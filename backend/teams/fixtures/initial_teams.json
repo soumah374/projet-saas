@@ -1,0 +1,71 @@
+[
+  {
+    "model": "teams.team",
+    "pk": 1,
+    "fields": {
+      "name": "Équipe Design",
+      "description": "Équipe spécialisée dans la conception graphique et l'identité visuelle",
+      "created_by": 2,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "teams.team",
+    "pk": 2,
+    "fields": {
+      "name": "Équipe Développement",
+      "description": "Équipe de développement web et applications",
+      "created_by": 2,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "teams.team",
+    "pk": 3,
+    "fields": {
+      "name": "Équipe Marketing",
+      "description": "Équipe marketing et communication",
+      "created_by": 2,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "teams.teammember",
+    "pk": 1,
+    "fields": {
+      "team": 1,
+      "user": 4,
+      "role": "leader",
+      "joined_at": "2024-01-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "teams.teammember",
+    "pk": 2,
+    "fields": {
+      "team": 2,
+      "user": 3,
+      "role": "leader",
+      "joined_at": "2024-01-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "teams.teammember",
+    "pk": 3,
+    "fields": {
+      "team": 3,
+      "user": 2,
+      "role": "leader",
+      "joined_at": "2024-01-01T00:00:00Z",
+      "is_active": true
+    }
+  }
+] 

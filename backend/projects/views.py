@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Avg
 from django.utils import timezone
@@ -18,7 +18,7 @@ from .serializers import (
 class ProjectViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des projets"""
     
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority', 'category']
     search_fields = ['title', 'description', 'client', 'id']
@@ -171,7 +171,7 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des membres de projet"""
     
     serializer_class = ProjectMemberSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     
     def get_queryset(self):
         """Filtrer selon le projet"""
@@ -190,7 +190,7 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des tâches de projet"""
     
     serializer_class = ProjectTaskSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['status', 'assigned_to']
     ordering_fields = ['due_date', 'created_at', 'title']
