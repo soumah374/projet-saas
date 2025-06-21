@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # Base de données PostgreSQL
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=sakom_db
+      - POSTGRES_USER=sakom_user
+      - POSTGRES_PASSWORD=sakom_password
+    ports:
+      - "5432:5432"
+    networks:
+      - sakom_network
+
+  # Cache Redis
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sakom_network
+
+  # Backend Django
+  backend:
+    build: ./backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=django-insecure-change-me-in-production
+      - DB_NAME=sakom_db
+      - DB_USER=sakom_user
+      - DB_PASSWORD=sakom_password
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
+    depends_on:
+      - db
+      - redis
+    networks:
+      - sakom_network
+
+  # Frontend React
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - VITE_APP_NAME=SAKOM
+    depends_on:
+      - backend
+    networks:
+      - sakom_network
+
+  # Nginx (optionnel pour la production)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - sakom_network
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_volume:
+  static_volume:
+
+networks:
+  sakom_network:
+    driver: bridge 
