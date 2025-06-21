@@ -1,23 +1,34 @@
-
-import { Bell, Search, User, Menu } from 'lucide-react';
+import { Bell, Search, User, Menu, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
 
-interface TopNavigationProps {
-  userRole: string;
-  onToggleSidebar: () => void;
+interface User {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+  is_staff: boolean;
 }
 
-export const TopNavigation = ({ userRole, onToggleSidebar }: TopNavigationProps) => {
+interface TopNavigationProps {
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+  user: User | null;
+  onLogout: () => void;
+}
+
+export const TopNavigation = ({ isSidebarOpen, setIsSidebarOpen, user, onLogout }: TopNavigationProps) => {
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-6 sticky top-0 z-50">
       <div className="flex items-center gap-4">
         <Button 
           variant="ghost" 
           size="sm" 
-          onClick={onToggleSidebar}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="lg:hidden"
         >
           <Menu className="h-5 w-5" />
@@ -62,12 +73,22 @@ export const TopNavigation = ({ userRole, onToggleSidebar }: TopNavigationProps)
         
         <div className="hidden md:flex items-center gap-3 pl-4 border-l border-gray-200">
           <div className="text-right">
-            <div className="text-sm font-medium">Sarah Martin</div>
-            <div className="text-xs text-gray-500">{userRole}</div>
+            <div className="text-sm font-medium">
+              {user ? `${user.first_name} ${user.last_name}` : 'Utilisateur'}
+            </div>
+            <div className="text-xs text-gray-500">{user?.role || 'Rôle'}</div>
           </div>
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
             <User className="h-4 w-4 text-blue-600" />
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onLogout}
+            className="text-gray-600 hover:text-red-600"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </div>
     </header>
