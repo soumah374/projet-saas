@@ -1,30 +1,115 @@
-
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import ProjectManagement from "./pages/ProjectManagement";
-import NotFound from "./pages/NotFound";
+import { TopNavigation } from './components/TopNavigation';
+import { Sidebar } from './components/Sidebar';
+import { LoginPage } from './pages/LoginPage';
+import { Dashboard } from './pages/Dashboard';
+import { ProjectsPage } from './pages/ProjectsPage';
+import { TeamsPage } from './pages/TeamsPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { DocumentsPage } from './pages/DocumentsPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { ProtectedRoute } from './components/ProtectedRoute';
 
-const queryClient = new QueryClient();
+interface User {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: string;
+  is_staff: boolean;
+}
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/projects" element={<ProjectManagement />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Vérifier si l'utilisateur est connecté au chargement
+    const token = localStorage.getItem('token');
+    const userData = localStorage.getItem('user');
+    
+    if (token && userData) {
+      try {
+        setUser(JSON.parse(userData));
+      } catch (error) {
+        console.error('Erreur lors du parsing des données utilisateur:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+    }
+    
+    setIsLoading(false);
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
+  const handleLogin = (userData: User, token: string) => {
+    setUser(userData);
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <Router>
+      <div className="min-h-screen bg-gray-50">
+        <Toaster />
+        <Sonner />
+        
+        {user ? (
+          <div className="flex">
+            <Sidebar 
+              isOpen={isSidebarOpen} 
+              user={user} 
+              onLogout={handleLogout} 
+            />
+            <div className="flex-1 lg:ml-64">
+              <TopNavigation 
+                isSidebarOpen={isSidebarOpen}
+                setIsSidebarOpen={setIsSidebarOpen}
+                user={user}
+                onLogout={handleLogout}
+              />
+              <main className="p-6">
+                <Routes>
+                  <Route path="/" element={<Dashboard user={user} />} />
+                  <Route path="/projects" element={<ProjectsPage />} />
+                  <Route path="/teams" element={<TeamsPage />} />
+                  <Route path="/calendar" element={<CalendarPage />} />
+                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/documents" element={<DocumentsPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </main>
+            </div>
+          </div>
+        ) : (
+          <Routes>
+            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        )}
+      </div>
+    </Router>
+  );
+}
 
 export default App;

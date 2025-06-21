@@ -3,7 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Users, FileText, Clock } from 'lucide-react';
+import { Calendar, Users, FileText, Clock, LogOut, User } from 'lucide-react';
 import { ProjectCard } from '@/components/ProjectCard';
 import { TopNavigation } from '@/components/TopNavigation';
 import { StatsOverview } from '@/components/StatsOverview';
@@ -12,9 +12,11 @@ import { CreateProjectModal } from '@/components/CreateProjectModal';
 import { ProjectDetailsPage } from '@/components/ProjectDetailsPage';
 import { DocumentManager } from '@/components/DocumentManager';
 import { ProjectCalendar } from '@/components/ProjectCalendar';
+import { useAuth } from '@/hooks/use-auth';
 
 const Index = () => {
-  const [selectedRole, setSelectedRole] = useState('Chef de projet');
+  const { user, logout } = useAuth();
+  const [selectedRole, setSelectedRole] = useState(user?.role || 'Chef de projet');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState<'dashboard' | 'project-details' | 'documents' | 'calendar'>('dashboard');
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -87,6 +89,10 @@ const Index = () => {
     }
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
   const renderCurrentView = () => {
     switch (currentView) {
       case 'project-details':
@@ -104,17 +110,36 @@ const Index = () => {
       default:
         return (
           <div className="max-w-7xl mx-auto space-y-8">
-            {/* En-tête de bienvenue */}
+            {/* En-tête de bienvenue avec informations utilisateur */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-8 text-white">
-              <h1 className="text-3xl font-bold mb-2">Bienvenue sur SAKOM</h1>
-              <p className="text-blue-100 text-lg">Plateforme de gestion collaborative des projets</p>
-              <div className="mt-4 flex gap-4">
-                <Badge variant="secondary" className="bg-blue-500/20 text-blue-100 hover:bg-blue-500/30">
-                  {selectedRole}
-                </Badge>
-                <Badge variant="secondary" className="bg-blue-500/20 text-blue-100 hover:bg-blue-500/30">
-                  {projects.length} projets actifs
-                </Badge>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h1 className="text-3xl font-bold mb-2">Bienvenue sur SAKOM</h1>
+                  <p className="text-blue-100 text-lg">Plateforme de gestion collaborative des projets</p>
+                  <div className="mt-4 flex gap-4">
+                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-100 hover:bg-blue-500/30">
+                      {selectedRole}
+                    </Badge>
+                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-100 hover:bg-blue-500/30">
+                      {projects.length} projets actifs
+                    </Badge>
+                  </div>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-medium">{user?.first_name} {user?.last_name}</p>
+                    <p className="text-blue-200 text-sm">{user?.email}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="text-white hover:bg-blue-700"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Déconnexion
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -226,8 +251,10 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-slate-50">
       <TopNavigation 
-        userRole={selectedRole}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        isSidebarOpen={isSidebarOpen}
+        setIsSidebarOpen={setIsSidebarOpen}
+        user={user}
+        onLogout={handleLogout}
       />
       
       <div className="flex">
@@ -238,10 +265,13 @@ const Index = () => {
           currentView={currentView}
           onViewChange={handleViewChange}
           projects={projects}
+          user={user}
         />
         
-        <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'} p-6`}>
-          {renderCurrentView()}
+        <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+          <div className="p-6">
+            {renderCurrentView()}
+          </div>
         </main>
       </div>
     </div>
