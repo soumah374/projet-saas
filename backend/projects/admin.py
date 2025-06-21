@@ -8,7 +8,6 @@ class ProjectAdmin(admin.ModelAdmin):
     list_filter = ['type', 'status', 'priority', 'category', 'created_at']
     search_fields = ['title', 'description', 'client', 'id']
     readonly_fields = ['id', 'created_at', 'updated_at']
-    filter_horizontal = ['team_members']
     
     fieldsets = (
         ('Informations de base', {
@@ -24,7 +23,7 @@ class ProjectAdmin(admin.ModelAdmin):
             'fields': ('progress', 'budget')
         }),
         ('Relations', {
-            'fields': ('client', 'created_by', 'team_members')
+            'fields': ('client', 'created_by')
         }),
         ('Métadonnées', {
             'fields': ('tags',)

@@ -1,0 +1,56 @@
+[
+  {
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$hash_here",
+      "last_login": null,
+      "is_superuser": true,
+      "username": "managing_director",
+      "first_name": "Admin",
+      "last_name": "SAKOM",
+      "email": "admin@sakom.com",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2024-01-01T00:00:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$hash_here",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "manager",
+      "first_name": "Jean",
+      "last_name": "Dupont",
+      "email": "jean.dupont@sakom.com",
+      "is_staff": true,
+      "is_active": true,
+      "date_joined": "2024-01-01T00:00:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  },
+  {
+    "model": "auth.user",
+    "pk": 4,
+    "fields": {
+      "password": "pbkdf2_sha256$600000$hash_here",
+      "last_login": null,
+      "is_superuser": false,
+      "username": "designer",
+      "first_name": "Marie",
+      "last_name": "Martin",
+      "email": "marie.martin@sakom.com",
+      "is_staff": false,
+      "is_active": true,
+      "date_joined": "2024-01-01T00:00:00Z",
+      "groups": [],
+      "user_permissions": []
+    }
+  }
+] 
