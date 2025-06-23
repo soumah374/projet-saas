@@ -13,6 +13,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import ProjectManagement from './pages/ProjectManagement';
 
 interface User {
   id: number;
@@ -61,7 +62,7 @@ function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -74,23 +75,24 @@ function App() {
         <Sonner />
         
         {user ? (
-          <div className="flex">
+          <div className="flex h-screen">
             <Sidebar 
               isOpen={isSidebarOpen} 
               user={user} 
-              onLogout={handleLogout} 
+              onLogout={handleLogout}
+              setIsSidebarOpen={setIsSidebarOpen}
             />
-            <div className="flex-1 lg:ml-64">
+            <div className="flex-1 flex flex-col min-w-0">
               <TopNavigation 
                 isSidebarOpen={isSidebarOpen}
                 setIsSidebarOpen={setIsSidebarOpen}
                 user={user}
                 onLogout={handleLogout}
               />
-              <main className="p-6">
+              <main className="flex-1 overflow-auto p-6">
                 <Routes>
                   <Route path="/" element={<Dashboard user={user} />} />
-                  <Route path="/projects" element={<ProjectsPage />} />
+                  <Route path="/projects" element={<ProjectManagement />} />
                   <Route path="/teams" element={<TeamsPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/reports" element={<ReportsPage />} />

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -75,12 +74,10 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Brief': return 'bg-blue-100 text-blue-800';
-      case 'Assets': return 'bg-green-100 text-green-800';
-      case 'Planning': return 'bg-orange-100 text-orange-800';
-      case 'Contrats': return 'bg-purple-100 text-purple-800';
+      case 'Assets': return 'bg-blue-100 text-blue-800';
+      case 'Planning': return 'bg-gray-100 text-gray-800';
+      case 'Contrats': return 'bg-blue-100 text-blue-800';
       case 'Factures': return 'bg-red-100 text-red-800';
-      case 'Rapport': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -213,7 +210,7 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
                 <p className="text-sm text-gray-600">Images</p>
                 <p className="text-2xl font-bold">{documents.filter(d => d.type === 'image').length}</p>
               </div>
-              <Image className="h-8 w-8 text-green-600" />
+              <Image className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -225,7 +222,7 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
                 <p className="text-sm text-gray-600">PDFs</p>
                 <p className="text-2xl font-bold">{documents.filter(d => d.type === 'pdf').length}</p>
               </div>
-              <FileText className="h-8 w-8 text-red-600" />
+              <FileText className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -237,7 +234,7 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
                 <p className="text-sm text-gray-600">Taille totale</p>
                 <p className="text-2xl font-bold">4.4 MB</p>
               </div>
-              <Archive className="h-8 w-8 text-yellow-600" />
+              <Archive className="h-8 w-8 text-gray-600" />
             </div>
           </CardContent>
         </Card>
@@ -316,7 +313,7 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
         <CardContent>
           <div className="space-y-3">
             <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
               <span className="text-gray-600">15/01/2024 - 14:30</span>
               <span>Sarah Martin a uploadé Brief_client_v2.pdf</span>
             </div>
@@ -326,7 +323,7 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
               <span>Pierre Lambert a uploadé Logo_client.png</span>
             </div>
             <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
               <span className="text-gray-600">13/01/2024 - 09:45</span>
               <span>Marie Durant a uploadé Planning_production.xlsx</span>
             </div>

@@ -374,7 +374,7 @@ export function ReportsPage() {
                   <td className="p-2">Application mobile</td>
                   <td className="p-2">Jean Martin</td>
                   <td className="p-2">
-                    <Badge className="bg-yellow-100 text-yellow-800">Planifié</Badge>
+                    <Badge className="bg-gray-100 text-gray-800">Planifié</Badge>
                   </td>
                   <td className="p-2">25%</td>
                   <td className="p-2">20 Mar 2024</td>
@@ -384,7 +384,7 @@ export function ReportsPage() {
                   <td className="p-2">Base de données</td>
                   <td className="p-2">Sophie Bernard</td>
                   <td className="p-2">
-                    <Badge className="bg-green-100 text-green-800">Terminé</Badge>
+                    <Badge className="bg-blue-100 text-blue-800">Terminé</Badge>
                   </td>
                   <td className="p-2">100%</td>
                   <td className="p-2">30 Jan 2024</td>

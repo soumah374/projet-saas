@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -469,8 +468,8 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                 </div>
 
                 {calculateTotalBudget() > 0 && (
-                  <Card className="p-3 bg-green-50">
-                    <p className="text-sm text-green-700">
+                  <Card className="p-3 bg-blue-50">
+                    <p className="text-sm text-blue-700">
                       <strong>Total calculé: {calculateTotalBudget().toLocaleString()} €</strong>
                     </p>
                   </Card>
@@ -632,7 +631,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                     step === currentStep 
                       ? 'bg-blue-600 text-white' 
                       : step < currentStep 
-                        ? 'bg-green-600 text-white' 
+                        ? 'bg-blue-600 text-white'
                         : 'bg-gray-200 text-gray-600'
                   }`}>
                     {step}
@@ -664,7 +663,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                   Suivant
                 </Button>
               ) : (
-                <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
                   Créer le projet
                 </Button>
               )}

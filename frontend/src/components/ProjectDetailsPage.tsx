@@ -34,11 +34,11 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'En cours': return 'bg-green-100 text-green-800';
-      case 'Planification': return 'bg-blue-100 text-blue-800';
-      case 'Production': return 'bg-orange-100 text-orange-800';
+      case 'Planification': return 'bg-gray-100 text-gray-800';
+      case 'En cours': return 'bg-blue-100 text-blue-800';
+      case 'Production': return 'bg-gray-100 text-gray-800';
       case 'En pause': return 'bg-gray-100 text-gray-800';
-      case 'Terminé': return 'bg-purple-100 text-purple-800';
+      case 'Terminé': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -414,13 +414,13 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
                     <p className="text-sm text-blue-600">Budget alloué</p>
                     <p className="text-2xl font-bold text-blue-900">{currentProject.budget || '0'}€</p>
                   </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <p className="text-sm text-green-600">Facturé</p>
-                    <p className="text-2xl font-bold text-green-900">18 750€</p>
+                  <div className="text-center p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-600">Facturé</p>
+                    <p className="text-2xl font-bold text-blue-900">18 750€</p>
                   </div>
-                  <div className="text-center p-4 bg-orange-50 rounded-lg">
-                    <p className="text-sm text-orange-600">Restant</p>
-                    <p className="text-2xl font-bold text-orange-900">6 250€</p>
+                  <div className="text-center p-4 bg-gray-50 rounded-lg">
+                    <p className="text-sm text-gray-600">Restant</p>
+                    <p className="text-2xl font-bold text-gray-900">6 250€</p>
                   </div>
                 </div>
               </CardContent>

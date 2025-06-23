@@ -1,4 +1,3 @@
-
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,20 +21,23 @@ interface ProjectCardProps {
 export const ProjectCard = ({ project, userRole }: ProjectCardProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'En cours': return 'bg-green-100 text-green-800';
-      case 'Planification': return 'bg-blue-100 text-blue-800';
-      case 'Production': return 'bg-orange-100 text-orange-800';
+      case 'Planification': return 'bg-gray-100 text-gray-800';
+      case 'En cours': return 'bg-blue-100 text-blue-800';
+      case 'Production': return 'bg-gray-100 text-gray-800';
       case 'En pause': return 'bg-gray-100 text-gray-800';
-      case 'Terminé': return 'bg-purple-100 text-purple-800';
+      case 'Terminé': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'Événementiel': return 'bg-red-100 text-red-800';
       case 'Communication': return 'bg-blue-100 text-blue-800';
-      case 'Audiovisuel': return 'bg-green-100 text-green-800';
+      case 'Événementiel': return 'bg-red-100 text-red-800';
+      case 'Audiovisuel': return 'bg-blue-100 text-blue-800';
+      case 'Production': return 'bg-gray-100 text-gray-800';
+      case 'Digital': return 'bg-blue-100 text-blue-800';
+      case 'Conseil': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };

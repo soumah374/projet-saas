@@ -26,7 +26,7 @@ interface Event {
   end_date: string;
   location?: string;
   attendees: string[];
-  type: 'meeting' | 'deadline' | 'milestone' | 'other';
+  type: 'meeting' | 'deadline' | 'milestone';
   color: string;
 }
 
@@ -86,7 +86,7 @@ export function CalendarPage() {
         end_date: "2024-02-14T12:00:00",
         location: "Salle de formation",
         attendees: ["Toute l'équipe"],
-        type: "other",
+        type: "meeting",
         color: "bg-purple-500"
       }
     ];
@@ -133,18 +133,26 @@ export function CalendarPage() {
     });
   };
 
-  const getTypeColor = (type: string) => {
+  const eventTypes = [
+    { id: 'deadline', name: 'Échéance', color: "bg-red-500" },
+    { id: 'milestone', name: 'Jalon', color: "bg-blue-500" },
+    { id: 'meeting', name: 'Réunion', color: "bg-gray-500" }
+  ];
+
+  const getEventTypeColor = (type: string) => {
     switch (type) {
-      case "meeting":
-        return "bg-blue-100 text-blue-800";
-      case "deadline":
-        return "bg-red-100 text-red-800";
-      case "milestone":
-        return "bg-green-100 text-green-800";
-      case "other":
-        return "bg-purple-100 text-purple-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+      case 'deadline': return 'bg-red-100 text-red-800';
+      case 'milestone': return 'bg-blue-100 text-blue-800';
+      case 'meeting': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getEventColor = (type: 'meeting' | 'deadline' | 'milestone') => {
+    switch (type) {
+      case 'deadline': return 'bg-red-500';
+      case 'milestone': return 'bg-blue-500';
+      case 'meeting': return 'bg-gray-500';
     }
   };
 
@@ -158,9 +166,7 @@ export function CalendarPage() {
       location: newEvent.location,
       attendees: newEvent.attendees.split(',').map(a => a.trim()).filter(a => a),
       type: newEvent.type,
-      color: newEvent.type === 'meeting' ? 'bg-blue-500' : 
-             newEvent.type === 'deadline' ? 'bg-red-500' :
-             newEvent.type === 'milestone' ? 'bg-green-500' : 'bg-purple-500'
+      color: getEventColor(newEvent.type)
     };
 
     setEvents([...events, event]);
@@ -264,7 +270,6 @@ export function CalendarPage() {
                     <SelectItem value="meeting">Réunion</SelectItem>
                     <SelectItem value="deadline">Deadline</SelectItem>
                     <SelectItem value="milestone">Milestone</SelectItem>
-                    <SelectItem value="other">Autre</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -418,7 +423,7 @@ export function CalendarPage() {
                       </div>
                     </div>
                   </div>
-                  <Badge className={getTypeColor(event.type)}>
+                  <Badge className={getEventTypeColor(event.type)}>
                     {event.type === 'meeting' ? 'Réunion' :
                      event.type === 'deadline' ? 'Deadline' :
                      event.type === 'milestone' ? 'Milestone' : 'Autre'}
