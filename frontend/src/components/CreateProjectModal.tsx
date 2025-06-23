@@ -5,18 +5,16 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { CalendarIcon, Upload, X, Plus, Users, DollarSign, FileText } from 'lucide-react';
+import { Upload, X, Plus, Users, DollarSign, FileText } from 'lucide-react';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { CreateProjectData } from '@/lib/api';
 
 interface CreateProjectModalProps {
   children: React.ReactNode;
-  onProjectCreate: (project: any) => void;
+  onProjectCreate: (project: CreateProjectData) => void;
 }
 
 interface TeamMember {
@@ -151,21 +149,32 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     
     const totalBudget = formData.budget ? parseFloat(formData.budget) : calculateTotalBudget();
     
-    const newProject = {
-      id: `PROJ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`,
-      ...formData,
-      budget: totalBudget.toString(),
-      budgetBreakdown: formData.budgetDetails,
-      team: teamMembers.map(m => m.name),
-      teamDetails: teamMembers,
-      documents: documents,
-      progress: 0,
+    // Format data for API
+    const projectData: CreateProjectData = {
+      title: formData.title,
+      description: formData.description,
+      objectives: formData.objectives || undefined,
+      type: formData.type,
+      category: formData.category || undefined,
+      status: formData.status,
+      priority: formData.priority,
+      start_date: formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : undefined,
       deadline: formData.deadline ? format(formData.deadline, 'yyyy-MM-dd') : '',
-      startDate: formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : '',
-      createdAt: new Date().toISOString(),
+      budget: totalBudget.toString(),
+      client: formData.client,
+      tags: formData.tags.length > 0 ? formData.tags : undefined,
+      budget_details: {
+        production: parseFloat(formData.budgetDetails.production) || 0,
+        personnel: parseFloat(formData.budgetDetails.personnel) || 0,
+        marketing: parseFloat(formData.budgetDetails.marketing) || 0,
+        other: parseFloat(formData.budgetDetails.other) || 0,
+      },
+      // Note: team_members will be handled separately as it requires user IDs
+      // For now, we'll create the project without team members
+      // They can be added later through the project details page
     };
     
-    onProjectCreate(newProject);
+    onProjectCreate(projectData);
     setOpen(false);
     resetForm();
   };
@@ -323,48 +332,33 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label>Date de début</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.startDate ? format(formData.startDate, 'PPP', { locale: fr }) : 'Sélectionner une date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.startDate}
-                      onSelect={(date) => setFormData(prev => ({ ...prev, startDate: date }))}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    console.log('Date de début sélectionnée:', date);
+                    setFormData(prev => ({ ...prev, startDate: date }));
+                  }}
+                  className="w-full"
+                  min={new Date().toISOString().split('T')[0]}
+                />
               </div>
 
               <div>
                 <Label>Date d'échéance *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.deadline ? format(formData.deadline, 'PPP', { locale: fr }) : 'Sélectionner une date'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.deadline}
-                      onSelect={(date) => setFormData(prev => ({ ...prev, deadline: date }))}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  type="date"
+                  value={formData.deadline ? format(formData.deadline, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    console.log('Date d\'échéance sélectionnée:', date);
+                    setFormData(prev => ({ ...prev, deadline: date }));
+                  }}
+                  className="w-full"
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                />
               </div>
 
               <div>

@@ -3,18 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Calendar, Users, FileText, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
+import { Project } from '@/lib/api';
 
 interface ProjectCardProps {
-  project: {
-    id: string;
-    title: string;
-    type: string;
-    status: string;
-    progress: number;
-    deadline: string;
-    team: string[];
-    client: string;
-  };
+  project: Project;
   userRole: string;
 }
 
@@ -44,6 +36,16 @@ export const ProjectCard = ({ project, userRole }: ProjectCardProps) => {
 
   const isDeadlineClose = new Date(project.deadline) < new Date(Date.now() + 7*24*60*60*1000);
   const canViewBudget = ['Managing Director', 'Finance/Admin'].includes(userRole);
+  
+  // Extract team member names for display - handle both detailed and list views
+  const teamMemberNames = project.team_members 
+    ? project.team_members.map(member => 
+        `${member.user.first_name} ${member.user.last_name}`.trim() || member.user.username
+      )
+    : [];
+  
+  // Use team_count if available, otherwise use team_members length
+  const teamCount = project.team_count || teamMemberNames.length;
 
   return (
     <Card className="p-6 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
@@ -89,14 +91,22 @@ export const ProjectCard = ({ project, userRole }: ProjectCardProps) => {
           <Users className="h-4 w-4" />
           <span>Équipe:</span>
           <div className="flex gap-1">
-            {project.team.slice(0, 3).map((member, idx) => (
-              <Badge key={idx} variant="outline" className="text-xs">
-                {member}
-              </Badge>
-            ))}
-            {project.team.length > 3 && (
+            {teamMemberNames.length > 0 ? (
+              <>
+                {teamMemberNames.slice(0, 3).map((member, idx) => (
+                  <Badge key={idx} variant="outline" className="text-xs">
+                    {member}
+                  </Badge>
+                ))}
+                {teamMemberNames.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{teamMemberNames.length - 3}
+                  </Badge>
+                )}
+              </>
+            ) : (
               <Badge variant="outline" className="text-xs">
-                +{project.team.length - 3}
+                {teamCount} membre{teamCount > 1 ? 's' : ''}
               </Badge>
             )}
           </div>
@@ -106,7 +116,7 @@ export const ProjectCard = ({ project, userRole }: ProjectCardProps) => {
         {canViewBudget ? (
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <FileText className="h-4 w-4" />
-            <span>Budget: 25 000€</span>
+            <span>Budget: {project.budget || 'Non défini'}</span>
             <Badge variant="secondary">75% facturé</Badge>
           </div>
         ) : (

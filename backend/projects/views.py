@@ -28,11 +28,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtrer les projets selon les permissions de l'utilisateur"""
         user = self.request.user
-        if user.is_staff:
+        if user.is_authenticated:
+            if user.is_staff:
+                return Project.objects.all()
+            return Project.objects.filter(
+                Q(created_by=user) | Q(team_members=user)
+            ).distinct()
+        else:
+            # For anonymous users, return all projects (or empty queryset if you want to restrict access)
             return Project.objects.all()
-        return Project.objects.filter(
-            Q(created_by=user) | Q(team_members=user)
-        ).distinct()
     
     def get_serializer_class(self):
         """Choisir le bon sérialiseur selon l'action"""
@@ -46,7 +50,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Créer un projet avec l'utilisateur connecté"""
-        serializer.save(created_by=self.request.user)
+        serializer.save()
     
     @action(detail=True, methods=['post'])
     def add_member(self, request, pk=None):
@@ -94,12 +98,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def statistics(self, request):
         """Obtenir les statistiques des projets"""
         user = request.user
-        if user.is_staff:
-            queryset = Project.objects.all()
+        if user.is_authenticated:
+            if user.is_staff:
+                queryset = Project.objects.all()
+            else:
+                queryset = Project.objects.filter(
+                    Q(created_by=user) | Q(team_members=user)
+                ).distinct()
         else:
-            queryset = Project.objects.filter(
-                Q(created_by=user) | Q(team_members=user)
-            ).distinct()
+            # For anonymous users, return statistics for all projects
+            queryset = Project.objects.all()
         
         # Statistiques générales
         total_projects = queryset.count()
@@ -132,12 +140,16 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def upcoming_deadlines(self, request):
         """Obtenir les projets avec des échéances proches"""
         user = request.user
-        if user.is_staff:
-            queryset = Project.objects.all()
+        if user.is_authenticated:
+            if user.is_staff:
+                queryset = Project.objects.all()
+            else:
+                queryset = Project.objects.filter(
+                    Q(created_by=user) | Q(team_members=user)
+                ).distinct()
         else:
-            queryset = Project.objects.filter(
-                Q(created_by=user) | Q(team_members=user)
-            ).distinct()
+            # For anonymous users, return all projects
+            queryset = Project.objects.all()
         
         # Projets avec échéance dans les 7 prochains jours
         week_from_now = timezone.now().date() + timedelta(days=7)
@@ -154,7 +166,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def my_projects(self, request):
         """Obtenir les projets de l'utilisateur connecté"""
         user = request.user
-        projects = Project.objects.filter(created_by=user).order_by('-created_at')
+        if user.is_authenticated:
+            projects = Project.objects.filter(created_by=user).order_by('-created_at')
+        else:
+            # For anonymous users, return empty queryset
+            projects = Project.objects.none()
         serializer = ProjectListSerializer(projects, many=True)
         return Response(serializer.data)
     
@@ -162,7 +178,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def team_projects(self, request):
         """Obtenir les projets où l'utilisateur est membre de l'équipe"""
         user = request.user
-        projects = Project.objects.filter(team_members=user).order_by('-created_at')
+        if user.is_authenticated:
+            projects = Project.objects.filter(team_members=user).order_by('-created_at')
+        else:
+            # For anonymous users, return empty queryset
+            projects = Project.objects.none()
         serializer = ProjectListSerializer(projects, many=True)
         return Response(serializer.data)
 
