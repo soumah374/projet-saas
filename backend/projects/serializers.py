@@ -153,6 +153,24 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
         budget_details_data = validated_data.pop('budget_details', None)
         team_members_data = validated_data.pop('team_members', [])
         
+        # Handle created_by field
+        user = self.context['request'].user
+        if user.is_authenticated:
+            validated_data['created_by'] = user
+        else:
+            # For anonymous users, we need to handle this
+            # For now, let's try to get a default user or handle the error
+            try:
+                # Try to get the first available user as a fallback
+                default_user = User.objects.first()
+                if default_user:
+                    validated_data['created_by'] = default_user
+                else:
+                    # If no users exist, we can't create a project
+                    raise serializers.ValidationError("No users available to assign as project creator")
+            except User.DoesNotExist:
+                raise serializers.ValidationError("No users available to assign as project creator")
+        
         # Créer le projet
         project = super().create(validated_data)
         

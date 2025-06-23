@@ -6,63 +6,33 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, Plus, Eye, Edit, Archive, MoreHorizontal } from 'lucide-react';
+import { Search, Filter, Plus, Eye, Edit, Archive, MoreHorizontal, Loader2 } from 'lucide-react';
 import { ProjectCard } from '@/components/ProjectCard';
 import { CreateProjectModal } from '@/components/CreateProjectModal';
 import { ProjectDetailsPage } from '@/components/ProjectDetailsPage';
+import { useProjects, useProjectStatistics, useCreateProject } from '@/hooks/use-projects';
+import { Project } from '@/lib/api';
+import { toast } from 'sonner';
 
 const ProjectManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-  // Données d'exemple étendues
-  const [projects] = useState([
-    {
-      id: "PROJ-2024-001",
-      title: "Lancement Produit TechCorp",
-      type: "Événementiel",
-      status: "En cours",
-      progress: 75,
-      deadline: "2024-12-25",
-      team: ["Sarah M.", "Pierre L.", "Marie D."],
-      client: "TechCorp Solutions",
-      createdAt: "2024-01-10T10:00:00Z",
-      description: "Organisation de l'événement de lancement du nouveau produit TechCorp.",
-      budget: "25000",
-      priority: "Haute"
-    },
-    {
-      id: "PROJ-2024-002", 
-      title: "Campagne RP StartupX",
-      type: "Communication",
-      status: "Planification",
-      progress: 30,
-      deadline: "2024-12-30",
-      team: ["Antoine R.", "Julie B."],
-      client: "StartupX",
-      createdAt: "2024-01-12T14:30:00Z",
-      description: "Campagne de relations publiques pour le lancement de StartupX.",
-      budget: "15000",
-      priority: "Normale"
-    },
-    {
-      id: "PROJ-2024-003",
-      title: "Production Vidéo Corporate",
-      type: "Audiovisuel",
-      status: "Production",
-      progress: 60,
-      deadline: "2024-12-28",
-      team: ["Marc V.", "Laura S.", "Tom K."],
-      client: "Corporate Inc",
-      createdAt: "2024-01-08T09:15:00Z",
-      description: "Réalisation d'une vidéo corporate institutionnelle.",
-      budget: "35000",
-      priority: "Haute"
-    }
-  ]);
+  // React Query hooks
+  const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
+    search: searchTerm || undefined,
+    status: statusFilter !== 'all' ? statusFilter : undefined,
+    type: typeFilter !== 'all' ? typeFilter : undefined,
+  });
+
+  // Ensure projects is always an array
+  const projects = Array.isArray(projectsData) ? projectsData : [];
+
+  const { data: statistics, isLoading: statsLoading } = useProjectStatistics();
+  const createProjectMutation = useCreateProject();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -85,7 +55,7 @@ const ProjectManagement = () => {
     }
   };
 
-  const handleProjectView = (project: any) => {
+  const handleProjectView = (project: Project) => {
     setSelectedProject(project);
   };
 
@@ -93,9 +63,19 @@ const ProjectManagement = () => {
     setSelectedProject(null);
   };
 
-  const handleUpdateProject = (updatedProject: any) => {
-    // In a real app, this would update the project in the backend
+  const handleUpdateProject = (updatedProject: Project) => {
+    // This will be handled by the ProjectDetailsPage component
     console.log('Updated project:', updatedProject);
+  };
+
+  const handleCreateProject = async (projectData: any) => {
+    try {
+      await createProjectMutation.mutateAsync(projectData);
+      toast.success('Projet créé avec succès');
+    } catch (error) {
+      toast.error('Erreur lors de la création du projet');
+      console.error('Create project error:', error);
+    }
   };
 
   // If a project is selected, show the details page
@@ -109,15 +89,46 @@ const ProjectManagement = () => {
     );
   }
 
-  const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.client.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || project.status === statusFilter;
-    const matchesType = typeFilter === 'all' || project.type === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Show loading state
+  if (projectsLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="max-w-10xl mx-auto space-y-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-6 w-6 animate-spin" />
+              <span>Chargement des projets...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (projectsError) {
+    console.error('Projects error:', projectsError);
+    return (
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="max-w-10xl mx-auto space-y-8">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="text-red-600 mb-4">
+                Erreur lors du chargement des projets
+                <br />
+                <span className="text-sm text-gray-500">
+                  {projectsError.message || 'Erreur de connexion à l\'API'}
+                </span>
+              </div>
+              <Button onClick={() => window.location.reload()} className="rounded-full px-4">
+                Réessayer
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -128,9 +139,16 @@ const ProjectManagement = () => {
             <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
             <p className="text-gray-600 mt-2">Gérez tous vos projets depuis cette interface centralisée</p>
           </div>
-          <CreateProjectModal onProjectCreate={() => {}}>
-            <Button className="bg-blue-600 hover:bg-blue-700 rounded-full px-6 py-2 text-base font-semibold shadow-sm">
-              <Plus className="h-4 w-4 mr-2" />
+          <CreateProjectModal onProjectCreate={handleCreateProject}>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 rounded-full px-6 py-2 text-base font-semibold shadow-sm"
+              disabled={createProjectMutation.isPending}
+            >
+              {createProjectMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
               Nouveau Projet
             </Button>
           </CreateProjectModal>
@@ -201,28 +219,36 @@ const ProjectManagement = () => {
             <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-2">
               <Plus className="w-6 h-6 text-blue-600" />
             </div>
-            <div className="text-3xl font-bold text-blue-700">{projects.length}</div>
+            <div className="text-3xl font-bold text-blue-700">
+              {statsLoading ? <Loader2 className="h-8 w-8 animate-spin" /> : statistics?.total_projects || 0}
+            </div>
             <div className="text-sm text-gray-600">Total Projets</div>
           </Card>
           <Card className="p-6 rounded-2xl bg-green-50 border-0 shadow-sm flex flex-col items-center">
             <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-2">
               <Eye className="w-6 h-6 text-green-600" />
             </div>
-            <div className="text-3xl font-bold text-green-700">{projects.filter(p => p.status === 'En cours').length}</div>
+            <div className="text-3xl font-bold text-green-700">
+              {statsLoading ? <Loader2 className="h-8 w-8 animate-spin" /> : statistics?.active_projects || 0}
+            </div>
             <div className="text-sm text-gray-600">En Cours</div>
           </Card>
           <Card className="p-6 rounded-2xl bg-orange-50 border-0 shadow-sm flex flex-col items-center">
             <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-2">
               <Filter className="w-6 h-6 text-orange-600" />
             </div>
-            <div className="text-3xl font-bold text-orange-700">{projects.filter(p => p.priority === 'Haute').length}</div>
-            <div className="text-sm text-gray-600">Priorité Haute</div>
+            <div className="text-3xl font-bold text-orange-700">
+              {statsLoading ? <Loader2 className="h-8 w-8 animate-spin" /> : statistics?.overdue_projects || 0}
+            </div>
+            <div className="text-sm text-gray-600">En Retard</div>
           </Card>
           <Card className="p-6 rounded-2xl bg-purple-50 border-0 shadow-sm flex flex-col items-center">
             <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-2">
               <Archive className="w-6 h-6 text-purple-600" />
             </div>
-            <div className="text-3xl font-bold text-purple-700">{projects.filter(p => p.status === 'Terminé').length}</div>
+            <div className="text-3xl font-bold text-purple-700">
+              {statsLoading ? <Loader2 className="h-8 w-8 animate-spin" /> : statistics?.completed_projects || 0}
+            </div>
             <div className="text-sm text-gray-600">Terminés</div>
           </Card>
         </div>
@@ -231,7 +257,7 @@ const ProjectManagement = () => {
         <Card className="p-6 rounded-2xl shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold">
-              Projets ({filteredProjects.length})
+              Projets ({projects.length})
             </h2>
             <Button variant="outline" size="sm" className="rounded-full px-4">
               <Filter className="h-4 w-4 mr-2" />
@@ -241,7 +267,7 @@ const ProjectManagement = () => {
 
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredProjects.map(project => (
+              {projects.map(project => (
                 <div key={project.id} onClick={() => handleProjectView(project)} className="cursor-pointer">
                   <ProjectCard project={project} userRole="Chef de projet" />
                 </div>
@@ -262,7 +288,7 @@ const ProjectManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProjects.map(project => (
+                {projects.map(project => (
                   <TableRow key={project.id} className="hover:bg-blue-50 transition-colors">
                     <TableCell>
                       <div>
@@ -300,7 +326,12 @@ const ProjectManagement = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="rounded-full">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="rounded-full"
+                          onClick={() => handleProjectView(project)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" className="rounded-full">
@@ -317,10 +348,18 @@ const ProjectManagement = () => {
             </Table>
           )}
 
-          {filteredProjects.length === 0 && (
+          {projects.length === 0 && (
             <div className="text-center py-12">
               <div className="text-gray-500 mb-4">Aucun projet trouvé</div>
-              <Button variant="outline" className="rounded-full px-4">
+              <Button 
+                variant="outline" 
+                className="rounded-full px-4"
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                  setTypeFilter('all');
+                }}
+              >
                 Effacer les filtres
               </Button>
             </div>
