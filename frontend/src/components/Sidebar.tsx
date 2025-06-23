@@ -58,10 +58,10 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.projets && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/projects" className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-700">Tous les projets <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">3</span></Link>
-                  <Link to="/projects?filter=mes" className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-700">Mes projets <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">1</span></Link>
-                  <Link to="/projects?filter=attente" className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-700">En attente <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">1</span></Link>
-                  <Link to="/projects?filter=termines" className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-700">Terminés <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">0</span></Link>
+                  <Link to="/projects" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">Tous les projets <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">3</span></Link>
+                  <Link to="/projects?filter=mes" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">Mes projets <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">1</span></Link>
+                  <Link to="/projects?filter=attente" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">En attente <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">1</span></Link>
+                  <Link to="/projects?filter=termines" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">Terminés <span className="ml-auto w-5 h-5 rounded-full bg-gray-100 text-gray-700 text-xs flex items-center justify-center">0</span></Link>
                 </div>
               )}
             </div>
@@ -72,21 +72,21 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.planning && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/calendar" className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-700">Tous les plannings</Link>
+                  <Link to="/calendar" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">Tous les plannings</Link>
                 </div>
               )}
             </div>
-            <Link to="/teams" className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", location.pathname === '/teams' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900")}> <Users className="h-5 w-5" /> Équipes </Link>
+            <Link to="/teams" className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors h-8", location.pathname === '/teams' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900")}> <Users className="h-5 w-5" /> Équipes </Link>
           </nav>
         </div>
         <div className="space-y-2">
           <div className="mb-2">
             <span className="block text-xs text-gray-400 mb-2">Actions rapides</span>
             <div className="grid gap-2">
-              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors"><Plus className="w-4 h-4" /> Nouveau projet</button>
-              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"><ClipboardList className="w-4 h-4" /> Suivi avancement</button>
-              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"><DocIcon className="w-4 h-4" /> Documents</button>
-              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors"><Sliders className="w-4 h-4" /> Paramètres</button>
+              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors h-8"><Plus className="w-4 h-4" /> Nouveau projet</button>
+              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"><ClipboardList className="w-4 h-4" /> Suivi avancement</button>
+              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"><DocIcon className="w-4 h-4" /> Documents</button>
+              <button className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"><Sliders className="w-4 h-4" /> Paramètres</button>
             </div>
           </div>
           <div className="border-t border-gray-200 pt-4 flex items-center gap-3">
