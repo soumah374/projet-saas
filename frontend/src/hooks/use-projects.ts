@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectApi, Project, CreateProjectData, UpdateProjectData, ProjectStatistics } from '@/lib/api';
+import { projectApi, Project, CreateProjectData, UpdateProjectData, CreateTaskData, UpdateTaskData } from '../lib/api';
+import { toast } from 'sonner';
 
 // Query keys
 export const projectKeys = {
@@ -14,170 +15,251 @@ export const projectKeys = {
   teamProjects: () => [...projectKeys.all, 'team-projects'] as const,
 };
 
-// Hook to get all projects with filters
-export const useProjects = (filters?: {
-  search?: string;
-  status?: string;
-  type?: string;
-  priority?: string;
-  ordering?: string;
-}) => {
+// Hook pour récupérer la liste des projets
+export const useProjects = (filters?: any) => {
   return useQuery({
-    queryKey: projectKeys.list(filters || {}),
+    queryKey: ['projects', filters],
     queryFn: () => projectApi.getProjects(filters),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
-// Hook to get a single project
+// Hook pour récupérer un projet spécifique
 export const useProject = (id: string) => {
   return useQuery({
-    queryKey: projectKeys.detail(id),
+    queryKey: ['project', id],
     queryFn: () => projectApi.getProject(id),
     enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
-// Hook to get project statistics
+// Hook pour créer un projet
+export const useCreateProject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: projectApi.createProject,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project-statistics'] });
+      toast.success('Projet créé avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la création du projet:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la création du projet';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+// Hook pour mettre à jour un projet
+export const useUpdateProject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateProjectData }) =>
+      projectApi.updateProject(id, data),
+    onSuccess: (updatedProject) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', updatedProject.id] });
+      queryClient.invalidateQueries({ queryKey: ['project-statistics'] });
+      toast.success('Projet mis à jour avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la mise à jour du projet:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la mise à jour du projet';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+// Hook pour supprimer un projet
+export const useDeleteProject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: projectApi.deleteProject,
+    onSuccess: (_, projectId) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.removeQueries({ queryKey: ['project', projectId] });
+      toast.success('Projet supprimé avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la suppression du projet:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la suppression du projet';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+// Hook pour récupérer les statistiques des projets
 export const useProjectStatistics = () => {
   return useQuery({
-    queryKey: projectKeys.statistics(),
+    queryKey: ['project-statistics'],
     queryFn: () => projectApi.getStatistics(),
     staleTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 
-// Hook to get upcoming deadlines
+// Hook pour récupérer les projets à venir
 export const useUpcomingDeadlines = () => {
   return useQuery({
-    queryKey: projectKeys.upcomingDeadlines(),
+    queryKey: ['upcoming-deadlines'],
     queryFn: () => projectApi.getUpcomingDeadlines(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
-// Hook to get my projects
+// Hook pour récupérer mes projets
 export const useMyProjects = () => {
   return useQuery({
-    queryKey: projectKeys.myProjects(),
+    queryKey: ['my-projects'],
     queryFn: () => projectApi.getMyProjects(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
-// Hook to get team projects
+// Hook pour récupérer les projets de l'équipe
 export const useTeamProjects = () => {
   return useQuery({
-    queryKey: projectKeys.teamProjects(),
+    queryKey: ['team-projects'],
     queryFn: () => projectApi.getTeamProjects(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
-// Hook to create a project
-export const useCreateProject = () => {
+// Hook pour mettre à jour la progression d'un projet
+export const useUpdateProgress = () => {
   const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (data: CreateProjectData) => projectApi.createProject(data),
-    onSuccess: () => {
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.myProjects() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.teamProjects() });
-    },
-  });
-};
 
-// Hook to update a project
-export const useUpdateProject = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateProjectData }) =>
-      projectApi.updateProject(id, data),
-    onSuccess: (updatedProject) => {
-      // Update the specific project in cache
-      queryClient.setQueryData(projectKeys.detail(updatedProject.id), updatedProject);
-      
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.myProjects() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.teamProjects() });
-    },
-  });
-};
-
-// Hook to delete a project
-export const useDeleteProject = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (id: string) => projectApi.deleteProject(id),
-    onSuccess: (_, deletedId) => {
-      // Remove the project from cache
-      queryClient.removeQueries({ queryKey: projectKeys.detail(deletedId) });
-      
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.myProjects() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.teamProjects() });
-    },
-  });
-};
-
-// Hook to update project progress
-export const useUpdateProjectProgress = () => {
-  const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: ({ id, progress }: { id: string; progress: number }) =>
       projectApi.updateProgress(id, progress),
-    onSuccess: (data, { id }) => {
-      // Update the project's progress in cache
-      queryClient.setQueryData(projectKeys.detail(id), (old: Project | undefined) => {
-        if (old) {
-          return { ...old, progress: data.progress };
-        }
-        return old;
-      });
-      
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      toast.success('Progression mise à jour avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la mise à jour de la progression:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la mise à jour de la progression';
+      toast.error(errorMessage);
     },
   });
 };
 
-// Hook to add a member to a project
+// Hook pour ajouter un membre à un projet
 export const useAddProjectMember = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ id, user_id, role }: { id: string; user_id: number; role: string }) =>
       projectApi.addMember(id, user_id, role),
     onSuccess: (_, { id }) => {
-      // Invalidate the specific project and lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      toast.success('Membre ajouté au projet avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de l\'ajout du membre:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de l\'ajout du membre';
+      toast.error(errorMessage);
     },
   });
 };
 
-// Hook to remove a member from a project
+// Hook pour supprimer un membre d'un projet
 export const useRemoveProjectMember = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ id, user_id }: { id: string; user_id: number }) =>
       projectApi.removeMember(id, user_id),
     onSuccess: (_, { id }) => {
-      // Invalidate the specific project and lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      toast.success('Membre supprimé du projet avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la suppression du membre:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la suppression du membre';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+// Hook pour créer une tâche
+export const useCreateTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: CreateTaskData }) =>
+      projectApi.createTask(projectId, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Tâche créée avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la création de la tâche:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la création de la tâche';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+// Hook pour mettre à jour une tâche
+export const useUpdateTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, taskId, data }: { projectId: string; taskId: number; data: UpdateTaskData }) =>
+      projectApi.updateTask(projectId, taskId, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Tâche mise à jour avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la mise à jour de la tâche:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la mise à jour de la tâche';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+// Hook pour supprimer une tâche
+export const useDeleteTask = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, taskId }: { projectId: string; taskId: number }) =>
+      projectApi.deleteTask(projectId, taskId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Tâche supprimée avec succès');
+    },
+    onError: (error: any) => {
+      console.error('Erreur lors de la suppression de la tâche:', error);
+      const errorMessage = error?.response?.data?.message || 
+                          error?.response?.data?.detail || 
+                          'Erreur lors de la suppression de la tâche';
+      toast.error(errorMessage);
     },
   });
 }; 

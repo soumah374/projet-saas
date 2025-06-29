@@ -22,10 +22,13 @@ import {
   UserPlus,
   Crown,
   Shield,
-  MoreHorizontal
+  MoreHorizontal,
+  Loader2
 } from "lucide-react";
-import { projectApi, Project } from '@/lib/api';
-
+import { projectApi, Project, User, userApi } from '@/lib/api';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { useUsers } from '@/hooks/use-users';
 interface ProjectMember {
   id: number;
   user: {
@@ -44,6 +47,7 @@ interface ProjectMember {
 export function ProjectTeamPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [project, setProject] = useState<Project | null>(null);
   const [teamMembers, setTeamMembers] = useState<ProjectMember[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,6 +55,46 @@ export function ProjectTeamPage() {
   const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('');
+
+  // React Query hooks
+  const { data: users, isLoading: usersLoading, error: usersError } = useUsers({
+    is_active: true,
+    ordering: 'first_name'
+  });
+
+  // Mutations
+  const addMemberMutation = useMutation({
+    mutationFn: ({ projectId, userId, role }: { projectId: string; userId: number; role: string }) =>
+      projectApi.addMember(projectId, userId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      loadProjectTeam();
+      setIsAddMemberDialogOpen(false);
+      setSelectedUser('');
+      setSelectedRole('');
+      toast.success('Membre ajouté à l\'équipe avec succès');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de l\'ajout du membre');
+      console.error('Error adding member:', error);
+    },
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: ({ projectId, userId }: { projectId: string; userId: number }) =>
+      projectApi.removeMember(projectId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      loadProjectTeam();
+      toast.success('Membre retiré de l\'équipe');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors du retrait du membre');
+      console.error('Error removing member:', error);
+    },
+  });
 
   useEffect(() => {
     if (projectId) {
@@ -70,6 +114,26 @@ export function ProjectTeamPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleAddMember = () => {
+    if (!selectedUser || !selectedRole) {
+      toast.error('Veuillez sélectionner un utilisateur et un rôle');
+      return;
+    }
+
+    addMemberMutation.mutate({
+      projectId: projectId!,
+      userId: parseInt(selectedUser),
+      role: selectedRole
+    });
+  };
+
+  const handleRemoveMember = (userId: number) => {
+    removeMemberMutation.mutate({
+      projectId: projectId!,
+      userId
+    });
   };
 
   const getRoleIcon = (role: string) => {
@@ -115,6 +179,11 @@ export function ProjectTeamPage() {
     
     return matchesSearch && matchesRole;
   });
+
+  // Filtrer les utilisateurs qui ne sont pas déjà dans l'équipe
+  const availableUsers = users?.filter(user => 
+    !teamMembers.some(member => member.user.id === user.id)
+  ) || [];
 
   const roles = ['Chef de projet', 'Designer', 'Développeur', 'Développeur Senior', 'Rédacteur', 'Consultant', 'Assistant'];
 
@@ -175,26 +244,39 @@ export function ProjectTeamPage() {
             <DialogHeader>
               <DialogTitle>Ajouter un membre à l'équipe</DialogTitle>
               <DialogDescription>
-                Ajoutez un nouveau membre à l'équipe du projet.
+                Sélectionnez un utilisateur et un rôle pour l'ajouter à l'équipe du projet.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="user">Utilisateur</Label>
-                <Select>
+                <Select value={selectedUser} onValueChange={setSelectedUser}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un utilisateur" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1">Marie Dupont (marie.dupont@sakom.com)</SelectItem>
-                    <SelectItem value="2">Jean Martin (jean.martin@sakom.com)</SelectItem>
-                    <SelectItem value="3">Sophie Bernard (sophie.bernard@sakom.com)</SelectItem>
+                    {usersLoading ? (
+                      <div className="flex items-center justify-center p-4">
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Chargement des utilisateurs...
+                      </div>
+                    ) : availableUsers.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500">
+                        Tous les utilisateurs sont déjà dans l'équipe
+                      </div>
+                    ) : (
+                      availableUsers.map(user => (
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.first_name} {user.last_name} ({user.email})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="role">Rôle</Label>
-                <Select>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un rôle" />
                   </SelectTrigger>
@@ -210,8 +292,18 @@ export function ProjectTeamPage() {
               <Button variant="outline" onClick={() => setIsAddMemberDialogOpen(false)}>
                 Annuler
               </Button>
-              <Button onClick={() => setIsAddMemberDialogOpen(false)}>
-                Ajouter
+              <Button 
+                onClick={handleAddMember}
+                disabled={!selectedUser || !selectedRole || addMemberMutation.isPending}
+              >
+                {addMemberMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Ajout en cours...
+                  </>
+                ) : (
+                  'Ajouter'
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -302,11 +394,21 @@ export function ProjectTeamPage() {
 
               <div className="flex gap-2 mt-4 pt-4 border-t">
                 <Button variant="outline" size="sm" className="flex-1">
-                  <Edit className="w-4 h-4 mr-2" />
+                  <Edit className="h-4 w-4 mr-2" />
                   Modifier
                 </Button>
-                <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                  <Trash2 className="w-4 h-4" />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-red-600 hover:text-red-700"
+                  onClick={() => handleRemoveMember(member.user.id)}
+                  disabled={removeMemberMutation.isPending}
+                >
+                  {removeMemberMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -330,7 +432,7 @@ export function ProjectTeamPage() {
             </p>
             {!searchTerm && roleFilter === 'all' && (
               <Button onClick={() => setIsAddMemberDialogOpen(true)}>
-                <UserPlus className="w-4 h-4 mr-2" />
+                <UserPlus className="h-4 w-4 mr-2" />
                 Ajouter le premier membre
               </Button>
             )}

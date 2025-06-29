@@ -15,7 +15,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
-import ProjectManagement from './pages/ProjectManagement';
+import { ProjectManagement } from './pages/ProjectManagement';
 
 interface User {
   id: number;
@@ -95,7 +95,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard user={user} />} />
                   <Route path="/projects" element={<ProjectManagement />} />
-                  <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+                  <Route path="/projects/:id" element={<ProjectDetailsPage />} />
                   <Route path="/projects/:projectId/team" element={<ProjectTeamPage />} />
                   <Route path="/teams" element={<TeamsPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />

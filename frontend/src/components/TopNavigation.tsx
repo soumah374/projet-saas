@@ -34,8 +34,8 @@ export const TopNavigation = ({ isSidebarOpen, setIsSidebarOpen, user, onLogout 
           <Menu className="h-5 w-5" />
         </Button>
         <Link to="/" className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold text-lg whitespace-nowrap">
-          SAKOM
-        </Link>
+            SAKOM
+          </Link>
         <span className="hidden md:block text-sm text-gray-500 ml-2 whitespace-nowrap">Gestion de projets collaborative</span>
       </div>
 

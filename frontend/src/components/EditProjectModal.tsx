@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,16 +8,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Upload, X, Plus, Users, DollarSign, FileText, Calendar, Loader2, UserPlus } from 'lucide-react';
+import { Upload, X, Plus, Users, DollarSign, FileText, Calendar, Loader2, Edit, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CreateProjectData } from '@/lib/api';
+import { Project, UpdateProjectData } from '@/lib/api';
 import { useUsers } from '@/hooks/use-users';
 import { useTeams } from '@/hooks/use-teams';
 
-interface CreateProjectModalProps {
+interface EditProjectModalProps {
   children: React.ReactNode;
-  onProjectCreate: (project: CreateProjectData) => void;
+  project: Project;
+  onProjectUpdate: (projectId: string, data: UpdateProjectData) => void;
 }
 
 interface TeamMember {
@@ -76,34 +77,42 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
-export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectModalProps) => {
+export const EditProjectModal = ({ children, project, onProjectUpdate }: EditProjectModalProps) => {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   
   // Form data state
   const [formData, setFormData] = useState({
-    title: '',
-    type: undefined as string | undefined,
-    client: '',
-    description: '',
-    objectives: '',
-    budget: '',
+    title: project.title,
+    type: project.type,
+    client: project.client,
+    description: project.description,
+    objectives: project.objectives || '',
+    budget: project.budget || '',
     budgetDetails: {
-      production: '',
-      personnel: '',
-      marketing: '',
-      other: ''
+      production: project.budget_details?.production?.toString() || '',
+      personnel: project.budget_details?.personnel?.toString() || '',
+      marketing: project.budget_details?.marketing?.toString() || '',
+      other: project.budget_details?.other?.toString() || ''
     },
-    deadline: undefined as Date | undefined,
-    startDate: undefined as Date | undefined,
-    priority: 'Normale',
-    status: 'Planification',
-    category: undefined as string | undefined,
-    tags: [] as string[]
+    deadline: project.deadline ? new Date(project.deadline) : undefined,
+    startDate: project.start_date ? new Date(project.start_date) : undefined,
+    priority: project.priority,
+    status: project.status,
+    category: project.category || '',
+    tags: project.tags || []
   });
 
   // Team management state
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(
+    project.team_members?.map(member => ({
+      id: member.id.toString(),
+      user_id: member.user.id,
+      name: `${member.user.first_name} ${member.user.last_name}`,
+      role: member.role,
+      email: member.user.email
+    })) || []
+  );
   const [newMember, setNewMember] = useState({
     user_id: '',
     role: ''
@@ -253,11 +262,11 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     const totalBudget = formData.budget ? parseFloat(formData.budget) : calculateTotalBudget();
     
     // Format data for API
-    const projectData: CreateProjectData = {
+    const projectData: UpdateProjectData = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       objectives: formData.objectives?.trim() || undefined,
-      type: formData.type || 'Communication',
+      type: formData.type,
       category: formData.category || undefined,
       status: formData.status,
       priority: formData.priority,
@@ -277,41 +286,50 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
         role: member.role
       })),
     };
-    onProjectCreate(projectData);
+
+    onProjectUpdate(project.id, projectData);
     setOpen(false);
-    resetForm();
   };
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      type: '',
-      client: '',
-      description: '',
-      objectives: '',
-      budget: '',
-      budgetDetails: { production: '', personnel: '', marketing: '', other: '' },
-      deadline: undefined,
-      startDate: undefined,
-      priority: 'Normale',
-      status: 'Planification',
-      category: undefined,
-      tags: []
+      title: project.title,
+      type: project.type,
+      client: project.client,
+      description: project.description,
+      objectives: project.objectives || '',
+      budget: project.budget || '',
+      budgetDetails: {
+        production: project.budget_details?.production?.toString() || '',
+        personnel: project.budget_details?.personnel?.toString() || '',
+        marketing: project.budget_details?.marketing?.toString() || '',
+        other: project.budget_details?.other?.toString() || ''
+      },
+      deadline: project.deadline ? new Date(project.deadline) : undefined,
+      startDate: project.start_date ? new Date(project.start_date) : undefined,
+      priority: project.priority,
+      status: project.status,
+      category: project.category || '',
+      tags: project.tags || []
     });
-    setTeamMembers([]);
+    setTeamMembers(
+      project.team_members?.map(member => ({
+        id: member.id.toString(),
+        user_id: member.user.id,
+        name: `${member.user.first_name} ${member.user.last_name}`,
+        role: member.role,
+        email: member.user.email
+      })) || []
+    );
     setDocuments([]);
-    setSelectedTeam('');
-    setTeamSelectionMode('individual');
     setCurrentStep(1);
   };
 
   const nextStep = () => {
-    console.log('Current formData before nextStep:', formData);
     setCurrentStep(prev => Math.min(prev + 1, 4));
   };
   
   const prevStep = () => {
-    console.log('Current formData before prevStep:', formData);
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
@@ -379,18 +397,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
 
               <div>
                 <Label htmlFor="type">Type de projet *</Label>
-                <Select 
-                  key={`type-select-${currentStep}`}
-                  value={formData.type || ''} 
-                  onValueChange={(value) => {
-                    console.log('Type selected:', value);
-                    console.log('Previous formData.type:', formData.type);
-                    setFormData(prev => {
-                      console.log('Setting type from', prev.type, 'to', value);
-                      return { ...prev, type: value };
-                    });
-                  }}
-                >
+                <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un type" />
                   </SelectTrigger>
@@ -400,12 +407,11 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                     ))}
                   </SelectContent>
                 </Select>
-                {formData.type && <p className="text-sm text-green-600 mt-1">Type sélectionné: {formData.type}</p>}
               </div>
 
               <div>
                 <Label htmlFor="category">Catégorie</Label>
-                <Select value={formData.category || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner une catégorie" />
                   </SelectTrigger>
@@ -513,7 +519,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
               </div>
 
               <div>
-                <Label htmlFor="status">Statut initial</Label>
+                <Label htmlFor="status">Statut</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -769,7 +775,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Upload className="h-5 w-5 text-purple-600" />
-              Documents initiaux
+              Documents du projet
             </h3>
 
             <Card className="p-6">
@@ -841,7 +847,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-blue-900">
-            Créer un nouveau projet
+            Modifier le projet
           </DialogTitle>
           <div className="flex items-center justify-center mt-4">
             <div className="flex items-center space-x-2">
@@ -884,7 +890,8 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                 </Button>
               ) : (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  Créer le projet
+                  <Edit className="h-4 w-4 mr-2" />
+                  Mettre à jour le projet
                 </Button>
               )}
             </div>
@@ -893,4 +900,4 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
       </DialogContent>
     </Dialog>
   );
-};
+}; 
