@@ -93,6 +93,20 @@ export function ProjectDetailsPage() {
     }
   };
 
+  const getProgressColor = (progress: number) => {
+    if (progress >= 80) return 'text-green-600';
+    if (progress >= 60) return 'text-yellow-600';
+    if (progress >= 40) return 'text-orange-600';
+    return 'text-red-600';
+  };
+
+  const getProgressBgColor = (progress: number) => {
+    if (progress >= 80) return 'bg-green-600';
+    if (progress >= 60) return 'bg-yellow-600';
+    if (progress >= 40) return 'bg-orange-600';
+    return 'bg-red-600';
+  };
+
   const handleDeleteProject = async () => {
     if (!project || !confirm('Êtes-vous sûr de vouloir supprimer ce projet ?')) return;
     
@@ -227,9 +241,16 @@ export function ProjectDetailsPage() {
         <CardContent className="pt-6">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-medium">Progression du projet</span>
-            <span className="text-sm text-gray-600">{project.progress}%</span>
+            <span className={`text-sm font-medium ${getProgressColor(project.progress)}`}>
+              {project.progress}%
+            </span>
           </div>
-          <Progress value={project.progress} className="w-full" />
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div 
+              className={`h-2 rounded-full transition-all duration-300 ${getProgressBgColor(project.progress)}`}
+              style={{ width: `${project.progress}%` }}
+            />
+          </div>
         </CardContent>
       </Card>
 

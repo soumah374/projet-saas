@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ProjectTask } from '@/lib/api';
 import { useUsers } from '@/hooks/use-users';
+import { StyledDateInput } from '@/components/ui/DateInput';
 
 interface TaskModalProps {
   children: React.ReactNode;
@@ -110,38 +111,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       setFormKey(prev => prev + 1);
     }
   }, [open, task?.id]); // Only depend on open state and task ID
-
-  // Styled Date Input Component
-  const StyledDateInput = ({ 
-    value, 
-    onChange, 
-    label, 
-    placeholder, 
-    required = false 
-  }: {
-    value: Date | undefined;
-    onChange: (date: Date | undefined) => void;
-    label: string;
-    placeholder: string;
-    required?: boolean;
-  }) => (
-    <div className="space-y-2">
-      <Label htmlFor={label.toLowerCase().replace(/\s+/g, '-')}>
-        {label} {required && <span className="text-red-500">*</span>}
-      </Label>
-      <Input
-        id={label.toLowerCase().replace(/\s+/g, '-')}
-        type="date"
-        value={value ? value.toISOString().split('T')[0] : ''}
-        onChange={(e) => {
-          const dateValue = e.target.value;
-          onChange(dateValue ? new Date(dateValue) : undefined);
-        }}
-        required={required}
-        className="w-full"
-      />
-    </div>
-  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -91,6 +91,13 @@ export function ProjectManagement() {
     return 'text-red-600';
   };
 
+  const getProgressBgColor = (progress: number) => {
+    if (progress >= 80) return 'bg-green-600';
+    if (progress >= 60) return 'bg-yellow-600';
+    if (progress >= 40) return 'bg-orange-600';
+    return 'bg-red-600';
+  };
+
   const handleProjectCreate = async (projectData: any) => {
     try {
       await createProjectMutation.mutateAsync(projectData);
@@ -353,7 +360,7 @@ export function ProjectManagement() {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div 
-                        className={`h-2 rounded-full ${getProgressColor(project.progress).replace('text-', 'bg-')}`}
+                        className={`h-2 rounded-full ${getProgressBgColor(project.progress)}`}
                         style={{ width: `${project.progress}%` }}
                       />
                     </div>

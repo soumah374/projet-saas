@@ -14,6 +14,7 @@ import { fr } from 'date-fns/locale';
 import { CreateProjectData } from '@/lib/api';
 import { useUsers } from '@/hooks/use-users';
 import { useTeams } from '@/hooks/use-teams';
+import { StyledDateInput } from '@/components/ui/DateInput';
 
 interface CreateProjectModalProps {
   children: React.ReactNode;
@@ -79,6 +80,7 @@ if (typeof document !== 'undefined') {
 export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectModalProps) => {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [formKey, setFormKey] = useState(0);
   
   // Form data state
   const [formData, setFormData] = useState({
@@ -285,12 +287,17 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   const resetForm = () => {
     setFormData({
       title: '',
-      type: '',
+      type: undefined,
       client: '',
       description: '',
       objectives: '',
       budget: '',
-      budgetDetails: { production: '', personnel: '', marketing: '', other: '' },
+      budgetDetails: {
+        production: '',
+        personnel: '',
+        marketing: '',
+        other: ''
+      },
       deadline: undefined,
       startDate: undefined,
       priority: 'Normale',
@@ -303,6 +310,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     setSelectedTeam('');
     setTeamSelectionMode('individual');
     setCurrentStep(1);
+    setFormKey(prev => prev + 1);
   };
 
   const nextStep = () => {
@@ -314,35 +322,6 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     console.log('Current formData before prevStep:', formData);
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
-
-  // Styled Date Input Component
-  const StyledDateInput = ({ 
-    value, 
-    onChange, 
-    label, 
-    placeholder, 
-    required = false 
-  }: {
-    value: Date | undefined;
-    onChange: (date: Date | undefined) => void;
-    label: string;
-    placeholder: string;
-    required?: boolean;
-  }) => (
-    <div className="space-y-2">
-      <Label htmlFor={label.toLowerCase().replace(/\s+/g, '-')}>
-        {label} {required && <span className="text-red-500">*</span>}
-      </Label>
-      <Input
-        id={label.toLowerCase().replace(/\s+/g, '-')}
-        type="date"
-        value={value ? value.toISOString().split('T')[0] : ''}
-        onChange={(e) => onChange(e.target.value ? new Date(e.target.value) : undefined)}
-        required={required}
-        className="w-full"
-      />
-    </div>
-  );
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -863,7 +842,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
           </div>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form key={formKey} onSubmit={handleSubmit} className="space-y-6">
           {renderStepContent()}
 
           <div className="flex justify-between pt-6 border-t">
@@ -884,6 +863,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                 </Button>
               ) : (
                 <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />
                   Créer le projet
                 </Button>
               )}

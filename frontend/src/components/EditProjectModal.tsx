@@ -14,6 +14,7 @@ import { fr } from 'date-fns/locale';
 import { Project, UpdateProjectData } from '@/lib/api';
 import { useUsers } from '@/hooks/use-users';
 import { useTeams } from '@/hooks/use-teams';
+import { StyledDateInput } from '@/components/ui/DateInput';
 
 interface EditProjectModalProps {
   children: React.ReactNode;
@@ -332,35 +333,6 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
-
-  // Styled Date Input Component
-  const StyledDateInput = ({ 
-    value, 
-    onChange, 
-    label, 
-    placeholder, 
-    required = false 
-  }: {
-    value: Date | undefined;
-    onChange: (date: Date | undefined) => void;
-    label: string;
-    placeholder: string;
-    required?: boolean;
-  }) => (
-    <div className="space-y-2">
-      <Label htmlFor={label.toLowerCase().replace(/\s+/g, '-')}>
-        {label} {required && <span className="text-red-500">*</span>}
-      </Label>
-      <Input
-        id={label.toLowerCase().replace(/\s+/g, '-')}
-        type="date"
-        value={value ? value.toISOString().split('T')[0] : ''}
-        onChange={(e) => onChange(e.target.value ? new Date(e.target.value) : undefined)}
-        required={required}
-        className="w-full"
-      />
-    </div>
-  );
 
   const renderStepContent = () => {
     switch (currentStep) {
