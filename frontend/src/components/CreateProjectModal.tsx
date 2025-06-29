@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Upload, X, Plus, Users, DollarSign, FileText } from 'lucide-react';
+import { Upload, X, Plus, Users, DollarSign, FileText, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { CreateProjectData } from '@/lib/api';
 
 interface CreateProjectModalProps {
@@ -31,6 +32,47 @@ interface ProjectDocument {
   size: number;
 }
 
+// Custom styles for date inputs
+const dateInputStyles = `
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    background: transparent;
+    bottom: 0;
+    color: transparent;
+    cursor: pointer;
+    height: auto;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: auto;
+  }
+  
+  input[type="date"]::-webkit-datetime-edit {
+    padding: 0;
+  }
+  
+  input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+  
+  input[type="date"]::-webkit-datetime-edit-text {
+    padding: 0 2px;
+  }
+  
+  input[type="date"]::-webkit-datetime-edit-month-field,
+  input[type="date"]::-webkit-datetime-edit-day-field,
+  input[type="date"]::-webkit-datetime-edit-year-field {
+    padding: 0 2px;
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const style = document.createElement('style');
+  style.textContent = dateInputStyles;
+  document.head.appendChild(style);
+}
+
 export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectModalProps) => {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
@@ -38,7 +80,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   // Form data state
   const [formData, setFormData] = useState({
     title: '',
-    type: '',
+    type: undefined as string | undefined,
     client: '',
     description: '',
     objectives: '',
@@ -53,7 +95,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     startDate: undefined as Date | undefined,
     priority: 'Normale',
     status: 'Planification',
-    category: '',
+    category: undefined as string | undefined,
     tags: [] as string[]
   });
 
@@ -147,21 +189,42 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validation côté frontend
+    if (!formData.title.trim()) {
+      alert('Le titre du projet est requis');
+      return;
+    }
+    
+    if (!formData.type) {
+      alert('Le type de projet est requis');
+      return;
+    }
+    
+    if (!formData.client.trim()) {
+      alert('Le client est requis');
+      return;
+    }
+    
+    if (!formData.deadline) {
+      alert('La date d\'échéance est requise');
+      return;
+    }
+    
     const totalBudget = formData.budget ? parseFloat(formData.budget) : calculateTotalBudget();
     
     // Format data for API
     const projectData: CreateProjectData = {
-      title: formData.title,
-      description: formData.description,
-      objectives: formData.objectives || undefined,
-      type: formData.type,
+      title: formData.title.trim(),
+      description: formData.description.trim(),
+      objectives: formData.objectives?.trim() || undefined,
+      type: formData.type || 'Communication',
       category: formData.category || undefined,
       status: formData.status,
       priority: formData.priority,
       start_date: formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : undefined,
       deadline: formData.deadline ? format(formData.deadline, 'yyyy-MM-dd') : '',
       budget: totalBudget.toString(),
-      client: formData.client,
+      client: formData.client.trim(),
       tags: formData.tags.length > 0 ? formData.tags : undefined,
       budget_details: {
         production: parseFloat(formData.budgetDetails.production) || 0,
@@ -173,7 +236,6 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
       // For now, we'll create the project without team members
       // They can be added later through the project details page
     };
-    
     onProjectCreate(projectData);
     setOpen(false);
     resetForm();
@@ -192,7 +254,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
       startDate: undefined,
       priority: 'Normale',
       status: 'Planification',
-      category: '',
+      category: undefined,
       tags: []
     });
     setTeamMembers([]);
@@ -200,8 +262,48 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     setCurrentStep(1);
   };
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4));
-  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+  const nextStep = () => {
+    console.log('Current formData before nextStep:', formData);
+    setCurrentStep(prev => Math.min(prev + 1, 4));
+  };
+  
+  const prevStep = () => {
+    console.log('Current formData before prevStep:', formData);
+    setCurrentStep(prev => Math.max(prev - 1, 1));
+  };
+
+  // Styled Date Input Component
+  const StyledDateInput = ({ 
+    value, 
+    onChange, 
+    label, 
+    placeholder, 
+    required = false 
+  }: {
+    value: Date | undefined;
+    onChange: (date: Date | undefined) => void;
+    label: string;
+    placeholder: string;
+    required?: boolean;
+  }) => (
+    <div className="relative">
+      <Label>{label}</Label>
+      <div className="relative">
+        <Input
+          type="date"
+          value={value ? format(value, 'yyyy-MM-dd') : ''}
+          onChange={(e) => {
+            const date = e.target.value ? new Date(e.target.value) : undefined;
+            onChange(date);
+          }}
+          className="w-full pr-10"
+          min={new Date().toISOString().split('T')[0]}
+          required={required}
+        />
+        <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+      </div>
+    </div>
+  );
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -238,7 +340,18 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
 
               <div>
                 <Label htmlFor="type">Type de projet *</Label>
-                <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value }))}>
+                <Select 
+                  key={`type-select-${currentStep}`}
+                  value={formData.type || ''} 
+                  onValueChange={(value) => {
+                    console.log('Type selected:', value);
+                    console.log('Previous formData.type:', formData.type);
+                    setFormData(prev => {
+                      console.log('Setting type from', prev.type, 'to', value);
+                      return { ...prev, type: value };
+                    });
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner un type" />
                   </SelectTrigger>
@@ -248,11 +361,12 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.type && <p className="text-sm text-green-600 mt-1">Type sélectionné: {formData.type}</p>}
               </div>
 
               <div>
                 <Label htmlFor="category">Catégorie</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                <Select value={formData.category || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner une catégorie" />
                   </SelectTrigger>
@@ -330,36 +444,20 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label>Date de début</Label>
-                <Input
-                  type="date"
-                  value={formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : ''}
-                  onChange={(e) => {
-                    const date = e.target.value ? new Date(e.target.value) : undefined;
-                    console.log('Date de début sélectionnée:', date);
-                    setFormData(prev => ({ ...prev, startDate: date }));
-                  }}
-                  className="w-full"
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
+              <StyledDateInput
+                value={formData.startDate}
+                onChange={(date) => setFormData(prev => ({ ...prev, startDate: date }))}
+                label="Date de début"
+                placeholder="Sélectionnez la date de début"
+              />
 
-              <div>
-                <Label>Date d'échéance *</Label>
-                <Input
-                  type="date"
-                  value={formData.deadline ? format(formData.deadline, 'yyyy-MM-dd') : ''}
-                  onChange={(e) => {
-                    const date = e.target.value ? new Date(e.target.value) : undefined;
-                    console.log('Date d\'échéance sélectionnée:', date);
-                    setFormData(prev => ({ ...prev, deadline: date }));
-                  }}
-                  className="w-full"
-                  min={new Date().toISOString().split('T')[0]}
-                  required
-                />
-              </div>
+              <StyledDateInput
+                value={formData.deadline}
+                onChange={(date) => setFormData(prev => ({ ...prev, deadline: date }))}
+                label="Date d'échéance *"
+                placeholder="Sélectionnez la date d'échéance"
+                required
+              />
 
               <div>
                 <Label htmlFor="priority">Priorité</Label>
@@ -396,19 +494,19 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
               <h4 className="font-medium mb-4">Budget du projet</h4>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="budget">Budget total (€)</Label>
+                  <Label htmlFor="budget">Budget total (GNF)</Label>
                   <Input
                     id="budget"
                     type="number"
                     value={formData.budget}
                     onChange={(e) => setFormData(prev => ({ ...prev, budget: e.target.value }))}
-                    placeholder="25000"
+                    placeholder="0"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="production">Production (€)</Label>
+                    <Label htmlFor="production">Production (GNF)</Label>
                     <Input
                       id="production"
                       type="number"
@@ -417,11 +515,11 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                         ...prev, 
                         budgetDetails: { ...prev.budgetDetails, production: e.target.value }
                       }))}
-                      placeholder="10000"
+                      placeholder="0"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="personnel">Personnel (€)</Label>
+                    <Label htmlFor="personnel">Personnel (GNF)</Label>
                     <Input
                       id="personnel"
                       type="number"
@@ -430,11 +528,11 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                         ...prev, 
                         budgetDetails: { ...prev.budgetDetails, personnel: e.target.value }
                       }))}
-                      placeholder="8000"
+                      placeholder="0"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="marketing">Marketing (€)</Label>
+                    <Label htmlFor="marketing">Marketing (GNF)</Label>
                     <Input
                       id="marketing"
                       type="number"
@@ -443,11 +541,11 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                         ...prev, 
                         budgetDetails: { ...prev.budgetDetails, marketing: e.target.value }
                       }))}
-                      placeholder="5000"
+                      placeholder="0"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="other">Autres (€)</Label>
+                    <Label htmlFor="other">Autres (GNF)</Label>
                     <Input
                       id="other"
                       type="number"
@@ -456,7 +554,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                         ...prev, 
                         budgetDetails: { ...prev.budgetDetails, other: e.target.value }
                       }))}
-                      placeholder="2000"
+                      placeholder="0"
                     />
                   </div>
                 </div>
@@ -464,7 +562,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                 {calculateTotalBudget() > 0 && (
                   <Card className="p-3 bg-blue-50">
                     <p className="text-sm text-blue-700">
-                      <strong>Total calculé: {calculateTotalBudget().toLocaleString()} €</strong>
+                      <strong>Total calculé: {calculateTotalBudget().toLocaleString()} GNF</strong>
                     </p>
                   </Card>
                 )}

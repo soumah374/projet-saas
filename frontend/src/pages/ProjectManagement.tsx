@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Search, Filter, Plus, Eye, Edit, Archive, MoreHorizontal, Loader2 } from 'lucide-react';
 import { ProjectCard } from '@/components/ProjectCard';
 import { CreateProjectModal } from '@/components/CreateProjectModal';
-import { ProjectDetailsPage } from '@/components/ProjectDetailsPage';
 import { useProjects, useProjectStatistics, useCreateProject } from '@/hooks/use-projects';
 import { Project } from '@/lib/api';
 import { toast } from 'sonner';
@@ -19,7 +18,6 @@ const ProjectManagement = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   // React Query hooks
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
@@ -55,19 +53,6 @@ const ProjectManagement = () => {
     }
   };
 
-  const handleProjectView = (project: Project) => {
-    setSelectedProject(project);
-  };
-
-  const handleBackToList = () => {
-    setSelectedProject(null);
-  };
-
-  const handleUpdateProject = (updatedProject: Project) => {
-    // This will be handled by the ProjectDetailsPage component
-    console.log('Updated project:', updatedProject);
-  };
-
   const handleCreateProject = async (projectData: any) => {
     try {
       await createProjectMutation.mutateAsync(projectData);
@@ -77,17 +62,6 @@ const ProjectManagement = () => {
       console.error('Create project error:', error);
     }
   };
-
-  // If a project is selected, show the details page
-  if (selectedProject) {
-    return (
-      <ProjectDetailsPage
-        project={selectedProject}
-        onBack={handleBackToList}
-        onUpdateProject={handleUpdateProject}
-      />
-    );
-  }
 
   // Show loading state
   if (projectsLoading) {
@@ -268,9 +242,11 @@ const ProjectManagement = () => {
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {projects.map(project => (
-                <div key={project.id} onClick={() => handleProjectView(project)} className="cursor-pointer">
-                  <ProjectCard project={project} userRole="Chef de projet" />
-                </div>
+                <ProjectCard 
+                  key={project.id} 
+                  project={project} 
+                  userRole="Chef de projet" 
+                />
               ))}
             </div>
           ) : (
@@ -330,7 +306,7 @@ const ProjectManagement = () => {
                           variant="ghost" 
                           size="sm" 
                           className="rounded-full"
-                          onClick={() => handleProjectView(project)}
+                          onClick={() => window.location.href = `/projects/${project.id}`}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>

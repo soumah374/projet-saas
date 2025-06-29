@@ -8,6 +8,8 @@ import { LoginPage } from './pages/LoginPage';
 import { Dashboard } from './pages/Dashboard';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { TeamsPage } from './pages/TeamsPage';
+import { ProjectTeamPage } from './pages/ProjectTeamPage';
+import { ProjectDetailsPage } from './pages/ProjectDetailsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
@@ -93,6 +95,8 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard user={user} />} />
                   <Route path="/projects" element={<ProjectManagement />} />
+                  <Route path="/projects/:projectId" element={<ProjectDetailsPage />} />
+                  <Route path="/projects/:projectId/team" element={<ProjectTeamPage />} />
                   <Route path="/teams" element={<TeamsPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/reports" element={<ReportsPage />} />

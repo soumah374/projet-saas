@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,27 +11,45 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
   ArrowLeft, Edit3, Users, Calendar, FileText, MessageSquare, 
-  Clock, Euro, CheckCircle, AlertTriangle, Play, Pause, Square,
-  Save, X
+  Clock, DollarSign, CheckCircle, AlertTriangle, Play, Pause, Square,
+  Save, X, ArrowRight
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { projectApi, Project } from '@/lib/api';
 
-interface ProjectDetailsPageProps {
-  project: any;
-  onBack: () => void;
-  onUpdateProject: (updatedProject: any) => void;
-}
-
-export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: ProjectDetailsPageProps) => {
-  const [currentProject, setCurrentProject] = useState(project);
+export const ProjectDetailsPage = () => {
+  const { projectId } = useParams<{ projectId: string }>();
+  const navigate = useNavigate();
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [newComment, setNewComment] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [editingField, setEditingField] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const statuses = ['Planification', 'En cours', 'Production', 'En pause', 'Terminé'];
   const priorities = ['Basse', 'Normale', 'Haute', 'Urgente'];
   const types = ['Événementiel', 'Communication', 'Audiovisuel', 'Digital', 'Autre'];
+
+  useEffect(() => {
+    if (projectId) {
+      loadProject();
+    }
+  }, [projectId]);
+
+  const loadProject = async () => {
+    try {
+      setIsLoading(true);
+      const projectData = await projectApi.getProject(projectId!);
+      setCurrentProject(projectData);
+    } catch (err) {
+      setError('Erreur lors du chargement du projet');
+      console.error('Error loading project:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -53,15 +72,26 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
     }
   };
 
-  const updateProject = (updates: any) => {
-    const updatedProject = { ...currentProject, ...updates };
-    setCurrentProject(updatedProject);
-    onUpdateProject(updatedProject);
+  const updateProject = async (updates: any) => {
+    if (!currentProject) return;
     
-    toast({
-      title: "Projet mis à jour",
-      description: "Les modifications ont been sauvegardées avec succès.",
-    });
+    try {
+      const updatedProject = { ...currentProject, ...updates };
+      await projectApi.updateProject(currentProject.id, updatedProject);
+      setCurrentProject(updatedProject);
+      
+      toast({
+        title: "Projet mis à jour",
+        description: "Les modifications ont été sauvegardées avec succès.",
+      });
+    } catch (err) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les modifications.",
+        variant: "destructive",
+      });
+      console.error('Error updating project:', err);
+    }
   };
 
   const handleSaveField = (field: string, value: any) => {
@@ -75,7 +105,7 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
   };
 
   const addComment = () => {
-    if (newComment.trim()) {
+    if (newComment.trim() && currentProject) {
       const comment = {
         id: Date.now(),
         text: newComment,
@@ -127,11 +157,11 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
           <div className="space-y-2">
             <Textarea
               value={value}
-              onChange={(e) => setCurrentProject(prev => ({ ...prev, [field]: e.target.value }))}
+              onChange={(e) => setCurrentProject(prev => prev ? { ...prev, [field]: e.target.value } : null)}
               rows={4}
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={() => handleSaveField(field, currentProject[field])}>
+              <Button size="sm" onClick={() => handleSaveField(field, currentProject?.[field])}>
                 <Save className="h-4 w-4 mr-1" />
                 Sauvegarder
               </Button>
@@ -147,14 +177,14 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
           <div className="flex items-center gap-2">
             <Input
               value={value}
-              onChange={(e) => setCurrentProject(prev => ({ ...prev, [field]: e.target.value }))}
+              onChange={(e) => setCurrentProject(prev => prev ? { ...prev, [field]: e.target.value } : null)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveField(field, currentProject[field]);
+                if (e.key === 'Enter') handleSaveField(field, currentProject?.[field]);
                 if (e.key === 'Escape') handleCancelEdit();
               }}
               autoFocus
             />
-            <Button size="sm" onClick={() => handleSaveField(field, currentProject[field])}>
+            <Button size="sm" onClick={() => handleSaveField(field, currentProject?.[field])}>
               <Save className="h-4 w-4" />
             </Button>
             <Button size="sm" variant="ghost" onClick={handleCancelEdit}>
@@ -176,12 +206,37 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
     );
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement du projet...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !currentProject) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error || 'Projet non trouvé'}</p>
+          <Button onClick={() => navigate('/projects')}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Retour aux projets
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <Button variant="ghost" onClick={onBack} className="mb-4">
+          <Button variant="ghost" onClick={() => navigate('/projects')} className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Retour aux projets
           </Button>
@@ -200,7 +255,7 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
                 <span>•</span>
                 <span>Client: {currentProject.client}</span>
                 <span>•</span>
-                <span>Créé le {new Date(currentProject.createdAt || Date.now()).toLocaleDateString('fr-FR')}</span>
+                <span>Créé le {new Date(currentProject.created_at || Date.now()).toLocaleDateString('fr-FR')}</span>
               </div>
             </div>
             <div className="flex gap-2">
@@ -346,7 +401,7 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
                   <div className="flex justify-between">
                     <span className="text-gray-600">Date de création:</span>
                     <span className="font-medium">
-                      {new Date(currentProject.createdAt || Date.now()).toLocaleDateString('fr-FR')}
+                      {new Date(currentProject.created_at || Date.now()).toLocaleDateString('fr-FR')}
                     </span>
                   </div>
                 </CardContent>
@@ -357,26 +412,51 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
           <TabsContent value="team">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Équipe du projet
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Équipe du projet
+                  </div>
+                  <Button 
+                    onClick={() => navigate(`/projects/${currentProject.id}/team`)}
+                    variant="outline"
+                    size="sm"
+                  >
+                    Voir l'équipe complète
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {(currentProject.team || []).map((member: string, index: number) => (
+                  {(currentProject.team_members || []).map((member: any, index: number) => (
                     <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                         <span className="text-blue-600 font-semibold">
-                          {member.split(' ').map(n => n[0]).join('')}
+                          {member.user?.first_name?.[0]}{member.user?.last_name?.[0] || member.user?.username?.[0]}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium">{member}</p>
-                        <p className="text-sm text-gray-500">Membre d'équipe</p>
+                        <p className="font-medium">
+                          {member.user?.first_name} {member.user?.last_name || member.user?.username}
+                        </p>
+                        <p className="text-sm text-gray-500">{member.role}</p>
                       </div>
                     </div>
                   ))}
+                  {(!currentProject.team_members || currentProject.team_members.length === 0) && (
+                    <div className="col-span-full text-center py-8">
+                      <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p className="text-gray-500 mb-4">Aucun membre d'équipe assigné</p>
+                      <Button 
+                        onClick={() => navigate(`/projects/${currentProject.id}/team`)}
+                        variant="outline"
+                      >
+                        <Users className="h-4 w-4 mr-2" />
+                        Gérer l'équipe
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -404,23 +484,29 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Euro className="h-5 w-5" />
-                  Informations budgétaires
+                  <DollarSign className="h-5 w-5" />
+                  Budget du projet
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-600">Budget alloué</p>
-                    <p className="text-2xl font-bold text-blue-900">{currentProject.budget || '0'}€</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-medium mb-4">Budget total</h4>
+                    <div className="text-3xl font-bold text-blue-600 mb-2">
+                      {currentProject.budget ? `${currentProject.budget.toLocaleString()} GNF` : 'Non défini'}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Budget alloué au projet
+                    </div>
                   </div>
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <p className="text-sm text-blue-600">Facturé</p>
-                    <p className="text-2xl font-bold text-blue-900">18 750€</p>
-                  </div>
-                  <div className="text-center p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">Restant</p>
-                    <p className="text-2xl font-bold text-gray-900">6 250€</p>
+                  <div>
+                    <h4 className="font-medium mb-4">Dépenses</h4>
+                    <div className="text-3xl font-bold text-green-600 mb-2">
+                      0 GNF
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Dépenses engagées
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -432,30 +518,27 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  Commentaires et historique
+                  Commentaires et notes
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-4">
-                  <Textarea
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    placeholder="Ajouter un commentaire..."
-                    className="flex-1"
-                  />
-                  <Button onClick={addComment}>Publier</Button>
-                </div>
-                
-                <div className="space-y-4 mt-6">
-                  {(currentProject.comments || []).map((comment: any) => (
-                    <div key={comment.id} className="flex gap-3 p-4 bg-gray-50 rounded-lg">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 text-sm font-semibold">
-                          {comment.author.split(' ').map((n: string) => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="Ajouter un commentaire..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button onClick={addComment} disabled={!newComment.trim()}>
+                      Ajouter
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {(currentProject.comments || []).map((comment: any) => (
+                      <div key={comment.id} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-start mb-2">
                           <span className="font-medium">{comment.author}</span>
                           <span className="text-sm text-gray-500">
                             {new Date(comment.timestamp).toLocaleDateString('fr-FR')}
@@ -463,8 +546,8 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
                         </div>
                         <p className="text-gray-700">{comment.text}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -473,4 +556,4 @@ export const ProjectDetailsPage = ({ project, onBack, onUpdateProject }: Project
       </div>
     </div>
   );
-};
+}; 
