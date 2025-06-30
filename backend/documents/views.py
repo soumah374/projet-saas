@@ -16,27 +16,27 @@ class DocumentViewSet(viewsets.ModelViewSet):
     serializer_class = DocumentSerializer
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['type', 'is_shared']
-    search_fields = ['name', 'description']
-    ordering_fields = ['created_at', 'updated_at', 'name']
+    filterset_fields = ['document_type', 'is_public', 'category']
+    search_fields = ['title', 'description']
+    ordering_fields = ['created_at', 'updated_at', 'title']
     ordering = ['-created_at']
     
     def perform_create(self, serializer):
         """Créer un document avec l'utilisateur connecté"""
-        serializer.save(created_by=self.request.user)
+        serializer.save(uploaded_by=self.request.user)
     
     @action(detail=True, methods=['post'])
-    def share(self, request, pk=None):
-        """Partager un document"""
+    def make_public(self, request, pk=None):
+        """Rendre un document public"""
         document = self.get_object()
-        document.is_shared = True
+        document.is_public = True
         document.save()
-        return Response({'message': 'Document partagé avec succès'})
+        return Response({'message': 'Document rendu public avec succès'})
     
     @action(detail=True, methods=['post'])
-    def unshare(self, request, pk=None):
-        """Ne plus partager un document"""
+    def make_private(self, request, pk=None):
+        """Rendre un document privé"""
         document = self.get_object()
-        document.is_shared = False
+        document.is_public = False
         document.save()
-        return Response({'message': 'Document non partagé'}) 
+        return Response({'message': 'Document rendu privé'}) 

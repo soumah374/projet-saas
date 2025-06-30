@@ -23,9 +23,9 @@ import {
   Share2,
   User
 } from "lucide-react";
-import { useProject, useUpdateProject, useDeleteProject, useCreateTask, useUpdateTask, useDeleteTask } from "@/hooks/use-projects";
+import { useProject, useUpdateProject, useDeleteProject, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask } from "@/hooks/use-projects";
 import { useUsers } from "@/hooks/use-users";
-import { Project, ProjectTask, UpdateProjectData, CreateTaskData, UpdateTaskData } from "@/lib/api";
+import type { CreateProjectForm, CreateTaskForm, ProjectTaskStatus } from "@/lib/types";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -42,9 +42,9 @@ export function ProjectDetailsPage() {
   const { data: users } = useUsers({ is_active: true });
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
-  const createTaskMutation = useCreateTask();
-  const updateTaskMutation = useUpdateTask();
-  const deleteTaskMutation = useDeleteTask();
+  const createTaskMutation = useCreateProjectTask();
+  const updateTaskMutation = useUpdateProjectTask();
+  const deleteTaskMutation = useDeleteProjectTask();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -119,7 +119,7 @@ export function ProjectDetailsPage() {
     }
   };
 
-  const handleProjectUpdate = async (projectId: string, data: UpdateProjectData) => {
+  const handleProjectUpdate = async (projectId: string, data: Partial<CreateProjectForm>) => {
     try {
       await updateProjectMutation.mutateAsync({ id: projectId, data });
     } catch (error) {
@@ -127,7 +127,7 @@ export function ProjectDetailsPage() {
     }
   };
 
-  const handleTaskSave = async (taskData: CreateTaskData | UpdateTaskData) => {
+  const handleTaskSave = async (taskData: any) => {
     if (!id) return;
 
     try {
@@ -199,7 +199,21 @@ export function ProjectDetailsPage() {
         </div>
         <div className="flex gap-2">
           <EditProjectModal 
-            project={project} 
+            project={{
+              id: project.id,
+              title: project.title,
+              type: project.type,
+              status: project.status,
+              priority: project.priority,
+              progress: project.progress,
+              deadline: project.deadline,
+              client: project.client,
+              created_by: project.created_by,
+              team_count: project.team_members?.length?.toString() || '0',
+              days_remaining: project.days_remaining?.toString() || '0',
+              is_overdue: project.is_overdue?.toString() || 'false',
+              created_at: project.created_at
+            }} 
             onProjectUpdate={handleProjectUpdate}
           >
             <Button className="bg-blue-600 hover:bg-blue-700">
@@ -329,7 +343,7 @@ export function ProjectDetailsPage() {
                     </p>
                   </div>
                 </div>
-                {project.days_remaining !== undefined && (
+                {project.days_remaining && (
                   <div className="flex items-center gap-3">
                     {project.is_overdue ? (
                       <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -339,10 +353,7 @@ export function ProjectDetailsPage() {
                     <div>
                       <p className="text-sm font-medium">Jours restants</p>
                       <p className={`text-sm ${project.is_overdue ? 'text-red-600' : 'text-gray-600'}`}>
-                        {project.days_remaining < 0 
-                          ? `${Math.abs(project.days_remaining)} jours de retard`
-                          : `${project.days_remaining} jours`
-                        }
+                        {project.days_remaining}
                       </p>
                     </div>
                   </div>

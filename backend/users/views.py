@@ -20,6 +20,7 @@ from .serializers import (
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Vue personnalisée pour l'obtention de tokens JWT"""
     serializer_class = CustomTokenObtainPairSerializer
+    permission_classes = [AllowAny]
 
 
 class AuthViewSet(viewsets.ViewSet):

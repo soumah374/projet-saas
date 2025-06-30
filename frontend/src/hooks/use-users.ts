@@ -1,27 +1,103 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { userApi, User } from '../lib/api';
+import { usersAPI } from '@/lib/api';
+import type { User, UserList, UserCreate, UserUpdate, UserStatistics } from '@/lib/types';
 import { toast } from 'sonner';
 
-// Hook pour récupérer la liste des utilisateurs
+// ===== UTILISATEURS =====
+
 export const useUsers = (params?: {
   search?: string;
-  is_active?: boolean;
   ordering?: string;
+  page?: number;
+  is_active?: boolean;
+  profile__role?: string;
+  profile__department?: string;
 }) => {
   return useQuery({
     queryKey: ['users', params],
-    queryFn: () => userApi.getUsers(params),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: () => usersAPI.getUsers(params),
   });
 };
 
-// Hook pour récupérer un utilisateur spécifique
 export const useUser = (id: number) => {
   return useQuery({
     queryKey: ['user', id],
-    queryFn: () => userApi.getUser(id),
+    queryFn: () => usersAPI.getUser(id),
     enabled: !!id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+export const useCreateUser = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: UserCreate) => usersAPI.createUser(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+export const useUpdateUser = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UserUpdate }) =>
+      usersAPI.updateUser(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      queryClient.invalidateQueries({ queryKey: ['user', id] });
+    },
+  });
+};
+
+export const useDeleteUser = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: number) => usersAPI.deleteUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
+
+// ===== UTILISATEUR CONNECTÉ =====
+
+export const useMe = () => {
+  return useQuery({
+    queryKey: ['me'],
+    queryFn: () => usersAPI.getMe(),
+  });
+};
+
+export const useUpdateMe = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: UserUpdate) => usersAPI.updateMe(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+};
+
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: (data: {
+      old_password: string;
+      new_password: string;
+      new_password_confirm: string;
+    }) => usersAPI.changePassword(data),
+  });
+};
+
+// ===== STATISTIQUES =====
+
+export const useUserStatistics = () => {
+  return useQuery({
+    queryKey: ['user-statistics'],
+    queryFn: () => usersAPI.getStatistics(),
   });
 };
 
@@ -29,7 +105,7 @@ export const useUser = (id: number) => {
 export const useCurrentUser = () => {
   return useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => userApi.getCurrentUser(),
+    queryFn: () => usersAPI.getCurrentUser(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -39,7 +115,7 @@ export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: userApi.updateProfile,
+    mutationFn: usersAPI.updateProfile,
     onSuccess: (updatedProfile) => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['user', updatedProfile.id] });

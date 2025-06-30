@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,17 +8,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Upload, X, Plus, Users, DollarSign, FileText, Calendar, Loader2, UserPlus } from 'lucide-react';
+import { Upload, X, Plus, Users, DollarSign, FileText, Loader2, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { CreateProjectData } from '@/lib/api';
+import type { 
+  CreateProjectForm, 
+  ProjectType, 
+  ProjectCategory, 
+  ProjectStatus, 
+  ProjectPriority, 
+  ProjectMemberRole 
+} from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useTeams } from '@/hooks/use-teams';
-import { StyledDateInput } from '@/components/ui/DateInput';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
 
 interface CreateProjectModalProps {
   children: React.ReactNode;
-  onProjectCreate: (project: CreateProjectData) => void;
+  onProjectCreate: (project: CreateProjectForm) => void;
 }
 
 interface TeamMember {
@@ -36,7 +45,7 @@ interface ProjectDocument {
   size: number;
 }
 
-// Custom styles for date inputs
+// Custom styles for date inputs and calendar
 const dateInputStyles = `
   input[type="date"]::-webkit-calendar-picker-indicator {
     background: transparent;
@@ -68,6 +77,31 @@ const dateInputStyles = `
   input[type="date"]::-webkit-datetime-edit-year-field {
     padding: 0 2px;
   }
+
+  /* Calendar component styles */
+  .rdp-day {
+    cursor: pointer !important;
+  }
+  
+  .rdp-day:hover {
+    cursor: pointer !important;
+  }
+  
+  .rdp-day_button {
+    cursor: pointer !important;
+  }
+  
+  .rdp-day_button:hover {
+    cursor: pointer !important;
+  }
+  
+  .rdp-nav_button {
+    cursor: pointer !important;
+  }
+  
+  .rdp-nav_button:hover {
+    cursor: pointer !important;
+  }
 `;
 
 // Inject styles
@@ -85,7 +119,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   // Form data state
   const [formData, setFormData] = useState({
     title: '',
-    type: undefined as string | undefined,
+    type: undefined as ProjectType | undefined,
     client: '',
     description: '',
     objectives: '',
@@ -98,9 +132,9 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     },
     deadline: undefined as Date | undefined,
     startDate: undefined as Date | undefined,
-    priority: 'Normale',
-    status: 'Planification',
-    category: undefined as string | undefined,
+    priority: 'Normale' as ProjectPriority,
+    status: 'Planification' as ProjectStatus,
+    category: undefined as ProjectCategory | undefined,
     tags: [] as string[]
   });
 
@@ -116,6 +150,10 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   // Documents state
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [newTag, setNewTag] = useState('');
+  
+  // Popover states
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
 
   // React Query hooks
   const { data: users, isLoading: usersLoading } = useUsers({
@@ -138,7 +176,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   const addTeamMember = () => {
     if (!newMember.user_id || !newMember.role) return;
 
-    const selectedUser = users?.find(user => user.id.toString() === newMember.user_id);
+    const selectedUser = users?.results?.find(user => user.id.toString() === newMember.user_id);
     if (!selectedUser) return;
 
     const member: TeamMember = {
@@ -159,19 +197,8 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
 
   const handleTeamSelection = (teamId: string) => {
     setSelectedTeam(teamId);
-    if (teamId) {
-      const selectedTeamData = teams?.find(team => team.id.toString() === teamId);
-      if (selectedTeamData && selectedTeamData.team_members) {
-        const teamMembersFromTeam = selectedTeamData.team_members.map(member => ({
-          id: member.id.toString(),
-          user_id: member.user.id,
-          name: `${member.user.first_name} ${member.user.last_name}`,
-          role: member.role,
-          email: member.user.email
-        }));
-        setTeamMembers(teamMembersFromTeam);
-      }
-    }
+    // Note: Team selection will need to be implemented when team members API is available
+    // For now, we'll just set the selected team ID
   };
 
   const clearTeamSelection = () => {
@@ -255,7 +282,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     const totalBudget = formData.budget ? parseFloat(formData.budget) : calculateTotalBudget();
     
     // Format data for API
-    const projectData: CreateProjectData = {
+    const projectData: CreateProjectForm = {
       title: formData.title.trim(),
       description: formData.description.trim(),
       objectives: formData.objectives?.trim() || undefined,
@@ -269,14 +296,14 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
       client: formData.client.trim(),
       tags: formData.tags.length > 0 ? formData.tags : undefined,
       budget_details: {
-        production: parseFloat(formData.budgetDetails.production) || 0,
-        personnel: parseFloat(formData.budgetDetails.personnel) || 0,
-        marketing: parseFloat(formData.budgetDetails.marketing) || 0,
-        other: parseFloat(formData.budgetDetails.other) || 0,
+        production: (parseFloat(formData.budgetDetails.production) || 0).toString(),
+        personnel: (parseFloat(formData.budgetDetails.personnel) || 0).toString(),
+        marketing: (parseFloat(formData.budgetDetails.marketing) || 0).toString(),
+        other: (parseFloat(formData.budgetDetails.other) || 0).toString(),
       },
       team_members: teamMembers.map(member => ({
         user_id: member.user_id,
-        role: member.role
+        role: member.role as ProjectMemberRole
       })),
     };
     onProjectCreate(projectData);
@@ -300,8 +327,8 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
       },
       deadline: undefined,
       startDate: undefined,
-      priority: 'Normale',
-      status: 'Planification',
+      priority: 'Normale' as ProjectPriority,
+      status: 'Planification' as ProjectStatus,
       category: undefined,
       tags: []
     });
@@ -309,17 +336,17 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     setDocuments([]);
     setSelectedTeam('');
     setTeamSelectionMode('individual');
+    setStartDateOpen(false);
+    setDeadlineOpen(false);
     setCurrentStep(1);
     setFormKey(prev => prev + 1);
   };
 
   const nextStep = () => {
-    console.log('Current formData before nextStep:', formData);
     setCurrentStep(prev => Math.min(prev + 1, 4));
   };
   
   const prevStep = () => {
-    console.log('Current formData before prevStep:', formData);
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
 
@@ -362,12 +389,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                   key={`type-select-${currentStep}`}
                   value={formData.type || ''} 
                   onValueChange={(value) => {
-                    console.log('Type selected:', value);
-                    console.log('Previous formData.type:', formData.type);
-                    setFormData(prev => {
-                      console.log('Setting type from', prev.type, 'to', value);
-                      return { ...prev, type: value };
-                    });
+                    setFormData(prev => ({ ...prev, type: value as ProjectType }));
                   }}
                 >
                   <SelectTrigger>
@@ -384,7 +406,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
 
               <div>
                 <Label htmlFor="category">Catégorie</Label>
-                <Select value={formData.category || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}>
+                <Select value={formData.category || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as ProjectCategory }))}>
                   <SelectTrigger>
                     <SelectValue placeholder="Sélectionner une catégorie" />
                   </SelectTrigger>
@@ -462,24 +484,67 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <StyledDateInput
-                value={formData.startDate}
-                onChange={(date) => setFormData(prev => ({ ...prev, startDate: date }))}
-                label="Date de début"
-                placeholder="Sélectionnez la date de début"
-              />
+              <div>
+                <Label>Date de début</Label>
+                <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.startDate ? format(formData.startDate, 'PPP', { locale: fr }) : 'Sélectionner une date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-auto p-0" 
+                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={formData.startDate}
+                      onSelect={(date) => {
+                        setFormData(prev => ({ ...prev, startDate: date || undefined }));
+                        setStartDateOpen(false);
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-              <StyledDateInput
-                value={formData.deadline}
-                onChange={(date) => setFormData(prev => ({ ...prev, deadline: date }))}
-                label="Date d'échéance *"
-                placeholder="Sélectionnez la date d'échéance"
-                required
-              />
+              <div>
+                <Label>Date d'échéance *</Label>
+                <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.deadline ? format(formData.deadline, 'PPP', { locale: fr }) : 'Sélectionner une date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-auto p-0" 
+                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  >
+                    <Calendar
+                       mode="single"
+                       selected={formData.deadline}
+                       onSelect={(date) => {
+                         setFormData(prev => ({ ...prev, deadline: date || undefined }));
+                         setDeadlineOpen(false);
+                       }}
+                       initialFocus
+                     />
+                  </PopoverContent>
+                </Popover>
+              </div>
 
               <div>
                 <Label htmlFor="priority">Priorité</Label>
-                <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value }))}>
+                <Select value={formData.priority} onValueChange={(value) => setFormData(prev => ({ ...prev, priority: value as ProjectPriority }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -493,7 +558,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
 
               <div>
                 <Label htmlFor="status">Statut initial</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}>
+                <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as ProjectStatus }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -637,12 +702,12 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           Chargement des équipes...
                         </div>
-                      ) : teams?.length === 0 ? (
+                      ) : teams?.results?.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                           Aucune équipe disponible
                         </div>
                       ) : (
-                        teams?.map(team => (
+                        teams?.results?.map(team => (
                           <SelectItem key={team.id} value={team.id.toString()}>
                             {team.name} ({team.member_count} membres)
                           </SelectItem>
@@ -681,12 +746,12 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           Chargement des utilisateurs...
                         </div>
-                      ) : users?.length === 0 ? (
+                      ) : users?.results?.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                           Aucun utilisateur disponible
                         </div>
                       ) : (
-                        users?.map(user => (
+                        users?.results?.map(user => (
                           <SelectItem key={user.id} value={user.id.toString()}>
                             {user.first_name} {user.last_name} ({user.email})
                           </SelectItem>

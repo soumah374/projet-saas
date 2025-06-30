@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { useTeams, useCreateTeam, useDeleteTeam } from '../hooks/use-teams';
 import { useUsers } from '../hooks/use-users';
-import { Team, TeamMember } from '../lib/api';
+import type { Team } from '@/lib/types';
 
 export function TeamsPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -89,7 +89,7 @@ export function TeamsPage() {
     }
   };
 
-  const filteredTeams = teams || [];
+  const filteredTeams = teams?.results || [];
 
   return (
     <div className="space-y-6">
@@ -228,27 +228,12 @@ export function TeamsPage() {
                     <span className="font-medium">{team.member_count}</span>
                   </div>
                   
-                  {/* Status */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 text-sm">Statut</span>
-                    <Badge className={getStatusColor(team.is_active)}>
-                      {team.is_active ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </div>
-
                   {/* Created by */}
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600 text-sm">Créée par</span>
-                    <div className="flex items-center gap-2">
-                      <Avatar className="w-6 h-6">
-                        <AvatarFallback className="text-xs">
-                          {team.created_by?.first_name?.[0] || ''}{team.created_by?.last_name?.[0] || ''}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm font-medium">
-                        {team.created_by?.first_name || ''} {team.created_by?.last_name || ''}
-                      </span>
-                    </div>
+                    <span className="text-sm font-medium">
+                      {team.created_by_name || 'N/A'}
+                    </span>
                   </div>
 
                   {/* Created date */}
@@ -257,42 +242,10 @@ export function TeamsPage() {
                     <span>{team.created_at ? new Date(team.created_at).toLocaleDateString('fr-FR') : 'N/A'}</span>
                   </div>
 
-                  {/* Team Members Preview */}
-                  {team.team_members && team.team_members.length > 0 && (
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-600 text-sm">Membres</span>
-                        <Button variant="ghost" size="sm">
-                          <UserPlus className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      <div className="space-y-2">
-                        {team.team_members.slice(0, 3).map((member) => (
-                          <div key={member.id} className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="w-6 h-6">
-                                <AvatarFallback className="text-xs">
-                                  {member.user?.first_name?.[0] || ''}{member.user?.last_name?.[0] || ''}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">
-                                {member.user?.first_name || ''} {member.user?.last_name || ''}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {getRoleIcon(member.role)}
-                              <span className="text-xs text-gray-500">{member.role}</span>
-                            </div>
-                          </div>
-                        ))}
-                        {team.team_members.length > 3 && (
-                          <div className="text-xs text-gray-500 text-center">
-                            +{team.team_members.length - 3} autres membres
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  {/* Team Members Preview - Will be implemented when team members API is available */}
+                  <div className="text-center text-sm text-gray-500">
+                    Gestion des membres à implémenter
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { FileText, Calendar, User, Loader2, Edit, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ProjectTask } from '@/lib/api';
+import { ProjectTask } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { StyledDateInput } from '@/components/ui/DateInput';
 
@@ -105,7 +105,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
         title: task?.title || '',
         description: task?.description || '',
         status: task?.status || 'À faire',
-        assigned_to_id: task?.assigned_to_id?.toString() || '',
+        assigned_to_id: task?.assigned_to?.id?.toString() || '',
         due_date: task?.due_date ? new Date(task.due_date) : undefined
       });
       setFormKey(prev => prev + 1);
@@ -235,12 +235,12 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
                         Chargement des utilisateurs...
                       </div>
-                    ) : users?.length === 0 ? (
+                    ) : users?.results?.length === 0 ? (
                       <div className="p-4 text-center text-gray-500">
                         Aucun utilisateur disponible
                       </div>
                     ) : (
-                      users?.map(user => (
+                      users?.results?.map(user => (
                         <SelectItem key={user.id} value={user.id.toString()}>
                           {user.first_name} {user.last_name} ({user.email})
                         </SelectItem>

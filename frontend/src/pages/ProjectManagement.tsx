@@ -25,7 +25,8 @@ import {
 } from "lucide-react";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { useProjects, useCreateProject, useProjectStatistics, useUpdateProject } from "@/hooks/use-projects";
-import { Project, UpdateProjectData } from "@/lib/api";
+import { useBackendStatus } from "@/hooks/use-backend-status";
+import type { ProjectList, CreateProjectForm } from "@/lib/types";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -40,6 +41,7 @@ export function ProjectManagement() {
   const navigate = useNavigate();
 
   // React Query hooks
+  const { data: backendStatus, isLoading: backendLoading } = useBackendStatus();
   const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects({
     search: searchTerm || undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
@@ -106,7 +108,7 @@ export function ProjectManagement() {
     }
   };
 
-  const handleProjectUpdate = async (projectId: string, data: UpdateProjectData) => {
+  const handleProjectUpdate = async (projectId: string, data: Partial<CreateProjectForm>) => {
     try {
       await updateProjectMutation.mutateAsync({ id: projectId, data });
     } catch (error) {
@@ -114,9 +116,9 @@ export function ProjectManagement() {
     }
   };
 
-  const filteredProjects = projects || [];
+  const filteredProjects = projects?.results || [];
 
-  const renderActionButtons = (project: Project) => (
+  const renderActionButtons = (project: ProjectList) => (
     <div className="flex items-center gap-2">
       <Button
         variant="outline"
@@ -304,7 +306,7 @@ export function ProjectManagement() {
           </SelectContent>
         </Select>
       </div>
-
+      
       {/* Projects Grid */}
       {projectsLoading ? (
         <div className="flex items-center justify-center py-12">
@@ -313,6 +315,11 @@ export function ProjectManagement() {
       ) : projectsError ? (
         <div className="text-center py-12">
           <p className="text-red-600">Erreur lors du chargement des projets</p>
+          {backendStatus && !backendStatus.isOnline && (
+            <p className="text-sm text-gray-600 mt-2">
+              Vérifiez que le serveur backend est en cours d'exécution
+            </p>
+          )}
         </div>
       ) : filteredProjects.length === 0 ? (
         <div className="text-center py-12">
@@ -375,18 +382,16 @@ export function ProjectManagement() {
                     </div>
                   </div>
 
-                  {/* Budget */}
-                  {project.budget && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Budget</span>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium">
-                          {parseInt(project.budget).toLocaleString()} GNF
-                        </span>
-                      </div>
+                  {/* Budget - Not available in ProjectList type */}
+                  {/* <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Budget</span>
+                    <div className="flex items-center gap-1">
+                      <DollarSign className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium">
+                        {parseInt(project.budget).toLocaleString()} GNF
+                      </span>
                     </div>
-                  )}
+                  </div> */}
 
                   {/* Deadline */}
                   <div className="flex justify-between text-sm">
@@ -400,11 +405,11 @@ export function ProjectManagement() {
                   </div>
 
                   {/* Days remaining */}
-                  {project.days_remaining !== undefined && (
+                  {project.days_remaining && (
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Jours restants</span>
-                      <span className={`font-medium ${project.is_overdue ? 'text-red-600' : ''}`}>
-                        {project.days_remaining < 0 ? `${Math.abs(project.days_remaining)} jours de retard` : `${project.days_remaining} jours`}
+                      <span className={`font-medium ${project.is_overdue === 'true' ? 'text-red-600' : ''}`}>
+                        {project.days_remaining}
                       </span>
                     </div>
                   )}

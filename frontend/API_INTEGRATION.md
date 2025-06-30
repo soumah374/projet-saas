@@ -1,208 +1,325 @@
-# API Integration Documentation
+# Intégration API SAKOM
 
-## Overview
+Ce document décrit l'intégration complète du schéma OpenAPI SAKOM dans le frontend React.
 
-The ProjectManagement page has been successfully integrated with the Django REST API backend using React Query for efficient data fetching and caching.
+## 📋 Schéma OpenAPI
 
-## Features Implemented
+Le schéma API est basé sur le fichier `SAKOM API.yaml` qui définit toutes les endpoints et types de données de l'API SAKOM.
 
-### 1. React Query Setup
+### Endpoints disponibles
 
-- QueryClient configured with 5-minute stale time
-- Automatic retry on failure (1 retry)
-- Error boundary for graceful error handling
+#### 🔐 Authentification
 
-### 2. API Service Layer (`src/lib/api.ts`)
+- `POST /api/v1/login/` - Connexion classique avec username/password
+- `POST /api/v1/otp/request/` - Demander un code OTP
+- `POST /api/v1/otp/verify/` - Vérifier le code OTP
+- `POST /api/v1/otp/resend/` - Renvoyer un code OTP
+- `POST /api/v1/token/refresh/` - Rafraîchir le token JWT
 
-- Type-safe API functions using TypeScript interfaces
-- Centralized API configuration
-- Error handling with proper error messages
-- Support for all CRUD operations on projects
+#### 👥 Utilisateurs
 
-### 3. React Query Hooks (`src/hooks/use-projects.ts`)
+- `GET /api/v1/users/` - Liste des utilisateurs
+- `GET /api/v1/users/{id}/` - Détails d'un utilisateur
+- `POST /api/v1/users/` - Créer un utilisateur
+- `PUT /api/v1/users/{id}/` - Mettre à jour un utilisateur
+- `DELETE /api/v1/users/{id}/` - Supprimer un utilisateur
+- `GET /api/v1/users/me/` - Informations de l'utilisateur connecté
+- `PATCH /api/v1/users/update_me/` - Mettre à jour ses informations
+- `POST /api/v1/users/change_password/` - Changer le mot de passe
+- `GET /api/v1/users/statistics/` - Statistiques des utilisateurs
 
-- `useProjects()` - Fetch projects with filtering
-- `useProject()` - Fetch single project
-- `useProjectStatistics()` - Fetch project statistics
-- `useCreateProject()` - Create new project
-- `useUpdateProject()` - Update existing project
-- `useDeleteProject()` - Delete project
-- `useUpdateProjectProgress()` - Update project progress
-- `useAddProjectMember()` - Add team member
-- `useRemoveProjectMember()` - Remove team member
+#### 📊 Projets
 
-### 4. Updated Components
+- `GET /api/v1/projects/` - Liste des projets
+- `GET /api/v1/projects/{id}/` - Détails d'un projet
+- `POST /api/v1/projects/` - Créer un projet
+- `PATCH /api/v1/projects/{id}/` - Mettre à jour un projet
+- `DELETE /api/v1/projects/{id}/` - Supprimer un projet
+- `GET /api/v1/projects/statistics/` - Statistiques des projets
+- `GET /api/v1/projects/my_projects/` - Mes projets
+- `GET /api/v1/projects/team_projects/` - Projets de l'équipe
+- `GET /api/v1/projects/upcoming_deadlines/` - Échéances proches
+- `POST /api/v1/projects/{id}/update_progress/` - Mettre à jour la progression
+- `POST /api/v1/projects/{id}/add_member/` - Ajouter un membre
+- `DELETE /api/v1/projects/{id}/remove_member/` - Retirer un membre
 
-- **ProjectManagement**: Now uses real API data instead of mock data
-- **ProjectCard**: Updated to work with new API structure
-- **CreateProjectModal**: Updated to send properly formatted data to API
+#### 👥 Membres de projet
 
-## API Endpoints Used
+- `GET /api/v1/projects/{project_pk}/members/` - Liste des membres
+- `POST /api/v1/projects/{project_pk}/members/` - Ajouter un membre
+- `GET /api/v1/projects/{project_pk}/members/{id}/` - Détails d'un membre
+- `PUT /api/v1/projects/{project_pk}/members/{id}/` - Mettre à jour un membre
+- `DELETE /api/v1/projects/{project_pk}/members/{id}/` - Supprimer un membre
 
-- `GET /api/v1/projects/` - List projects with filtering
-- `GET /api/v1/projects/{id}/` - Get single project
-- `POST /api/v1/projects/` - Create new project
-- `PATCH /api/v1/projects/{id}/` - Update project
-- `DELETE /api/v1/projects/{id}/` - Delete project
-- `GET /api/v1/projects/statistics/` - Get project statistics
-- `POST /api/v1/projects/{id}/update_progress/` - Update progress
-- `POST /api/v1/projects/{id}/add_member/` - Add team member
-- `DELETE /api/v1/projects/{id}/remove_member/` - Remove team member
+#### ✅ Tâches de projet
 
-## Configuration
+- `GET /api/v1/projects/{project_pk}/tasks/` - Liste des tâches
+- `POST /api/v1/projects/{project_pk}/tasks/` - Créer une tâche
+- `GET /api/v1/projects/{project_pk}/tasks/{id}/` - Détails d'une tâche
+- `PUT /api/v1/projects/{project_pk}/tasks/{id}/` - Mettre à jour une tâche
+- `DELETE /api/v1/projects/{project_pk}/tasks/{id}/` - Supprimer une tâche
+- `POST /api/v1/projects/{project_pk}/tasks/{id}/update_status/` - Mettre à jour le statut
 
-### Environment Variables
+#### 🏢 Équipes
 
-Create a `.env` file in the frontend directory:
+- `GET /api/v1/teams/` - Liste des équipes
+- `GET /api/v1/teams/{id}/` - Détails d'une équipe
+- `POST /api/v1/teams/` - Créer une équipe
+- `PUT /api/v1/teams/{id}/` - Mettre à jour une équipe
+- `DELETE /api/v1/teams/{id}/` - Supprimer une équipe
+- `POST /api/v1/teams/{id}/add_member/` - Ajouter un membre
 
-```env
-VITE_API_BASE_URL=http://localhost:8000/api/v1
-```
+#### 👥 Membres d'équipe
 
-### Default Configuration
+- `GET /api/v1/teams/members/` - Liste des membres d'équipe
+- `POST /api/v1/teams/members/` - Créer un membre d'équipe
+- `GET /api/v1/teams/members/{id}/` - Détails d'un membre
+- `PUT /api/v1/teams/members/{id}/` - Mettre à jour un membre
+- `DELETE /api/v1/teams/members/{id}/` - Supprimer un membre
 
-If no environment variable is set, the app defaults to `http://localhost:8000/api/v1`.
+#### 📄 Documents
 
-## Usage Examples
+- `GET /api/v1/documents/` - Liste des documents
+- `GET /api/v1/documents/{id}/` - Détails d'un document
+- `POST /api/v1/documents/` - Créer un document
+- `PUT /api/v1/documents/{id}/` - Mettre à jour un document
+- `DELETE /api/v1/documents/{id}/` - Supprimer un document
+- `POST /api/v1/documents/{id}/make_public/` - Rendre public
+- `POST /api/v1/documents/{id}/make_private/` - Rendre privé
 
-### Fetching Projects
+## 🏗️ Architecture Frontend
+
+### Types TypeScript
+
+Tous les types sont définis dans `src/lib/types.ts` et correspondent exactement au schéma OpenAPI :
 
 ```typescript
-const {
-  data: projects,
-  isLoading,
-  error,
-} = useProjects({
-  search: "search term",
-  status: "En cours",
-  type: "Événementiel",
+// Enums
+export type ProjectType =
+  | "Événementiel"
+  | "Communication"
+  | "Audiovisuel"
+  | "Production"
+  | "Digital"
+  | "Conseil";
+export type ProjectStatus =
+  | "Planification"
+  | "En cours"
+  | "Production"
+  | "En pause"
+  | "Terminé";
+export type ProjectPriority = "Basse" | "Normale" | "Haute" | "Urgente";
+
+// Interfaces
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  type: ProjectType;
+  status: ProjectStatus;
+  priority: ProjectPriority;
+  // ... autres propriétés
+}
+```
+
+### Fonctions API
+
+Les fonctions API sont organisées par domaine dans `src/lib/api.ts` :
+
+```typescript
+// Authentification
+export const authAPI = {
+  login: async (credentials: LoginRequest): Promise<LoginResponse>,
+  requestOTP: async (data: OTPRequest): Promise<{ message: string; email: string }>,
+  verifyOTP: async (data: OTPVerification): Promise<LoginResponse>,
+  // ...
+};
+
+// Projets
+export const projectsAPI = {
+  getProjects: async (params?: ProjectFilters): Promise<PaginatedResponse<ProjectList>>,
+  getProject: async (id: string): Promise<Project>,
+  createProject: async (data: CreateProjectForm): Promise<Project>,
+  // ...
+};
+```
+
+### Hooks React Query
+
+Les hooks sont organisés par domaine et utilisent React Query pour la gestion du cache :
+
+```typescript
+// src/hooks/use-projects.ts
+export const useProjects = (params?: ProjectFilters) => {
+  return useQuery({
+    queryKey: ["projects", params],
+    queryFn: () => projectsAPI.getProjects(params),
+  });
+};
+
+export const useCreateProject = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateProjectForm) => projectsAPI.createProject(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
+};
+```
+
+## 🔧 Configuration
+
+### Configuration API
+
+```typescript
+// src/lib/config.ts
+export const config = {
+  api: {
+    baseUrl: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
+    timeout: 10000,
+  },
+  // ...
+};
+```
+
+### Variables d'environnement
+
+```env
+# .env
+VITE_API_URL=http://localhost:8000/api/v1
+```
+
+## 📝 Utilisation
+
+### Exemple d'utilisation dans un composant
+
+```typescript
+import { useProjects, useCreateProject } from "@/hooks/use-projects";
+import { useUsers } from "@/hooks/use-users";
+
+function ProjectManagement() {
+  const { data: projects, isLoading } = useProjects({
+    status: "En cours",
+    ordering: "-created_at",
+  });
+
+  const { data: users } = useUsers();
+  const createProject = useCreateProject();
+
+  const handleCreateProject = (data: CreateProjectForm) => {
+    createProject.mutate(data, {
+      onSuccess: () => {
+        toast.success("Projet créé avec succès");
+      },
+      onError: (error) => {
+        toast.error("Erreur lors de la création du projet");
+      },
+    });
+  };
+
+  if (isLoading) return <div>Chargement...</div>;
+
+  return (
+    <div>
+      {projects?.results.map((project) => (
+        <ProjectCard key={project.id} project={project} />
+      ))}
+    </div>
+  );
+}
+```
+
+## 🔒 Authentification
+
+L'API supporte deux méthodes d'authentification :
+
+### 1. Authentification classique (username/password)
+
+```typescript
+const { login } = authAPI;
+const response = await login({ username: "user", password: "pass" });
+// Stocker le token dans localStorage
+localStorage.setItem("access_token", response.access);
+```
+
+### 2. Authentification OTP
+
+```typescript
+const { requestOTP, verifyOTP } = authAPI;
+
+// Demander un code OTP
+await requestOTP({ email: "user@example.com" });
+
+// Vérifier le code OTP
+const response = await verifyOTP({
+  email: "user@example.com",
+  otp_code: "123456",
 });
 ```
 
-### Creating a Project
+## 📊 Gestion des erreurs
+
+Toutes les fonctions API gèrent automatiquement les erreurs HTTP et retournent des erreurs typées :
+
+```typescript
+try {
+  const project = await projectsAPI.getProject("PROJ-2024-001");
+} catch (error) {
+  if (error instanceof Error) {
+    console.error("Erreur API:", error.message);
+    toast.error(error.message);
+  }
+}
+```
+
+## 🔄 Cache et invalidation
+
+React Query gère automatiquement le cache et l'invalidation :
 
 ```typescript
 const createProject = useCreateProject();
 
-const handleCreate = async () => {
-  try {
-    await createProject.mutateAsync({
-      title: "New Project",
-      description: "Project description",
-      type: "Événementiel",
-      status: "Planification",
-      priority: "Normale",
-      deadline: "2024-12-31",
-      budget: "25000",
-      client: "Client Name",
-    });
-    toast.success("Project created successfully");
-  } catch (error) {
-    toast.error("Failed to create project");
-  }
-};
+// Après création, le cache des projets est automatiquement invalidé
+createProject.mutate(projectData);
 ```
 
-### Updating Project Progress
+## 📱 Responsive et UX
+
+- Tous les composants sont responsives
+- Gestion des états de chargement
+- Messages d'erreur utilisateur-friendly
+- Optimistic updates pour une meilleure UX
+- Pagination automatique pour les listes
+
+## 🧪 Tests
+
+Les hooks peuvent être testés avec React Testing Library :
 
 ```typescript
-const updateProgress = useUpdateProjectProgress();
+import { renderHook, waitFor } from "@testing-library/react";
+import { useProjects } from "@/hooks/use-projects";
 
-const handleProgressUpdate = async (projectId: string, progress: number) => {
-  await updateProgress.mutateAsync({ id: projectId, progress });
-};
+test("useProjects returns projects data", async () => {
+  const { result } = renderHook(() => useProjects());
+
+  await waitFor(() => {
+    expect(result.current.data).toBeDefined();
+  });
+});
 ```
 
-## Error Handling
+## 🚀 Déploiement
 
-- **Network Errors**: Displayed with toast notifications
-- **API Errors**: Handled gracefully with retry options
-- **Loading States**: Shown with spinner components
-- **Error Boundary**: Catches unexpected errors and provides recovery options
+1. Configurer les variables d'environnement
+2. Build de l'application : `npm run build`
+3. Déployer les fichiers statiques
+4. Configurer le reverse proxy pour l'API
 
-## Data Types
+## 📚 Ressources
 
-### Project Interface
-
-```typescript
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  status: string;
-  priority: string;
-  progress: number;
-  deadline: string;
-  budget: string;
-  client: string;
-  created_by: User;
-  team_members: ProjectMember[];
-  // ... other fields
-}
-```
-
-### CreateProjectData Interface
-
-```typescript
-interface CreateProjectData {
-  title: string;
-  description: string;
-  type: string;
-  status: string;
-  priority: string;
-  deadline: string;
-  budget: string;
-  client: string;
-  // ... optional fields
-}
-```
-
-## Caching Strategy
-
-- **Project Lists**: 5-minute stale time
-- **Project Details**: 5-minute stale time
-- **Statistics**: 10-minute stale time
-- **Automatic Invalidation**: When projects are created, updated, or deleted
-
-## Performance Optimizations
-
-- **Optimistic Updates**: UI updates immediately, then syncs with server
-- **Background Refetching**: Data is refreshed in the background
-- **Selective Invalidation**: Only relevant queries are invalidated
-- **Debounced Search**: Search queries are debounced to reduce API calls
-
-## Testing the Integration
-
-1. Start the Django backend server
-2. Start the React frontend development server
-3. Navigate to the ProjectManagement page
-4. Test creating, viewing, and updating projects
-5. Verify that data persists and syncs correctly
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CORS Errors**: Ensure Django CORS settings are configured correctly
-2. **API Connection**: Verify the API base URL is correct
-3. **Authentication**: Ensure proper authentication headers are sent
-4. **Data Format**: Check that data sent to API matches expected format
-
-### Debug Mode
-
-Enable debug logging by setting:
-
-```typescript
-// In src/lib/api.ts
-console.log("API call:", url, options);
-```
-
-## Future Enhancements
-
-- [ ] Real-time updates using WebSockets
-- [ ] Offline support with service workers
-- [ ] Advanced filtering and sorting
-- [ ] Bulk operations
-- [ ] Export functionality
-- [ ] Advanced search with full-text search
+- [Documentation OpenAPI SAKOM](./SAKOM%20API.yaml)
+- [React Query Documentation](https://tanstack.com/query/latest)
+- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
+- [Vite Documentation](https://vitejs.dev/guide/)

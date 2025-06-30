@@ -1,0 +1,3604 @@
+openapi: 3.0.3
+info:
+  title: SAKOM API
+  version: 1.0.0
+  description: API pour la gestion de projets SAKOM
+paths:
+  /api/v1/auth/request_otp/:
+    post:
+      operationId: auth_request_otp_create
+      description: Demander un code OTP pour la connexion
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/resend_otp/:
+    post:
+      operationId: auth_resend_otp_create
+      description: Renvoyer un code OTP
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/verify_otp/:
+    post:
+      operationId: auth_verify_otp_create
+      description: Vérifier le code OTP et connecter l'utilisateur
+      tags:
+      - auth
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/documents/:
+    get:
+      operationId: documents_list
+      description: ViewSet pour la gestion des documents
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+          default: other
+          enum:
+          - audio
+          - contract
+          - design
+          - other
+          - photo
+          - presentation
+          - proposal
+          - report
+          - video
+        description: |-
+          * `contract` - Contrat
+          * `proposal` - Proposition
+          * `report` - Rapport
+          * `presentation` - Présentation
+          * `design` - Design
+          * `video` - Vidéo
+          * `audio` - Audio
+          * `photo` - Photo
+          * `other` - Autre
+      - in: query
+        name: document_type
+        schema:
+          type: string
+          enum:
+          - avi
+          - doc
+          - docx
+          - gif
+          - jpeg
+          - jpg
+          - mp3
+          - mp4
+          - other
+          - pdf
+          - png
+          - ppt
+          - pptx
+          - txt
+          - xls
+          - xlsx
+          - zip
+        description: |-
+          * `pdf` - PDF
+          * `doc` - Document Word
+          * `docx` - Document Word
+          * `xls` - Feuille de calcul Excel
+          * `xlsx` - Feuille de calcul Excel
+          * `ppt` - Présentation PowerPoint
+          * `pptx` - Présentation PowerPoint
+          * `txt` - Fichier texte
+          * `jpg` - Image JPEG
+          * `jpeg` - Image JPEG
+          * `png` - Image PNG
+          * `gif` - Image GIF
+          * `mp4` - Vidéo MP4
+          * `avi` - Vidéo AVI
+          * `mp3` - Audio MP3
+          * `zip` - Archive ZIP
+          * `other` - Autre
+      - in: query
+        name: is_public
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDocumentList'
+          description: ''
+    post:
+      operationId: documents_create
+      description: ViewSet pour la gestion des documents
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+  /api/v1/documents/{id}/:
+    get:
+      operationId: documents_retrieve
+      description: ViewSet pour la gestion des documents
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+    put:
+      operationId: documents_update
+      description: ViewSet pour la gestion des documents
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Document.
+        required: true
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+    patch:
+      operationId: documents_partial_update
+      description: ViewSet pour la gestion des documents
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Document.
+        required: true
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDocumentRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+    delete:
+      operationId: documents_destroy
+      description: ViewSet pour la gestion des documents
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Document.
+        required: true
+      tags:
+      - documents
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/documents/{id}/make_private/:
+    post:
+      operationId: documents_make_private_create
+      description: Rendre un document privé
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Document.
+        required: true
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+  /api/v1/documents/{id}/make_public/:
+    post:
+      operationId: documents_make_public_create
+      description: Rendre un document public
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Document.
+        required: true
+      tags:
+      - documents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+          description: ''
+  /api/v1/login/:
+    post:
+      operationId: login_create
+      description: Vue personnalisée pour l'obtention de tokens JWT
+      tags:
+      - login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/v1/otp/request/:
+    post:
+      operationId: otp_request_create
+      description: Demander un code OTP pour la connexion
+      tags:
+      - otp
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/otp/resend/:
+    post:
+      operationId: otp_resend_create
+      description: Renvoyer un code OTP
+      tags:
+      - otp
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/otp/verify/:
+    post:
+      operationId: otp_verify_create
+      description: Vérifier le code OTP et connecter l'utilisateur
+      tags:
+      - otp
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/projects/:
+    get:
+      operationId: projects_list
+      description: ViewSet pour la gestion des projets
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: string
+          enum:
+          - Commercial
+          - Corporate
+          - Institutionnel
+          - Interne
+          - Marketing
+        description: |-
+          * `Corporate` - Corporate
+          * `Marketing` - Marketing
+          * `Institutionnel` - Institutionnel
+          * `Commercial` - Commercial
+          * `Interne` - Interne
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: priority
+        schema:
+          type: string
+          default: Normale
+          enum:
+          - Basse
+          - Haute
+          - Normale
+          - Urgente
+        description: |-
+          * `Basse` - Basse
+          * `Normale` - Normale
+          * `Haute` - Haute
+          * `Urgente` - Urgente
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          default: Planification
+          enum:
+          - En cours
+          - En pause
+          - Planification
+          - Production
+          - Terminé
+        description: |-
+          * `Planification` - Planification
+          * `En cours` - En cours
+          * `Production` - Production
+          * `En pause` - En pause
+          * `Terminé` - Terminé
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - Audiovisuel
+          - Communication
+          - Conseil
+          - Digital
+          - Production
+          - Événementiel
+        description: |-
+          * `Événementiel` - Événementiel
+          * `Communication` - Communication
+          * `Audiovisuel` - Audiovisuel
+          * `Production` - Production
+          * `Digital` - Digital
+          * `Conseil` - Conseil
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectListList'
+          description: ''
+    post:
+      operationId: projects_create
+      description: ViewSet pour la gestion des projets
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCreate'
+          description: ''
+  /api/v1/projects/{id}/:
+    get:
+      operationId: projects_retrieve
+      description: ViewSet pour la gestion des projets
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this Projet.
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+    put:
+      operationId: projects_update
+      description: ViewSet pour la gestion des projets
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this Projet.
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectUpdateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectUpdate'
+          description: ''
+    patch:
+      operationId: projects_partial_update
+      description: ViewSet pour la gestion des projets
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this Projet.
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectUpdateRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectUpdate'
+          description: ''
+    delete:
+      operationId: projects_destroy
+      description: ViewSet pour la gestion des projets
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this Projet.
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/projects/{id}/add_member/:
+    post:
+      operationId: projects_add_member_create
+      description: Ajouter un membre à un projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this Projet.
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/{id}/remove_member/:
+    delete:
+      operationId: projects_remove_member_destroy
+      description: Retirer un membre d'un projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this Projet.
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/projects/{id}/update_progress/:
+    post:
+      operationId: projects_update_progress_create
+      description: Mettre à jour la progression d'un projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: A unique value identifying this Projet.
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/{project_pk}/members/:
+    get:
+      operationId: projects_members_list
+      description: ViewSet pour la gestion des membres de projet
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectMemberList'
+          description: ''
+    post:
+      operationId: projects_members_create
+      description: ViewSet pour la gestion des membres de projet
+      parameters:
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+          description: ''
+  /api/v1/projects/{project_pk}/members/{id}/:
+    get:
+      operationId: projects_members_retrieve
+      description: ViewSet pour la gestion des membres de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre du projet.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+          description: ''
+    put:
+      operationId: projects_members_update
+      description: ViewSet pour la gestion des membres de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre du projet.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectMemberRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+          description: ''
+    patch:
+      operationId: projects_members_partial_update
+      description: ViewSet pour la gestion des membres de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre du projet.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectMemberRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectMember'
+          description: ''
+    delete:
+      operationId: projects_members_destroy
+      description: ViewSet pour la gestion des membres de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre du projet.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/projects/{project_pk}/tasks/:
+    get:
+      operationId: projects_tasks_list
+      description: ViewSet pour la gestion des tâches de projet
+      parameters:
+      - in: query
+        name: assigned_to
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      - in: query
+        name: status
+        schema:
+          type: string
+          default: À faire
+          enum:
+          - En cours
+          - En pause
+          - Terminé
+          - À faire
+        description: |-
+          * `À faire` - À faire
+          * `En cours` - En cours
+          * `Terminé` - Terminé
+          * `En pause` - En pause
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectTaskList'
+          description: ''
+    post:
+      operationId: projects_tasks_create
+      description: ViewSet pour la gestion des tâches de projet
+      parameters:
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTask'
+          description: ''
+  /api/v1/projects/{project_pk}/tasks/{id}/:
+    get:
+      operationId: projects_tasks_retrieve
+      description: ViewSet pour la gestion des tâches de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tâche.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTask'
+          description: ''
+    put:
+      operationId: projects_tasks_update
+      description: ViewSet pour la gestion des tâches de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tâche.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTask'
+          description: ''
+    patch:
+      operationId: projects_tasks_partial_update
+      description: ViewSet pour la gestion des tâches de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tâche.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectTaskRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTask'
+          description: ''
+    delete:
+      operationId: projects_tasks_destroy
+      description: ViewSet pour la gestion des tâches de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tâche.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/projects/{project_pk}/tasks/{id}/update_status/:
+    post:
+      operationId: projects_tasks_update_status_create
+      description: Mettre à jour le statut d'une tâche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tâche.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTask'
+          description: ''
+  /api/v1/projects/my_projects/:
+    get:
+      operationId: projects_my_projects_retrieve
+      description: Obtenir les projets de l'utilisateur connecté
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/statistics/:
+    get:
+      operationId: projects_statistics_retrieve
+      description: Obtenir les statistiques des projets
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/team_projects/:
+    get:
+      operationId: projects_team_projects_retrieve
+      description: Obtenir les projets où l'utilisateur est membre de l'équipe
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/upcoming_deadlines/:
+    get:
+      operationId: projects_upcoming_deadlines_retrieve
+      description: Obtenir les projets avec des échéances proches
+      tags:
+      - projects
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/teams/:
+    get:
+      operationId: teams_list
+      description: ViewSet pour la gestion des équipes
+      parameters:
+      - in: query
+        name: created_by
+        schema:
+          type: integer
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeamList'
+          description: ''
+    post:
+      operationId: teams_create
+      description: ViewSet pour la gestion des équipes
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+  /api/v1/teams/{id}/:
+    get:
+      operationId: teams_retrieve
+      description: ViewSet pour la gestion des équipes
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Équipe.
+        required: true
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+    put:
+      operationId: teams_update
+      description: ViewSet pour la gestion des équipes
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Équipe.
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+    patch:
+      operationId: teams_partial_update
+      description: ViewSet pour la gestion des équipes
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Équipe.
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+    delete:
+      operationId: teams_destroy
+      description: ViewSet pour la gestion des équipes
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Équipe.
+        required: true
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/teams/{id}/add_member/:
+    post:
+      operationId: teams_add_member_create
+      description: Ajouter un membre à l'équipe
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Équipe.
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Team'
+          description: ''
+  /api/v1/teams/members/:
+    get:
+      operationId: teams_members_list
+      description: ViewSet pour la gestion des membres d'équipe
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: role
+        schema:
+          type: string
+          default: member
+          enum:
+          - consultant
+          - leader
+          - member
+        description: |-
+          * `leader` - Chef d'équipe
+          * `member` - Membre
+          * `consultant` - Consultant
+      - in: query
+        name: team
+        schema:
+          type: integer
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedTeamMemberList'
+          description: ''
+    post:
+      operationId: teams_members_create
+      description: ViewSet pour la gestion des membres d'équipe
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamMemberRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+          description: ''
+  /api/v1/teams/members/{id}/:
+    get:
+      operationId: teams_members_retrieve
+      description: ViewSet pour la gestion des membres d'équipe
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre d'équipe.
+        required: true
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+          description: ''
+    put:
+      operationId: teams_members_update
+      description: ViewSet pour la gestion des membres d'équipe
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre d'équipe.
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TeamMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TeamMemberRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+          description: ''
+    patch:
+      operationId: teams_members_partial_update
+      description: ViewSet pour la gestion des membres d'équipe
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre d'équipe.
+        required: true
+      tags:
+      - teams
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamMemberRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamMemberRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedTeamMemberRequest'
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+          description: ''
+    delete:
+      operationId: teams_members_destroy
+      description: ViewSet pour la gestion des membres d'équipe
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Membre d'équipe.
+        required: true
+      tags:
+      - teams
+      security:
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/token/refresh/:
+    post:
+      operationId: token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/users/:
+    get:
+      operationId: users_list
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: profile__department
+        schema:
+          type: string
+      - in: query
+        name: profile__role
+        schema:
+          type: string
+          enum:
+          - Assistant
+          - Chef de projet
+          - Consultant
+          - Designer
+          - Développeur
+          - Finance/Admin
+          - Managing Director
+          - Rédacteur
+        description: |-
+          * `Chef de projet` - Chef de projet
+          * `Designer` - Designer
+          * `Développeur` - Développeur
+          * `Rédacteur` - Rédacteur
+          * `Consultant` - Consultant
+          * `Assistant` - Assistant
+          * `Managing Director` - Managing Director
+          * `Finance/Admin` - Finance/Admin
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserListList'
+          description: ''
+    post:
+      operationId: users_create
+      description: ViewSet pour la gestion des utilisateurs
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreate'
+          description: ''
+  /api/v1/users/{id}/:
+    get:
+      operationId: users_retrieve
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: users_update
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+    patch:
+      operationId: users_partial_update
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+    delete:
+      operationId: users_destroy
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/users/change_password/:
+    post:
+      operationId: users_change_password_create
+      description: Changer le mot de passe de l'utilisateur connecté
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/me/:
+    get:
+      operationId: users_me_retrieve
+      description: Obtenir les informations de l'utilisateur connecté
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/statistics/:
+    get:
+      operationId: users_statistics_retrieve
+      description: Obtenir les statistiques des utilisateurs
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/team_members/:
+    get:
+      operationId: users_team_members_retrieve
+      description: Obtenir la liste des membres d'équipe pour les projets
+      tags:
+      - users
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/update_me/:
+    put:
+      operationId: users_update_me_update
+      description: Mettre à jour les informations de l'utilisateur connecté
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: users_update_me_partial_update
+      description: Mettre à jour les informations de l'utilisateur connecté
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+components:
+  schemas:
+    BlankEnum:
+      enum:
+      - ''
+    Category700Enum:
+      enum:
+      - Corporate
+      - Marketing
+      - Institutionnel
+      - Commercial
+      - Interne
+      type: string
+      description: |-
+        * `Corporate` - Corporate
+        * `Marketing` - Marketing
+        * `Institutionnel` - Institutionnel
+        * `Commercial` - Commercial
+        * `Interne` - Interne
+    CustomTokenObtainPairRequest:
+      type: object
+      description: Sérialiseur personnalisé pour l'obtention de tokens JWT
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    Document:
+      type: object
+      description: Sérialiseur pour les documents
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        file:
+          type: string
+          format: uri
+          pattern: (?:pdf|doc|docx|xls|xlsx|ppt|pptx|txt|jpg|jpeg|png|gif|mp4|avi|mp3|zip)$
+        document_type:
+          $ref: '#/components/schemas/DocumentTypeEnum'
+        file_size:
+          type: integer
+          readOnly: true
+          description: Taille du fichier en bytes
+        uploaded_by:
+          type: integer
+          readOnly: true
+        uploaded_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_public:
+          type: boolean
+          default: false
+        category:
+          allOf:
+          - $ref: '#/components/schemas/DocumentCategoryEnum'
+          default: other
+        tags: {}
+        project:
+          type: string
+          nullable: true
+      required:
+      - created_at
+      - document_type
+      - file
+      - file_size
+      - id
+      - title
+      - updated_at
+      - uploaded_by
+      - uploaded_by_name
+    DocumentCategoryEnum:
+      enum:
+      - contract
+      - proposal
+      - report
+      - presentation
+      - design
+      - video
+      - audio
+      - photo
+      - other
+      type: string
+      description: |-
+        * `contract` - Contrat
+        * `proposal` - Proposition
+        * `report` - Rapport
+        * `presentation` - Présentation
+        * `design` - Design
+        * `video` - Vidéo
+        * `audio` - Audio
+        * `photo` - Photo
+        * `other` - Autre
+    DocumentRequest:
+      type: object
+      description: Sérialiseur pour les documents
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        file:
+          type: string
+          format: binary
+          pattern: (?:pdf|doc|docx|xls|xlsx|ppt|pptx|txt|jpg|jpeg|png|gif|mp4|avi|mp3|zip)$
+        document_type:
+          $ref: '#/components/schemas/DocumentTypeEnum'
+        is_public:
+          type: boolean
+          default: false
+        category:
+          allOf:
+          - $ref: '#/components/schemas/DocumentCategoryEnum'
+          default: other
+        tags: {}
+        project:
+          type: string
+          minLength: 1
+          nullable: true
+      required:
+      - document_type
+      - file
+      - title
+    DocumentTypeEnum:
+      enum:
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - ppt
+      - pptx
+      - txt
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - mp4
+      - avi
+      - mp3
+      - zip
+      - other
+      type: string
+      description: |-
+        * `pdf` - PDF
+        * `doc` - Document Word
+        * `docx` - Document Word
+        * `xls` - Feuille de calcul Excel
+        * `xlsx` - Feuille de calcul Excel
+        * `ppt` - Présentation PowerPoint
+        * `pptx` - Présentation PowerPoint
+        * `txt` - Fichier texte
+        * `jpg` - Image JPEG
+        * `jpeg` - Image JPEG
+        * `png` - Image PNG
+        * `gif` - Image GIF
+        * `mp4` - Vidéo MP4
+        * `avi` - Vidéo AVI
+        * `mp3` - Audio MP3
+        * `zip` - Archive ZIP
+        * `other` - Autre
+    PaginatedDocumentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+    PaginatedProjectListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectList'
+    PaginatedProjectMemberList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+    PaginatedProjectTaskList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectTask'
+    PaginatedTeamList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Team'
+    PaginatedTeamMemberList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMember'
+    PaginatedUserListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserList'
+    PatchedDocumentRequest:
+      type: object
+      description: Sérialiseur pour les documents
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        file:
+          type: string
+          format: binary
+          pattern: (?:pdf|doc|docx|xls|xlsx|ppt|pptx|txt|jpg|jpeg|png|gif|mp4|avi|mp3|zip)$
+        document_type:
+          $ref: '#/components/schemas/DocumentTypeEnum'
+        is_public:
+          type: boolean
+          default: false
+        category:
+          allOf:
+          - $ref: '#/components/schemas/DocumentCategoryEnum'
+          default: other
+        tags: {}
+        project:
+          type: string
+          minLength: 1
+          nullable: true
+    PatchedProjectMemberRequest:
+      type: object
+      description: Sérialiseur pour les membres d'un projet
+      properties:
+        user_id:
+          type: integer
+          writeOnly: true
+        role:
+          $ref: '#/components/schemas/ProjectMemberRoleEnum'
+        is_active:
+          type: boolean
+          default: true
+    PatchedProjectTaskRequest:
+      type: object
+      description: Sérialiseur pour les tâches d'un projet
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ProjectTaskStatusEnum'
+          default: À faire
+        assigned_to_id:
+          type: integer
+          writeOnly: true
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+    PatchedProjectUpdateRequest:
+      type: object
+      description: Sérialiseur pour la mise à jour de projets
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+        objectives:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category700Enum'
+          - $ref: '#/components/schemas/BlankEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        deadline:
+          type: string
+          format: date
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tags: {}
+        budget_details:
+          $ref: '#/components/schemas/ProjectBudgetRequest'
+    PatchedTeamMemberRequest:
+      type: object
+      description: Sérialiseur pour les membres d'équipe
+      properties:
+        team:
+          type: integer
+        user:
+          type: integer
+        role:
+          allOf:
+          - $ref: '#/components/schemas/TeamMemberRoleEnum'
+          default: member
+        is_active:
+          type: boolean
+          default: true
+    PatchedTeamRequest:
+      type: object
+      description: Sérialiseur pour les équipes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+    PatchedUserRequest:
+      type: object
+      description: Sérialiseur pour les utilisateurs
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+        is_active:
+          type: boolean
+          default: true
+          title: Actif
+          description: Précise si l’utilisateur doit être considéré comme actif. Décochez
+            ceci plutôt que de supprimer le compte.
+    PatchedUserUpdateRequest:
+      type: object
+      description: Sérialiseur pour la mise à jour d'utilisateurs
+      properties:
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+        profile:
+          $ref: '#/components/schemas/UserProfileRequest'
+    PriorityEnum:
+      enum:
+      - Basse
+      - Normale
+      - Haute
+      - Urgente
+      type: string
+      description: |-
+        * `Basse` - Basse
+        * `Normale` - Normale
+        * `Haute` - Haute
+        * `Urgente` - Urgente
+    Project:
+      type: object
+      description: Sérialiseur pour les projets
+      properties:
+        id:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        objectives:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category700Enum'
+          - $ref: '#/components/schemas/BlankEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        deadline:
+          type: string
+          format: date
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        progress:
+          type: integer
+          maximum: 100
+          minimum: 0
+          default: 0
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client:
+          type: string
+          maxLength: 200
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        team_members:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectMember'
+          readOnly: true
+        budget_details:
+          allOf:
+          - $ref: '#/components/schemas/ProjectBudget'
+          readOnly: true
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectTask'
+          readOnly: true
+        tags: {}
+        days_remaining:
+          type: string
+          readOnly: true
+        is_overdue:
+          type: string
+          readOnly: true
+      required:
+      - budget_details
+      - client
+      - created_at
+      - created_by
+      - days_remaining
+      - deadline
+      - description
+      - id
+      - is_overdue
+      - tasks
+      - team_members
+      - title
+      - type
+      - updated_at
+    ProjectBudget:
+      type: object
+      description: Sérialiseur pour le budget d'un projet
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        production:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+        personnel:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+        marketing:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+        other:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+        total:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - total
+    ProjectBudgetRequest:
+      type: object
+      description: Sérialiseur pour le budget d'un projet
+      properties:
+        production:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+        personnel:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+        marketing:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+        other:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          default: '0.00'
+    ProjectCreate:
+      type: object
+      description: Sérialiseur pour la création de projets avec budget
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        objectives:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category700Enum'
+          - $ref: '#/components/schemas/BlankEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        deadline:
+          type: string
+          format: date
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client:
+          type: string
+          maxLength: 200
+        tags: {}
+        budget_details:
+          $ref: '#/components/schemas/ProjectBudget'
+      required:
+      - client
+      - deadline
+      - description
+      - title
+      - type
+    ProjectCreateRequest:
+      type: object
+      description: Sérialiseur pour la création de projets avec budget
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+        objectives:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category700Enum'
+          - $ref: '#/components/schemas/BlankEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        deadline:
+          type: string
+          format: date
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tags: {}
+        budget_details:
+          $ref: '#/components/schemas/ProjectBudgetRequest'
+        team_members:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+          writeOnly: true
+      required:
+      - client
+      - deadline
+      - description
+      - title
+      - type
+    ProjectList:
+      type: object
+      description: Sérialiseur simplifié pour la liste des projets
+      properties:
+        id:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        progress:
+          type: integer
+          maximum: 100
+          minimum: 0
+          default: 0
+        deadline:
+          type: string
+          format: date
+        client:
+          type: string
+          maxLength: 200
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        team_count:
+          type: string
+          readOnly: true
+        days_remaining:
+          type: string
+          readOnly: true
+        is_overdue:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client
+      - created_at
+      - created_by
+      - days_remaining
+      - deadline
+      - id
+      - is_overdue
+      - team_count
+      - title
+      - type
+    ProjectMember:
+      type: object
+      description: Sérialiseur pour les membres d'un projet
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        role:
+          $ref: '#/components/schemas/ProjectMemberRoleEnum'
+        joined_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - id
+      - joined_at
+      - role
+      - user
+    ProjectMemberRequest:
+      type: object
+      description: Sérialiseur pour les membres d'un projet
+      properties:
+        user_id:
+          type: integer
+          writeOnly: true
+        role:
+          $ref: '#/components/schemas/ProjectMemberRoleEnum'
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - role
+      - user_id
+    ProjectMemberRoleEnum:
+      enum:
+      - Chef de projet
+      - Designer
+      - Développeur
+      - Rédacteur
+      - Consultant
+      - Assistant
+      type: string
+      description: |-
+        * `Chef de projet` - Chef de projet
+        * `Designer` - Designer
+        * `Développeur` - Développeur
+        * `Rédacteur` - Rédacteur
+        * `Consultant` - Consultant
+        * `Assistant` - Assistant
+    ProjectRequest:
+      type: object
+      description: Sérialiseur pour les projets
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+        objectives:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category700Enum'
+          - $ref: '#/components/schemas/BlankEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        deadline:
+          type: string
+          format: date
+        progress:
+          type: integer
+          maximum: 100
+          minimum: 0
+          default: 0
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tags: {}
+      required:
+      - client
+      - deadline
+      - description
+      - title
+      - type
+    ProjectTask:
+      type: object
+      description: Sérialiseur pour les tâches d'un projet
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ProjectTaskStatusEnum'
+          default: À faire
+        assigned_to:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - assigned_to
+      - created_at
+      - id
+      - title
+      - updated_at
+    ProjectTaskRequest:
+      type: object
+      description: Sérialiseur pour les tâches d'un projet
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        status:
+          allOf:
+          - $ref: '#/components/schemas/ProjectTaskStatusEnum'
+          default: À faire
+        assigned_to_id:
+          type: integer
+          writeOnly: true
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - title
+    ProjectTaskStatusEnum:
+      enum:
+      - À faire
+      - En cours
+      - Terminé
+      - En pause
+      type: string
+      description: |-
+        * `À faire` - À faire
+        * `En cours` - En cours
+        * `Terminé` - Terminé
+        * `En pause` - En pause
+    ProjectUpdate:
+      type: object
+      description: Sérialiseur pour la mise à jour de projets
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        objectives:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category700Enum'
+          - $ref: '#/components/schemas/BlankEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        deadline:
+          type: string
+          format: date
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client:
+          type: string
+          maxLength: 200
+        tags: {}
+        budget_details:
+          $ref: '#/components/schemas/ProjectBudget'
+      required:
+      - client
+      - deadline
+      - description
+      - title
+      - type
+    ProjectUpdateRequest:
+      type: object
+      description: Sérialiseur pour la mise à jour de projets
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+        objectives:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category700Enum'
+          - $ref: '#/components/schemas/BlankEnum'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusB54Enum'
+          default: Planification
+        priority:
+          allOf:
+          - $ref: '#/components/schemas/PriorityEnum'
+          default: Normale
+        start_date:
+          type: string
+          format: date
+          nullable: true
+        deadline:
+          type: string
+          format: date
+        budget:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+          nullable: true
+        client:
+          type: string
+          minLength: 1
+          maxLength: 200
+        tags: {}
+        budget_details:
+          $ref: '#/components/schemas/ProjectBudgetRequest'
+      required:
+      - client
+      - deadline
+      - description
+      - title
+      - type
+    StatusB54Enum:
+      enum:
+      - Planification
+      - En cours
+      - Production
+      - En pause
+      - Terminé
+      type: string
+      description: |-
+        * `Planification` - Planification
+        * `En cours` - En cours
+        * `Production` - Production
+        * `En pause` - En pause
+        * `Terminé` - Terminé
+    Team:
+      type: object
+      description: Sérialiseur pour les équipes
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+        created_by:
+          type: integer
+          readOnly: true
+        created_by_name:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        member_count:
+          type: string
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - created_by_name
+      - id
+      - member_count
+      - name
+      - updated_at
+    TeamMember:
+      type: object
+      description: Sérialiseur pour les membres d'équipe
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        team:
+          type: integer
+        team_name:
+          type: string
+          readOnly: true
+        user:
+          type: integer
+        user_name:
+          type: string
+          readOnly: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/TeamMemberRoleEnum'
+          default: member
+        joined_at:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - id
+      - joined_at
+      - team
+      - team_name
+      - user
+      - user_name
+    TeamMemberRequest:
+      type: object
+      description: Sérialiseur pour les membres d'équipe
+      properties:
+        team:
+          type: integer
+        user:
+          type: integer
+        role:
+          allOf:
+          - $ref: '#/components/schemas/TeamMemberRoleEnum'
+          default: member
+        is_active:
+          type: boolean
+          default: true
+      required:
+      - team
+      - user
+    TeamMemberRoleEnum:
+      enum:
+      - leader
+      - member
+      - consultant
+      type: string
+      description: |-
+        * `leader` - Chef d'équipe
+        * `member` - Membre
+        * `consultant` - Consultant
+    TeamRequest:
+      type: object
+      description: Sérialiseur pour les équipes
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+      required:
+      - name
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+      required:
+      - access
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - refresh
+    TypeEnum:
+      enum:
+      - Événementiel
+      - Communication
+      - Audiovisuel
+      - Production
+      - Digital
+      - Conseil
+      type: string
+      description: |-
+        * `Événementiel` - Événementiel
+        * `Communication` - Communication
+        * `Audiovisuel` - Audiovisuel
+        * `Production` - Production
+        * `Digital` - Digital
+        * `Conseil` - Conseil
+    User:
+      type: object
+      description: Sérialiseur pour les utilisateurs
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+      required:
+      - id
+      - username
+    UserCreate:
+      type: object
+      description: Sérialiseur pour la création d'utilisateurs
+      properties:
+        username:
+          type: string
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+      required:
+      - username
+    UserCreateRequest:
+      type: object
+      description: Sérialiseur pour la création d'utilisateurs
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password_confirm:
+          type: string
+          writeOnly: true
+          minLength: 1
+        profile:
+          $ref: '#/components/schemas/UserProfileRequest'
+      required:
+      - password
+      - password_confirm
+      - username
+    UserList:
+      type: object
+      description: Sérialiseur simplifié pour la liste des utilisateurs
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/UserProfile'
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        project_count:
+          type: string
+          readOnly: true
+        is_active:
+          type: boolean
+          default: true
+          title: Actif
+          description: Précise si l’utilisateur doit être considéré comme actif. Décochez
+            ceci plutôt que de supprimer le compte.
+      required:
+      - full_name
+      - id
+      - profile
+      - project_count
+      - username
+    UserProfile:
+      type: object
+      description: Sérialiseur pour le profil utilisateur
+      properties:
+        role:
+          oneOf:
+          - $ref: '#/components/schemas/UserProfileRoleEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        phone:
+          type: string
+          maxLength: 20
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        bio:
+          type: string
+        department:
+          type: string
+          maxLength: 100
+        position:
+          type: string
+          maxLength: 100
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - updated_at
+    UserProfileRequest:
+      type: object
+      description: Sérialiseur pour le profil utilisateur
+      properties:
+        role:
+          oneOf:
+          - $ref: '#/components/schemas/UserProfileRoleEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        phone:
+          type: string
+          maxLength: 20
+        avatar:
+          type: string
+          format: binary
+          nullable: true
+        bio:
+          type: string
+        department:
+          type: string
+          maxLength: 100
+        position:
+          type: string
+          maxLength: 100
+        hire_date:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+          default: true
+    UserProfileRoleEnum:
+      enum:
+      - Chef de projet
+      - Designer
+      - Développeur
+      - Rédacteur
+      - Consultant
+      - Assistant
+      - Managing Director
+      - Finance/Admin
+      type: string
+      description: |-
+        * `Chef de projet` - Chef de projet
+        * `Designer` - Designer
+        * `Développeur` - Développeur
+        * `Rédacteur` - Rédacteur
+        * `Consultant` - Consultant
+        * `Assistant` - Assistant
+        * `Managing Director` - Managing Director
+        * `Finance/Admin` - Finance/Admin
+    UserRequest:
+      type: object
+      description: Sérialiseur pour les utilisateurs
+      properties:
+        username:
+          type: string
+          minLength: 1
+          title: Nom d’utilisateur
+          description: Requis. 150 caractères maximum. Uniquement des lettres, nombres
+            et les caractères « @ », « . », « + », « - » et « _ ».
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+      required:
+      - username
+    UserUpdate:
+      type: object
+      description: Sérialiseur pour la mise à jour d'utilisateurs
+      properties:
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+        profile:
+          $ref: '#/components/schemas/UserProfile'
+    UserUpdateRequest:
+      type: object
+      description: Sérialiseur pour la mise à jour d'utilisateurs
+      properties:
+        first_name:
+          type: string
+          title: Prénom
+          maxLength: 150
+        last_name:
+          type: string
+          title: Nom
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Adresse électronique
+          maxLength: 254
+        profile:
+          $ref: '#/components/schemas/UserProfileRequest'
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid

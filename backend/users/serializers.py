@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les utilisateurs"""
     
     profile = UserProfileSerializer(read_only=True)
-    full_name = serializers.ReadOnlyField()
+    full_name = serializers.SerializerMethodField()
     
     class Meta:
         model = User
@@ -32,6 +32,10 @@ class UserSerializer(serializers.ModelSerializer):
             'profile', 'full_name', 'date_joined', 'is_active'
         ]
         read_only_fields = ['id', 'date_joined']
+    
+    def get_full_name(self, obj):
+        """Obtenir le nom complet de l'utilisateur"""
+        return obj.get_full_name() or obj.username
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -142,7 +146,7 @@ class UserListSerializer(serializers.ModelSerializer):
     """Sérialiseur simplifié pour la liste des utilisateurs"""
     
     profile = UserProfileSerializer(read_only=True)
-    full_name = serializers.ReadOnlyField()
+    full_name = serializers.SerializerMethodField()
     project_count = serializers.SerializerMethodField()
     
     class Meta:
@@ -152,6 +156,10 @@ class UserListSerializer(serializers.ModelSerializer):
             'profile', 'full_name', 'project_count', 'is_active'
         ]
         read_only_fields = ['id']
+    
+    def get_full_name(self, obj):
+        """Obtenir le nom complet de l'utilisateur"""
+        return obj.get_full_name() or obj.username
     
     def get_project_count(self, obj):
         """Compter le nombre de projets de l'utilisateur"""

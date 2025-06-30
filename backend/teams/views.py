@@ -16,7 +16,7 @@ class TeamViewSet(viewsets.ModelViewSet):
     serializer_class = TeamSerializer
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['department']
+    filterset_fields = ['is_active', 'created_by']
     search_fields = ['name', 'description']
     ordering_fields = ['created_at', 'name']
     ordering = ['-created_at']
@@ -44,7 +44,7 @@ class TeamMemberViewSet(viewsets.ModelViewSet):
     serializer_class = TeamMemberSerializer
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['team', 'role', 'status']
+    filterset_fields = ['team', 'role', 'is_active']
     ordering_fields = ['joined_at', 'user__first_name']
     ordering = ['joined_at']
     

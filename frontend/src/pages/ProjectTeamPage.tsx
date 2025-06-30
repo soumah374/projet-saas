@@ -25,7 +25,8 @@ import {
   MoreHorizontal,
   Loader2
 } from "lucide-react";
-import { projectApi, Project, User, userApi } from '@/lib/api';
+import { projectsAPI, usersAPI } from '@/lib/api';
+import type { Project, User, ProjectMemberRole } from '@/lib/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useUsers } from '@/hooks/use-users';
@@ -66,8 +67,8 @@ export function ProjectTeamPage() {
 
   // Mutations
   const addMemberMutation = useMutation({
-    mutationFn: ({ projectId, userId, role }: { projectId: string; userId: number; role: string }) =>
-      projectApi.addMember(projectId, userId, role),
+    mutationFn: ({ projectId, userId, role }: { projectId: string; userId: number; role: ProjectMemberRole }) =>
+      projectsAPI.addMember(projectId, { user_id: userId, role }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -84,7 +85,7 @@ export function ProjectTeamPage() {
 
   const removeMemberMutation = useMutation({
     mutationFn: ({ projectId, userId }: { projectId: string; userId: number }) =>
-      projectApi.removeMember(projectId, userId),
+      projectsAPI.removeMember(projectId, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -105,7 +106,7 @@ export function ProjectTeamPage() {
   const loadProjectTeam = async () => {
     try {
       setIsLoading(true);
-      const projectData = await projectApi.getProject(projectId!);
+      const projectData = await projectsAPI.getProject(projectId!);
       setProject(projectData);
       setTeamMembers(projectData.team_members || []);
     } catch (err) {
@@ -125,7 +126,7 @@ export function ProjectTeamPage() {
     addMemberMutation.mutate({
       projectId: projectId!,
       userId: parseInt(selectedUser),
-      role: selectedRole
+      role: selectedRole as ProjectMemberRole
     });
   };
 
@@ -181,11 +182,11 @@ export function ProjectTeamPage() {
   });
 
   // Filtrer les utilisateurs qui ne sont pas déjà dans l'équipe
-  const availableUsers = users?.filter(user => 
+  const availableUsers = users?.results?.filter(user => 
     !teamMembers.some(member => member.user.id === user.id)
   ) || [];
 
-  const roles = ['Chef de projet', 'Designer', 'Développeur', 'Développeur Senior', 'Rédacteur', 'Consultant', 'Assistant'];
+  const roles: ProjectMemberRole[] = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'];
 
   if (isLoading) {
     return (
