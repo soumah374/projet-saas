@@ -7,12 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Calendar, User, Loader2, Edit, Plus } from 'lucide-react';
+import { FileText, User, Loader2, Edit, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ProjectTask } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { StyledDateInput } from '@/components/ui/DateInput';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { CalendarIcon } from 'lucide-react';
 
 interface TaskModalProps {
   children: React.ReactNode;
@@ -78,7 +81,7 @@ if (typeof document !== 'undefined') {
 export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskModalProps) => {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0); // Key to force form re-render
-  
+  const [deadlineOpen, setDeadlineOpen] = useState(false); 
   // Form data state
   const [formData, setFormData] = useState({
     title: '',
@@ -251,13 +254,34 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
               </div>
             </div>
 
-            <StyledDateInput
-              value={formData.due_date}
-              onChange={(date) => setFormData(prev => ({ ...prev, due_date: date }))}
-              label="Date d'échéance"
-              placeholder="Sélectionnez la date d'échéance"
-              required
-            />
+            <div>
+                <Label>Date d'échéance *</Label>
+                <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.due_date ? format(formData.due_date, 'PPP', { locale: fr }) : 'Sélectionner une date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-auto p-0" 
+                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  >
+                    <Calendar
+                       mode="single"
+                       selected={formData.due_date as Date | undefined}
+                       onSelect={(date) => {
+                         setFormData(prev => ({ ...prev, due_date: date || undefined }));
+                         setDeadlineOpen(false);
+                       }}
+                       initialFocus
+                     />
+                  </PopoverContent>
+                </Popover>
+              </div>
           </div>
 
           <Separator />
