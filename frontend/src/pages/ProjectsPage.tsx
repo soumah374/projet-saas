@@ -277,13 +277,12 @@ export function ProjectsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="budget">Budget (€)</Label>
+                  <Label htmlFor="budget">Budget (GNF)</Label>
                   <Input
                     id="budget"
                     type="number"
                     value={newProject.budget}
                     onChange={(e) => setNewProject({...newProject, budget: parseInt(e.target.value) || 0})}
-                    placeholder="0"
                   />
                 </div>
                 <div className="grid gap-2">
@@ -389,7 +388,7 @@ export function ProjectsPage() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <Target className="w-4 h-4 text-gray-400" />
-                  <span>Budget: {project.budget.toLocaleString()}€</span>
+                  <span>Budget: {project.budget.toLocaleString()} GNF</span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Users className="w-4 h-4 text-gray-400" />

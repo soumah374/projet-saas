@@ -112,7 +112,7 @@ class ProjectListSerializer(serializers.ModelSerializer):
     
     def get_team_count(self, obj):
         """Compter le nombre de membres de l'équipe"""
-        return obj.team_members.count()
+        return obj.project_members.count()
     
     def get_days_remaining(self, obj):
         """Calculer le nombre de jours restants"""

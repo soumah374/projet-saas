@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Upload, X, Plus, Users, DollarSign, FileText, Loader2, UserPlus } from 'lucide-react';
-import { format } from 'date-fns';
+import { Edit, X, Plus, Users, DollarSign, FileText, Loader2, UserPlus } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { 
+  Project,
   CreateProjectForm, 
   ProjectType, 
   ProjectCategory, 
@@ -25,9 +26,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 
-interface CreateProjectModalProps {
+interface EditProjectModalProps {
   children: React.ReactNode;
-  onProjectCreate: (project: CreateProjectForm) => void;
+  project: Project;
+  onProjectUpdate: (projectId: string, data: Partial<CreateProjectForm>) => void;
 }
 
 interface TeamMember {
@@ -36,13 +38,6 @@ interface TeamMember {
   name: string;
   role: string;
   email: string;
-}
-
-interface ProjectDocument {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
 }
 
 // Custom styles for date inputs and calendar
@@ -111,9 +106,10 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
-export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectModalProps) => {
+export const EditProjectModal = ({ children, project, onProjectUpdate }: EditProjectModalProps) => {
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const [formKey, setFormKey] = useState(0);
   
   // Form data state
@@ -147,8 +143,6 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [teamSelectionMode, setTeamSelectionMode] = useState<'individual' | 'team'>('individual');
 
-  // Documents state
-  const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [newTag, setNewTag] = useState('');
   
   // Popover states
@@ -173,11 +167,53 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   const categories = ['Corporate', 'Marketing', 'Institutionnel', 'Commercial', 'Interne'];
   const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Développeur Senior', 'Rédacteur', 'Consultant', 'Assistant'];
 
+  // Initialize form data with project values
+  useEffect(() => {
+    if (project && open) {
+      setFormData({
+        title: project.title || '',
+        type: project.type,
+        client: project.client || '',
+        description: project.description || '',
+        objectives: project.objectives || '',
+        budget: project.budget || '',
+        budgetDetails: {
+          production: project.budget_details?.production || '',
+          personnel: project.budget_details?.personnel || '',
+          marketing: project.budget_details?.marketing || '',
+          other: project.budget_details?.other || ''
+        },
+        deadline: project.deadline ? parseISO(project.deadline) : undefined,
+        startDate: project.start_date ? parseISO(project.start_date) : undefined,
+        priority: project.priority,
+        status: project.status,
+        category: project.category,
+        tags: Array.isArray(project.tags) ? project.tags : []
+      });
+
+      // Initialize team members
+      const existingMembers: TeamMember[] = project.team_members?.map(member => ({
+        id: member.id.toString(),
+        user_id: member.user.id,
+        name: `${member.user.first_name} ${member.user.last_name}`,
+        role: member.role,
+        email: member.user.email
+      })) || [];
+      setTeamMembers(existingMembers);
+    }
+  }, [project, open]);
+
   const addTeamMember = () => {
     if (!newMember.user_id || !newMember.role) return;
 
     const selectedUser = users?.results?.find(user => user.id.toString() === newMember.user_id);
     if (!selectedUser) return;
+
+    // Check if user is already in team
+    if (teamMembers.some(member => member.user_id === selectedUser.id)) {
+      alert('Cet utilisateur fait déjà partie de l\'équipe');
+      return;
+    }
 
     const member: TeamMember = {
       id: Date.now().toString(),
@@ -223,31 +259,6 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     }));
   };
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      const newDocs: ProjectDocument[] = Array.from(files).map((file, index) => ({
-        id: Date.now().toString() + index,
-        name: file.name,
-        type: file.type,
-        size: file.size
-      }));
-      setDocuments(prev => [...prev, ...newDocs]);
-    }
-  };
-
-  const removeDocument = (id: string) => {
-    setDocuments(prev => prev.filter(d => d.id !== id));
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   const calculateTotalBudget = () => {
     const total = Object.values(formData.budgetDetails).reduce((sum, value) => {
       return sum + (parseFloat(value) || 0);
@@ -255,85 +266,103 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
     return total;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validation côté frontend
-    if (!formData.title.trim()) {
-      alert('Le titre du projet est requis');
-      return;
+    setIsLoading(true);
+
+    try {
+      // Validation côté frontend
+      if (!formData.title.trim()) {
+        alert('Le titre du projet est requis');
+        return;
+      }
+      
+      if (!formData.type) {
+        alert('Le type de projet est requis');
+        return;
+      }
+      
+      if (!formData.client.trim()) {
+        alert('Le client est requis');
+        return;
+      }
+      
+      if (!formData.deadline) {
+        alert('La date d\'échéance est requise');
+        return;
+      }
+      
+      const totalBudget = formData.budget ? parseFloat(formData.budget) : calculateTotalBudget();
+      
+      // Format data for API
+      const projectData: Partial<CreateProjectForm> = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        objectives: formData.objectives?.trim() || undefined,
+        type: formData.type || 'Communication',
+        category: formData.category || undefined,
+        status: formData.status,
+        priority: formData.priority,
+        start_date: formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : undefined,
+        deadline: formData.deadline ? format(formData.deadline, 'yyyy-MM-dd') : '',
+        budget: totalBudget.toString(),
+        client: formData.client.trim(),
+        tags: formData.tags.length > 0 ? formData.tags : undefined,
+        budget_details: {
+          production: (parseFloat(formData.budgetDetails.production) || 0).toString(),
+          personnel: (parseFloat(formData.budgetDetails.personnel) || 0).toString(),
+          marketing: (parseFloat(formData.budgetDetails.marketing) || 0).toString(),
+          other: (parseFloat(formData.budgetDetails.other) || 0).toString(),
+        },
+        team_members: teamMembers.map(member => ({
+          user_id: member.user_id,
+          role: member.role as ProjectMemberRole
+        })),
+      };
+
+      await onProjectUpdate(project.id, projectData);
+      setOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du projet:', error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    if (!formData.type) {
-      alert('Le type de projet est requis');
-      return;
-    }
-    
-    if (!formData.client.trim()) {
-      alert('Le client est requis');
-      return;
-    }
-    
-    if (!formData.deadline) {
-      alert('La date d\'échéance est requise');
-      return;
-    }
-    
-    const totalBudget = formData.budget ? parseFloat(formData.budget) : calculateTotalBudget();
-    
-    // Format data for API
-    const projectData: CreateProjectForm = {
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      objectives: formData.objectives?.trim() || undefined,
-      type: formData.type || 'Communication',
-      category: formData.category || undefined,
-      status: formData.status,
-      priority: formData.priority,
-      start_date: formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : undefined,
-      deadline: formData.deadline ? format(formData.deadline, 'yyyy-MM-dd') : '',
-      budget: totalBudget.toString(),
-      client: formData.client.trim(),
-      tags: formData.tags.length > 0 ? formData.tags : undefined,
-      budget_details: {
-        production: (parseFloat(formData.budgetDetails.production) || 0).toString(),
-        personnel: (parseFloat(formData.budgetDetails.personnel) || 0).toString(),
-        marketing: (parseFloat(formData.budgetDetails.marketing) || 0).toString(),
-        other: (parseFloat(formData.budgetDetails.other) || 0).toString(),
-      },
-      team_members: teamMembers.map(member => ({
-        user_id: member.user_id,
-        role: member.role as ProjectMemberRole
-      })),
-    };
-    onProjectCreate(projectData);
-    setOpen(false);
-    resetForm();
   };
 
   const resetForm = () => {
-    setFormData({
-      title: '',
-      type: undefined,
-      client: '',
-      description: '',
-      objectives: '',
-      budget: '',
-      budgetDetails: {
-        production: '',
-        personnel: '',
-        marketing: '',
-        other: ''
-      },
-      deadline: undefined,
-      startDate: undefined,
-      priority: 'Normale' as ProjectPriority,
-      status: 'Planification' as ProjectStatus,
-      category: undefined,
-      tags: []
-    });
-    setTeamMembers([]);
-    setDocuments([]);
+    // Reset to original project values
+    if (project) {
+      setFormData({
+        title: project.title || '',
+        type: project.type,
+        client: project.client || '',
+        description: project.description || '',
+        objectives: project.objectives || '',
+        budget: project.budget || '',
+        budgetDetails: {
+          production: project.budget_details?.production || '',
+          personnel: project.budget_details?.personnel || '',
+          marketing: project.budget_details?.marketing || '',
+          other: project.budget_details?.other || ''
+        },
+        deadline: project.deadline ? parseISO(project.deadline) : undefined,
+        startDate: project.start_date ? parseISO(project.start_date) : undefined,
+        priority: project.priority,
+        status: project.status,
+        category: project.category,
+        tags: Array.isArray(project.tags) ? project.tags : []
+      });
+
+      const existingMembers: TeamMember[] = project.team_members?.map(member => ({
+        id: member.id.toString(),
+        user_id: member.user.id,
+        name: `${member.user.first_name} ${member.user.last_name}`,
+        role: member.role,
+        email: member.user.email
+      })) || [];
+      setTeamMembers(existingMembers);
+    }
+    
     setSelectedTeam('');
     setTeamSelectionMode('individual');
     setStartDateOpen(false);
@@ -343,7 +372,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   };
 
   const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 4));
+    setCurrentStep(prev => Math.min(prev + 1, 3));
   };
   
   const prevStep = () => {
@@ -557,7 +586,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
               </div>
 
               <div>
-                <Label htmlFor="status">Statut initial</Label>
+                <Label htmlFor="status">Statut</Label>
                 <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as ProjectStatus }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -808,88 +837,29 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
           </div>
         );
 
-      case 4:
-        return (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Upload className="h-5 w-5 text-purple-600" />
-              Documents initiaux
-            </h3>
-
-            <Card className="p-6">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <div>
-                  <Label htmlFor="file-upload" className="cursor-pointer">
-                    <span className="text-blue-600 hover:text-blue-700 font-medium">
-                      Cliquez pour parcourir
-                    </span>
-                    <span className="text-gray-500"> ou glissez-déposez vos fichiers ici</span>
-                  </Label>
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    multiple
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif"
-                  />
-                </div>
-                <p className="text-sm text-gray-400 mt-2">
-                  PDF, DOC, XLS, PPT, PNG, JPG jusqu'à 10MB par fichier
-                </p>
-              </div>
-            </Card>
-
-            {documents.length > 0 && (
-              <div className="space-y-3">
-                <h4 className="font-medium">Documents ajoutés ({documents.length})</h4>
-                {documents.map(doc => (
-                  <Card key={doc.id} className="p-3">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 rounded">
-                          <FileText className="h-4 w-4 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-sm">{doc.name}</p>
-                          <p className="text-xs text-gray-500">{formatFileSize(doc.size)}</p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeDocument(doc.id)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-
       default:
         return null;
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(newOpen) => {
+      setOpen(newOpen);
+      if (!newOpen) {
+        resetForm();
+      }
+    }}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-blue-900">
-            Créer un nouveau projet
+            Modifier le projet: {project?.title}
           </DialogTitle>
           <div className="flex items-center justify-center mt-4">
             <div className="flex items-center space-x-2">
-              {[1, 2, 3, 4].map((step) => (
+              {[1, 2, 3].map((step) => (
                 <div key={step} className="flex items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                     step === currentStep 
@@ -900,7 +870,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                   }`}>
                     {step}
                   </div>
-                  {step < 4 && <div className="w-12 h-px bg-gray-300 mx-2" />}
+                  {step < 3 && <div className="w-12 h-px bg-gray-300 mx-2" />}
                 </div>
               ))}
             </div>
@@ -919,17 +889,26 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
               )}
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={isLoading}>
                 Annuler
               </Button>
-              {currentStep < 4 ? (
+              {currentStep < 3 ? (
                 <Button type="button" onClick={nextStep} className="bg-blue-600 hover:bg-blue-700">
                   Suivant
                 </Button>
               ) : (
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer le projet
+                <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Mise à jour...
+                    </>
+                  ) : (
+                    <>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Mettre à jour
+                    </>
+                  )}
                 </Button>
               )}
             </div>
@@ -938,4 +917,4 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
       </DialogContent>
     </Dialog>
   );
-};
+}; 

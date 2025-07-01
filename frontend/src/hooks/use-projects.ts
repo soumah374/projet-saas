@@ -1,5 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectApi, Project, CreateProjectData, UpdateProjectData, ProjectStatistics } from '@/lib/api';
+import { projectsAPI, projectMembersAPI, projectTasksAPI } from '@/lib/api';
+import type { 
+  Project, 
+  ProjectList, 
+  CreateProjectForm, 
+  ProjectStatistics,
+  ProjectMember,
+  ProjectTask,
+  CreateTaskForm,
+  CreateTeamMemberForm
+} from '@/lib/types';
+import { toast } from 'sonner';
 
 // Query keys
 export const projectKeys = {
@@ -14,170 +25,251 @@ export const projectKeys = {
   teamProjects: () => [...projectKeys.all, 'team-projects'] as const,
 };
 
-// Hook to get all projects with filters
-export const useProjects = (filters?: {
+// ===== PROJETS =====
+
+export const useProjects = (params?: {
   search?: string;
+  ordering?: string;
+  page?: number;
   status?: string;
   type?: string;
   priority?: string;
-  ordering?: string;
+  category?: string;
 }) => {
   return useQuery({
-    queryKey: projectKeys.list(filters || {}),
-    queryFn: () => projectApi.getProjects(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryKey: ['projects', params],
+    queryFn: () => projectsAPI.getProjects(params),
+    retry: (failureCount, error: any) => {
+      // Don't retry on authentication errors
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      // Retry up to 3 times for other errors
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 };
 
-// Hook to get a single project
 export const useProject = (id: string) => {
   return useQuery({
-    queryKey: projectKeys.detail(id),
-    queryFn: () => projectApi.getProject(id),
+    queryKey: ['project', id],
+    queryFn: () => projectsAPI.getProject(id),
     enabled: !!id,
   });
 };
 
-// Hook to get project statistics
-export const useProjectStatistics = () => {
-  return useQuery({
-    queryKey: projectKeys.statistics(),
-    queryFn: () => projectApi.getStatistics(),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  });
-};
-
-// Hook to get upcoming deadlines
-export const useUpcomingDeadlines = () => {
-  return useQuery({
-    queryKey: projectKeys.upcomingDeadlines(),
-    queryFn: () => projectApi.getUpcomingDeadlines(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-// Hook to get my projects
-export const useMyProjects = () => {
-  return useQuery({
-    queryKey: projectKeys.myProjects(),
-    queryFn: () => projectApi.getMyProjects(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-// Hook to get team projects
-export const useTeamProjects = () => {
-  return useQuery({
-    queryKey: projectKeys.teamProjects(),
-    queryFn: () => projectApi.getTeamProjects(),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-};
-
-// Hook to create a project
 export const useCreateProject = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: CreateProjectData) => projectApi.createProject(data),
+    mutationFn: (data: CreateProjectForm) => projectsAPI.createProject(data),
     onSuccess: () => {
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.myProjects() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.teamProjects() });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 };
 
-// Hook to update a project
 export const useUpdateProject = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateProjectData }) =>
-      projectApi.updateProject(id, data),
-    onSuccess: (updatedProject) => {
-      // Update the specific project in cache
-      queryClient.setQueryData(projectKeys.detail(updatedProject.id), updatedProject);
-      
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.myProjects() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.teamProjects() });
+    mutationFn: ({ id, data }: { id: string; data: Partial<CreateProjectForm> }) =>
+      projectsAPI.updateProject(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
     },
   });
 };
 
-// Hook to delete a project
 export const useDeleteProject = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: string) => projectApi.deleteProject(id),
-    onSuccess: (_, deletedId) => {
-      // Remove the project from cache
-      queryClient.removeQueries({ queryKey: projectKeys.detail(deletedId) });
-      
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.myProjects() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.teamProjects() });
+    mutationFn: (id: string) => projectsAPI.deleteProject(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 };
 
-// Hook to update project progress
+export const useProjectStatistics = () => {
+  return useQuery({
+    queryKey: ['project-statistics'],
+    queryFn: () => projectsAPI.getStatistics(),
+    retry: (failureCount, error: any) => {
+      // Don't retry on authentication errors
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      // Retry up to 3 times for other errors
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
+};
+
+export const useMyProjects = () => {
+  return useQuery({
+    queryKey: ['my-projects'],
+    queryFn: () => projectsAPI.getMyProjects(),
+  });
+};
+
+export const useTeamProjects = () => {
+  return useQuery({
+    queryKey: ['team-projects'],
+    queryFn: () => projectsAPI.getTeamProjects(),
+  });
+};
+
+export const useUpcomingDeadlines = () => {
+  return useQuery({
+    queryKey: ['upcoming-deadlines'],
+    queryFn: () => projectsAPI.getUpcomingDeadlines(),
+  });
+};
+
 export const useUpdateProjectProgress = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: ({ id, progress }: { id: string; progress: number }) =>
-      projectApi.updateProgress(id, progress),
-    onSuccess: (data, { id }) => {
-      // Update the project's progress in cache
-      queryClient.setQueryData(projectKeys.detail(id), (old: Project | undefined) => {
-        if (old) {
-          return { ...old, progress: data.progress };
-        }
-        return old;
-      });
-      
-      // Invalidate and refetch project lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: projectKeys.statistics() });
+      projectsAPI.updateProgress(id, progress),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', id] });
     },
   });
 };
 
-// Hook to add a member to a project
+// ===== MEMBRES DE PROJET =====
+
+export const useProjectMembers = (projectId: string) => {
+  return useQuery({
+    queryKey: ['project-members', projectId],
+    queryFn: () => projectMembersAPI.getProjectMembers(projectId),
+    enabled: !!projectId,
+  });
+};
+
 export const useAddProjectMember = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, user_id, role }: { id: string; user_id: number; role: string }) =>
-      projectApi.addMember(id, user_id, role),
-    onSuccess: (_, { id }) => {
-      // Invalidate the specific project and lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+    mutationFn: ({ projectId, data }: { projectId: string; data: CreateTeamMemberForm }) =>
+      projectMembersAPI.addProjectMember(projectId, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
 };
 
-// Hook to remove a member from a project
-export const useRemoveProjectMember = () => {
+export const useUpdateProjectMember = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, user_id }: { id: string; user_id: number }) =>
-      projectApi.removeMember(id, user_id),
-    onSuccess: (_, { id }) => {
-      // Invalidate the specific project and lists
-      queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
-      queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
+    mutationFn: ({ 
+      projectId, 
+      memberId, 
+      data 
+    }: { 
+      projectId: string; 
+      memberId: number; 
+      data: Partial<CreateTeamMemberForm> 
+    }) => projectMembersAPI.updateProjectMember(projectId, memberId, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+};
+
+export const useDeleteProjectMember = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ projectId, memberId }: { projectId: string; memberId: number }) =>
+      projectMembersAPI.deleteProjectMember(projectId, memberId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+};
+
+// ===== TÂCHES DE PROJET =====
+
+export const useProjectTasks = (projectId: string, params?: {
+  status?: string;
+  assigned_to?: number;
+  ordering?: string;
+  page?: number;
+}) => {
+  return useQuery({
+    queryKey: ['project-tasks', projectId, params],
+    queryFn: () => projectTasksAPI.getProjectTasks(projectId, params),
+    enabled: !!projectId,
+  });
+};
+
+export const useCreateProjectTask = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: CreateTaskForm }) =>
+      projectTasksAPI.createProjectTask(projectId, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+};
+
+export const useUpdateProjectTask = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ 
+      projectId, 
+      taskId, 
+      data 
+    }: { 
+      projectId: string; 
+      taskId: number; 
+      data: Partial<CreateTaskForm> 
+    }) => projectTasksAPI.updateProjectTask(projectId, taskId, data),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+};
+
+export const useDeleteProjectTask = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ projectId, taskId }: { projectId: string; taskId: number }) =>
+      projectTasksAPI.deleteProjectTask(projectId, taskId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+};
+
+export const useUpdateTaskStatus = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ projectId, taskId, status }: { projectId: string; taskId: number; status: string }) =>
+      projectTasksAPI.updateTaskStatus(projectId, taskId, status),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
 }; 

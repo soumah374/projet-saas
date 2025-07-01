@@ -5,12 +5,6 @@ from .views import TeamViewSet, TeamMemberViewSet
 # Router pour les équipes
 router = DefaultRouter()
 router.register(r'', TeamViewSet, basename='team')
+router.register(r'members', TeamMemberViewSet, basename='team-member')
 
-# Router pour les membres d'équipe
-member_router = DefaultRouter()
-member_router.register(r'members', TeamMemberViewSet, basename='team-member')
-
-urlpatterns = [
-    path('', include(router.urls)),
-    path('', include(member_router.urls)),
-] 
+urlpatterns = router.urls 

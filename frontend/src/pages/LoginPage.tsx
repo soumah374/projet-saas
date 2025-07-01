@@ -3,74 +3,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
+import { toast } from "sonner";
+import { Eye, EyeOff, Lock, User as UserIcon } from "lucide-react";
+import { authAPI } from "@/lib/api";
 
-interface User {
-  id: number;
-  username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: string;
-  is_staff: boolean;
-}
-
-interface LoginPageProps {
-  onLogin: (user: User, token: string) => void;
-}
-
-export function LoginPage({ onLogin }: LoginPageProps) {
+export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!username || !password) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir tous les champs",
-        variant: "destructive",
-      });
+      toast.error("Veuillez remplir tous les champs");
       return;
     }
 
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        onLogin(data.user, data.token);
-        toast({
-          title: "Connexion réussie",
-          description: `Bienvenue ${data.user.first_name} !`,
-        });
-      } else {
-        const errorData = await response.json();
-        toast({
-          title: "Erreur de connexion",
-          description: errorData.message || "Nom d'utilisateur ou mot de passe incorrect",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de se connecter au serveur",
-        variant: "destructive",
-      });
+      const response = await authAPI.login({ username, password });
+      
+      console.log('Login successful:', response);
+      
+      // Stocker les tokens et informations utilisateur
+      localStorage.setItem('access_token', response.access);
+      localStorage.setItem('refresh_token', response.refresh);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      console.log('Tokens stored in localStorage');
+      
+      toast.success(`Bienvenue ${response.user.first_name} !`);
+      
+      // Rediriger vers la page principale
+      window.location.href = '/';
+    } catch (error: any) {
+      toast.error(error.message || "Nom d'utilisateur ou mot de passe incorrect");
     } finally {
       setIsLoading(false);
     }
@@ -93,7 +62,7 @@ export function LoginPage({ onLogin }: LoginPageProps) {
             <div className="space-y-2">
               <Label htmlFor="username">Nom d'utilisateur</Label>
               <div className="relative">
-                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <UserIcon className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="username"
                   type="text"

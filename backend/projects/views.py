@@ -1,11 +1,12 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Count, Avg
+from django.db.models import Q, Count, Avg, Sum
 from django.utils import timezone
-from datetime import timedelta
+from datetime import timedelta, datetime
+from django.http import HttpResponse
 
 from .models import Project, ProjectMember, ProjectBudget, ProjectTask
 from .serializers import (
@@ -18,7 +19,7 @@ from .serializers import (
 class ProjectViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des projets"""
     
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority', 'category']
     search_fields = ['title', 'description', 'client', 'id']
@@ -185,6 +186,219 @@ class ProjectViewSet(viewsets.ModelViewSet):
             projects = Project.objects.none()
         serializer = ProjectListSerializer(projects, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def reports(self, request):
+        """
+        Endpoint pour récupérer les données de rapport des projets
+        """
+        # Récupérer les filtres
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        status_filter = request.query_params.get('status')
+        priority_filter = request.query_params.get('priority')
+        team_member_filter = request.query_params.get('team_member')
+        type_filter = request.query_params.get('type')
+
+        # Construire la queryset de base
+        queryset = Project.objects.all()
+
+        # Appliquer les filtres
+        if date_from:
+            try:
+                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(start_date__gte=date_from_obj)
+            except ValueError:
+                pass
+
+        if date_to:
+            try:
+                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(deadline__lte=date_to_obj)
+            except ValueError:
+                pass
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        if priority_filter:
+            queryset = queryset.filter(priority=priority_filter)
+
+        if type_filter:
+            queryset = queryset.filter(type=type_filter)
+
+        if team_member_filter:
+            try:
+                team_member_id = int(team_member_filter)
+                queryset = queryset.filter(team_members__id=team_member_id)
+            except (ValueError, TypeError):
+                pass
+
+        # Préparer les données pour chaque projet
+        report_data = []
+        for project in queryset.select_related('created_by').prefetch_related('team_members'):
+            # Calculer les statistiques des tâches (simulation pour l'exemple)
+            total_tasks = 10  # À remplacer par la vraie logique
+            completed_tasks = int(project.progress * total_tasks / 100)
+            pending_tasks = total_tasks - completed_tasks
+            overdue_tasks = 1 if project.deadline < timezone.now().date() and project.status != 'Terminé' else 0
+
+            project_data = {
+                'id': project.id,
+                'title': project.title,
+                'status': project.status,
+                'priority': project.priority,
+                'progress': project.progress,
+                'start_date': project.start_date.isoformat() if project.start_date else None,
+                'deadline': project.deadline.isoformat() if project.deadline else None,
+                'budget': str(project.budget) if project.budget else '0',
+                'team_members_count': project.team_members.count(),
+                'tasks_total': total_tasks,
+                'tasks_completed': completed_tasks,
+                'tasks_pending': pending_tasks,
+                'tasks_overdue': overdue_tasks,
+                'manager': {
+                    'id': project.created_by.id if project.created_by else None,
+                    'first_name': project.created_by.first_name if project.created_by else '',
+                    'last_name': project.created_by.last_name if project.created_by else '',
+                    'email': project.created_by.email if project.created_by else '',
+                } if project.created_by else None
+            }
+            report_data.append(project_data)
+
+        return Response(report_data)
+
+    @action(detail=False, methods=['get'])
+    def reports_summary(self, request):
+        """
+        Endpoint pour récupérer le résumé des rapports
+        """
+        # Récupérer les filtres (même logique que reports)
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        status_filter = request.query_params.get('status')
+        priority_filter = request.query_params.get('priority')
+
+        # Construire la queryset
+        queryset = Project.objects.all()
+
+        if date_from:
+            try:
+                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+                queryset = queryset.filter(start_date__gte=date_from_obj)
+            except ValueError:
+                pass
+
+        if date_to:
+            try:
+                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+                queryset = queryset.filter(deadline__lte=date_to_obj)
+            except ValueError:
+                pass
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        if priority_filter:
+            queryset = queryset.filter(priority=priority_filter)
+
+        # Calculer les statistiques
+        total_projects = queryset.count()
+        active_projects = queryset.filter(status__in=['En cours', 'Production']).count()
+        completed_projects = queryset.filter(status='Terminé').count()
+        delayed_projects = queryset.filter(
+            deadline__lt=timezone.now().date(),
+            status__in=['En cours', 'Production', 'Planification']
+        ).count()
+        on_time_projects = total_projects - delayed_projects
+
+        # Statistiques des tâches (simulation)
+        total_tasks = total_projects * 10
+        completed_tasks = sum([int(p.progress * 10 / 100) for p in queryset])
+        pending_tasks = total_tasks - completed_tasks
+        overdue_tasks = delayed_projects * 2
+        completion_rate = int((completed_tasks / total_tasks * 100)) if total_tasks > 0 else 0
+
+        # Statistiques d'équipe
+        total_members = 15  # À remplacer par la vraie logique
+        active_projects_count = active_projects
+        avg_productivity = 85  # À calculer réellement
+
+        # Statistiques budgétaires
+        total_allocated = float(queryset.aggregate(total=Sum('budget'))['total'] or 0)
+        total_spent = total_allocated * 0.7  # Simulation
+        remaining = total_allocated - total_spent
+
+        # Timeline (simulation pour les 6 derniers mois)
+        timeline_data = {
+            'labels': ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
+            'projects_completed': [2, 3, 1, 4, 2, 3],
+            'tasks_completed': [45, 52, 38, 67, 43, 58]
+        }
+
+        summary = {
+            'projects': {
+                'total': total_projects,
+                'active': active_projects,
+                'completed': completed_projects,
+                'delayed': delayed_projects,
+                'on_time': on_time_projects
+            },
+            'tasks': {
+                'total': total_tasks,
+                'completed': completed_tasks,
+                'pending': pending_tasks,
+                'overdue': overdue_tasks,
+                'completion_rate': completion_rate
+            },
+            'team': {
+                'total_members': total_members,
+                'active_projects': active_projects_count,
+                'avg_productivity': avg_productivity
+            },
+            'budget': {
+                'total_allocated': total_allocated,
+                'total_spent': total_spent,
+                'remaining': remaining
+            },
+            'timeline': timeline_data
+        }
+
+        return Response(summary)
+
+    @action(detail=False, methods=['get'])
+    def export_pdf(self, request):
+        """
+        Exporter le rapport en PDF
+        """
+        # Pour l'instant, retourner une réponse simple
+        # Dans une vraie implémentation, utiliser une bibliothèque comme reportlab
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="rapport_projets.pdf"'
+        
+        # Contenu PDF simulé
+        pdf_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n100 700 Td\n(Rapport des projets) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000010 00000 n \n0000000053 00000 n \n0000000109 00000 n \n0000000158 00000 n \ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n238\n%%EOF"
+        response.write(pdf_content)
+        
+        return response
+
+    @action(detail=False, methods=['get'])
+    def export_excel(self, request):
+        """
+        Exporter le rapport en Excel
+        """
+        # Pour l'instant, retourner une réponse simple
+        # Dans une vraie implémentation, utiliser openpyxl ou xlsxwriter
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="rapport_projets.xlsx"'
+        
+        # Contenu Excel simulé (un fichier Excel minimal)
+        excel_content = b'PK\x03\x04\x14\x00\x00\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\x00\x08\x02[Content_Types].xml \xa2\x04\x02(\xa0\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00PK\x07\x08\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00PK\x01\x02\x14\x00\x14\x00\x00\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00[Content_Types].xmlPK\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00A\x00\x00\x00#\x00\x00\x00\x00\x00'
+        response.write(excel_content)
+        
+        return response
 
 
 class ProjectMemberViewSet(viewsets.ModelViewSet):

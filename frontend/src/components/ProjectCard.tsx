@@ -3,14 +3,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Calendar, Users, FileText, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Project } from '@/lib/api';
 
 interface ProjectCardProps {
   project: Project;
   userRole: string;
+  onViewDetails?: (project: Project) => void;
 }
 
-export const ProjectCard = ({ project, userRole }: ProjectCardProps) => {
+export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardProps) => {
+  const navigate = useNavigate();
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Planification': return 'bg-gray-100 text-gray-800';
@@ -116,7 +120,7 @@ export const ProjectCard = ({ project, userRole }: ProjectCardProps) => {
         {canViewBudget ? (
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <FileText className="h-4 w-4" />
-            <span>Budget: {project.budget || 'Non défini'}</span>
+            <span>Budget: {project.budget ? `${project.budget} GNF` : 'Non défini'}</span>
             <Badge variant="secondary">75% facturé</Badge>
           </div>
         ) : (
@@ -129,15 +133,23 @@ export const ProjectCard = ({ project, userRole }: ProjectCardProps) => {
 
       {/* Actions */}
       <div className="flex gap-2 pt-4 border-t border-gray-100 mt-4">
-        <Button size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700">
+        <Button 
+          size="sm" 
+          className="flex-1 bg-blue-600 hover:bg-blue-700"
+          onClick={() => navigate(`/projects/${project.id}`)}
+        >
           <Eye className="h-4 w-4 mr-2" />
           Voir détails
         </Button>
-        <Button variant="outline" size="sm">
-          <FileText className="h-4 w-4" />
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => navigate(`/projects/${project.id}/team`)}
+        >
+          <Users className="h-4 w-4" />
         </Button>
         <Button variant="outline" size="sm">
-          <Users className="h-4 w-4" />
+          <FileText className="h-4 w-4" />
         </Button>
       </div>
     </Card>

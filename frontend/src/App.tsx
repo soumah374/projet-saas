@@ -6,14 +6,15 @@ import { TopNavigation } from './components/TopNavigation';
 import { Sidebar } from './components/Sidebar';
 import { LoginPage } from './pages/LoginPage';
 import { Dashboard } from './pages/Dashboard';
-import { ProjectsPage } from './pages/ProjectsPage';
 import { TeamsPage } from './pages/TeamsPage';
+import { ProjectTeamPage } from './pages/ProjectTeamPage';
+import { ProjectDetailsPage } from './pages/ProjectDetailsPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { ProtectedRoute } from './components/ProtectedRoute';
-import ProjectManagement from './pages/ProjectManagement';
+import { ProjectManagement } from './pages/ProjectManagement';
+import { ProjectReportPage } from './pages/ProjectReportPage';
 
 interface User {
   id: number;
@@ -32,31 +33,40 @@ function App() {
 
   useEffect(() => {
     // Vérifier si l'utilisateur est connecté au chargement
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('access_token');
     const userData = localStorage.getItem('user');
+    
+    console.log('App loading - Token:', token ? 'exists' : 'missing');
+    console.log('App loading - User data:', userData ? 'exists' : 'missing');
     
     if (token && userData) {
       try {
-        setUser(JSON.parse(userData));
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+        console.log('User authenticated:', parsedUser.username);
       } catch (error) {
         console.error('Erreur lors du parsing des données utilisateur:', error);
-        localStorage.removeItem('token');
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
       }
+    } else {
+      console.log('No authentication data found, redirecting to login');
     }
     
     setIsLoading(false);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setUser(null);
   };
 
   const handleLogin = (userData: User, token: string) => {
     setUser(userData);
-    localStorage.setItem('token', token);
+    localStorage.setItem('access_token', token);
     localStorage.setItem('user', JSON.stringify(userData));
   };
 
@@ -93,6 +103,9 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Dashboard user={user} />} />
                   <Route path="/projects" element={<ProjectManagement />} />
+                  <Route path="/projects/:id" element={<ProjectDetailsPage />} />
+                  <Route path="/projects/:id/reports" element={<ProjectReportPage />} />
+                  <Route path="/projects/:projectId/team" element={<ProjectTeamPage />} />
                   <Route path="/teams" element={<TeamsPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/reports" element={<ReportsPage />} />
@@ -105,7 +118,7 @@ function App() {
           </div>
         ) : (
           <Routes>
-            <Route path="/login" element={<LoginPage onLogin={handleLogin} />} />
+            <Route path="/login" element={<LoginPage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         )}
