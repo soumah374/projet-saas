@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import { DocumentManager } from "@/components/DocumentManager";
 import { 
   ArrowLeft, 
   Edit, 
@@ -202,17 +203,26 @@ export function ProjectDetailsPage() {
             project={{
               id: project.id,
               title: project.title,
+              description: project.description,
+              objectives: project.objectives,
               type: project.type,
+              category: project.category,
               status: project.status,
               priority: project.priority,
-              progress: project.progress,
+              start_date: project.start_date,
               deadline: project.deadline,
+              budget: project.budget,
               client: project.client,
               created_by: project.created_by,
-              team_count: project.team_members?.length?.toString() || '0',
-              days_remaining: project.days_remaining?.toString() || '0',
-              is_overdue: project.is_overdue?.toString() || 'false',
-              created_at: project.created_at
+              team_members: project.team_members,
+              budget_details: project.budget_details,
+              tasks: project.tasks,
+              tags: project.tags,
+              days_remaining: project.days_remaining,
+              is_overdue: project.is_overdue,
+              created_at: project.created_at,
+              updated_at: project.updated_at,
+              progress: project.progress
             }} 
             onProjectUpdate={handleProjectUpdate}
           >
@@ -567,24 +577,7 @@ export function ProjectDetailsPage() {
         </TabsContent>
 
         <TabsContent value="documents" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Documents du projet</CardTitle>
-              <CardDescription>
-                Gérez les documents associés à ce projet
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Aucun document uploadé</p>
-                <Button className="mt-4">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Ajouter un document
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <DocumentManager projectId={id || ''} />
         </TabsContent>
       </Tabs>
     </div>

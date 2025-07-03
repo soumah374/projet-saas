@@ -3,71 +3,127 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 import { 
   FileText, Upload, Download, Eye, Trash2, Plus, Search,
-  File, Image, Video, Archive, FileX, Calendar
+  File, Image, Video, Archive, FileX, Calendar, Loader2, Music
 } from 'lucide-react';
-
-interface Document {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadedBy: string;
-  uploadedAt: string;
-  category: string;
-  url?: string;
-}
+import { useDocuments, useCreateDocument, useDeleteDocument } from '@/hooks/use-documents';
+import type { Document, DocumentType, DocumentCategory } from '@/lib/types';
+import { useToast } from '@/components/ui/use-toast';
+import { DocumentDetailsModal } from './DocumentDetailsModal';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface DocumentManagerProps {
   projectId: string;
 }
 
-export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
-  const [documents, setDocuments] = useState<Document[]>([
-    {
-      id: '1',
-      name: 'Brief_client_v2.pdf',
-      type: 'pdf',
-      size: '2.3 MB',
-      uploadedBy: 'Sarah Martin',
-      uploadedAt: '2024-01-15',
-      category: 'Brief'
-    },
-    {
-      id: '2',
-      name: 'Logo_client.png',
-      type: 'image',
-      size: '856 KB',
-      uploadedBy: 'Pierre Lambert',
-      uploadedAt: '2024-01-14',
-      category: 'Assets'
-    },
-    {
-      id: '3',
-      name: 'Planning_production.xlsx',
-      type: 'spreadsheet',
-      size: '1.2 MB',
-      uploadedBy: 'Marie Durant',
-      uploadedAt: '2024-01-13',
-      category: 'Planning'
-    }
-  ]);
+const getDocumentType = (file: File): DocumentType => {
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const mimeType = file.type.toLowerCase();
 
+  // Images
+  if (mimeType.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) {
+    if (extension === 'jpg' || extension === 'jpeg') return 'jpg';
+    if (extension === 'png') return 'png';
+    if (extension === 'gif') return 'gif';
+    return 'jpg'; // default image type
+  }
+
+  // Documents
+  if (mimeType === 'application/pdf' || extension === 'pdf') return 'pdf';
+  if (mimeType === 'application/msword' || extension === 'doc') return 'doc';
+  if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || extension === 'docx') return 'docx';
+  if (mimeType === 'application/vnd.ms-excel' || extension === 'xls') return 'xls';
+  if (mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || extension === 'xlsx') return 'xlsx';
+  if (mimeType === 'application/vnd.ms-powerpoint' || extension === 'ppt') return 'ppt';
+  if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' || extension === 'pptx') return 'pptx';
+  if (mimeType === 'text/plain' || extension === 'txt') return 'txt';
+
+  // Vidéos
+  if (mimeType.startsWith('video/') || ['mp4', 'avi'].includes(extension || '')) {
+    if (extension === 'mp4') return 'mp4';
+    if (extension === 'avi') return 'avi';
+    return 'mp4'; // default video type
+  }
+
+  // Audio
+  if (mimeType.startsWith('audio/') || extension === 'mp3') return 'mp3';
+
+  // Archives
+  if (mimeType === 'application/zip' || extension === 'zip') return 'zip';
+
+  return 'other';
+};
+
+interface DocumentFormData {
+  title: string;
+  description: string;
+  file: File | null;
+  document_type: DocumentType;
+  category: DocumentCategory;
+  tags: string;
+  is_public: boolean;
+}
+
+export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('Tous');
+  const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [showDetails, setShowDetails] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+  
+  // Form state
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [documentType, setDocumentType] = useState<string>('other');
+  const [category, setCategory] = useState<DocumentCategory>('contract');
+  const [tags, setTags] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
+
+  const { data: documentsData, isLoading } = useDocuments(projectId);
+  const documents = documentsData?.results || [];
+  const createDocumentMutation = useCreateDocument();
+  const deleteDocumentMutation = useDeleteDocument();
 
   const categories = ['Tous', 'Brief', 'Assets', 'Planning', 'Contrats', 'Factures', 'Rapport'];
 
   const getFileIcon = (type: string) => {
     switch (type) {
       case 'pdf': return <FileText className="h-8 w-8 text-red-500" />;
-      case 'image': return <Image className="h-8 w-8 text-green-500" />;
-      case 'video': return <Video className="h-8 w-8 text-blue-500" />;
-      case 'spreadsheet': return <File className="h-8 w-8 text-green-600" />;
-      case 'archive': return <Archive className="h-8 w-8 text-yellow-500" />;
+      case 'jpg':
+      case 'jpeg':
+      case 'png':
+      case 'gif': return <Image className="h-8 w-8 text-green-500" />;
+      case 'mp4':
+      case 'avi': return <Video className="h-8 w-8 text-blue-500" />;
+      case 'doc':
+      case 'docx':
+      case 'xls':
+      case 'xlsx':
+      case 'ppt':
+      case 'pptx':
+      case 'txt': return <File className="h-8 w-8 text-green-600" />;
+      case 'zip': return <Archive className="h-8 w-8 text-yellow-500" />;
+      case 'mp3': return <Music className="h-8 w-8 text-green-600" />;
       default: return <FileX className="h-8 w-8 text-gray-500" />;
     }
   };
@@ -83,253 +139,341 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
   };
 
   const filteredDocuments = documents.filter(doc => {
-    const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = doc.title.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Tous' || doc.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files) {
-      Array.from(files).forEach(file => {
-        const newDoc: Document = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          name: file.name,
-          type: file.type.includes('image') ? 'image' : 
-                file.type.includes('pdf') ? 'pdf' :
-                file.type.includes('video') ? 'video' :
-                file.type.includes('sheet') ? 'spreadsheet' : 'file',
-          size: (file.size / 1024 / 1024).toFixed(1) + ' MB',
-          uploadedBy: 'Sarah Martin',
-          uploadedAt: new Date().toISOString().split('T')[0],
-          category: 'Assets'
-        };
-        setDocuments(prev => [...prev, newDoc]);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    let documentType = 'other';
+
+    if (['pdf'].includes(extension)) documentType = 'pdf';
+    else if (['doc', 'docx'].includes(extension)) documentType = 'doc';
+    else if (['xls', 'xlsx'].includes(extension)) documentType = 'xls';
+    else if (['ppt', 'pptx'].includes(extension)) documentType = 'ppt';
+    else if (['jpg', 'jpeg', 'png', 'gif'].includes(extension)) documentType = 'image';
+    else if (['mp4', 'avi'].includes(extension)) documentType = 'video';
+    else if (['mp3'].includes(extension)) documentType = 'audio';
+    else if (['zip'].includes(extension)) documentType = 'archive';
+
+    const title = file.name.replace(/\.[^/.]+$/, "");
+    
+    setSelectedFile(file);
+    setTitle(title);
+    setDocumentType(documentType);
+    setCategory(documentType as DocumentCategory);
+  };
+
+  const handleCategoryChange = (value: string) => {
+    setCategory(value as DocumentCategory);
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez sélectionner un fichier",
+        variant: "destructive"
       });
+      return;
+    }
+
+    try {
+      await createDocumentMutation.mutateAsync({
+        title,
+        description,
+        file: selectedFile,
+        document_type: documentType,
+        category,
+        tags: tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        is_public: isPublic,
+        project: projectId
+      });
+
+      toast({
+        title: "Succès",
+        description: "Document téléchargé avec succès",
+      });
+      
       setUploadDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors du téléchargement du document",
+        variant: "destructive"
+      });
     }
   };
 
-  const deleteDocument = (id: string) => {
-    setDocuments(prev => prev.filter(doc => doc.id !== id));
+  const handleDeleteClick = (doc: Document) => {
+    setDocumentToDelete(doc);
+    setShowDeleteDialog(true);
   };
+
+  const handleDelete = async () => {
+    if (!documentToDelete) return;
+
+    try {
+      await deleteDocumentMutation.mutateAsync(documentToDelete.id);
+
+      toast({
+        title: "Succès",
+        description: "Document supprimé avec succès",
+      });
+      
+      setShowDeleteDialog(false);
+      setDocumentToDelete(null);
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la suppression du document",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setSelectedFile(null);
+    setDocumentType('other');
+    setCategory('contract');
+    setTags('');
+    setIsPublic(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header et actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestion des documents</h2>
-          <p className="text-gray-600">Projet ID: {projectId}</p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Documents</h2>
+          <p className="text-sm text-gray-500">
+            Gérez les documents associés à ce projet
+          </p>
         </div>
-        
-        <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter des documents
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Uploader des documents</DialogTitle>
-            </DialogHeader>
+        <Button onClick={() => setUploadDialogOpen(true)}>
+          <Upload className="w-4 h-4 mr-2" />
+          Uploader
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <div className="flex-1">
+          <Input
+            placeholder="Rechercher un document..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="max-w-sm"
+          />
+        </div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Catégorie" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="Tous">Tous</SelectItem>
+            <SelectItem value="contract">Contrats</SelectItem>
+            <SelectItem value="proposal">Propositions</SelectItem>
+            <SelectItem value="report">Rapports</SelectItem>
+            <SelectItem value="presentation">Présentations</SelectItem>
+            <SelectItem value="design">Design</SelectItem>
+            <SelectItem value="other">Autres</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Uploader un document</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpload} className="space-y-4">
             <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <span className="text-gray-600">Glissez-déposez vos fichiers ici ou </span>
-                  <span className="text-blue-600 underline">parcourez</span>
-                </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 <input
-                  id="file-upload"
                   type="file"
-                  multiple
+                  id="file"
                   className="hidden"
-                  onChange={handleFileUpload}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.zip,.rar"
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mp3,.zip"
                 />
-                <p className="text-sm text-gray-400 mt-2">
-                  PDF, DOC, XLS, PPT, Images, Vidéos, Archives (Max: 50MB par fichier)
+                <label
+                  htmlFor="file"
+                  className="cursor-pointer flex flex-col items-center justify-center"
+                >
+                  <Upload className="h-8 w-8 text-gray-400" />
+                  <span className="mt-2 text-sm text-gray-500">
+                    Cliquez pour sélectionner un fichier
+                  </span>
+                </label>
+                {selectedFile && (
+                  <p className="mt-2 text-sm text-gray-500">
+                    Fichier sélectionné: {selectedFile.name}
+                  </p>
+                )}
+                <p className="text-xs text-gray-400 mt-2">
+                  PDF, DOC, XLS, PPT, Images, Vidéos, Audio, Archives (Max: 50MB)
                 </p>
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </div>
 
-      {/* Filtres et recherche */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="space-y-2">
+                <Label htmlFor="title">Titre</Label>
                 <Input
-                  placeholder="Rechercher un document..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="category">Catégorie</Label>
+                <Select value={category} onValueChange={handleCategoryChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez une catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="contract">Contrat</SelectItem>
+                    <SelectItem value="proposal">Proposition</SelectItem>
+                    <SelectItem value="report">Rapport</SelectItem>
+                    <SelectItem value="presentation">Présentation</SelectItem>
+                    <SelectItem value="design">Design</SelectItem>
+                    <SelectItem value="other">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  value={tags}
+                  onChange={(e) => setTags(e.target.value)}
+                  placeholder="tag1, tag2, tag3"
+                />
+                <p className="text-xs text-gray-500">
+                  Séparez les tags par des virgules
+                </p>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="is_public"
+                  checked={isPublic}
+                  onCheckedChange={(checked) => setIsPublic(checked as boolean)}
+                />
+                <Label htmlFor="is_public">Document public</Label>
+              </div>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              {categories.map(category => (
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setUploadDialogOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit">Uploader</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredDocuments.map((doc) => (
+          <div
+            key={doc.id}
+            className="p-4 border rounded-lg space-y-3 hover:border-gray-400 transition-colors"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-start space-x-3">
+                {getFileIcon(doc.document_type)}
+                <div>
+                  <h3 className="font-medium truncate max-w-[200px]">{doc.title}</h3>
+                  <p className="text-sm text-gray-500 truncate max-w-[200px]">
+                    {doc.description || 'Aucune description'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
                 <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setSelectedDocument(doc);
+                    setShowDetails(true);
+                  }}
                 >
-                  {category}
+                  <Eye className="h-4 w-4" />
                 </Button>
-              ))}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDeleteClick(doc)}
+                >
+                  <Trash2 className="h-4 w-4 text-red-500" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">{doc.document_type.toUpperCase()}</Badge>
+              <Badge>{doc.category}</Badge>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Statistiques documents */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total documents</p>
-                <p className="text-2xl font-bold">{documents.length}</p>
-              </div>
-              <FileText className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Images</p>
-                <p className="text-2xl font-bold">{documents.filter(d => d.type === 'image').length}</p>
-              </div>
-              <Image className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">PDFs</p>
-                <p className="text-2xl font-bold">{documents.filter(d => d.type === 'pdf').length}</p>
-              </div>
-              <FileText className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Taille totale</p>
-                <p className="text-2xl font-bold">4.4 MB</p>
-              </div>
-              <Archive className="h-8 w-8 text-gray-600" />
-            </div>
-          </CardContent>
-        </Card>
+        ))}
       </div>
 
-      {/* Liste des documents */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Documents du projet ({filteredDocuments.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {filteredDocuments.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
-                <FileX className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>Aucun document trouvé</p>
-                {searchTerm && (
-                  <Button variant="outline" onClick={() => setSearchTerm('')} className="mt-2">
-                    Effacer la recherche
-                  </Button>
-                )}
-              </div>
-            ) : (
-              filteredDocuments.map(doc => (
-                <div key={doc.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                  <div className="flex items-center gap-4">
-                    {getFileIcon(doc.type)}
-                    <div>
-                      <h3 className="font-medium text-gray-900">{doc.name}</h3>
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>{doc.size}</span>
-                        <span>•</span>
-                        <span>Par {doc.uploadedBy}</span>
-                        <span>•</span>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(doc.uploadedAt).toLocaleDateString('fr-FR')}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Badge className={getCategoryColor(doc.category)}>
-                      {doc.category}
-                    </Badge>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => deleteDocument(doc.id)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </CardContent>
-      </Card>
+      {selectedDocument && (
+        <DocumentDetailsModal
+          document={selectedDocument}
+          open={showDetails}
+          onOpenChange={(open) => {
+            setShowDetails(open);
+            if (!open) setSelectedDocument(null);
+          }}
+        />
+      )}
 
-      {/* Historique des modifications */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Historique récent</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-gray-600">15/01/2024 - 14:30</span>
-              <span>Sarah Martin a uploadé Brief_client_v2.pdf</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span className="text-gray-600">14/01/2024 - 11:15</span>
-              <span>Pierre Lambert a uploadé Logo_client.png</span>
-            </div>
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-2 h-2 bg-gray-500 rounded-full"></div>
-              <span className="text-gray-600">13/01/2024 - 09:45</span>
-              <span>Marie Durant a uploadé Planning_production.xlsx</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le document{' '}
+              <span className="font-medium">{documentToDelete?.title}</span> sera définitivement supprimé.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDocumentToDelete(null)}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

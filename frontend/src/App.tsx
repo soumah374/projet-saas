@@ -15,6 +15,7 @@ import { DocumentsPage } from './pages/DocumentsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProjectManagement } from './pages/ProjectManagement';
 import { ProjectReportPage } from './pages/ProjectReportPage';
+import { UsersPage } from './pages/UsersPage';
 
 interface User {
   id: number;
@@ -107,6 +108,7 @@ function App() {
                   <Route path="/projects/:id/reports" element={<ProjectReportPage />} />
                   <Route path="/projects/:projectId/team" element={<ProjectTeamPage />} />
                   <Route path="/teams" element={<TeamsPage />} />
+                  <Route path="/users" element={<UsersPage />} />
                   <Route path="/calendar" element={<CalendarPage />} />
                   <Route path="/reports" element={<ReportsPage />} />
                   <Route path="/documents" element={<DocumentsPage />} />

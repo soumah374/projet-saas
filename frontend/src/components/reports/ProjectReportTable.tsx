@@ -358,7 +358,7 @@ export const ProjectReportTable = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => onViewProject(project.id)}
+                          onClick={() => onViewProject(project?.id)}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>

@@ -40,6 +40,11 @@ async function apiRequest<T>(
     'Content-Type': 'application/json',
   };
 
+  // Ne pas définir Content-Type pour les requêtes FormData
+  if (options.body instanceof FormData) {
+    delete defaultHeaders['Content-Type'];
+  }
+
   // Ajouter le header d'autorisation si un token existe
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
@@ -553,49 +558,24 @@ export const teamMembersAPI = {
 
 export const documentsAPI = {
   // Liste des documents
-  getDocuments: async (params?: {
-    search?: string;
-    ordering?: string;
-    page?: number;
-    document_type?: string;
-    is_public?: boolean;
-    category?: string;
-  }): Promise<PaginatedResponse<Document>> => {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/documents/?${queryString}` : '/documents/';
-    
+  getDocuments: async (projectId?: string): Promise<PaginatedResponse<Document>> => {
+    const endpoint = projectId ? `/documents/?project=${projectId}` : '/documents/';
     return apiRequest<PaginatedResponse<Document>>(endpoint);
   },
 
-  // Détails d'un document
-  getDocument: async (id: number): Promise<Document> => {
-    return apiRequest<Document>(`/documents/${id}/`);
-  },
-
   // Créer un document
-  createDocument: async (documentData: FormData): Promise<Document> => {
+  createDocument: async (formData: FormData): Promise<Document> => {
     return apiRequest<Document>('/documents/', {
       method: 'POST',
-      body: documentData,
-      headers: {}, // Laisser le navigateur définir le Content-Type pour FormData
+      body: formData,
     });
   },
 
   // Mettre à jour un document
-  updateDocument: async (id: number, documentData: FormData): Promise<Document> => {
+  updateDocument: async (id: number, formData: FormData): Promise<Document> => {
     return apiRequest<Document>(`/documents/${id}/`, {
       method: 'PATCH',
-      body: documentData,
-      headers: {}, // Laisser le navigateur définir le Content-Type pour FormData
+      body: formData,
     });
   },
 
@@ -603,20 +583,6 @@ export const documentsAPI = {
   deleteDocument: async (id: number): Promise<void> => {
     return apiRequest<void>(`/documents/${id}/`, {
       method: 'DELETE',
-    });
-  },
-
-  // Rendre un document public
-  makePublic: async (id: number): Promise<{ message: string }> => {
-    return apiRequest<{ message: string }>(`/documents/${id}/make_public/`, {
-      method: 'POST',
-    });
-  },
-
-  // Rendre un document privé
-  makePrivate: async (id: number): Promise<{ message: string }> => {
-    return apiRequest<{ message: string }>(`/documents/${id}/make_private/`, {
-      method: 'POST',
     });
   },
 }; 

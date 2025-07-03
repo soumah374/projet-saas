@@ -167,7 +167,7 @@ export interface Team {
   created_by_name: string;
   created_at: string;
   updated_at: string;
-  member_count: string;
+  member_count: number;
 }
 
 export interface TeamMember {
