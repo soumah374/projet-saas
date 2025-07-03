@@ -157,12 +157,13 @@ class ProjectTask(models.Model):
     description = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='À faire')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tasks')
+    start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        ordering = ['due_date', 'created_at']
+        ordering = ['start_date', 'due_date', 'created_at']
         verbose_name = 'Tâche'
         verbose_name_plural = 'Tâches'
     

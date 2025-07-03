@@ -455,4 +455,36 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
         return Response(
             {'error': 'Statut invalide'}, 
             status=status.HTTP_400_BAD_REQUEST
-        ) 
+        )
+
+    @action(detail=False, methods=['get'])
+    def upcoming_deadlines(self, request, project_pk=None):
+        """Obtenir les tâches avec des échéances proches"""
+        # Récupérer les tâches du projet
+        queryset = self.get_queryset()
+        
+        # Filtrer les tâches non terminées avec une date d'échéance
+        queryset = queryset.filter(
+            status__in=['À faire', 'En cours', 'En pause'],
+            due_date__isnull=False
+        )
+        
+        # Calculer la date limite (7 jours à partir d'aujourd'hui)
+        deadline = timezone.now().date() + timedelta(days=7)
+        
+        # Filtrer les tâches avec échéance dans les 7 prochains jours
+        upcoming_tasks = queryset.filter(
+            due_date__lte=deadline,
+            due_date__gte=timezone.now().date()
+        ).order_by('due_date')
+        
+        serializer = self.get_serializer(upcoming_tasks, many=True)
+        
+        # Ajouter le nombre de jours restants pour chaque tâche
+        data = serializer.data
+        for task in data:
+            due_date = datetime.strptime(task['due_date'], '%Y-%m-%d').date()
+            days_remaining = (due_date - timezone.now().date()).days
+            task['days_remaining'] = days_remaining
+        
+        return Response(data) 

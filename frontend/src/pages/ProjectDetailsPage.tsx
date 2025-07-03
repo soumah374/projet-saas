@@ -32,6 +32,12 @@ import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { EditProjectModal } from '@/components/EditProjectModal';
 import { TaskModal } from '@/components/TaskModal';
+import { UpdateBudgetModal } from '@/components/UpdateBudgetModal';
+import { BudgetChart } from '@/components/BudgetChart';
+import { ProjectCalendar } from '@/components/ProjectCalendar';
+import { TeamMembersList } from '@/components/TeamMembersList';
+import { TaskDeadlineAlert } from '@/components/TaskDeadlineAlert';
+import { Separator } from '@/components/ui/separator';
 
 export function ProjectDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -242,6 +248,8 @@ export function ProjectDetailsPage() {
         </div>
       </div>
 
+      <TaskDeadlineAlert projectId={project.id} />
+
       {/* Project Status */}
       <div className="flex flex-wrap gap-2">
         <Badge className={getStatusColor(project.status)}>
@@ -447,33 +455,41 @@ export function ProjectDetailsPage() {
                 <div className="space-y-4">
                   {project.tasks.map((task) => (
                     <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-medium text-lg">{task.title}</h4>
-                          <Badge className={getTaskStatusColor(task.status)}>
-                            {task.status}
-                          </Badge>
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-gray-600 mb-3">{task.description}</p>
-                        )}
-                        <div className="flex items-center gap-6 text-sm text-gray-500">
-                          {task.assigned_to && (
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4" />
-                              <span>Assigné à: {task.assigned_to.first_name} {task.assigned_to.last_name}</span>
+                      <div className="flex-1 cursor-pointer">
+                        <TaskModal 
+                          task={task}
+                          projectId={project.id}
+                          mode="view"
+                        >
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-medium text-lg">{task.title}</h4>
+                              <Badge className={getTaskStatusColor(task.status)}>
+                                {task.status}
+                              </Badge>
                             </div>
-                          )}
-                          {task.due_date && (
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>Échéance: {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</span>
+                            {task.description && (
+                              <p className="text-sm text-gray-600 mb-3">{task.description}</p>
+                            )}
+                            <div className="flex items-center gap-6 text-sm text-gray-500">
+                              {task.assigned_to && (
+                                <div className="flex items-center gap-2">
+                                  <User className="w-4 h-4" />
+                                  <span>Assigné à: {task.assigned_to.first_name} {task.assigned_to.last_name}</span>
+                                </div>
+                              )}
+                              {task.due_date && (
+                                <div className="flex items-center gap-2">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>Échéance: {format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr })}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2">
+                                <span>Créée le: {format(new Date(task.created_at), 'dd/MM/yyyy', { locale: fr })}</span>
+                              </div>
                             </div>
-                          )}
-                          <div className="flex items-center gap-2">
-                            <span>Créée le: {format(new Date(task.created_at), 'dd/MM/yyyy', { locale: fr })}</span>
                           </div>
-                        </div>
+                        </TaskModal>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
                         <TaskModal 
@@ -524,10 +540,30 @@ export function ProjectDetailsPage() {
             {/* Budget Overview */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  Budget total
-                </CardTitle>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    Budget total
+                  </CardTitle>
+                  <UpdateBudgetModal
+                    projectId={project.id}
+                    currentBudget={{
+                      total: project.budget || '0',
+                      details: {
+                        production: project.budget_details?.production || '0',
+                        personnel: project.budget_details?.personnel || '0',
+                        marketing: project.budget_details?.marketing || '0',
+                        other: project.budget_details?.other || '0'
+                      }
+                    }}
+                    onBudgetUpdate={handleProjectUpdate}
+                  >
+                    <Button variant="outline" size="sm">
+                      <Edit className="w-4 h-4 mr-2" />
+                      Modifier le budget
+                    </Button>
+                  </UpdateBudgetModal>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600 mb-4">
@@ -562,15 +598,19 @@ export function ProjectDetailsPage() {
               </CardContent>
             </Card>
 
-            {/* Budget Chart Placeholder */}
+            {/* Budget Chart */}
             <Card>
               <CardHeader>
                 <CardTitle>Répartition du budget</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  Graphique de répartition du budget
-                </div>
+                {project.budget_details ? (
+                  <BudgetChart budgetDetails={project.budget_details} />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    Aucune donnée budgétaire disponible
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

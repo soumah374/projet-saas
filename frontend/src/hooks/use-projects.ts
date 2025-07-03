@@ -272,4 +272,14 @@ export const useUpdateTaskStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
+};
+
+export const useUpcomingTaskDeadlines = (projectId: string) => {
+  return useQuery({
+    queryKey: ['upcoming-task-deadlines', projectId],
+    queryFn: () => projectTasksAPI.getUpcomingDeadlines(projectId),
+    enabled: !!projectId,
+    // Rafraîchir toutes les 5 minutes
+    refetchInterval: 5 * 60 * 1000,
+  });
 }; 

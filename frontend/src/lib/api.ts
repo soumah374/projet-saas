@@ -21,6 +21,7 @@ import type {
   CreateProjectForm,
   CreateTaskForm,
   CreateTeamMemberForm,
+  TaskWithDeadline,
 } from './types';
 
 // Configuration de base pour les requêtes API
@@ -416,6 +417,11 @@ export const projectTasksAPI = {
       method: 'POST',
       body: JSON.stringify({ status }),
     });
+  },
+
+  getUpcomingDeadlines: async (projectId: string): Promise<TaskWithDeadline[]> => {
+    const response = await apiRequest<TaskWithDeadline[]>(`/projects/${projectId}/tasks/upcoming_deadlines/`);
+    return response;
   },
 };
 

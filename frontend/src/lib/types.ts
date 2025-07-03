@@ -77,12 +77,17 @@ export interface ProjectMember {
 export interface ProjectTask {
   id: number;
   title: string;
-  description?: string;
-  status: ProjectTaskStatus;
-  assigned_to: User;
-  due_date?: string;
+  description: string;
+  status: string;
+  assigned_to?: User;
+  start_date?: string;
+  due_date: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface TaskWithDeadline extends ProjectTask {
+  days_remaining: number;
 }
 
 export interface Project {
@@ -286,6 +291,7 @@ export interface CreateTaskForm {
   description?: string;
   status: ProjectTaskStatus;
   assigned_to_id?: number;
+  start_date?: string;
   due_date?: string;
 }
 
