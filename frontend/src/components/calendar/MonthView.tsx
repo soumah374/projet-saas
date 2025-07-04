@@ -1,22 +1,24 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import { Event } from './types';
 import { EventList } from './EventList';
 import { getEventsForDate, hasEventsOnDate } from './utils';
+import { MonthViewProps } from './types';
 
-interface MonthViewProps {
-  events: Event[];
-}
-
-export const MonthView = ({ events }: MonthViewProps) => {
+export const MonthView = ({ events, onEventClick }: MonthViewProps) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
 
   const upcomingEvents = events
     .filter(event => event.date >= new Date())
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .slice(0, 5);
+
+  const handleEventClick = (eventId: string) => {
+    if (onEventClick) {
+      onEventClick(eventId);
+    }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

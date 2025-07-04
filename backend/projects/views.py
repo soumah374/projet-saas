@@ -8,17 +8,18 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import HttpResponse
 
-from .models import Project, ProjectMember, ProjectBudget, ProjectTask
+from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent
 from .serializers import (
     ProjectSerializer, ProjectListSerializer, ProjectCreateSerializer,
     ProjectUpdateSerializer, ProjectMemberSerializer, ProjectBudgetSerializer,
-    ProjectTaskSerializer
+    ProjectTaskSerializer, ProjectEventSerializer
 )
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des projets"""
     
+    queryset = Project.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority', 'category']
@@ -95,7 +96,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    @action(detail=False)
+    @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Obtenir les statistiques des projets"""
         user = request.user
@@ -107,34 +108,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     Q(created_by=user) | Q(team_members=user)
                 ).distinct()
         else:
-            # For anonymous users, return statistics for all projects
-            queryset = Project.objects.all()
-        
-        # Statistiques générales
+            queryset = Project.objects.none()
+
+        # Calculer les statistiques
         total_projects = queryset.count()
         active_projects = queryset.filter(status__in=['Planification', 'En cours', 'Production']).count()
         completed_projects = queryset.filter(status='Terminé').count()
-        
-        # Progression moyenne
         avg_progress = queryset.aggregate(Avg('progress'))['progress__avg'] or 0
-        
-        # Projets en retard
-        overdue_projects = queryset.filter(deadline__lt=timezone.now().date()).count()
-        
+        overdue_projects = queryset.filter(
+            deadline__lt=timezone.now().date(),
+            status__in=['Planification', 'En cours', 'Production']
+        ).count()
+
         # Projets par type
-        projects_by_type = queryset.values('type').annotate(count=Count('id'))
-        
+        projects_by_type = queryset.values('type').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
         # Projets par statut
-        projects_by_status = queryset.values('status').annotate(count=Count('id'))
-        
+        projects_by_status = queryset.values('status').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
         return Response({
             'total_projects': total_projects,
             'active_projects': active_projects,
             'completed_projects': completed_projects,
             'average_progress': round(avg_progress, 1),
             'overdue_projects': overdue_projects,
-            'projects_by_type': list(projects_by_type),
-            'projects_by_status': list(projects_by_status),
+            'projects_by_type': projects_by_type,
+            'projects_by_status': projects_by_status,
         })
     
     @action(detail=False)
@@ -487,4 +490,38 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
             days_remaining = (due_date - timezone.now().date()).days
             task['days_remaining'] = days_remaining
         
-        return Response(data) 
+        return Response(data)
+
+
+class ProjectEventViewSet(viewsets.ModelViewSet):
+    """ViewSet pour la gestion des événements de projet"""
+    
+    serializer_class = ProjectEventSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['type', 'date']
+    search_fields = ['title', 'description', 'location']
+    ordering_fields = ['date', 'start_time', 'created_at']
+    ordering = ['date', 'start_time']
+    
+    def get_queryset(self):
+        """Filtrer selon le projet"""
+        project_id = self.kwargs.get('project_pk')
+        if project_id:
+            return ProjectEvent.objects.filter(project_id=project_id)
+        return ProjectEvent.objects.none()
+    
+    def perform_create(self, serializer):
+        """Créer un événement avec le projet"""
+        project_id = self.kwargs.get('project_pk')
+        serializer.save(project_id=project_id)
+    
+    @action(detail=False)
+    def upcoming(self, request):
+        """Obtenir les événements à venir"""
+        queryset = self.get_queryset()
+        upcoming = queryset.filter(
+            date__gte=timezone.now().date()
+        ).order_by('date', 'start_time')
+        serializer = self.get_serializer(upcoming, many=True)
+        return Response(serializer.data) 

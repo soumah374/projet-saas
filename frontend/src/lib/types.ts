@@ -90,6 +90,21 @@ export interface TaskWithDeadline extends ProjectTask {
   days_remaining: number;
 }
 
+export interface ProjectEvent {
+  id: number;
+  title: string;
+  description: string;
+  type: 'Réunion' | 'Présentation' | 'Atelier' | 'Livraison' | 'Autre';
+  date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants: User[];
+  created_by: User;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -113,6 +128,7 @@ export interface Project {
   tags: any;
   days_remaining: string;
   is_overdue: string;
+  events: ProjectEvent[];
 }
 
 export interface ProjectList {

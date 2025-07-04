@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Project, ProjectMember, ProjectBudget, ProjectTask
+from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -49,6 +49,52 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class ProjectEventSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les événements d'un projet"""
+    
+    created_by = UserSerializer(read_only=True)
+    participants = UserSerializer(many=True, read_only=True)
+    participant_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False
+    )
+    
+    class Meta:
+        model = ProjectEvent
+        fields = [
+            'id', 'title', 'description', 'type', 'date', 'start_time',
+            'end_time', 'location', 'created_by', 'participants',
+            'participant_ids', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        """Créer un événement avec les participants"""
+        participant_ids = validated_data.pop('participant_ids', [])
+        validated_data['created_by'] = self.context['request'].user
+        event = super().create(validated_data)
+        
+        # Ajouter les participants
+        if participant_ids:
+            participants = User.objects.filter(id__in=participant_ids)
+            event.participants.set(participants)
+        
+        return event
+    
+    def update(self, instance, validated_data):
+        """Mettre à jour un événement avec les participants"""
+        participant_ids = validated_data.pop('participant_ids', None)
+        event = super().update(instance, validated_data)
+        
+        # Mettre à jour les participants si fournis
+        if participant_ids is not None:
+            participants = User.objects.filter(id__in=participant_ids)
+            event.participants.set(participants)
+        
+        return event
+
+
 class ProjectSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les projets"""
     
@@ -56,6 +102,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
     budget_details = ProjectBudgetSerializer(read_only=True)
     tasks = ProjectTaskSerializer(many=True, read_only=True)
+    events = ProjectEventSerializer(many=True, read_only=True)
     
     # Champs calculés
     days_remaining = serializers.SerializerMethodField()
@@ -67,7 +114,7 @@ class ProjectSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'objectives', 'type', 'category',
             'status', 'priority', 'start_date', 'deadline', 'created_at',
             'updated_at', 'progress', 'budget', 'client', 'created_by',
-            'team_members', 'budget_details', 'tasks', 'tags',
+            'team_members', 'budget_details', 'tasks', 'events', 'tags',
             'days_remaining', 'is_overdue'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

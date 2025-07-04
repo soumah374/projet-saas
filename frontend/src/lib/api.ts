@@ -95,7 +95,7 @@ async function apiRequest<T>(
 export const authAPI = {
   // Connexion classique avec username/password
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    return apiRequest<LoginResponse>('/login/', {
+    return apiRequest<LoginResponse>('/auth/login/', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -103,7 +103,7 @@ export const authAPI = {
 
   // Demander un code OTP
   requestOTP: async (data: OTPRequest): Promise<{ message: string; email: string }> => {
-    return apiRequest<{ message: string; email: string }>('/otp/request/', {
+    return apiRequest<{ message: string; email: string }>('/auth/otp/request/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -111,7 +111,7 @@ export const authAPI = {
 
   // Vérifier le code OTP
   verifyOTP: async (data: OTPVerification): Promise<LoginResponse> => {
-    return apiRequest<LoginResponse>('/otp/verify/', {
+    return apiRequest<LoginResponse>('/auth/otp/verify/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -119,7 +119,7 @@ export const authAPI = {
 
   // Renvoyer un code OTP
   resendOTP: async (data: OTPRequest): Promise<{ message: string; email: string }> => {
-    return apiRequest<{ message: string; email: string }>('/otp/resend/', {
+    return apiRequest<{ message: string; email: string }>('/auth/otp/resend/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -127,7 +127,7 @@ export const authAPI = {
 
   // Rafraîchir le token
   refreshToken: async (refresh: string): Promise<{ access: string }> => {
-    return apiRequest<{ access: string }>('/token/refresh/', {
+    return apiRequest<{ access: string }>('/auth/token/refresh/', {
       method: 'POST',
       body: JSON.stringify({ refresh }),
     });
@@ -156,19 +156,19 @@ export const usersAPI = {
     }
     
     const queryString = searchParams.toString();
-    const endpoint = queryString ? `/users/?${queryString}` : '/users/';
+    const endpoint = queryString ? `/auth/users/?${queryString}` : '/auth/users/';
     
     return apiRequest<PaginatedResponse<UserList>>(endpoint);
   },
 
   // Détails d'un utilisateur
   getUser: async (id: number): Promise<User> => {
-    return apiRequest<User>(`/users/${id}/`);
+    return apiRequest<User>(`/auth/users/${id}/`);
   },
 
   // Créer un utilisateur
   createUser: async (userData: UserCreate): Promise<User> => {
-    return apiRequest<User>('/users/', {
+    return apiRequest<User>('/auth/users/', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -176,7 +176,7 @@ export const usersAPI = {
 
   // Mettre à jour un utilisateur
   updateUser: async (id: number, userData: UserUpdate): Promise<User> => {
-    return apiRequest<User>(`/users/${id}/`, {
+    return apiRequest<User>(`/auth/users/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(userData),
     });
@@ -184,19 +184,19 @@ export const usersAPI = {
 
   // Supprimer un utilisateur
   deleteUser: async (id: number): Promise<void> => {
-    return apiRequest<void>(`/users/${id}/`, {
+    return apiRequest<void>(`/auth/users/${id}/`, {
       method: 'DELETE',
     });
   },
 
   // Informations de l'utilisateur connecté
   getMe: async (): Promise<User> => {
-    return apiRequest<User>('/users/me/');
+    return apiRequest<User>('/auth/users/me/');
   },
 
   // Mettre à jour les informations de l'utilisateur connecté
   updateMe: async (userData: UserUpdate): Promise<User> => {
-    return apiRequest<User>('/users/update_me/', {
+    return apiRequest<User>('/auth/users/update_me/', {
       method: 'PATCH',
       body: JSON.stringify(userData),
     });
@@ -317,6 +317,31 @@ export const projectsAPI = {
     return apiRequest<void>(`/projects/${projectId}/remove_member/`, {
       method: 'DELETE',
       body: JSON.stringify({ user_id: userId }),
+    });
+  },
+
+  // Événements
+  getProjectEvents: (projectId: string) => {
+    return apiRequest<any[]>(`/projects/${projectId}/events/`);
+  },
+  
+  createProjectEvent: (projectId: string, eventData: any) => {
+    return apiRequest<any>(`/projects/${projectId}/events/`, {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+  },
+  
+  updateProjectEvent: (projectId: string, eventId: number, eventData: any) => {
+    return apiRequest<any>(`/projects/${projectId}/events/${eventId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(eventData),
+    });
+  },
+  
+  deleteProjectEvent: (projectId: string, eventId: number) => {
+    return apiRequest<void>(`/projects/${projectId}/events/${eventId}/`, {
+      method: 'DELETE',
     });
   },
 };
