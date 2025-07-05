@@ -6,7 +6,7 @@ export type ProjectCategory = 'Corporate' | 'Marketing' | 'Institutionnel' | 'Co
 export type ProjectStatus = 'Planification' | 'En cours' | 'Production' | 'En pause' | 'Terminé';
 export type ProjectPriority = 'Basse' | 'Normale' | 'Haute' | 'Urgente';
 export type ProjectMemberRole = 'Chef de projet' | 'Designer' | 'Développeur' | 'Rédacteur' | 'Consultant' | 'Assistant';
-export type ProjectTaskStatus = 'À faire' | 'En cours' | 'Terminé' | 'En pause';
+export type ProjectTaskStatus = 'À faire' | 'En cours' | 'En pause' | 'Terminé';
 export type TeamMemberRole = 'leader' | 'member' | 'consultant';
 export type UserProfileRole = 'Chef de projet' | 'Designer' | 'Développeur' | 'Rédacteur' | 'Consultant' | 'Assistant' | 'Managing Director' | 'Finance/Admin';
 export type DocumentType = 'pdf' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'ppt' | 'pptx' | 'txt' | 'jpg' | 'jpeg' | 'png' | 'gif' | 'mp4' | 'avi' | 'mp3' | 'zip' | 'other';
@@ -78,12 +78,13 @@ export interface ProjectTask {
   id: number;
   title: string;
   description: string;
-  status: string;
+  status: ProjectTaskStatus;
   assigned_to?: User;
   start_date?: string;
   due_date: string;
   created_at: string;
   updated_at: string;
+  executed_at?: string;
 }
 
 export interface TaskWithDeadline extends ProjectTask {
@@ -315,4 +316,19 @@ export interface CreateTeamMemberForm {
   user_id: number;
   role: ProjectMemberRole;
   is_active?: boolean;
+}
+
+export interface Notification {
+  id: number;
+  type: 'project_member' | 'task_assignment';
+  project: Project;
+  task?: ProjectTask;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface ProjectMemberUpdate {
+  role: string;
+  is_active: boolean;
 } 

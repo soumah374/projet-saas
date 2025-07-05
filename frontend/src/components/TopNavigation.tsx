@@ -1,8 +1,10 @@
+import React from 'react';
 import { Bell, Search, User, Menu, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Link } from 'react-router-dom';
+import { NotificationDropdown } from './NotificationDropdown';
 
 interface User {
   id: number;
@@ -21,7 +23,7 @@ interface TopNavigationProps {
   onLogout: () => void;
 }
 
-export const TopNavigation = ({ isSidebarOpen, setIsSidebarOpen, user, onLogout }: TopNavigationProps) => {
+export const TopNavigation: React.FC<TopNavigationProps> = ({ isSidebarOpen, setIsSidebarOpen, user, onLogout }) => {
   return (
     <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20">
       <div className="flex items-center gap-4 min-w-0">
@@ -50,10 +52,7 @@ export const TopNavigation = ({ isSidebarOpen, setIsSidebarOpen, user, onLogout 
       </div>
 
       <div className="flex items-center gap-4 min-w-0">
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">3</span>
-        </Button>
+        <NotificationDropdown />
         <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-1">
           <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
             <User className="h-4 w-4 text-blue-600" />

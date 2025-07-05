@@ -33,6 +33,7 @@ export const useProjects = (
     search?: string;
     ordering?: string;
     page?: number;
+    page_size?: number;
     status?: string;
     type?: string;
     priority?: string;
@@ -296,6 +297,20 @@ export const useUpdateTaskStatus = () => {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+};
+
+export const useExecuteTask = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ projectId, taskId }: { projectId: string; taskId: number }) =>
+      projectTasksAPI.executeTask(projectId, taskId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Tâche exécutée avec succès');
     },
   });
 };

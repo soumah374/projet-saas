@@ -9,11 +9,15 @@ import { Separator } from '@/components/ui/separator';
 import { FileText, User, Loader2, Edit, Plus, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ProjectTask } from '@/lib/types';
+import { ProjectTask, ProjectTaskStatus } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
+import { useForm } from 'react-hook-form';
+import { useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask, useExecuteTask } from '@/hooks/use-projects';
+import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 interface TaskModalProps {
   children: React.ReactNode;
@@ -98,6 +102,28 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
 
   const taskStatuses = ['À faire', 'En cours', 'En pause', 'Terminé'];
 
+  const createTaskMutation = useCreateProjectTask();
+  const updateTaskMutation = useUpdateProjectTask();
+  const deleteTaskMutation = useDeleteProjectTask();
+  const executeTaskMutation = useExecuteTask();
+
+  const form = useForm<CreateTaskData>({
+    defaultValues: task ? {
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      assigned_to_id: task.assigned_to?.id,
+      start_date: task.start_date,
+      due_date: task.due_date,
+    } : {
+      title: '',
+      description: '',
+      status: 'À faire',
+      start_date: '',
+      due_date: '',
+    }
+  });
+
   useEffect(() => {
     if (open) {
       setFormData({
@@ -112,7 +138,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     }
   }, [open, task?.id]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!onTaskSave) return;
@@ -149,16 +175,22 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     const taskData = {
       title: formData.title.trim(),
       description: formData.description.trim(),
-      status: formData.status,
+      status: formData.status as ProjectTaskStatus,
       assigned_to_id: formData.assigned_to_id ? parseInt(formData.assigned_to_id) : undefined,
       start_date: formData.start_date ? format(formData.start_date, 'yyyy-MM-dd') : undefined,
       due_date: format(formData.due_date, 'yyyy-MM-dd'),
     };
 
     if (mode === 'edit' && task) {
-      onTaskSave({ ...taskData, id: task.id } as UpdateTaskData);
+      await updateTaskMutation.mutateAsync({ 
+        projectId, 
+        taskId: task.id, 
+        data: taskData 
+      });
+      toast.success('Tâche mise à jour avec succès');
     } else {
-      onTaskSave(taskData as CreateTaskData);
+      await createTaskMutation.mutateAsync({ projectId, data: taskData });
+      toast.success('Tâche créée avec succès');
     }
     
     setOpen(false);
@@ -182,6 +214,27 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       start_date: undefined,
       due_date: undefined
     });
+  };
+
+  const handleDelete = async () => {
+    if (!task) return;
+    try {
+      await deleteTaskMutation.mutateAsync({ projectId, taskId: task.id });
+      toast.success('Tâche supprimée avec succès');
+      setOpen(false);
+    } catch (error) {
+      toast.error('Une erreur est survenue');
+    }
+  };
+
+  const handleExecute = async () => {
+    if (!task) return;
+    try {
+      await executeTaskMutation.mutateAsync({ projectId, taskId: task.id });
+      setOpen(false);
+    } catch (error) {
+      toast.error('Une erreur est survenue');
+    }
   };
 
   const renderViewMode = () => {
@@ -245,12 +298,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
         </div>
 
         <Separator />
-
-        <div className="flex justify-end pt-4">
-          <Button variant="outline" onClick={handleClose}>
-            Fermer
-          </Button>
-        </div>
       </div>
     );
   };
@@ -444,6 +491,54 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
               </div>
             </div>
           </form>
+        )}
+
+        {task?.executed_at && (
+          <div className="mt-4 text-sm text-gray-500">
+            Exécutée le : {new Date(task.executed_at).toLocaleString()}
+          </div>
+        )}
+
+        {mode === 'view' && (
+          <div className="flex justify-end gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+            >
+              Fermer
+            </Button>
+            {task && task.status !== 'Terminé' && (
+              <Button
+                type="button"
+                variant="default"
+                onClick={handleExecute}
+              >
+                Exécuter
+              </Button>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="destructive">
+                  Supprimer
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Cette action ne peut pas être annulée. La tâche sera définitivement supprimée.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annuler</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>
+                    Supprimer
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         )}
       </DialogContent>
     </Dialog>

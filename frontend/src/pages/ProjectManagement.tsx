@@ -1,9 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   Plus, 
   Search, 
@@ -21,7 +38,11 @@ import {
   MoreHorizontal,
   Edit,
   BarChart3,
-  Trash2
+  Trash2,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { useProjects, useCreateProject, useProjectStatistics, useUpdateProject } from "@/hooks/use-projects";
@@ -38,7 +59,15 @@ export function ProjectManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(viewMode === 'grid' ? 9 : 10); // 9 items pour la vue grille (3x3), 10 pour la liste
   const navigate = useNavigate();
+
+  // Mettre à jour itemsPerPage quand viewMode change
+  useEffect(() => {
+    setItemsPerPage(viewMode === 'grid' ? 9 : 10);
+  }, [viewMode]);
 
   // React Query hooks
   const { data: backendStatus, isLoading: backendLoading } = useBackendStatus();
@@ -47,7 +76,9 @@ export function ProjectManagement() {
     status: statusFilter !== 'all' ? statusFilter : undefined,
     type: typeFilter !== 'all' ? typeFilter : undefined,
     priority: priorityFilter !== 'all' ? priorityFilter : undefined,
-    ordering: '-created_at'
+    ordering: '-created_at',
+    page: currentPage,
+    page_size: itemsPerPage
   });
 
   const { data: statistics, isLoading: statsLoading } = useProjectStatistics();
@@ -114,6 +145,48 @@ export function ProjectManagement() {
     } catch (error) {
       console.error('Erreur lors de la mise à jour du projet:', error);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Scroll to top when changing page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const totalPages = projects ? Math.ceil(projects.count / itemsPerPage) : 0;
+
+  // Generate array of page numbers to display
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages is less than max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Always show first page
+      pageNumbers.push(1);
+      
+      if (currentPage > 3) {
+        pageNumbers.push('ellipsis');
+      }
+      
+      // Show current page and surrounding pages
+      for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+        pageNumbers.push(i);
+      }
+      
+      if (currentPage < totalPages - 2) {
+        pageNumbers.push('ellipsis');
+      }
+      
+      // Always show last page
+      pageNumbers.push(totalPages);
+    }
+    
+    return pageNumbers;
   };
 
   const filteredProjects = projects?.results || [];
@@ -292,9 +365,25 @@ export function ProjectManagement() {
             <SelectItem value="Basse">Basse</SelectItem>
           </SelectContent>
         </Select>
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'outline'}
+            size="icon"
+            onClick={() => setViewMode('grid')}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="icon"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       
-      {/* Projects Grid */}
+      {/* Projects List/Grid */}
       {projectsLoading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
@@ -308,121 +397,230 @@ export function ProjectManagement() {
             </p>
           )}
         </div>
-      ) : filteredProjects.length === 0 ? (
+      ) : projects?.results.length === 0 ? (
         <div className="text-center py-12">
           <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun projet trouvé</h3>
           <p className="text-gray-600">Commencez par créer votre premier projet.</p>
         </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredProjects.map((project) => (
-            <Card key={project.id} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-lg">{project.title}</CardTitle>
-                    <CardDescription className="mt-1">
-                      {project.client}
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge className={getStatusColor(project.status)}>
-                      {project.status}
-                    </Badge>
-                    <Badge className={getPriorityColor(project.priority)}>
-                      {project.priority}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Project Info */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Type</span>
-                    <span className="font-medium">{project.type}</span>
-                  </div>
+        <div className="space-y-6">
+          {viewMode === 'list' ? (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Projet</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Priorité</TableHead>
+                    <TableHead>Progression</TableHead>
+                    <TableHead>Échéance</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {projects.results.map((project) => (
+                    <TableRow key={project.id}>
+                      <TableCell className="font-medium">{project.title}</TableCell>
+                      <TableCell>{project.client}</TableCell>
+                      <TableCell>{project.type}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(project.status)}>
+                          {project.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getPriorityColor(project.priority)}>
+                          {project.priority}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className={`text-sm font-medium ${getProgressColor(project.progress)}`}>
+                            {project.progress}%
+                          </div>
+                          <div className="w-24 h-2 bg-gray-200 rounded-full mt-1">
+                            <div 
+                              className={`h-2 rounded-full ${getProgressBgColor(project.progress)}`}
+                              style={{ width: `${project.progress}%` }}
+                            />
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className={project.is_overdue ? 'text-red-600' : ''}>
+                            {format(new Date(project.deadline), 'dd/MM/yyyy', { locale: fr })}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {renderActionButtons(project)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {projects.results.map((project) => (
+                <Card key={project.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg">{project.title}</CardTitle>
+                        <CardDescription className="mt-1">
+                          {project.client}
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Badge className={getStatusColor(project.status)}>
+                          {project.status}
+                        </Badge>
+                        <Badge className={getPriorityColor(project.priority)}>
+                          {project.priority}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Project Info */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Type</span>
+                        <span className="font-medium">{project.type}</span>
+                      </div>
+                      
+                      {/* Progress */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="text-gray-600">Progression</span>
+                          <span className={`font-medium ${getProgressColor(project.progress)}`}>
+                            {project.progress}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${getProgressBgColor(project.progress)}`}
+                            style={{ width: `${project.progress}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Team */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Équipe</span>
+                        <div className="flex items-center gap-1">
+                          <Users className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium">{project.team_count || 0}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Deadline */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Échéance</span>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4 text-gray-400" />
+                          <span className={`font-medium ${project.is_overdue ? 'text-red-600' : ''}`}>
+                            {format(new Date(project.deadline), 'dd/MM/yyyy', { locale: fr })}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Days remaining */}
+                      {project.days_remaining && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600">Jours restants</span>
+                          <span className={`font-medium ${project.is_overdue === 'true' ? 'text-red-600' : ''}`}>
+                            {project.days_remaining}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Created by */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Créé par</span>
+                        <span className="font-medium">
+                          {project.created_by.first_name} {project.created_by.last_name}
+                        </span>
+                      </div>
+
+                      {/* Created date */}
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Créé le</span>
+                        <span>{format(new Date(project.created_at), 'dd/MM/yyyy', { locale: fr })}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-4 border-t border-gray-100 mt-4">
+                      {renderActionButtons(project)}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    {currentPage === 1 ? (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled
+                        className="cursor-not-allowed"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <PaginationPrevious onClick={() => handlePageChange(currentPage - 1)} />
+                    )}
+                  </PaginationItem>
                   
-                  {/* Progress */}
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600">Progression</span>
-                      <span className={`font-medium ${getProgressColor(project.progress)}`}>
-                        {project.progress}%
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full ${getProgressBgColor(project.progress)}`}
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                  </div>
+                  {getPageNumbers().map((pageNumber, index) => (
+                    pageNumber === 'ellipsis' ? (
+                      <PaginationItem key={`ellipsis-${index}`}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={pageNumber}>
+                        <PaginationLink
+                          onClick={() => handlePageChange(pageNumber as number)}
+                          isActive={currentPage === pageNumber}
+                        >
+                          {pageNumber}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  ))}
 
-                  {/* Team */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Équipe</span>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium">{project.team_count || 0}</span>
-                    </div>
-                  </div>
-
-                  {/* Budget - Not available in ProjectList type */}
-                  {/* <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Budget</span>
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium">
-                        {parseInt(project.budget).toLocaleString()} GNF
-                      </span>
-                    </div>
-                  </div> */}
-
-                  {/* Deadline */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Échéance</span>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4 text-gray-400" />
-                      <span className={`font-medium ${project.is_overdue ? 'text-red-600' : ''}`}>
-                        {format(new Date(project.deadline), 'dd/MM/yyyy', { locale: fr })}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Days remaining */}
-                  {project.days_remaining && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Jours restants</span>
-                      <span className={`font-medium ${project.is_overdue === 'true' ? 'text-red-600' : ''}`}>
-                        {project.days_remaining}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Created by */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Créé par</span>
-                    <span className="font-medium">
-                      {project.created_by.first_name} {project.created_by.last_name}
-                    </span>
-                  </div>
-
-                  {/* Created date */}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Créé le</span>
-                    <span>{format(new Date(project.created_at), 'dd/MM/yyyy', { locale: fr })}</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 pt-4 border-t border-gray-100 mt-4">
-                  {renderActionButtons(project)}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <PaginationItem>
+                    {currentPage === totalPages ? (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        disabled
+                        className="cursor-not-allowed"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    ) : (
+                      <PaginationNext onClick={() => handlePageChange(currentPage + 1)} />
+                    )}
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </div>
       )}
     </div>

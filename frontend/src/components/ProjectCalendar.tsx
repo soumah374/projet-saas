@@ -97,79 +97,69 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
 
   // 5. Events processing
   const allEvents = useMemo(() => {
-    if (!project?.id || !tasks?.results) return [];
+    if (!project?.id || !tasks?.results || !events?.results) return [];
     
     const eventsList: Event[] = [];
     
-    // Add tasks
-    tasks.results.forEach((task: ProjectTask) => {
-      if (!task.due_date) return;
-      
-      const now = new Date();
-      const dueDate = new Date(task.due_date);
-      const isOverdue = dueDate < now && task.status !== 'Terminé';
-      
-      const taskStatus = (() => {
-        switch (task.status) {
-          case 'Terminé': return 'completed';
-          case 'En pause': return 'paused';
-          case 'En cours': return isOverdue ? 'overdue' : 'in-progress';
-          case 'À faire': return isOverdue ? 'overdue' : 'upcoming';
-          default: return 'upcoming';
-        }
-      })();
-
-      const taskType = (() => {
-        switch (task.status) {
-          case 'Terminé': return 'milestone';
-          case 'En pause': return 'deadline';
-          default: return 'task';
-        }
-      })();
-
-      eventsList.push({
-        id: `task-${task.id}`,
-        title: task.title,
-        type: taskType,
-        date: dueDate,
-        time: '09:00', // Utiliser start_date si disponible
-        project: project.id,
-        status: taskStatus as EventStatus,
-        participants: task.assigned_to ? 
-          [`${task.assigned_to.first_name} ${task.assigned_to.last_name}`.trim() || task.assigned_to.username] : 
-          [],
-        duration: 480, // Calculer la durée si start_date est disponible
-        description: task.description
-      });
-    });
-
-    // Add events
-    if (events?.results) {
-      events.results.forEach((event: ProjectEvent) => {
-        if (!event.date) return;
+    // Add tasks with due dates
+    tasks.results
+      .filter((task: ProjectTask) => task.due_date)
+      .forEach((task: ProjectTask) => {
+        const now = new Date();
+        const dueDate = new Date(task.due_date!);
+        const isOverdue = dueDate < now && task.status !== 'Terminé';
         
-        // Calculer la durée en minutes
-        const startTime = new Date(`${event.date}T${event.start_time}`);
-        const endTime = new Date(`${event.date}T${event.end_time}`);
-        const durationInMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
-        
+        const taskStatus = (() => {
+          switch (task.status) {
+            case 'Terminé': return 'completed';
+            case 'En pause': return 'paused';
+            case 'En cours': return isOverdue ? 'overdue' : 'in-progress';
+            case 'À faire': return isOverdue ? 'overdue' : 'upcoming';
+            default: return 'upcoming';
+          }
+        })();
+
         eventsList.push({
-          id: `event-${event.id}`,
-          title: event.title,
-          type: event.type.toLowerCase() as EventType,
-          date: new Date(event.date),
-          time: event.start_time,
+          id: `task-${task.id}`,
+          title: task.title,
+          type: task.status === 'Terminé' ? 'milestone' : 'task',
+          date: dueDate,
+          time: '09:00',
           project: project.id,
-          status: 'upcoming',
-          participants: event.participants.map(p => 
-            `${p.first_name} ${p.last_name}`.trim() || p.username
-          ),
-          duration: durationInMinutes,
-          location: event.location,
-          description: event.description
+          status: taskStatus as EventStatus,
+          participants: task.assigned_to ? 
+            [`${task.assigned_to.first_name} ${task.assigned_to.last_name}`.trim() || task.assigned_to.username] : 
+            [],
+          duration: 480,
+          description: task.description
         });
       });
-    }
+
+    // Add events
+    events.results.forEach((event: ProjectEvent) => {
+      const startTime = new Date(`${event.date}T${event.start_time}`);
+      const endTime = new Date(`${event.date}T${event.end_time}`);
+      const durationInMinutes = Math.max(
+        (endTime.getTime() - startTime.getTime()) / (1000 * 60),
+        30 // minimum duration of 30 minutes
+      );
+      
+      eventsList.push({
+        id: `event-${event.id}`,
+        title: event.title,
+        type: event.type.toLowerCase() as EventType,
+        date: new Date(event.date),
+        time: event.start_time,
+        project: project.id,
+        status: 'upcoming',
+        participants: event.participants.map(p => 
+          `${p.first_name} ${p.last_name}`.trim() || p.username
+        ),
+        duration: durationInMinutes,
+        location: event.location,
+        description: event.description
+      });
+    });
 
     return eventsList;
   }, [tasks?.results, events?.results, project?.id]);

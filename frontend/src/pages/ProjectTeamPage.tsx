@@ -8,6 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { 
   ArrowLeft,
   Plus, 
@@ -23,13 +33,17 @@ import {
   Crown,
   Shield,
   MoreHorizontal,
-  Loader2
+  Loader2,
+  Save,
+  LayoutGrid,
+  List
 } from "lucide-react";
 import { projectsAPI, usersAPI } from '@/lib/api';
-import type { Project, User, ProjectMemberRole } from '@/lib/types';
+import type { Project, User, ProjectMemberRole, ProjectMemberUpdate } from '@/lib/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useUsers } from '@/hooks/use-users';
+
 interface ProjectMember {
   id: number;
   user: {
@@ -58,6 +72,13 @@ export function ProjectTeamPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
+  const [memberToDelete, setMemberToDelete] = useState<ProjectMember | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [memberToEdit, setMemberToEdit] = useState<ProjectMember | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editRole, setEditRole] = useState<string>('');
+  const [editIsActive, setEditIsActive] = useState(true);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // React Query hooks
   const { data: users, isLoading: usersLoading, error: usersError } = useUsers({
@@ -94,6 +115,22 @@ export function ProjectTeamPage() {
     onError: (error) => {
       toast.error('Erreur lors du retrait du membre');
       console.error('Error removing member:', error);
+    },
+  });
+
+  const updateMemberMutation = useMutation({
+    mutationFn: ({ projectId, memberId, data }: { projectId: string; memberId: number; data: ProjectMemberUpdate }) =>
+      projectsAPI.updateMember(projectId, memberId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      loadProjectTeam();
+      setIsEditDialogOpen(false);
+      setMemberToEdit(null);
+      toast.success('Membre mis à jour avec succès');
+    },
+    onError: (error) => {
+      toast.error('Erreur lors de la mise à jour du membre');
+      console.error('Error updating member:', error);
     },
   });
 
@@ -135,6 +172,31 @@ export function ProjectTeamPage() {
       projectId: projectId!,
       userId
     });
+    setMemberToDelete(null);
+    setIsDeleteDialogOpen(false);
+  };
+
+  const handleEditMember = () => {
+    if (!memberToEdit || !editRole) {
+      toast.error('Veuillez sélectionner un rôle');
+      return;
+    }
+
+    updateMemberMutation.mutate({
+      projectId: projectId!,
+      memberId: memberToEdit.id,
+      data: {
+        role: editRole,
+        is_active: editIsActive
+      }
+    });
+  };
+
+  const openEditDialog = (member: ProjectMember) => {
+    setMemberToEdit(member);
+    setEditRole(member.role);
+    setEditIsActive(member.is_active);
+    setIsEditDialogOpen(true);
   };
 
   const getRoleIcon = (role: string) => {
@@ -339,83 +401,203 @@ export function ProjectTeamPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('grid')}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('list')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Team Members Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredMembers.map((member) => (
-          <Card key={member.id} className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={member.user.avatar} />
-                    <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                      {member.user.first_name[0]}{member.user.last_name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
-                      {member.user.first_name} {member.user.last_name}
-                    </h3>
-                    <p className="text-sm text-gray-500">{member.user.email}</p>
+      {/* Team Members View */}
+      {viewMode === 'grid' ? (
+        // Grid View
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredMembers.map((member) => (
+            <Card key={member.id} className="hover:shadow-lg transition-shadow">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={member.user.avatar} />
+                      <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
+                        {member.user.first_name[0]}{member.user.last_name[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {member.user.first_name} {member.user.last_name}
+                      </h3>
+                      <p className="text-sm text-gray-500">{member.user.email}</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    {getRoleIcon(member.role)}
+                    <Badge className={getRoleColor(member.role)}>
+                      {member.role}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Calendar className="w-4 h-4" />
+                    <span>Rejoint le {new Date(member.joined_at).toLocaleDateString('fr-FR')}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Mail className="w-4 h-4" />
+                    <span>{member.user.email}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Badge variant={member.is_active ? "default" : "secondary"}>
+                      {member.is_active ? "Actif" : "Inactif"}
+                    </Badge>
                   </div>
                 </div>
-                <Button variant="ghost" size="sm">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  {getRoleIcon(member.role)}
-                  <Badge className={getRoleColor(member.role)}>
-                    {member.role}
-                  </Badge>
+                <div className="flex gap-2 mt-4 pt-4 border-t">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => openEditDialog(member)}
+                    disabled={updateMemberMutation.isPending}
+                  >
+                    {updateMemberMutation.isPending && memberToEdit?.id === member.id ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Modification...
+                      </>
+                    ) : (
+                      <>
+                        <Edit className="h-4 w-4 mr-2" />
+                        Modifier
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => {
+                      setMemberToDelete(member);
+                      setIsDeleteDialogOpen(true);
+                    }}
+                    disabled={removeMemberMutation.isPending}
+                  >
+                    {removeMemberMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
-
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>Rejoint le {new Date(member.joined_at).toLocaleDateString('fr-FR')}</span>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Mail className="w-4 h-4" />
-                  <span>{member.user.email}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Badge variant={member.is_active ? "default" : "secondary"}>
-                    {member.is_active ? "Actif" : "Inactif"}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-4 pt-4 border-t">
-                <Button variant="outline" size="sm" className="flex-1">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Modifier
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-red-600 hover:text-red-700"
-                  onClick={() => handleRemoveMember(member.user.id)}
-                  disabled={removeMemberMutation.isPending}
-                >
-                  {removeMemberMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        // List View
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Membre</TableHead>
+                <TableHead>Rôle</TableHead>
+                <TableHead>Date d'ajout</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredMembers.map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={member.user.avatar} />
+                        <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-xs">
+                          {member.user.first_name[0]}{member.user.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">{member.user.first_name} {member.user.last_name}</div>
+                        <div className="text-sm text-gray-500">{member.user.email}</div>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getRoleIcon(member.role)}
+                      <Badge className={getRoleColor(member.role)}>
+                        {member.role}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {new Date(member.joined_at).toLocaleDateString('fr-FR')}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={member.is_active ? "default" : "secondary"}>
+                      {member.is_active ? "Actif" : "Inactif"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(member)}
+                        disabled={updateMemberMutation.isPending}
+                      >
+                        {updateMemberMutation.isPending && memberToEdit?.id === member.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Edit className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          setMemberToDelete(member);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                        disabled={removeMemberMutation.isPending}
+                      >
+                        {removeMemberMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
 
       {/* Empty State */}
       {filteredMembers.length === 0 && (
@@ -440,6 +622,99 @@ export function ProjectTeamPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Member Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier le membre de l'équipe</DialogTitle>
+            <DialogDescription>
+              Modifiez le rôle et le statut de {memberToEdit?.user.first_name} {memberToEdit?.user.last_name}.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Rôle</Label>
+              <Select value={editRole} onValueChange={setEditRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un rôle" />
+                </SelectTrigger>
+                <SelectContent>
+                  {roles.map(role => (
+                    <SelectItem key={role} value={role}>{role}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>Statut actif</Label>
+              <Switch
+                checked={editIsActive}
+                onCheckedChange={setEditIsActive}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditDialogOpen(false);
+                setMemberToEdit(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleEditMember}
+              disabled={!editRole || updateMemberMutation.isPending}
+            >
+              {updateMemberMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Mise à jour...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Enregistrer les modifications
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir retirer {memberToDelete?.user.first_name} {memberToDelete?.user.last_name} de l'équipe ?
+              Cette action ne peut pas être annulée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMemberToDelete(null)}>
+              Annuler
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => handleRemoveMember(memberToDelete!.user.id)}
+              disabled={removeMemberMutation.isPending}
+            >
+              {removeMemberMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Confirmer la suppression'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

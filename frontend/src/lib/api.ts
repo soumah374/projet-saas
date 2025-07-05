@@ -22,10 +22,23 @@ import type {
   CreateTaskForm,
   CreateTeamMemberForm,
   TaskWithDeadline,
+  ProjectEvent,
+  ProjectBudget,
+  ProjectMemberUpdate,
 } from './types';
+import axios from 'axios';
 
 // Configuration de base pour les requêtes API
 const API_BASE = config.api.baseUrl;
+
+// Configuration de l'instance axios
+const axiosInstance = axios.create({
+  baseURL: API_BASE,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
 // Fonction utilitaire pour les requêtes API
 async function apiRequest<T>(
@@ -228,6 +241,7 @@ export const projectsAPI = {
     search?: string;
     ordering?: string;
     page?: number;
+    page_size?: number;
     status?: string;
     type?: string;
     priority?: string;
@@ -304,20 +318,20 @@ export const projectsAPI = {
     });
   },
 
-  // Ajouter un membre à un projet
-  addMember: async (projectId: string, memberData: CreateTeamMemberForm): Promise<ProjectMember> => {
-    return apiRequest<ProjectMember>(`/projects/${projectId}/add_member/`, {
-      method: 'POST',
-      body: JSON.stringify(memberData),
-    });
+  // Project Members
+  addMember: async (projectId: string, data: { user_id: number; role: string }) => {
+    const response = await axiosInstance.post(`/projects/${projectId}/members/`, data);
+    return response.data;
   },
 
-  // Retirer un membre d'un projet
-  removeMember: async (projectId: string, userId: number): Promise<void> => {
-    return apiRequest<void>(`/projects/${projectId}/remove_member/`, {
-      method: 'DELETE',
-      body: JSON.stringify({ user_id: userId }),
-    });
+  removeMember: async (projectId: string, userId: number) => {
+    const response = await axiosInstance.delete(`/projects/${projectId}/members/${userId}/`);
+    return response.data;
+  },
+
+  updateMember: async (projectId: string, memberId: number, data: ProjectMemberUpdate) => {
+    const response = await axiosInstance.patch(`/projects/${projectId}/members/${memberId}/`, data);
+    return response.data;
   },
 
   // Événements
@@ -441,6 +455,13 @@ export const projectTasksAPI = {
     return apiRequest<{ status: string }>(`/projects/${projectId}/tasks/${taskId}/update_status/`, {
       method: 'POST',
       body: JSON.stringify({ status }),
+    });
+  },
+
+  // Exécuter une tâche
+  executeTask: async (projectId: string, taskId: number): Promise<ProjectTask> => {
+    return apiRequest<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/execute/`, {
+      method: 'POST',
     });
   },
 
@@ -616,4 +637,26 @@ export const documentsAPI = {
       method: 'DELETE',
     });
   },
+};
+
+// Notifications
+export const getNotifications = async () => {
+  const response = await axiosInstance.get('/notifications/');
+  return response.data;
+};
+
+export const markNotificationRead = async (notificationId: number) => {
+  const response = await axiosInstance.post(`/notifications/${notificationId}/mark_read/`);
+  return response.data;
+};
+
+export const markAllNotificationsRead = async () => {
+  const response = await axiosInstance.post('/notifications/mark_all_read/');
+  return response.data;
+};
+
+// Project Members
+export const updateProjectMember = async (projectId: string, memberId: number, data: { role: string; is_active: boolean }) => {
+  const response = await axiosInstance.patch(`/projects/${projectId}/members/${memberId}/`, data);
+  return response.data;
 }; 
