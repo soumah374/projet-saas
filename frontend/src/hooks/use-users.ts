@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersAPI } from '@/lib/api';
-import type { User, UserList, UserCreate, UserUpdate, UserStatistics } from '@/lib/types';
+import type { UserCreate, UserUpdate } from '@/lib/types';
 import { toast } from 'sonner';
 
 // ===== UTILISATEURS =====
@@ -105,7 +105,7 @@ export const useUserStatistics = () => {
 export const useCurrentUser = () => {
   return useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => usersAPI.getCurrentUser(),
+    queryFn: () => usersAPI.getMe(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -115,7 +115,7 @@ export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: usersAPI.updateProfile,
+    mutationFn: usersAPI.updateMe,
     onSuccess: (updatedProfile) => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['user', updatedProfile.id] });

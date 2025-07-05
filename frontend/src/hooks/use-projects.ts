@@ -342,10 +342,10 @@ export function useCreateProjectEvent() {
   return useMutation({
     mutationFn: async ({ projectId, eventData }: { projectId: string; eventData: any }) => {
       const response = await projectsAPI.createProjectEvent(projectId, eventData);
-      return response.data;
+      return response;
     },
-    onSuccess: (data, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'events'] });
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
     },
   });
 }
@@ -356,10 +356,10 @@ export function useUpdateProjectEvent() {
   return useMutation({
     mutationFn: async ({ projectId, eventId, eventData }: { projectId: string; eventId: number; eventData: any }) => {
       const response = await projectsAPI.updateProjectEvent(projectId, eventId, eventData);
-      return response.data;
+      return response;
     },
-    onSuccess: (data, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'events'] });
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
     },
   });
 }
@@ -372,7 +372,7 @@ export function useDeleteProjectEvent() {
       await projectsAPI.deleteProjectEvent(projectId, eventId);
     },
     onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'events'] });
+      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
     },
   });
 } 

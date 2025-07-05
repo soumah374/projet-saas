@@ -32,7 +32,7 @@ export function ProjectCalendarPage() {
       </div>
 
       <Card className="p-6">
-        <ProjectCalendar projects={[project]} />
+        <ProjectCalendar project={project} />
       </Card>
     </div>
   );

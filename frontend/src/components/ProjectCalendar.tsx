@@ -8,10 +8,9 @@ import { MonthView } from './calendar/MonthView';
 import { WeekView } from './calendar/WeekView';
 import { AgendaView } from './calendar/AgendaView';
 import { GanttView } from './calendar/GanttView';
-import { Event } from './calendar/types';
+import { Event, EventStatus, EventType } from './calendar/types';
 import { getEventStats } from './calendar/utils';
 import { useProjects, useProjectTasks, useProjectEvents } from '@/hooks/use-projects';
-import { ProjectTask } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -25,10 +24,50 @@ const queryOptions = {
 };
 
 interface ProjectCalendarProps {
-  projects: any[];
+  project: any;
 }
 
-export const ProjectCalendar = ({ projects }: ProjectCalendarProps) => {
+// Ajout des types depuis le backend
+interface ProjectTask {
+  id: number;
+  title: string;
+  description: string;
+  status: 'À faire' | 'En cours' | 'Terminé' | 'En pause';
+  assigned_to: {
+    id: number;
+    username: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  } | null;
+  start_date: string | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ProjectEvent {
+  id: number;
+  title: string;
+  description: string;
+  type: 'Réunion' | 'Présentation' | 'Atelier' | 'Livraison' | 'Autre';
+  date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants: {
+    id: number;
+    username: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+  }[];
+  created_at: string;
+  updated_at: string;
+}
+
+export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
+
   // 1. State hooks
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'agenda' | 'gantt'>('month');
   const [filterType, setFilterType] = useState<string>('all');
@@ -53,98 +92,108 @@ export const ProjectCalendar = ({ projects }: ProjectCalendarProps) => {
   const projectIds = useMemo(() => activeProjects.map(project => project.id), [activeProjects]);
 
   // 4. Task and Event queries - moved outside useMemo
-  const taskQueries = projectIds.map(projectId => useProjectTasks(projectId, undefined, queryOptions));
-  const eventQueries = projectIds.map(projectId => useProjectEvents(projectId, queryOptions));
+  const { data: tasks, isLoading: isLoadingTasks } = useProjectTasks(project?.id, undefined, queryOptions);
+  const { data: events, isLoading: isLoadingEvents } = useProjectEvents(project?.id, queryOptions);
 
   // 5. Events processing
-  const events = useMemo(() => {
-    if (!projectIds.length) return [];
+  const allEvents = useMemo(() => {
+    if (!project?.id || !tasks?.results) return [];
     
-    const allEvents: Event[] = [];
+    const eventsList: Event[] = [];
     
     // Add tasks
-    taskQueries.forEach((query, index) => {
-      if (query.data?.results && projectIds[index]) {
-        const tasks = query.data.results;
-        const projectId = projectIds[index];
-        
-        tasks.forEach(task => {
-          if (!task.due_date) return;
-          
-          const now = new Date();
-          const dueDate = new Date(task.due_date);
-          const isOverdue = dueDate < now && task.status !== 'Terminé';
+    tasks.results.forEach((task: ProjectTask) => {
+      if (!task.due_date) return;
+      
+      const now = new Date();
+      const dueDate = new Date(task.due_date);
+      const isOverdue = dueDate < now && task.status !== 'Terminé';
+      
+      const taskStatus = (() => {
+        switch (task.status) {
+          case 'Terminé': return 'completed';
+          case 'En pause': return 'paused';
+          case 'En cours': return isOverdue ? 'overdue' : 'in-progress';
+          case 'À faire': return isOverdue ? 'overdue' : 'upcoming';
+          default: return 'upcoming';
+        }
+      })();
 
-          allEvents.push({
-            id: `task-${task.id}`,
-            title: task.title,
-            type: task.status === 'Terminé' ? 'milestone' : 
-                  task.status === 'En pause' ? 'deadline' : 'task',
-            date: dueDate,
-            time: '09:00',
-            project: projectId,
-            status: task.status === 'Terminé' ? 'completed' :
-                    isOverdue ? 'overdue' :
-                    task.status === 'En cours' ? 'in-progress' : 'upcoming',
-            participants: task.assigned_to ? [task.assigned_to.username] : [],
-            duration: 480
-          });
-        });
-      }
+      const taskType = (() => {
+        switch (task.status) {
+          case 'Terminé': return 'milestone';
+          case 'En pause': return 'deadline';
+          default: return 'task';
+        }
+      })();
+
+      eventsList.push({
+        id: `task-${task.id}`,
+        title: task.title,
+        type: taskType,
+        date: dueDate,
+        time: '09:00', // Utiliser start_date si disponible
+        project: project.id,
+        status: taskStatus as EventStatus,
+        participants: task.assigned_to ? 
+          [`${task.assigned_to.first_name} ${task.assigned_to.last_name}`.trim() || task.assigned_to.username] : 
+          [],
+        duration: 480, // Calculer la durée si start_date est disponible
+        description: task.description
+      });
     });
 
     // Add events
-    eventQueries.forEach((query, index) => {
-      if (query.data?.results && projectIds[index]) {
-        const events = query.data.results;
-        const projectId = projectIds[index];
-
-        events.forEach(event => {
-          if (!event.date) return;
-          
-          allEvents.push({
-            id: `event-${event.id}`,
-            title: event.title,
-            type: 'event',
-            date: new Date(event.date),
-            time: event.start_time || '09:00',
-            project: projectId,
-            status: 'upcoming',
-            participants: event.participants?.map((p: any) => p.username) || [],
-            duration: 60,
-            location: event.location,
-            description: event.description
-          });
+    if (events?.results) {
+      events.results.forEach((event: ProjectEvent) => {
+        if (!event.date) return;
+        
+        // Calculer la durée en minutes
+        const startTime = new Date(`${event.date}T${event.start_time}`);
+        const endTime = new Date(`${event.date}T${event.end_time}`);
+        const durationInMinutes = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+        
+        eventsList.push({
+          id: `event-${event.id}`,
+          title: event.title,
+          type: event.type.toLowerCase() as EventType,
+          date: new Date(event.date),
+          time: event.start_time,
+          project: project.id,
+          status: 'upcoming',
+          participants: event.participants.map(p => 
+            `${p.first_name} ${p.last_name}`.trim() || p.username
+          ),
+          duration: durationInMinutes,
+          location: event.location,
+          description: event.description
         });
-      }
-    });
+      });
+    }
 
-    return allEvents;
-  }, [taskQueries, eventQueries, projectIds]);
+    return eventsList;
+  }, [tasks?.results, events?.results, project?.id]);
 
   const filteredEvents = useMemo(() => {
-    return events.filter(event => {
+    return allEvents.filter(event => {
       const matchesType = filterType === 'all' || event.type === filterType;
       const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            event.project.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesType && matchesSearch;
     });
-  }, [events, filterType, searchTerm]);
+  }, [allEvents, filterType, searchTerm]);
 
-  const stats = useMemo(() => getEventStats(events), [events]);
+  const stats = useMemo(() => getEventStats(allEvents), [allEvents]);
 
   // Vérifier s'il y a des erreurs dans les requêtes
-  const taskErrors = taskQueries.map(query => query.error).filter(Boolean);
-  const eventErrors = eventQueries.map(query => query.error).filter(Boolean);
+  const taskErrors = isLoadingTasks ? [] : [tasks?.error].filter(Boolean);
+  const eventErrors = isLoadingEvents ? [] : [events?.error].filter(Boolean);
 
   // Gérer les événements du calendrier
   const handleEventClick = (eventId: string) => {
     if (eventId.startsWith('event-')) {
       const id = parseInt(eventId.replace('event-', ''));
-      const event = eventQueries
-        .map(query => query.data?.results)
-        .flat()
-        .find((e: any) => e?.id === id);
+      const event = events?.results.find((e: any) => e?.id === id);
       
       if (event) {
         setSelectedEvent(event);
@@ -159,7 +208,7 @@ export const ProjectCalendar = ({ projects }: ProjectCalendarProps) => {
   };
 
   // Afficher l'état de chargement
-  if (isLoadingProjects || taskQueries.some(query => query.isLoading) || eventQueries.some(query => query.isLoading)) {
+  if (isLoadingProjects || isLoadingTasks || isLoadingEvents) {
     return (
       <div className="space-y-6">
         <div className="space-y-4">
@@ -239,7 +288,7 @@ export const ProjectCalendar = ({ projects }: ProjectCalendarProps) => {
 
       {isEventModalOpen && (
         <EventModal
-          projectId={activeProjects[0]?.id}
+          projectId={project?.id}
           event={selectedEvent}
           isOpen={isEventModalOpen}
           onClose={() => {

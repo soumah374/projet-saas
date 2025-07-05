@@ -1,5 +1,6 @@
 export type EventType = 'milestone' | 'deadline' | 'meeting' | 'task' | 'event';
-export type EventStatus = 'completed' | 'overdue' | 'in-progress' | 'upcoming';
+
+export type EventStatus = 'completed' | 'in-progress' | 'upcoming' | 'overdue' | 'paused';
 
 export interface Event {
   id: string;
