@@ -1,63 +1,68 @@
-import { useState, useEffect } from 'react';
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../lib/api';
-import { Notification } from '../lib/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { notificationsAPI } from '../lib/api';
+import type { Notification, PaginatedResponse } from '../lib/types';
 
-export const useNotifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Query keys
+const notificationKeys = {
+  all: ['notifications'] as const,
+  lists: () => [...notificationKeys.all, 'list'] as const,
+  list: (filters: any) => [...notificationKeys.lists(), filters] as const,
+  unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
+};
 
-  const fetchNotifications = async () => {
-    try {
-      setLoading(true);
-      const data = await getNotifications();
-      setNotifications(data);
-      setUnreadCount(data.filter((n: Notification) => !n.is_read).length);
-      setError(null);
-    } catch (err) {
-      setError('Erreur lors du chargement des notifications');
-    } finally {
-      setLoading(false);
-    }
-  };
+export const useNotifications = (params?: {
+  type?: string;
+  is_read?: boolean;
+  page?: number;
+  page_size?: number;
+}) => {
+  const queryClient = useQueryClient();
 
-  const markAsRead = async (notificationId: number) => {
-    try {
-      await markNotificationRead(notificationId);
-      setNotifications(notifications.map(n => 
-        n.id === notificationId ? { ...n, is_read: true } : n
-      ));
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (err) {
-      setError('Erreur lors du marquage de la notification comme lue');
-    }
-  };
+  // Requête pour obtenir les notifications
+  const {
+    data,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery<PaginatedResponse<Notification>>({
+    queryKey: notificationKeys.list(params),
+    queryFn: () => notificationsAPI.getNotifications(params),
+    refetchInterval: 60000, // Rafraîchir toutes les minutes
+  });
 
-  const markAllAsRead = async () => {
-    try {
-      await markAllNotificationsRead();
-      setNotifications(notifications.map(n => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      setError('Erreur lors du marquage de toutes les notifications comme lues');
-    }
-  };
+  // Requête pour obtenir le nombre de notifications non lues
+  const { data: unreadCountData } = useQuery({
+    queryKey: notificationKeys.unreadCount(),
+    queryFn: () => notificationsAPI.getUnreadCount(),
+    refetchInterval: 60000,
+  });
 
-  useEffect(() => {
-    fetchNotifications();
-    // Rafraîchir les notifications toutes les minutes
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  // Mutation pour marquer une notification comme lue
+  const markAsReadMutation = useMutation({
+    mutationFn: (notificationId: number) => notificationsAPI.markRead(notificationId),
+    onSuccess: () => {
+      // Invalider les requêtes pour forcer un rafraîchissement
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+
+  // Mutation pour marquer toutes les notifications comme lues
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => notificationsAPI.markAllRead(),
+    onSuccess: () => {
+      // Invalider les requêtes pour forcer un rafraîchissement
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
 
   return {
-    notifications,
-    unreadCount,
+    notifications: data?.results || [],
+    totalCount: data?.count || 0,
+    unreadCount: unreadCountData?.unread_count || 0,
     loading,
     error,
-    markAsRead,
-    markAllAsRead,
-    refetch: fetchNotifications,
+    markAsRead: markAsReadMutation.mutate,
+    markAllAsRead: markAllAsReadMutation.mutate,
+    refetch,
   };
 }; 

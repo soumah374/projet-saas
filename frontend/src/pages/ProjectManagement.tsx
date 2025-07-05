@@ -153,10 +153,12 @@ export function ProjectManagement() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const totalPages = projects ? Math.ceil(projects.count / itemsPerPage) : 0;
+  const totalPages = projects?.count ? Math.ceil(projects.count / itemsPerPage) : 0;
 
   // Generate array of page numbers to display
   const getPageNumbers = () => {
+    if (!totalPages) return [];
+    
     const pageNumbers = [];
     const maxVisiblePages = 5;
     
@@ -397,7 +399,7 @@ export function ProjectManagement() {
             </p>
           )}
         </div>
-      ) : projects?.results.length === 0 ? (
+      ) : !projects?.results || projects.results.length === 0 ? (
         <div className="text-center py-12">
           <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun projet trouvé</h3>

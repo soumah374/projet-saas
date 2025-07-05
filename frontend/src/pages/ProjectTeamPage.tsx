@@ -105,8 +105,8 @@ export function ProjectTeamPage() {
   });
 
   const removeMemberMutation = useMutation({
-    mutationFn: ({ projectId, userId }: { projectId: string; userId: number }) =>
-      projectsAPI.removeMember(projectId, userId),
+    mutationFn: ({ projectId, memberId }: { projectId: string; memberId: number }) =>
+      projectsAPI.removeMember(projectId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -167,10 +167,10 @@ export function ProjectTeamPage() {
     });
   };
 
-  const handleRemoveMember = (userId: number) => {
+  const handleRemoveMember = (memberId: number) => {
     removeMemberMutation.mutate({
       projectId: projectId!,
-      userId
+      memberId
     });
     setMemberToDelete(null);
     setIsDeleteDialogOpen(false);
@@ -700,7 +700,7 @@ export function ProjectTeamPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               className="bg-red-600 hover:bg-red-700 text-white"
-              onClick={() => handleRemoveMember(memberToDelete!.user.id)}
+              onClick={() => handleRemoveMember(memberToDelete!.id)}
               disabled={removeMemberMutation.isPending}
             >
               {removeMemberMutation.isPending ? (

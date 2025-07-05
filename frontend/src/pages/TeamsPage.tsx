@@ -82,7 +82,8 @@ export function TeamsPage() {
   const [newMember, setNewMember] = useState({
     user: '',
     role: 'member' as TeamMemberRole,
-    is_active: true
+    is_active: true,
+    team: 0
   });
 
   // React Query hooks
@@ -96,10 +97,13 @@ export function TeamsPage() {
     ordering: 'first_name'
   });
 
-  const { data: teamMembers, isLoading: membersLoading } = useTeamMembers({
-    team: selectedTeam?.id,
-    ordering: 'user_name'
-  });
+  const { data: teamMembers, isLoading: membersLoading } = useTeamMembers(
+    selectedTeam ? {
+      team: selectedTeam.id,
+      ordering: 'user__first_name',
+      is_active: true
+    } : undefined
+  );
 
   // Calculate team stats
   const teamStats = useTeamStats(teamMembers?.results || []);
@@ -203,10 +207,11 @@ export function TeamsPage() {
         data: {
           user: parseInt(newMember.user),
           role: newMember.role,
-          is_active: newMember.is_active
+          is_active: newMember.is_active,
+          team: selectedTeam.id
         }
       });
-      setNewMember({ user: '', role: 'member', is_active: true });
+      setNewMember({ user: '', role: 'member', is_active: true, team: selectedTeam.id });
       setIsAddMemberDialogOpen(false);
     } catch (error) {
       console.error('Erreur lors de l\'ajout du membre:', error);
@@ -609,15 +614,14 @@ export function TeamsPage() {
               onClick={() => setIsDeleteTeamDialogOpen(false)}
             >
               Annuler
-                    </Button>
-                    <Button
+            </Button>
+            <Button
               variant="destructive"
-              onClick={handleDeleteTeam}
-                      disabled={deleteTeamMutation.isPending}
-                    >
+              onClick={handleDeleteTeam} disabled={deleteTeamMutation.isPending}
+            >
               {deleteTeamMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Supprimer l'équipe
-                    </Button>
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -671,15 +675,13 @@ export function TeamsPage() {
                   )}
               </CardContent>
             </Card>
-
-                             {/* Team Statistics */}
+              {/* Team Statistics */}
                <TeamStatsCard
                  totalMembers={teamStats.totalMembers}
                  leaders={teamStats.leaders}
                  members={teamStats.members}
                  consultants={teamStats.consultants}
                />
-
                {/* Members List */}
                <TeamMembersList
                  members={teamMembers?.results || []}
@@ -734,9 +736,11 @@ export function TeamsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="leader">Leader</SelectItem>
-                  <SelectItem value="member">Membre</SelectItem>
-                  <SelectItem value="consultant">Consultant</SelectItem>
+                  {teamRoles.map(role => (
+                    <SelectItem key={role} value={role}>
+                      {getRoleBadge(role)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

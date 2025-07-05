@@ -161,6 +161,7 @@ class ProjectTask(models.Model):
     due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    executed_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         ordering = ['start_date', 'due_date', 'created_at']
@@ -169,6 +170,12 @@ class ProjectTask(models.Model):
     
     def __str__(self):
         return f"{self.title} - {self.project.title}"
+
+    def execute(self):
+        """Marquer la tâche comme exécutée"""
+        self.status = 'Terminé'
+        self.executed_at = timezone.now()
+        self.save()
 
 
 class ProjectEvent(models.Model):
@@ -201,4 +208,29 @@ class ProjectEvent(models.Model):
         verbose_name_plural = 'Événements'
     
     def __str__(self):
-        return f"{self.title} - {self.project.title} ({self.date})" 
+        return f"{self.title} - {self.project.title} ({self.date})"
+
+
+class Notification(models.Model):
+    """Modèle pour les notifications"""
+    
+    TYPE_CHOICES = [
+        ('project_member', 'Ajout au projet'),
+        ('task_assignment', 'Assignation de tâche'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='notifications')
+    task = models.ForeignKey(ProjectTask, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
+    
+    def __str__(self):
+        return f"Notification pour {self.user.get_full_name()} - {self.get_type_display()}" 

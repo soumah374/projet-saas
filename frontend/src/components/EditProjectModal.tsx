@@ -165,7 +165,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   const priorities = ['Basse', 'Normale', 'Haute', 'Urgente'];
   const statuses = ['Planification', 'En cours', 'Production', 'En pause', 'Terminé'];
   const categories = ['Corporate', 'Marketing', 'Institutionnel', 'Commercial', 'Interne'];
-  const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Développeur Senior', 'Rédacteur', 'Consultant', 'Assistant'];
+  const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'];
 
   // Initialize form data with project values
   useEffect(() => {

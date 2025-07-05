@@ -8,11 +8,11 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import HttpResponse
 
-from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent
+from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent, Notification
 from .serializers import (
     ProjectSerializer, ProjectListSerializer, ProjectCreateSerializer,
     ProjectUpdateSerializer, ProjectMemberSerializer, ProjectBudgetSerializer,
-    ProjectTaskSerializer, ProjectEventSerializer
+    ProjectTaskSerializer, ProjectEventSerializer, NotificationSerializer
 )
 
 
@@ -408,7 +408,7 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des membres de projet"""
     
     serializer_class = ProjectMemberSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         """Filtrer selon le projet"""
@@ -418,9 +418,34 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
         return ProjectMember.objects.none()
     
     def perform_create(self, serializer):
-        """Créer un membre avec le projet"""
+        """Créer un membre avec le projet et envoyer une notification"""
         project_id = self.kwargs.get('project_pk')
-        serializer.save(project_id=project_id)
+        member = serializer.save(project_id=project_id)
+        
+        # Créer une notification pour le nouveau membre
+        project = Project.objects.get(id=project_id)
+        Notification.objects.create(
+            user=member.user,
+            type='project_member',
+            project=project,
+            message=f"Vous avez été ajouté(e) au projet '{project.title}' en tant que {member.role}"
+        )
+    
+    def perform_destroy(self, instance):
+        """Supprimer un membre et envoyer une notification"""
+        project = instance.project
+        user = instance.user
+        
+        # Supprimer le membre
+        instance.delete()
+        
+        # Créer une notification pour informer l'utilisateur
+        Notification.objects.create(
+            user=user,
+            type='project_member',
+            project=project,
+            message=f"Vous avez été retiré(e) du projet '{project.title}'"
+        )
 
 
 class ProjectTaskViewSet(viewsets.ModelViewSet):
@@ -441,10 +466,36 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
         return ProjectTask.objects.none()
     
     def perform_create(self, serializer):
-        """Créer une tâche avec le projet"""
+        """Créer une tâche avec le projet et envoyer une notification si assignée"""
         project_id = self.kwargs.get('project_pk')
-        serializer.save(project_id=project_id)
+        task = serializer.save(project_id=project_id)
+        
+        # Si la tâche est assignée, créer une notification
+        if task.assigned_to:
+            project = Project.objects.get(id=project_id)
+            Notification.objects.create(
+                user=task.assigned_to,
+                type='task_assignment',
+                project=project,
+                task=task,
+                message=f"Vous avez été assigné(e) à la tâche '{task.title}' dans le projet '{project.title}'"
+            )
     
+    def perform_update(self, serializer):
+        """Mettre à jour une tâche et envoyer une notification si l'assignation change"""
+        old_task = self.get_object()
+        task = serializer.save()
+        
+        # Si l'assignation a changé et qu'il y a un nouvel assigné
+        if old_task.assigned_to != task.assigned_to and task.assigned_to:
+            Notification.objects.create(
+                user=task.assigned_to,
+                type='task_assignment',
+                project=task.project,
+                task=task,
+                message=f"Vous avez été assigné(e) à la tâche '{task.title}' dans le projet '{task.project.title}'"
+            )
+
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None, project_pk=None):
         """Mettre à jour le statut d'une tâche"""
@@ -459,6 +510,21 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
             {'error': 'Statut invalide'}, 
             status=status.HTTP_400_BAD_REQUEST
         )
+
+    @action(detail=True, methods=['post'])
+    def execute(self, request, pk=None, project_pk=None):
+        """Exécuter une tâche"""
+        task = self.get_object()
+        
+        if task.status == 'Terminé':
+            return Response(
+                {'error': 'La tâche est déjà terminée'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        task.execute()
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['get'])
     def upcoming_deadlines(self, request, project_pk=None):
@@ -524,4 +590,29 @@ class ProjectEventViewSet(viewsets.ModelViewSet):
             date__gte=timezone.now().date()
         ).order_by('date', 'start_time')
         serializer = self.get_serializer(upcoming, many=True)
-        return Response(serializer.data) 
+        return Response(serializer.data)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """ViewSet pour la gestion des notifications"""
+    
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Retourner uniquement les notifications de l'utilisateur connecté"""
+        return Notification.objects.filter(user=self.request.user)
+    
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        """Marquer toutes les notifications comme lues"""
+        self.get_queryset().update(is_read=True)
+        return Response(status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        """Marquer une notification comme lue"""
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response(status=status.HTTP_200_OK) 

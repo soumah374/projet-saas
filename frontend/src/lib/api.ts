@@ -22,23 +22,13 @@ import type {
   CreateTaskForm,
   CreateTeamMemberForm,
   TaskWithDeadline,
-  ProjectEvent,
-  ProjectBudget,
   ProjectMemberUpdate,
+  Notification,
 } from './types';
-import axios from 'axios';
 
 // Configuration de base pour les requêtes API
 const API_BASE = config.api.baseUrl;
 
-// Configuration de l'instance axios
-const axiosInstance = axios.create({
-  baseURL: API_BASE,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
 
 // Fonction utilitaire pour les requêtes API
 async function apiRequest<T>(
@@ -320,18 +310,23 @@ export const projectsAPI = {
 
   // Project Members
   addMember: async (projectId: string, data: { user_id: number; role: string }) => {
-    const response = await axiosInstance.post(`/projects/${projectId}/members/`, data);
-    return response.data;
+    return apiRequest<ProjectMember>(`/projects/${projectId}/members/`, { 
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
-  removeMember: async (projectId: string, userId: number) => {
-    const response = await axiosInstance.delete(`/projects/${projectId}/members/${userId}/`);
-    return response.data;
+  removeMember: async (projectId: string, memberId: number): Promise<void> => {
+    return apiRequest<void>(`/projects/${projectId}/members/${memberId}/`, {
+      method: 'DELETE',
+    });
   },
 
   updateMember: async (projectId: string, memberId: number, data: ProjectMemberUpdate) => {
-    const response = await axiosInstance.patch(`/projects/${projectId}/members/${memberId}/`, data);
-    return response.data;
+    return apiRequest<ProjectMember>(`/projects/${projectId}/members/${memberId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
   },
 
   // Événements
@@ -570,31 +565,18 @@ export const teamMembersAPI = {
   },
 
   // Créer un membre d'équipe
-  createTeamMember: async (memberData: {
-    team: number;
-    user: number;
-    role: string;
-    is_active?: boolean;
-  }): Promise<TeamMember> => {
+  createTeamMember: async (data: { team: number; user: number; role: string; is_active?: boolean }): Promise<TeamMember> => {
     return apiRequest<TeamMember>('/teams/members/', {
       method: 'POST',
-      body: JSON.stringify(memberData),
+      body: JSON.stringify(data),
     });
   },
 
   // Mettre à jour un membre d'équipe
-  updateTeamMember: async (
-    id: number,
-    memberData: Partial<{
-      team: number;
-      user: number;
-      role: string;
-      is_active: boolean;
-    }>
-  ): Promise<TeamMember> => {
+  updateTeamMember: async (id: number, data: Partial<{ team: number; user: number; role: string; is_active: boolean }>): Promise<TeamMember> => {
     return apiRequest<TeamMember>(`/teams/members/${id}/`, {
       method: 'PATCH',
-      body: JSON.stringify(memberData),
+      body: JSON.stringify(data),
     });
   },
 
@@ -639,24 +621,55 @@ export const documentsAPI = {
   },
 };
 
-// Notifications
-export const getNotifications = async () => {
-  const response = await axiosInstance.get('/notifications/');
-  return response.data;
-};
+// ===== NOTIFICATIONS =====
 
-export const markNotificationRead = async (notificationId: number) => {
-  const response = await axiosInstance.post(`/notifications/${notificationId}/mark_read/`);
-  return response.data;
-};
+export const notificationsAPI = {
+  // Liste des notifications
+  getNotifications: async (params?: {
+    type?: string;
+    is_read?: boolean;
+    page?: number;
+    page_size?: number;
+  }): Promise<PaginatedResponse<Notification>> => {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) {
+          searchParams.append(key, value.toString());
+        }
+      });
+    }
+    
+    const queryString = searchParams.toString();
+    const endpoint = queryString ? `/notifications/?${queryString}` : '/notifications/';
+    
+    return apiRequest<PaginatedResponse<Notification>>(endpoint);
+  },
 
-export const markAllNotificationsRead = async () => {
-  const response = await axiosInstance.post('/notifications/mark_all_read/');
-  return response.data;
+  // Marquer une notification comme lue
+  markRead: async (notificationId: number): Promise<{ status: string }> => {
+    return apiRequest<{ status: string }>(`/notifications/${notificationId}/mark_read/`, {
+      method: 'POST',
+    });
+  },
+
+  // Marquer toutes les notifications comme lues
+  markAllRead: async (): Promise<{ status: string }> => {
+    return apiRequest<{ status: string }>('/notifications/mark_all_read/', {
+      method: 'POST',
+    });
+  },
+
+  // Obtenir le nombre de notifications non lues
+  getUnreadCount: async (): Promise<{ unread_count: number }> => {
+    return apiRequest<{ unread_count: number }>('/notifications/unread_count/');
+  },
 };
 
 // Project Members
 export const updateProjectMember = async (projectId: string, memberId: number, data: { role: string; is_active: boolean }) => {
-  const response = await axiosInstance.patch(`/projects/${projectId}/members/${memberId}/`, data);
-  return response.data;
+  return apiRequest<any>(`/projects/${projectId}/members/${memberId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }; 

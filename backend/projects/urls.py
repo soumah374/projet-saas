@@ -2,7 +2,7 @@ from django.urls import path, include
 from rest_framework_nested import routers
 from .views import (
     ProjectViewSet, ProjectMemberViewSet,
-    ProjectTaskViewSet, ProjectEventViewSet
+    ProjectTaskViewSet, ProjectEventViewSet,
 )
 
 # Router principal pour les projets

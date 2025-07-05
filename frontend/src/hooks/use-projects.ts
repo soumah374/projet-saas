@@ -1,12 +1,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { projectsAPI, projectMembersAPI, projectTasksAPI } from '@/lib/api';
 import type { 
-  Project, 
-  ProjectList, 
   CreateProjectForm, 
-  ProjectStatistics,
-  ProjectMember,
-  ProjectTask,
   CreateTaskForm,
   CreateTeamMemberForm
 } from '@/lib/types';

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent
+from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent, Notification
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -44,9 +44,10 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
         model = ProjectTask
         fields = [
             'id', 'title', 'description', 'status', 'assigned_to', 
-            'assigned_to_id', 'start_date', 'due_date', 'created_at', 'updated_at'
+            'assigned_to_id', 'start_date', 'due_date', 'created_at', 
+            'updated_at', 'executed_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'executed_at']
 
 
 class ProjectEventSerializer(serializers.ModelSerializer):
@@ -79,6 +80,12 @@ class ProjectEventSerializer(serializers.ModelSerializer):
         if participant_ids:
             participants = User.objects.filter(id__in=participant_ids)
             event.participants.set(participants)
+            # Ajouter automatiquement le créateur comme participant s'il ne l'est pas déjà
+            if event.created_by.id not in participant_ids:
+                event.participants.add(event.created_by)
+        else:
+            # Si aucun participant n'est spécifié, ajouter au moins le créateur
+            event.participants.add(event.created_by)
         
         return event
     
@@ -183,7 +190,7 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
     budget_details = ProjectBudgetSerializer(required=False)
     team_members = serializers.ListField(
         child=serializers.DictField(),
-        required=False,
+        required=True,
         write_only=True
     )
     
@@ -194,6 +201,29 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
             'status', 'priority', 'start_date', 'deadline', 'budget',
             'client', 'tags', 'budget_details', 'team_members'
         ]
+    
+    def validate_team_members(self, value):
+        """Validate team members data"""
+        if not value:
+            raise serializers.ValidationError("Ce champ est obligatoire.")
+        
+        for member in value:
+            if not member.get('user_id'):
+                raise serializers.ValidationError("user_id est requis pour chaque membre.")
+            if not member.get('role'):
+                raise serializers.ValidationError("role est requis pour chaque membre.")
+            
+            # Validate that user exists
+            try:
+                User.objects.get(id=member['user_id'])
+            except User.DoesNotExist:
+                raise serializers.ValidationError(f"L'utilisateur avec l'ID {member['user_id']} n'existe pas.")
+            
+            # Validate role
+            if member['role'] not in dict(ProjectMember.ROLE_CHOICES):
+                raise serializers.ValidationError(f"Le rôle '{member['role']}' n'est pas valide.")
+        
+        return value
     
     def create(self, validated_data):
         """Créer un projet avec budget et membres d'équipe"""
@@ -274,4 +304,16 @@ class ProjectUpdateSerializer(serializers.ModelSerializer):
                     setattr(budget_details, attr, value)
                 budget_details.save()
         
-        return project 
+        return project
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les notifications"""
+    
+    project = ProjectListSerializer(read_only=True)
+    task = ProjectTaskSerializer(read_only=True)
+    
+    class Meta:
+        model = Notification
+        fields = ['id', 'type', 'project', 'task', 'message', 'is_read', 'created_at']
+        read_only_fields = ['id', 'created_at'] 
