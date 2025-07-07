@@ -21,10 +21,14 @@ import type {
   CreateProjectForm,
   CreateTaskForm,
   CreateTeamMemberForm,
+  TaskWithDeadline,
+  ProjectMemberUpdate,
+  Notification,
 } from './types';
 
 // Configuration de base pour les requêtes API
 const API_BASE = config.api.baseUrl;
+
 
 // Fonction utilitaire pour les requêtes API
 async function apiRequest<T>(
@@ -39,6 +43,11 @@ async function apiRequest<T>(
   const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+
+  // Ne pas définir Content-Type pour les requêtes FormData
+  if (options.body instanceof FormData) {
+    delete defaultHeaders['Content-Type'];
+  }
 
   // Ajouter le header d'autorisation si un token existe
   if (token) {
@@ -89,7 +98,7 @@ async function apiRequest<T>(
 export const authAPI = {
   // Connexion classique avec username/password
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    return apiRequest<LoginResponse>('/login/', {
+    return apiRequest<LoginResponse>('/auth/login/', {
       method: 'POST',
       body: JSON.stringify(credentials),
     });
@@ -97,7 +106,7 @@ export const authAPI = {
 
   // Demander un code OTP
   requestOTP: async (data: OTPRequest): Promise<{ message: string; email: string }> => {
-    return apiRequest<{ message: string; email: string }>('/otp/request/', {
+    return apiRequest<{ message: string; email: string }>('/auth/otp/request/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -105,7 +114,7 @@ export const authAPI = {
 
   // Vérifier le code OTP
   verifyOTP: async (data: OTPVerification): Promise<LoginResponse> => {
-    return apiRequest<LoginResponse>('/otp/verify/', {
+    return apiRequest<LoginResponse>('/auth/otp/verify/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -113,7 +122,7 @@ export const authAPI = {
 
   // Renvoyer un code OTP
   resendOTP: async (data: OTPRequest): Promise<{ message: string; email: string }> => {
-    return apiRequest<{ message: string; email: string }>('/otp/resend/', {
+    return apiRequest<{ message: string; email: string }>('/auth/otp/resend/', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -121,7 +130,7 @@ export const authAPI = {
 
   // Rafraîchir le token
   refreshToken: async (refresh: string): Promise<{ access: string }> => {
-    return apiRequest<{ access: string }>('/token/refresh/', {
+    return apiRequest<{ access: string }>('/auth/token/refresh/', {
       method: 'POST',
       body: JSON.stringify({ refresh }),
     });
@@ -150,19 +159,19 @@ export const usersAPI = {
     }
     
     const queryString = searchParams.toString();
-    const endpoint = queryString ? `/users/?${queryString}` : '/users/';
+    const endpoint = queryString ? `/auth/users/?${queryString}` : '/auth/users/';
     
     return apiRequest<PaginatedResponse<UserList>>(endpoint);
   },
 
   // Détails d'un utilisateur
   getUser: async (id: number): Promise<User> => {
-    return apiRequest<User>(`/users/${id}/`);
+    return apiRequest<User>(`/auth/users/${id}/`);
   },
 
   // Créer un utilisateur
   createUser: async (userData: UserCreate): Promise<User> => {
-    return apiRequest<User>('/users/', {
+    return apiRequest<User>('/auth/users/', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -170,7 +179,7 @@ export const usersAPI = {
 
   // Mettre à jour un utilisateur
   updateUser: async (id: number, userData: UserUpdate): Promise<User> => {
-    return apiRequest<User>(`/users/${id}/`, {
+    return apiRequest<User>(`/auth/users/${id}/`, {
       method: 'PUT',
       body: JSON.stringify(userData),
     });
@@ -178,19 +187,19 @@ export const usersAPI = {
 
   // Supprimer un utilisateur
   deleteUser: async (id: number): Promise<void> => {
-    return apiRequest<void>(`/users/${id}/`, {
+    return apiRequest<void>(`/auth/users/${id}/`, {
       method: 'DELETE',
     });
   },
 
   // Informations de l'utilisateur connecté
   getMe: async (): Promise<User> => {
-    return apiRequest<User>('/users/me/');
+    return apiRequest<User>('/auth/users/me/');
   },
 
   // Mettre à jour les informations de l'utilisateur connecté
   updateMe: async (userData: UserUpdate): Promise<User> => {
-    return apiRequest<User>('/users/update_me/', {
+    return apiRequest<User>('/auth/users/update_me/', {
       method: 'PATCH',
       body: JSON.stringify(userData),
     });
@@ -222,6 +231,7 @@ export const projectsAPI = {
     search?: string;
     ordering?: string;
     page?: number;
+    page_size?: number;
     status?: string;
     type?: string;
     priority?: string;
@@ -298,19 +308,49 @@ export const projectsAPI = {
     });
   },
 
-  // Ajouter un membre à un projet
-  addMember: async (projectId: string, memberData: CreateTeamMemberForm): Promise<ProjectMember> => {
-    return apiRequest<ProjectMember>(`/projects/${projectId}/add_member/`, {
+  // Project Members
+  addMember: async (projectId: string, data: { user_id: number; role: string }) => {
+    return apiRequest<ProjectMember>(`/projects/${projectId}/members/`, { 
       method: 'POST',
-      body: JSON.stringify(memberData),
+      body: JSON.stringify(data),
     });
   },
 
-  // Retirer un membre d'un projet
-  removeMember: async (projectId: string, userId: number): Promise<void> => {
-    return apiRequest<void>(`/projects/${projectId}/remove_member/`, {
+  removeMember: async (projectId: string, memberId: number): Promise<void> => {
+    return apiRequest<void>(`/projects/${projectId}/members/${memberId}/`, {
       method: 'DELETE',
-      body: JSON.stringify({ user_id: userId }),
+    });
+  },
+
+  updateMember: async (projectId: string, memberId: number, data: ProjectMemberUpdate) => {
+    return apiRequest<ProjectMember>(`/projects/${projectId}/members/${memberId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Événements
+  getProjectEvents: (projectId: string) => {
+    return apiRequest<any[]>(`/projects/${projectId}/events/`);
+  },
+  
+  createProjectEvent: (projectId: string, eventData: any) => {
+    return apiRequest<any>(`/projects/${projectId}/events/`, {
+      method: 'POST',
+      body: JSON.stringify(eventData),
+    });
+  },
+  
+  updateProjectEvent: (projectId: string, eventId: number, eventData: any) => {
+    return apiRequest<any>(`/projects/${projectId}/events/${eventId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(eventData),
+    });
+  },
+  
+  deleteProjectEvent: (projectId: string, eventId: number) => {
+    return apiRequest<void>(`/projects/${projectId}/events/${eventId}/`, {
+      method: 'DELETE',
     });
   },
 };
@@ -411,6 +451,18 @@ export const projectTasksAPI = {
       method: 'POST',
       body: JSON.stringify({ status }),
     });
+  },
+
+  // Exécuter une tâche
+  executeTask: async (projectId: string, taskId: number): Promise<ProjectTask> => {
+    return apiRequest<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/execute/`, {
+      method: 'POST',
+    });
+  },
+
+  getUpcomingDeadlines: async (projectId: string): Promise<TaskWithDeadline[]> => {
+    const response = await apiRequest<TaskWithDeadline[]>(`/projects/${projectId}/tasks/upcoming_deadlines/`);
+    return response;
   },
 };
 
@@ -513,31 +565,18 @@ export const teamMembersAPI = {
   },
 
   // Créer un membre d'équipe
-  createTeamMember: async (memberData: {
-    team: number;
-    user: number;
-    role: string;
-    is_active?: boolean;
-  }): Promise<TeamMember> => {
+  createTeamMember: async (data: { team: number; user: number; role: string; is_active?: boolean }): Promise<TeamMember> => {
     return apiRequest<TeamMember>('/teams/members/', {
       method: 'POST',
-      body: JSON.stringify(memberData),
+      body: JSON.stringify(data),
     });
   },
 
   // Mettre à jour un membre d'équipe
-  updateTeamMember: async (
-    id: number,
-    memberData: Partial<{
-      team: number;
-      user: number;
-      role: string;
-      is_active: boolean;
-    }>
-  ): Promise<TeamMember> => {
+  updateTeamMember: async (id: number, data: Partial<{ team: number; user: number; role: string; is_active: boolean }>): Promise<TeamMember> => {
     return apiRequest<TeamMember>(`/teams/members/${id}/`, {
       method: 'PATCH',
-      body: JSON.stringify(memberData),
+      body: JSON.stringify(data),
     });
   },
 
@@ -553,14 +592,45 @@ export const teamMembersAPI = {
 
 export const documentsAPI = {
   // Liste des documents
-  getDocuments: async (params?: {
-    search?: string;
-    ordering?: string;
+  getDocuments: async (projectId?: string): Promise<PaginatedResponse<Document>> => {
+    const endpoint = projectId ? `/documents/?project=${projectId}` : '/documents/';
+    return apiRequest<PaginatedResponse<Document>>(endpoint);
+  },
+
+  // Créer un document
+  createDocument: async (formData: FormData): Promise<Document> => {
+    return apiRequest<Document>('/documents/', {
+      method: 'POST',
+      body: formData,
+    });
+  },
+
+  // Mettre à jour un document
+  updateDocument: async (id: number, formData: FormData): Promise<Document> => {
+    return apiRequest<Document>(`/documents/${id}/`, {
+      method: 'PATCH',
+      body: formData,
+    });
+  },
+
+  // Supprimer un document
+  deleteDocument: async (id: number): Promise<void> => {
+    return apiRequest<void>(`/documents/${id}/`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// ===== NOTIFICATIONS =====
+
+export const notificationsAPI = {
+  // Liste des notifications
+  getNotifications: async (params?: {
+    type?: string;
+    is_read?: boolean;
     page?: number;
-    document_type?: string;
-    is_public?: boolean;
-    category?: string;
-  }): Promise<PaginatedResponse<Document>> => {
+    page_size?: number;
+  }): Promise<PaginatedResponse<Notification>> => {
     const searchParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -571,52 +641,35 @@ export const documentsAPI = {
     }
     
     const queryString = searchParams.toString();
-    const endpoint = queryString ? `/documents/?${queryString}` : '/documents/';
+    const endpoint = queryString ? `/notifications/?${queryString}` : '/notifications/';
     
-    return apiRequest<PaginatedResponse<Document>>(endpoint);
+    return apiRequest<PaginatedResponse<Notification>>(endpoint);
   },
 
-  // Détails d'un document
-  getDocument: async (id: number): Promise<Document> => {
-    return apiRequest<Document>(`/documents/${id}/`);
-  },
-
-  // Créer un document
-  createDocument: async (documentData: FormData): Promise<Document> => {
-    return apiRequest<Document>('/documents/', {
-      method: 'POST',
-      body: documentData,
-      headers: {}, // Laisser le navigateur définir le Content-Type pour FormData
-    });
-  },
-
-  // Mettre à jour un document
-  updateDocument: async (id: number, documentData: FormData): Promise<Document> => {
-    return apiRequest<Document>(`/documents/${id}/`, {
-      method: 'PATCH',
-      body: documentData,
-      headers: {}, // Laisser le navigateur définir le Content-Type pour FormData
-    });
-  },
-
-  // Supprimer un document
-  deleteDocument: async (id: number): Promise<void> => {
-    return apiRequest<void>(`/documents/${id}/`, {
-      method: 'DELETE',
-    });
-  },
-
-  // Rendre un document public
-  makePublic: async (id: number): Promise<{ message: string }> => {
-    return apiRequest<{ message: string }>(`/documents/${id}/make_public/`, {
+  // Marquer une notification comme lue
+  markRead: async (notificationId: number): Promise<{ status: string }> => {
+    return apiRequest<{ status: string }>(`/notifications/${notificationId}/mark_read/`, {
       method: 'POST',
     });
   },
 
-  // Rendre un document privé
-  makePrivate: async (id: number): Promise<{ message: string }> => {
-    return apiRequest<{ message: string }>(`/documents/${id}/make_private/`, {
+  // Marquer toutes les notifications comme lues
+  markAllRead: async (): Promise<{ status: string }> => {
+    return apiRequest<{ status: string }>('/notifications/mark_all_read/', {
       method: 'POST',
     });
   },
+
+  // Obtenir le nombre de notifications non lues
+  getUnreadCount: async (): Promise<{ unread_count: number }> => {
+    return apiRequest<{ unread_count: number }>('/notifications/unread_count/');
+  },
+};
+
+// Project Members
+export const updateProjectMember = async (projectId: string, memberId: number, data: { role: string; is_active: boolean }) => {
+  return apiRequest<any>(`/projects/${projectId}/members/${memberId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
 }; 

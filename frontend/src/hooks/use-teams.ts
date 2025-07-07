@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { teamsAPI, teamMembersAPI } from '@/lib/api';
-import type { Team, TeamMember } from '@/lib/types';
+import type { Team, TeamMember, TeamMemberRole } from '@/lib/types';
 import { toast } from 'sonner';
 
 // ===== ÉQUIPES =====
@@ -86,7 +86,7 @@ export const useAddTeamMember = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ teamId, data }: { teamId: number; data: { user: number; role: string; is_active?: boolean } }) =>
+    mutationFn: ({ teamId, data }: { teamId: number; data: { user: number; role: string; is_active?: boolean, team?: number } }) =>
       teamsAPI.addTeamMember(teamId, data),
     onSuccess: (_, { teamId }) => {
       queryClient.invalidateQueries({ queryKey: ['teams'] });
@@ -106,14 +106,15 @@ export const useAddTeamMember = () => {
 // Hook pour récupérer la liste des membres d'une équipe
 export const useTeamMembers = (params?: {
   team?: number;
-  role?: string;
+  role?: TeamMemberRole;
   is_active?: boolean;
-  ordering?: string;
+  ordering?: 'joined_at' | 'user__first_name';
   page?: number;
 }) => {
   return useQuery({
     queryKey: ['team-members', params],
     queryFn: () => teamMembersAPI.getTeamMembers(params),
+    enabled: !!params?.team // Only fetch if team is provided
   });
 };
 

@@ -1,13 +1,14 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Event } from './types';
+import { Event, WeekViewProps } from './types';
 import { getEventsForDate, getEventTypeColor } from './utils';
 
-interface WeekViewProps {
-  events: Event[];
-}
+export const WeekView = ({ events, onEventClick }: WeekViewProps) => {
+  const handleEventClick = (eventId: string) => {
+    if (onEventClick) {
+      onEventClick(eventId);
+    }
+  };
 
-export const WeekView = ({ events }: WeekViewProps) => {
   return (
     <Card>
       <CardHeader>
@@ -30,7 +31,11 @@ export const WeekView = ({ events }: WeekViewProps) => {
                 <div className="font-medium text-sm mb-2 text-center">{date.getDate()}</div>
                 <div className="space-y-1">
                   {getEventsForDate(date, events).map(event => (
-                    <div key={event.id} className={`text-xs p-2 rounded ${getEventTypeColor(event.type)}`}>
+                    <div
+                      key={event.id}
+                      onClick={() => handleEventClick(event.id)}
+                      className={`text-xs p-2 rounded ${getEventTypeColor(event.type)} cursor-pointer hover:bg-gray-100`}
+                    >
                       <div className="font-medium">{event.title}</div>
                       {event.time && <div className="text-xs opacity-75">{event.time}</div>}
                     </div>

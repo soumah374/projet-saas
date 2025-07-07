@@ -1,16 +1,12 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { projectsAPI, projectMembersAPI, projectTasksAPI } from '@/lib/api';
 import type { 
-  Project, 
-  ProjectList, 
   CreateProjectForm, 
-  ProjectStatistics,
-  ProjectMember,
-  ProjectTask,
   CreateTaskForm,
   CreateTeamMemberForm
 } from '@/lib/types';
 import { toast } from 'sonner';
+import { useMemo } from 'react';
 
 // Query keys
 export const projectKeys = {
@@ -27,15 +23,19 @@ export const projectKeys = {
 
 // ===== PROJETS =====
 
-export const useProjects = (params?: {
-  search?: string;
-  ordering?: string;
-  page?: number;
-  status?: string;
-  type?: string;
-  priority?: string;
-  category?: string;
-}) => {
+export const useProjects = (
+  params?: {
+    search?: string;
+    ordering?: string;
+    page?: number;
+    page_size?: number;
+    status?: string;
+    type?: string;
+    priority?: string;
+    category?: string;
+  },
+  options?: Omit<UseQueryOptions<any, any, any>, 'queryKey' | 'queryFn'>
+) => {
   return useQuery({
     queryKey: ['projects', params],
     queryFn: () => projectsAPI.getProjects(params),
@@ -48,6 +48,7 @@ export const useProjects = (params?: {
       return failureCount < 3;
     },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...options,
   });
 };
 
@@ -202,16 +203,37 @@ export const useDeleteProjectMember = () => {
 
 // ===== TÂCHES DE PROJET =====
 
-export const useProjectTasks = (projectId: string, params?: {
-  status?: string;
-  assigned_to?: number;
-  ordering?: string;
-  page?: number;
-}) => {
+export const useProjectTasks = (
+  projectId: string | undefined,
+  params?: {
+    status?: string;
+    assigned_to?: number;
+    ordering?: string;
+    page?: number;
+  },
+  options?: Omit<UseQueryOptions<any, any, any>, 'queryKey' | 'queryFn' | 'enabled'>
+) => {
+  const queryKey = useMemo(() => ['project-tasks', projectId, params], [projectId, params]);
+
   return useQuery({
-    queryKey: ['project-tasks', projectId, params],
-    queryFn: () => projectTasksAPI.getProjectTasks(projectId, params),
+    queryKey,
+    queryFn: () => {
+      if (!projectId) {
+        return Promise.resolve({ results: [] });
+      }
+      return projectTasksAPI.getProjectTasks(projectId, params);
+    },
     enabled: !!projectId,
+    retry: (failureCount, error: any) => {
+      // Don't retry on authentication errors
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      // Retry up to 3 times for other errors
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...options,
   });
 };
 
@@ -272,4 +294,95 @@ export const useUpdateTaskStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
-}; 
+};
+
+export const useExecuteTask = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ projectId, taskId }: { projectId: string; taskId: number }) =>
+      projectTasksAPI.executeTask(projectId, taskId),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Tâche exécutée avec succès');
+    },
+  });
+};
+
+export const useUpcomingTaskDeadlines = (projectId: string) => {
+  return useQuery({
+    queryKey: ['upcoming-task-deadlines', projectId],
+    queryFn: () => projectTasksAPI.getUpcomingDeadlines(projectId),
+    enabled: !!projectId,
+    // Rafraîchir toutes les 5 minutes
+    refetchInterval: 5 * 60 * 1000,
+  });
+};
+
+export function useProjectEvents(
+  projectId: string | undefined,
+  queryOptions?: Omit<UseQueryOptions<any>, 'queryKey' | 'queryFn'>
+) {
+  const queryKey = useMemo(() => ['project-events', projectId], [projectId]);
+
+  return useQuery({
+    queryKey,
+    queryFn: () => {
+      if (!projectId) {
+        return Promise.resolve({ results: [] });
+      }
+      return projectsAPI.getProjectEvents(projectId);
+    },
+    enabled: !!projectId,
+    retry: (failureCount, error: any) => {
+      if (error?.message?.includes('401') || error?.message?.includes('403')) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...queryOptions,
+  });
+}
+
+export function useCreateProjectEvent() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ projectId, eventData }: { projectId: string; eventData: any }) => {
+      const response = await projectsAPI.createProjectEvent(projectId, eventData);
+      return response;
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
+    },
+  });
+}
+
+export function useUpdateProjectEvent() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ projectId, eventId, eventData }: { projectId: string; eventId: number; eventData: any }) => {
+      const response = await projectsAPI.updateProjectEvent(projectId, eventId, eventData);
+      return response;
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
+    },
+  });
+}
+
+export function useDeleteProjectEvent() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ projectId, eventId }: { projectId: string; eventId: number }) => {
+      await projectsAPI.deleteProjectEvent(projectId, eventId);
+    },
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
+    },
+  });
+} 

@@ -8,17 +8,18 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import HttpResponse
 
-from .models import Project, ProjectMember, ProjectBudget, ProjectTask
+from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent, Notification
 from .serializers import (
     ProjectSerializer, ProjectListSerializer, ProjectCreateSerializer,
     ProjectUpdateSerializer, ProjectMemberSerializer, ProjectBudgetSerializer,
-    ProjectTaskSerializer
+    ProjectTaskSerializer, ProjectEventSerializer, NotificationSerializer
 )
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des projets"""
     
+    queryset = Project.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority', 'category']
@@ -95,7 +96,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    @action(detail=False)
+    @action(detail=False, methods=['get'])
     def statistics(self, request):
         """Obtenir les statistiques des projets"""
         user = request.user
@@ -107,34 +108,36 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     Q(created_by=user) | Q(team_members=user)
                 ).distinct()
         else:
-            # For anonymous users, return statistics for all projects
-            queryset = Project.objects.all()
-        
-        # Statistiques générales
+            queryset = Project.objects.none()
+
+        # Calculer les statistiques
         total_projects = queryset.count()
         active_projects = queryset.filter(status__in=['Planification', 'En cours', 'Production']).count()
         completed_projects = queryset.filter(status='Terminé').count()
-        
-        # Progression moyenne
         avg_progress = queryset.aggregate(Avg('progress'))['progress__avg'] or 0
-        
-        # Projets en retard
-        overdue_projects = queryset.filter(deadline__lt=timezone.now().date()).count()
-        
+        overdue_projects = queryset.filter(
+            deadline__lt=timezone.now().date(),
+            status__in=['Planification', 'En cours', 'Production']
+        ).count()
+
         # Projets par type
-        projects_by_type = queryset.values('type').annotate(count=Count('id'))
-        
+        projects_by_type = queryset.values('type').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
         # Projets par statut
-        projects_by_status = queryset.values('status').annotate(count=Count('id'))
-        
+        projects_by_status = queryset.values('status').annotate(
+            count=Count('id')
+        ).order_by('-count')
+
         return Response({
             'total_projects': total_projects,
             'active_projects': active_projects,
             'completed_projects': completed_projects,
             'average_progress': round(avg_progress, 1),
             'overdue_projects': overdue_projects,
-            'projects_by_type': list(projects_by_type),
-            'projects_by_status': list(projects_by_status),
+            'projects_by_type': projects_by_type,
+            'projects_by_status': projects_by_status,
         })
     
     @action(detail=False)
@@ -405,7 +408,7 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des membres de projet"""
     
     serializer_class = ProjectMemberSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
         """Filtrer selon le projet"""
@@ -415,9 +418,34 @@ class ProjectMemberViewSet(viewsets.ModelViewSet):
         return ProjectMember.objects.none()
     
     def perform_create(self, serializer):
-        """Créer un membre avec le projet"""
+        """Créer un membre avec le projet et envoyer une notification"""
         project_id = self.kwargs.get('project_pk')
-        serializer.save(project_id=project_id)
+        member = serializer.save(project_id=project_id)
+        
+        # Créer une notification pour le nouveau membre
+        project = Project.objects.get(id=project_id)
+        Notification.objects.create(
+            user=member.user,
+            type='project_member',
+            project=project,
+            message=f"Vous avez été ajouté(e) au projet '{project.title}' en tant que {member.role}"
+        )
+    
+    def perform_destroy(self, instance):
+        """Supprimer un membre et envoyer une notification"""
+        project = instance.project
+        user = instance.user
+        
+        # Supprimer le membre
+        instance.delete()
+        
+        # Créer une notification pour informer l'utilisateur
+        Notification.objects.create(
+            user=user,
+            type='project_member',
+            project=project,
+            message=f"Vous avez été retiré(e) du projet '{project.title}'"
+        )
 
 
 class ProjectTaskViewSet(viewsets.ModelViewSet):
@@ -438,10 +466,36 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
         return ProjectTask.objects.none()
     
     def perform_create(self, serializer):
-        """Créer une tâche avec le projet"""
+        """Créer une tâche avec le projet et envoyer une notification si assignée"""
         project_id = self.kwargs.get('project_pk')
-        serializer.save(project_id=project_id)
+        task = serializer.save(project_id=project_id)
+        
+        # Si la tâche est assignée, créer une notification
+        if task.assigned_to:
+            project = Project.objects.get(id=project_id)
+            Notification.objects.create(
+                user=task.assigned_to,
+                type='task_assignment',
+                project=project,
+                task=task,
+                message=f"Vous avez été assigné(e) à la tâche '{task.title}' dans le projet '{project.title}'"
+            )
     
+    def perform_update(self, serializer):
+        """Mettre à jour une tâche et envoyer une notification si l'assignation change"""
+        old_task = self.get_object()
+        task = serializer.save()
+        
+        # Si l'assignation a changé et qu'il y a un nouvel assigné
+        if old_task.assigned_to != task.assigned_to and task.assigned_to:
+            Notification.objects.create(
+                user=task.assigned_to,
+                type='task_assignment',
+                project=task.project,
+                task=task,
+                message=f"Vous avez été assigné(e) à la tâche '{task.title}' dans le projet '{task.project.title}'"
+            )
+
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None, project_pk=None):
         """Mettre à jour le statut d'une tâche"""
@@ -455,4 +509,110 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
         return Response(
             {'error': 'Statut invalide'}, 
             status=status.HTTP_400_BAD_REQUEST
-        ) 
+        )
+
+    @action(detail=True, methods=['post'])
+    def execute(self, request, pk=None, project_pk=None):
+        """Exécuter une tâche"""
+        task = self.get_object()
+        
+        if task.status == 'Terminé':
+            return Response(
+                {'error': 'La tâche est déjà terminée'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        task.execute()
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def upcoming_deadlines(self, request, project_pk=None):
+        """Obtenir les tâches avec des échéances proches"""
+        # Récupérer les tâches du projet
+        queryset = self.get_queryset()
+        
+        # Filtrer les tâches non terminées avec une date d'échéance
+        queryset = queryset.filter(
+            status__in=['À faire', 'En cours', 'En pause'],
+            due_date__isnull=False
+        )
+        
+        # Calculer la date limite (7 jours à partir d'aujourd'hui)
+        deadline = timezone.now().date() + timedelta(days=7)
+        
+        # Filtrer les tâches avec échéance dans les 7 prochains jours
+        upcoming_tasks = queryset.filter(
+            due_date__lte=deadline,
+            due_date__gte=timezone.now().date()
+        ).order_by('due_date')
+        
+        serializer = self.get_serializer(upcoming_tasks, many=True)
+        
+        # Ajouter le nombre de jours restants pour chaque tâche
+        data = serializer.data
+        for task in data:
+            due_date = datetime.strptime(task['due_date'], '%Y-%m-%d').date()
+            days_remaining = (due_date - timezone.now().date()).days
+            task['days_remaining'] = days_remaining
+        
+        return Response(data)
+
+
+class ProjectEventViewSet(viewsets.ModelViewSet):
+    """ViewSet pour la gestion des événements de projet"""
+    
+    serializer_class = ProjectEventSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['type', 'date']
+    search_fields = ['title', 'description', 'location']
+    ordering_fields = ['date', 'start_time', 'created_at']
+    ordering = ['date', 'start_time']
+    
+    def get_queryset(self):
+        """Filtrer selon le projet"""
+        project_id = self.kwargs.get('project_pk')
+        if project_id:
+            return ProjectEvent.objects.filter(project_id=project_id)
+        return ProjectEvent.objects.none()
+    
+    def perform_create(self, serializer):
+        """Créer un événement avec le projet"""
+        project_id = self.kwargs.get('project_pk')
+        serializer.save(project_id=project_id)
+    
+    @action(detail=False)
+    def upcoming(self, request):
+        """Obtenir les événements à venir"""
+        queryset = self.get_queryset()
+        upcoming = queryset.filter(
+            date__gte=timezone.now().date()
+        ).order_by('date', 'start_time')
+        serializer = self.get_serializer(upcoming, many=True)
+        return Response(serializer.data)
+
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    """ViewSet pour la gestion des notifications"""
+    
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Retourner uniquement les notifications de l'utilisateur connecté"""
+        return Notification.objects.filter(user=self.request.user)
+    
+    @action(detail=False, methods=['post'])
+    def mark_all_read(self, request):
+        """Marquer toutes les notifications comme lues"""
+        self.get_queryset().update(is_read=True)
+        return Response(status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=['post'])
+    def mark_read(self, request, pk=None):
+        """Marquer une notification comme lue"""
+        notification = self.get_object()
+        notification.is_read = True
+        notification.save()
+        return Response(status=status.HTTP_200_OK) 

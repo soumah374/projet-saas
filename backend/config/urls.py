@@ -20,10 +20,11 @@ urlpatterns = [
     path('api/v1/', include([
         path('', api_root, name='api-root'),
         path('health/', health_check, name='health-check'),
-        path('', include('users.urls')),
+        path('auth/', include('users.urls')),
+        path('teams/', include('teams.urls')),
         path('projects/', include('projects.urls')),
         path('documents/', include('documents.urls')),
-        path('teams/', include('teams.urls')),
+        path('notifications/', include('notifications.urls')),
     ])),
 ]
 

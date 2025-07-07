@@ -165,7 +165,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   const priorities = ['Basse', 'Normale', 'Haute', 'Urgente'];
   const statuses = ['Planification', 'En cours', 'Production', 'En pause', 'Terminé'];
   const categories = ['Corporate', 'Marketing', 'Institutionnel', 'Commercial', 'Interne'];
-  const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Développeur Senior', 'Rédacteur', 'Consultant', 'Assistant'];
+  const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'];
 
   // Initialize form data with project values
   useEffect(() => {
@@ -271,24 +271,39 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
     setIsLoading(true);
 
     try {
-      // Validation côté frontend
+      // Validation finale
       if (!formData.title.trim()) {
         alert('Le titre du projet est requis');
+        setCurrentStep(1);
+        setIsLoading(false);
         return;
       }
       
       if (!formData.type) {
         alert('Le type de projet est requis');
+        setCurrentStep(1);
+        setIsLoading(false);
         return;
       }
       
       if (!formData.client.trim()) {
         alert('Le client est requis');
+        setCurrentStep(1);
+        setIsLoading(false);
         return;
       }
       
       if (!formData.deadline) {
         alert('La date d\'échéance est requise');
+        setCurrentStep(2);
+        setIsLoading(false);
+        return;
+      }
+
+      if (teamMembers.length === 0) {
+        alert('Veuillez ajouter au moins un membre à l\'équipe');
+        setCurrentStep(3);
+        setIsLoading(false);
         return;
       }
       
@@ -372,11 +387,40 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   };
 
   const nextStep = () => {
-    setCurrentStep(prev => Math.min(prev + 1, 3));
+    if (currentStep < 3) {
+      // Validation avant de passer à l'étape suivante
+      if (currentStep === 1) {
+        if (!formData.title.trim() || !formData.type || !formData.client.trim()) {
+          alert('Veuillez remplir tous les champs obligatoires (*)');
+          return;
+        }
+      } else if (currentStep === 2) {
+        if (!formData.deadline) {
+          alert('La date d\'échéance est requise');
+          return;
+        }
+      }
+      setCurrentStep(prev => prev + 1);
+    }
   };
   
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 1));
+    if (currentStep > 1) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const getStepTitle = (step: number) => {
+    switch (step) {
+      case 1:
+        return "Informations générales";
+      case 2:
+        return "Budget et paramètres";
+      case 3:
+        return "Équipe du projet";
+      default:
+        return "";
+    }
   };
 
   const renderStepContent = () => {
@@ -386,7 +430,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <FileText className="h-5 w-5 text-blue-600" />
-              Informations générales
+              {getStepTitle(currentStep)}
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -509,7 +553,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-green-600" />
-              Budget et paramètres
+              {getStepTitle(currentStep)}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -518,6 +562,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                 <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full justify-start text-left font-normal"
                     >
@@ -527,7 +572,8 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                   </PopoverTrigger>
                   <PopoverContent 
                     className="w-auto p-0" 
-                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                    align="start"
+                    side="bottom"
                   >
                     <Calendar
                       mode="single"
@@ -547,6 +593,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                 <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
                   <PopoverTrigger asChild>
                     <Button
+                      type="button"
                       variant="outline"
                       className="w-full justify-start text-left font-normal"
                     >
@@ -555,18 +602,19 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent 
-                    className="w-auto p-0" 
-                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                    className="w-auto p-0"
+                    align="start"
+                    side="bottom"
                   >
                     <Calendar
-                       mode="single"
-                       selected={formData.deadline}
-                       onSelect={(date) => {
-                         setFormData(prev => ({ ...prev, deadline: date || undefined }));
-                         setDeadlineOpen(false);
-                       }}
-                       initialFocus
-                     />
+                      mode="single"
+                      selected={formData.deadline}
+                      onSelect={(date) => {
+                        setFormData(prev => ({ ...prev, deadline: date || undefined }));
+                        setDeadlineOpen(false);
+                      }}
+                      initialFocus
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -688,7 +736,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
           <div className="space-y-6">
             <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <Users className="h-5 w-5 text-blue-600" />
-              Équipe du projet
+              {getStepTitle(currentStep)}
             </h3>
 
             {/* Mode de sélection */}
@@ -843,16 +891,38 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   };
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      setOpen(newOpen);
-      if (!newOpen) {
-        resetForm();
-      }
-    }}>
+    <Dialog 
+      open={open} 
+      onOpenChange={(newOpen) => {
+        // Empêcher la fermeture si on est en train de sélectionner une date
+        if (!newOpen && (startDateOpen || deadlineOpen)) {
+          return;
+        }
+        setOpen(newOpen);
+        if (!newOpen) {
+          resetForm();
+        }
+      }}
+      modal={true}
+    >
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent 
+        className="max-w-4xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => {
+          // Empêcher la fermeture si on clique sur un popover
+          if (startDateOpen || deadlineOpen) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          // Empêcher la fermeture par la touche Escape si un popover est ouvert
+          if (startDateOpen || deadlineOpen) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-blue-900">
             Modifier le projet: {project?.title}
@@ -861,16 +931,23 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
             <div className="flex items-center space-x-2">
               {[1, 2, 3].map((step) => (
                 <div key={step} className="flex items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                    step === currentStep 
-                      ? 'bg-blue-600 text-white' 
-                      : step < currentStep 
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-600'
-                  }`}>
-                    {step}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                      step === currentStep 
+                        ? 'bg-blue-600 text-white' 
+                        : step < currentStep 
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-200 text-gray-600'
+                    }`}>
+                      {step < currentStep ? '✓' : step}
+                    </div>
+                    <span className="text-xs mt-1 text-gray-600 whitespace-nowrap">
+                      {getStepTitle(step)}
+                    </span>
                   </div>
-                  {step < 3 && <div className="w-12 h-px bg-gray-300 mx-2" />}
+                  {step < 3 && <div className={`w-12 h-px mx-2 ${
+                    step < currentStep ? 'bg-green-600' : 'bg-gray-300'
+                  }`} />}
                 </div>
               ))}
             </div>
@@ -896,7 +973,8 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                 <Button type="button" onClick={nextStep} className="bg-blue-600 hover:bg-blue-700">
                   Suivant
                 </Button>
-              ) : (
+              ) : ''}
+              {currentStep === 3 && (
                 <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
                   {isLoading ? (
                     <>

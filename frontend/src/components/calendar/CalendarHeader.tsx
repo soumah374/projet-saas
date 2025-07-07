@@ -1,17 +1,16 @@
-
 import { Search, Filter, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CalendarHeaderProps } from './types';
 
-interface CalendarHeaderProps {
-  searchTerm: string;
-  onSearchChange: (value: string) => void;
-  filterType: string;
-  onFilterChange: (value: string) => void;
-}
-
-export const CalendarHeader = ({ searchTerm, onSearchChange, filterType, onFilterChange }: CalendarHeaderProps) => {
+export const CalendarHeader = ({ 
+  searchTerm, 
+  onSearchChange, 
+  filterType, 
+  onFilterChange,
+  onAddEvent 
+}: CalendarHeaderProps) => {
   return (
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
@@ -43,11 +42,6 @@ export const CalendarHeader = ({ searchTerm, onSearchChange, filterType, onFilte
             <SelectItem value="task">Tâches</SelectItem>
           </SelectContent>
         </Select>
-        
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel événement
-        </Button>
       </div>
     </div>
   );

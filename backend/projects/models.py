@@ -157,14 +157,80 @@ class ProjectTask(models.Model):
     description = models.TextField(blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='À faire')
     assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_tasks')
+    start_date = models.DateField(null=True, blank=True)
     due_date = models.DateField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    executed_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
-        ordering = ['due_date', 'created_at']
+        ordering = ['start_date', 'due_date', 'created_at']
         verbose_name = 'Tâche'
         verbose_name_plural = 'Tâches'
     
     def __str__(self):
-        return f"{self.title} - {self.project.title}" 
+        return f"{self.title} - {self.project.title}"
+
+    def execute(self):
+        """Marquer la tâche comme exécutée"""
+        self.status = 'Terminé'
+        self.executed_at = timezone.now()
+        self.save()
+
+
+class ProjectEvent(models.Model):
+    """Modèle pour les événements d'un projet"""
+    
+    EVENT_TYPES = [
+        ('Réunion', 'Réunion'),
+        ('Présentation', 'Présentation'),
+        ('Atelier', 'Atelier'),
+        ('Livraison', 'Livraison'),
+        ('Autre', 'Autre'),
+    ]
+    
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='events')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    type = models.CharField(max_length=20, choices=EVENT_TYPES)
+    date = models.DateField()
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    location = models.CharField(max_length=200, blank=True)
+    participants = models.ManyToManyField(User, related_name='project_events')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_events')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['date', 'start_time']
+        verbose_name = 'Événement'
+        verbose_name_plural = 'Événements'
+    
+    def __str__(self):
+        return f"{self.title} - {self.project.title} ({self.date})"
+
+
+class Notification(models.Model):
+    """Modèle pour les notifications"""
+    
+    TYPE_CHOICES = [
+        ('project_member', 'Ajout au projet'),
+        ('task_assignment', 'Assignation de tâche'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='notifications')
+    task = models.ForeignKey(ProjectTask, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
+    
+    def __str__(self):
+        return f"Notification pour {self.user.get_full_name()} - {self.get_type_display()}" 

@@ -77,6 +77,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               )}
             </div>
             <Link to="/teams" className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors h-8", location.pathname === '/teams' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900")}> <Users className="h-5 w-5" /> Équipes </Link>
+            <Link to="/users" className={cn("flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors h-8", location.pathname === '/users' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900")}> <Users className="h-5 w-5" /> Utilisateurs </Link>
           </nav>
         </div>
         <div className="space-y-2">
