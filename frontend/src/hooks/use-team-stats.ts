@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import type { TeamMember } from '@/lib/types';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 export interface TeamStats {
   totalMembers: number;
@@ -42,4 +44,32 @@ export function useTeamStats(members: TeamMember[] = []): TeamStats {
       roleDistribution
     };
   }, [members]);
+}
+
+export interface TeamPerformanceMember {
+  id: number;
+  name: string;
+  role: string;
+  productivity: number;
+  tasks_completed: number;
+  projects_involved: number;
+}
+
+export interface TeamPerformanceData {
+  members: TeamPerformanceMember[];
+  topPerformers: TeamPerformanceMember[];
+  averageProductivity: number;
+  totalTasks: number;
+  completedTasks: number;
+  activeProjects: number;
+}
+
+export function useTeamPerformance() {
+  return useQuery<TeamPerformanceData>({
+    queryKey: ['team-performance'],
+    queryFn: async () => {
+      const response = await api.get('/api/teams/performance');
+      return response.data;
+    }
+  });
 } 

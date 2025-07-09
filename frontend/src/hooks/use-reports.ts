@@ -127,7 +127,7 @@ export const useReportSummary = (filters?: ReportFilters) => {
       if (filters?.status) params.append('status', filters.status);
       if (filters?.priority) params.append('priority', filters.priority);
 
-      const response = await apiRequest<ReportSummary>(`/projects/reports/summary/?${params.toString()}`);
+      const response = await apiRequest<ReportSummary>(`/projects/reports_summary/?${params.toString()}`);
       return response;
     },
     staleTime: 5 * 60 * 1000,

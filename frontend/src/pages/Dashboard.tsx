@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,13 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
-  Activity
+  Activity,
+  Loader2
 } from "lucide-react";
+import { useProjectStatistics } from '@/hooks/use-projects';
+import { useProjectReports, useReportSummary } from '@/hooks/use-reports';
+import { useNavigate } from 'react-router-dom';
+import { BudgetChart } from '@/components/BudgetChart';
 
 interface User {
   id: number;
@@ -29,107 +34,11 @@ interface DashboardProps {
   user: User;
 }
 
-interface Project {
-  id: number;
-  name: string;
-  status: string;
-  progress: number;
-  due_date: string;
-  team_size: number;
-}
-
-interface Task {
-  id: number;
-  title: string;
-  status: string;
-  priority: string;
-  due_date: string;
-  assigned_to: string;
-}
-
 export function Dashboard({ user }: DashboardProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [stats, setStats] = useState({
-    totalProjects: 0,
-    activeProjects: 0,
-    completedProjects: 0,
-    totalTasks: 0,
-    completedTasks: 0,
-    pendingTasks: 0,
-    teamMembers: 0,
-    upcomingDeadlines: 0
-  });
-
-  useEffect(() => {
-    // Simuler le chargement des données
-    const mockProjects: Project[] = [
-      {
-        id: 1,
-        name: "Refonte du site web",
-        status: "En cours",
-        progress: 75,
-        due_date: "2024-02-15",
-        team_size: 5
-      },
-      {
-        id: 2,
-        name: "Application mobile",
-        status: "Planifié",
-        progress: 25,
-        due_date: "2024-03-20",
-        team_size: 8
-      },
-      {
-        id: 3,
-        name: "Base de données",
-        status: "Terminé",
-        progress: 100,
-        due_date: "2024-01-30",
-        team_size: 3
-      }
-    ];
-
-    const mockTasks: Task[] = [
-      {
-        id: 1,
-        title: "Révision du design",
-        status: "En cours",
-        priority: "Haute",
-        due_date: "2024-02-10",
-        assigned_to: "Marie Dupont"
-      },
-      {
-        id: 2,
-        title: "Tests d'intégration",
-        status: "En attente",
-        priority: "Moyenne",
-        due_date: "2024-02-12",
-        assigned_to: "Jean Martin"
-      },
-      {
-        id: 3,
-        title: "Documentation API",
-        status: "Terminé",
-        priority: "Basse",
-        due_date: "2024-02-08",
-        assigned_to: "Sophie Bernard"
-      }
-    ];
-
-    setProjects(mockProjects);
-    setTasks(mockTasks);
-    setStats({
-      totalProjects: mockProjects.length,
-      activeProjects: mockProjects.filter(p => p.status === "En cours").length,
-      completedProjects: mockProjects.filter(p => p.status === "Terminé").length,
-      totalTasks: mockTasks.length,
-      completedTasks: mockTasks.filter(t => t.status === "Terminé").length,
-      pendingTasks: mockTasks.filter(t => t.status === "En attente").length,
-      teamMembers: 12,
-      upcomingDeadlines: 3
-    });
-  }, []);
+  const navigate = useNavigate();
+  const { data: statistics, isLoading: isLoadingStats } = useProjectStatistics();
+  const { data: reports } = useProjectReports();
+  const { data: summary } = useReportSummary();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -139,6 +48,10 @@ export function Dashboard({ user }: DashboardProps) {
         return "bg-gray-100 text-gray-800";
       case "Terminé":
         return "bg-green-100 text-green-800";
+      case "Planification":
+        return "bg-yellow-100 text-yellow-800";
+      case "Production":
+        return "bg-purple-100 text-purple-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -159,6 +72,14 @@ export function Dashboard({ user }: DashboardProps) {
     }
   };
 
+  if (isLoadingStats) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* En-tête */}
@@ -171,7 +92,7 @@ export function Dashboard({ user }: DashboardProps) {
             Bonjour {user.first_name}, voici un aperçu de vos activités
           </p>
         </div>
-        <Button>
+        <Button onClick={() => navigate('/reports')}>
           <Activity className="w-4 h-4 mr-2" />
           Voir les rapports
         </Button>
@@ -185,9 +106,9 @@ export function Dashboard({ user }: DashboardProps) {
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProjects}</div>
+            <div className="text-2xl font-bold">{statistics?.total_projects || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.activeProjects} actifs, {stats.completedProjects} terminés
+              {statistics?.active_projects || 0} actifs, {statistics?.completed_projects || 0} terminés
             </p>
           </CardContent>
         </Card>
@@ -198,9 +119,9 @@ export function Dashboard({ user }: DashboardProps) {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTasks}</div>
+            <div className="text-2xl font-bold">{summary?.tasks?.total || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.completedTasks} terminées, {stats.pendingTasks} en attente
+              {summary?.tasks?.completed || 0} terminées, {summary?.tasks?.pending || 0} en attente
             </p>
           </CardContent>
         </Card>
@@ -211,9 +132,9 @@ export function Dashboard({ user }: DashboardProps) {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.teamMembers}</div>
+            <div className="text-2xl font-bold">{summary?.team?.total_members || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Membres actifs
+              {summary?.team?.active_projects || 0} projets actifs
             </p>
           </CardContent>
         </Card>
@@ -224,9 +145,9 @@ export function Dashboard({ user }: DashboardProps) {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.upcomingDeadlines}</div>
+            <div className="text-2xl font-bold">{summary?.projects?.delayed || 0}</div>
             <p className="text-xs text-muted-foreground">
-              Cette semaine
+              Projets en retard
             </p>
           </CardContent>
         </Card>
@@ -243,17 +164,17 @@ export function Dashboard({ user }: DashboardProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {projects.map((project) => (
+            {reports?.slice(0, 5).map((project) => (
               <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div className="flex-1">
-                  <h4 className="font-medium">{project.name}</h4>
+                  <h4 className="font-medium">{project.title}</h4>
                   <div className="flex items-center space-x-2 mt-1">
                     <Badge className={getStatusColor(project.status)}>
                       {project.status}
                     </Badge>
-                    <span className="text-sm text-gray-500">
-                      {project.team_size} membres
-                    </span>
+                    <Badge className={getPriorityColor(project.priority)}>
+                      {project.priority}
+                    </Badge>
                   </div>
                   <div className="mt-2">
                     <div className="flex justify-between text-sm text-gray-600 mb-1">
@@ -262,42 +183,64 @@ export function Dashboard({ user }: DashboardProps) {
                     </div>
                     <Progress value={project.progress} className="h-2" />
                   </div>
+                  <div className="mt-2 text-sm text-gray-500">
+                    {project.team_members_count} membres • {project.tasks_completed}/{project.tasks_total} tâches
+                  </div>
                 </div>
               </div>
             ))}
           </CardContent>
         </Card>
 
-        {/* Tâches récentes */}
+        {/* Budget et Performance */}
         <Card>
           <CardHeader>
-            <CardTitle>Tâches récentes</CardTitle>
+            <CardTitle>Budget et Performance</CardTitle>
             <CardDescription>
-              Vos tâches en cours
+              Vue d'ensemble des budgets et de la performance
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {tasks.map((task) => (
-              <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <h4 className="font-medium">{task.title}</h4>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Badge className={getStatusColor(task.status)}>
-                      {task.status}
-                    </Badge>
-                    <Badge className={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Badge>
+          <CardContent>
+            {summary && (
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Budget total alloué</span>
+                    <span className="font-medium">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(summary.budget.total_allocated)}</span>
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Assigné à {task.assigned_to}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Échéance: {new Date(task.due_date).toLocaleDateString()}
-                  </p>
+                  <div className="flex justify-between text-sm">
+                    <span>Budget dépensé</span>
+                    <span className="font-medium">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(summary.budget.total_spent)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Budget restant</span>
+                    <span className="font-medium text-green-600">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(summary.budget.remaining)}</span>
+                  </div>
+                </div>
+
+                <div className="h-[200px]">
+                  <BudgetChart
+                    allocated={summary.budget.total_allocated}
+                    spent={summary.budget.total_spent}
+                    remaining={summary.budget.remaining}
+                  />
+                </div>
+
+                <div className="space-y-2 pt-4 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span>Taux de complétion des tâches</span>
+                    <span className="font-medium">{summary.tasks.completion_rate}%</span>
+                  </div>
+                  <Progress value={summary.tasks.completion_rate} className="h-2" />
+                  
+                  <div className="flex justify-between text-sm mt-4">
+                    <span>Productivité moyenne de l'équipe</span>
+                    <span className="font-medium">{summary.team.avg_productivity}%</span>
+                  </div>
+                  <Progress value={summary.team.avg_productivity} className="h-2" />
                 </div>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>
@@ -311,13 +254,29 @@ export function Dashboard({ user }: DashboardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-            <div className="text-center text-gray-500">
-              <BarChart3 className="w-12 h-12 mx-auto mb-2" />
-              <p>Graphique d'activité</p>
-              <p className="text-sm">Intégration des graphiques en cours</p>
+          {summary?.timeline ? (
+            <div className="h-[300px]">
+              {/* Ici, vous pouvez intégrer un composant de graphique comme recharts ou chart.js */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Projets terminés</div>
+                  <div className="text-2xl font-bold">{summary.projects.completed}</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Tâches complétées</div>
+                  <div className="text-2xl font-bold">{summary.tasks.completed}</div>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
+              <div className="text-center text-gray-500">
+                <BarChart3 className="w-12 h-12 mx-auto mb-2" />
+                <p>Graphique d'activité</p>
+                <p className="text-sm">Données non disponibles</p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

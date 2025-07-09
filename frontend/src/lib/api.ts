@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { config } from './config';
 import type {
   User,
@@ -26,9 +27,44 @@ import type {
   Notification,
 } from './types';
 
+const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+export const api = axios.create({
+  baseURL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Intercepteur pour ajouter le token d'authentification
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Intercepteur pour gérer les erreurs
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Gérer l'expiration du token
+      localStorage.removeItem('access_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Configuration de base pour les requêtes API
 const API_BASE = config.api.baseUrl;
-
 
 // Fonction utilitaire pour les requêtes API
 async function apiRequest<T>(
@@ -672,4 +708,37 @@ export const updateProjectMember = async (projectId: string, memberId: number, d
     method: 'PATCH',
     body: JSON.stringify(data),
   });
+};
+
+// Calendar Events API
+export const fetchEvents = async () => {
+  const response = await apiRequest<any[]>('/projects/events/');
+  return response;
+};
+
+export const createEvent = async (eventData: any) => {
+  const response = await apiRequest<any>('/projects/events/', {
+    method: 'POST',
+    body: JSON.stringify(eventData),
+  });
+  return response;
+};
+
+export const updateEvent = async (eventId: number, eventData: any) => {
+  const response = await apiRequest<any>(`/projects/events/${eventId}/`, {
+    method: 'PUT',
+    body: JSON.stringify(eventData),
+  });
+  return response;
+};
+
+export const deleteEvent = async (eventId: number) => {
+  await apiRequest<void>(`/projects/events/${eventId}/`, {
+    method: 'DELETE',
+  });
+};
+
+export const fetchUpcomingEvents = async () => {
+  const response = await apiRequest<any[]>('/projects/events/upcoming/');
+  return response;
 }; 

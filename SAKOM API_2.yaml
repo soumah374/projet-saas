@@ -4,42 +4,474 @@ info:
   version: 1.0.0
   description: API pour la gestion de projets SAKOM
 paths:
-  /api/v1/auth/request_otp/:
+  /api/v1/:
+    get:
+      operationId: root_retrieve
+      description: Endpoint racine de l'API
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/auth/request_otp/:
     post:
-      operationId: auth_request_otp_create
+      operationId: auth_auth_request_otp_create
       description: Demander un code OTP pour la connexion
       tags:
       - auth
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
         '200':
           description: No response body
-  /api/v1/auth/resend_otp/:
+  /api/v1/auth/auth/resend_otp/:
     post:
-      operationId: auth_resend_otp_create
+      operationId: auth_auth_resend_otp_create
       description: Renvoyer un code OTP
       tags:
       - auth
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
         '200':
           description: No response body
-  /api/v1/auth/verify_otp/:
+  /api/v1/auth/auth/verify_otp/:
     post:
-      operationId: auth_verify_otp_create
+      operationId: auth_auth_verify_otp_create
       description: Vérifier le code OTP et connecter l'utilisateur
       tags:
       - auth
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
         '200':
           description: No response body
+  /api/v1/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: Vue personnalisée pour l'obtention de tokens JWT
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/otp/request/:
+    post:
+      operationId: auth_otp_request_create
+      description: Demander un code OTP pour la connexion
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/otp/resend/:
+    post:
+      operationId: auth_otp_resend_create
+      description: Renvoyer un code OTP
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/otp/verify/:
+    post:
+      operationId: auth_otp_verify_create
+      description: Vérifier le code OTP et connecter l'utilisateur
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/users/:
+    get:
+      operationId: auth_users_list
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: profile__department
+        schema:
+          type: string
+      - in: query
+        name: profile__role
+        schema:
+          type: string
+          enum:
+          - Assistant
+          - Chef de projet
+          - Consultant
+          - Designer
+          - Développeur
+          - Finance/Admin
+          - Managing Director
+          - Rédacteur
+        description: |-
+          * `Chef de projet` - Chef de projet
+          * `Designer` - Designer
+          * `Développeur` - Développeur
+          * `Rédacteur` - Rédacteur
+          * `Consultant` - Consultant
+          * `Assistant` - Assistant
+          * `Managing Director` - Managing Director
+          * `Finance/Admin` - Finance/Admin
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserListList'
+          description: ''
+    post:
+      operationId: auth_users_create
+      description: ViewSet pour la gestion des utilisateurs
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCreate'
+          description: ''
+  /api/v1/auth/users/{id}/:
+    get:
+      operationId: auth_users_retrieve
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: auth_users_update
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+    patch:
+      operationId: auth_users_partial_update
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserUpdate'
+          description: ''
+    delete:
+      operationId: auth_users_destroy
+      description: ViewSet pour la gestion des utilisateurs
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this utilisateur.
+        required: true
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/users/change_password/:
+    post:
+      operationId: auth_users_change_password_create
+      description: Changer le mot de passe de l'utilisateur connecté
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/me/:
+    get:
+      operationId: auth_users_me_retrieve
+      description: Obtenir les informations de l'utilisateur connecté
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/statistics/:
+    get:
+      operationId: auth_users_statistics_retrieve
+      description: Obtenir les statistiques des utilisateurs
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/team_members/:
+    get:
+      operationId: auth_users_team_members_retrieve
+      description: Obtenir la liste des membres d'équipe pour les projets
+      tags:
+      - auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/auth/users/update_me/:
+    put:
+      operationId: auth_users_update_me_update
+      description: Mettre à jour les informations de l'utilisateur connecté
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: auth_users_update_me_partial_update
+      description: Mettre à jour les informations de l'utilisateur connecté
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
   /api/v1/documents/:
     get:
       operationId: documents_list
@@ -135,6 +567,7 @@ paths:
       tags:
       - documents
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -162,6 +595,7 @@ paths:
               $ref: '#/components/schemas/DocumentRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -185,6 +619,7 @@ paths:
       tags:
       - documents
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -219,6 +654,7 @@ paths:
               $ref: '#/components/schemas/DocumentRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -252,6 +688,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedDocumentRequest'
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -274,6 +711,7 @@ paths:
       tags:
       - documents
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -305,6 +743,7 @@ paths:
               $ref: '#/components/schemas/DocumentRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -340,6 +779,7 @@ paths:
               $ref: '#/components/schemas/DocumentRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -349,63 +789,263 @@ paths:
               schema:
                 $ref: '#/components/schemas/Document'
           description: ''
-  /api/v1/login/:
-    post:
-      operationId: login_create
-      description: Vue personnalisée pour l'obtention de tokens JWT
+  /api/v1/health/:
+    get:
+      operationId: health_retrieve
+      description: Endpoint de health check pour vérifier l'état du serveur
       tags:
-      - login
+      - health
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/notifications/:
+    get:
+      operationId: notifications_list
+      description: Liste les notifications avec support de pagination.
+      parameters:
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationList'
+          description: ''
+    post:
+      operationId: notifications_create
+      tags:
+      - notifications
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+              $ref: '#/components/schemas/NotificationRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+              $ref: '#/components/schemas/NotificationRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/CustomTokenObtainPairRequest'
+              $ref: '#/components/schemas/NotificationRequest'
         required: true
-      responses:
-        '200':
-          description: No response body
-  /api/v1/otp/request/:
-    post:
-      operationId: otp_request_create
-      description: Demander un code OTP pour la connexion
-      tags:
-      - otp
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
-        '200':
-          description: No response body
-  /api/v1/otp/resend/:
-    post:
-      operationId: otp_resend_create
-      description: Renvoyer un code OTP
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/notifications/{id}/:
+    get:
+      operationId: notifications_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
       tags:
-      - otp
+      - notifications
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
-          description: No response body
-  /api/v1/otp/verify/:
-    post:
-      operationId: otp_verify_create
-      description: Vérifier le code OTP et connecter l'utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    put:
+      operationId: notifications_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
       tags:
-      - otp
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+        required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    patch:
+      operationId: notifications_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedNotificationRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+    delete:
+      operationId: notifications_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
           description: No response body
+  /api/v1/notifications/{id}/mark_read/:
+    post:
+      operationId: notifications_mark_read_create
+      description: Marque une notification spécifique comme lue.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this notification.
+        required: true
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/notifications/mark_all_read/:
+    post:
+      operationId: notifications_mark_all_read_create
+      description: Marque toutes les notifications non lues comme lues.
+      tags:
+      - notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/notifications/unread_count/:
+    get:
+      operationId: notifications_unread_count_retrieve
+      description: Retourne le nombre de notifications non lues.
+      tags:
+      - notifications
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+          description: ''
   /api/v1/projects/:
     get:
       operationId: projects_list
@@ -498,8 +1138,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -525,8 +1165,8 @@ paths:
               $ref: '#/components/schemas/ProjectCreateRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '201':
           content:
@@ -548,8 +1188,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -582,8 +1222,8 @@ paths:
               $ref: '#/components/schemas/ProjectUpdateRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -615,8 +1255,8 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedProjectUpdateRequest'
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -637,8 +1277,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '204':
           description: No response body
@@ -668,8 +1308,8 @@ paths:
               $ref: '#/components/schemas/ProjectRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -691,8 +1331,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '204':
           description: No response body
@@ -722,14 +1362,258 @@ paths:
               $ref: '#/components/schemas/ProjectRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/{project_pk}/events/:
+    get:
+      operationId: projects_events_list
+      description: ViewSet pour la gestion des événements de projet
+      parameters:
+      - in: query
+        name: date
+        schema:
+          type: string
+          format: date
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: type
+        schema:
+          type: string
+          enum:
+          - Atelier
+          - Autre
+          - Livraison
+          - Présentation
+          - Réunion
+        description: |-
+          * `Réunion` - Réunion
+          * `Présentation` - Présentation
+          * `Atelier` - Atelier
+          * `Livraison` - Livraison
+          * `Autre` - Autre
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProjectEventList'
+          description: ''
+    post:
+      operationId: projects_events_create
+      description: ViewSet pour la gestion des événements de projet
+      parameters:
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectEventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectEventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectEventRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEvent'
+          description: ''
+  /api/v1/projects/{project_pk}/events/{id}/:
+    get:
+      operationId: projects_events_retrieve
+      description: ViewSet pour la gestion des événements de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Événement.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEvent'
+          description: ''
+    put:
+      operationId: projects_events_update
+      description: ViewSet pour la gestion des événements de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Événement.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectEventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectEventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectEventRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEvent'
+          description: ''
+    patch:
+      operationId: projects_events_partial_update
+      description: ViewSet pour la gestion des événements de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Événement.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectEventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectEventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProjectEventRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEvent'
+          description: ''
+    delete:
+      operationId: projects_events_destroy
+      description: ViewSet pour la gestion des événements de projet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Événement.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/projects/{project_pk}/events/upcoming/:
+    get:
+      operationId: projects_events_upcoming_retrieve
+      description: Obtenir les événements à venir
+      parameters:
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEvent'
           description: ''
   /api/v1/projects/{project_pk}/members/:
     get:
@@ -762,8 +1646,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -795,8 +1679,8 @@ paths:
               $ref: '#/components/schemas/ProjectMemberRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '201':
           content:
@@ -823,8 +1707,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -862,8 +1746,8 @@ paths:
               $ref: '#/components/schemas/ProjectMemberRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -900,8 +1784,8 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedProjectMemberRequest'
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -927,8 +1811,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '204':
           description: No response body
@@ -976,6 +1860,7 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1009,6 +1894,7 @@ paths:
               $ref: '#/components/schemas/ProjectTaskRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1037,6 +1923,7 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1076,6 +1963,7 @@ paths:
               $ref: '#/components/schemas/ProjectTaskRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1114,6 +2002,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedProjectTaskRequest'
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1141,11 +2030,53 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
         '204':
           description: No response body
+  /api/v1/projects/{project_pk}/tasks/{id}/execute/:
+    post:
+      operationId: projects_tasks_execute_create
+      description: Exécuter une tâche
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Tâche.
+        required: true
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectTaskRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTask'
+          description: ''
   /api/v1/projects/{project_pk}/tasks/{id}/update_status/:
     post:
       operationId: projects_tasks_update_status_create
@@ -1177,6 +2108,7 @@ paths:
               $ref: '#/components/schemas/ProjectTaskRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1186,6 +2118,61 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProjectTask'
           description: ''
+  /api/v1/projects/{project_pk}/tasks/upcoming_deadlines/:
+    get:
+      operationId: projects_tasks_upcoming_deadlines_retrieve
+      description: Obtenir les tâches avec des échéances proches
+      parameters:
+      - in: path
+        name: project_pk
+        schema:
+          type: string
+        required: true
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectTask'
+          description: ''
+  /api/v1/projects/export_excel/:
+    get:
+      operationId: projects_export_excel_retrieve
+      description: Exporter le rapport en Excel
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/export_pdf/:
+    get:
+      operationId: projects_export_pdf_retrieve
+      description: Exporter le rapport en PDF
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
   /api/v1/projects/my_projects/:
     get:
       operationId: projects_my_projects_retrieve
@@ -1193,8 +2180,40 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/reports/:
+    get:
+      operationId: projects_reports_retrieve
+      description: Endpoint pour récupérer les données de rapport des projets
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+          description: ''
+  /api/v1/projects/reports_summary/:
+    get:
+      operationId: projects_reports_summary_retrieve
+      description: Endpoint pour récupérer le résumé des rapports
+      tags:
+      - projects
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
       responses:
         '200':
           content:
@@ -1209,8 +2228,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -1225,8 +2244,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -1241,8 +2260,8 @@ paths:
       tags:
       - projects
       security:
+      - jwtAuth: []
       - cookieAuth: []
-      - {}
       responses:
         '200':
           content:
@@ -1284,6 +2303,7 @@ paths:
       tags:
       - teams
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1311,6 +2331,7 @@ paths:
               $ref: '#/components/schemas/TeamRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1334,6 +2355,7 @@ paths:
       tags:
       - teams
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1368,6 +2390,7 @@ paths:
               $ref: '#/components/schemas/TeamRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1401,6 +2424,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedTeamRequest'
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1423,6 +2447,7 @@ paths:
       tags:
       - teams
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1454,6 +2479,7 @@ paths:
               $ref: '#/components/schemas/TeamRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1504,6 +2530,7 @@ paths:
       tags:
       - teams
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1531,6 +2558,7 @@ paths:
               $ref: '#/components/schemas/TeamMemberRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1554,6 +2582,7 @@ paths:
       tags:
       - teams
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1588,6 +2617,7 @@ paths:
               $ref: '#/components/schemas/TeamMemberRequest'
         required: true
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1621,6 +2651,7 @@ paths:
             schema:
               $ref: '#/components/schemas/PatchedTeamMemberRequest'
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
@@ -1643,355 +2674,12 @@ paths:
       tags:
       - teams
       security:
+      - jwtAuth: []
       - cookieAuth: []
       - {}
       responses:
         '204':
           description: No response body
-  /api/v1/token/refresh/:
-    post:
-      operationId: token_refresh_create
-      description: |-
-        Takes a refresh type JSON web token and returns an access type JSON web
-        token if the refresh token is valid.
-      tags:
-      - token
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/TokenRefreshRequest'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TokenRefresh'
-          description: ''
-  /api/v1/users/:
-    get:
-      operationId: users_list
-      description: ViewSet pour la gestion des utilisateurs
-      parameters:
-      - in: query
-        name: is_active
-        schema:
-          type: boolean
-      - name: ordering
-        required: false
-        in: query
-        description: Which field to use when ordering the results.
-        schema:
-          type: string
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - in: query
-        name: profile__department
-        schema:
-          type: string
-      - in: query
-        name: profile__role
-        schema:
-          type: string
-          enum:
-          - Assistant
-          - Chef de projet
-          - Consultant
-          - Designer
-          - Développeur
-          - Finance/Admin
-          - Managing Director
-          - Rédacteur
-        description: |-
-          * `Chef de projet` - Chef de projet
-          * `Designer` - Designer
-          * `Développeur` - Développeur
-          * `Rédacteur` - Rédacteur
-          * `Consultant` - Consultant
-          * `Assistant` - Assistant
-          * `Managing Director` - Managing Director
-          * `Finance/Admin` - Finance/Admin
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
-      tags:
-      - users
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedUserListList'
-          description: ''
-    post:
-      operationId: users_create
-      description: ViewSet pour la gestion des utilisateurs
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserCreateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserCreateRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserCreate'
-          description: ''
-  /api/v1/users/{id}/:
-    get:
-      operationId: users_retrieve
-      description: ViewSet pour la gestion des utilisateurs
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this utilisateur.
-        required: true
-      tags:
-      - users
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    put:
-      operationId: users_update
-      description: ViewSet pour la gestion des utilisateurs
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this utilisateur.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserUpdateRequest'
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserUpdate'
-          description: ''
-    patch:
-      operationId: users_partial_update
-      description: ViewSet pour la gestion des utilisateurs
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this utilisateur.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedUserUpdateRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedUserUpdateRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedUserUpdateRequest'
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserUpdate'
-          description: ''
-    delete:
-      operationId: users_destroy
-      description: ViewSet pour la gestion des utilisateurs
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this utilisateur.
-        required: true
-      tags:
-      - users
-      security:
-      - cookieAuth: []
-      responses:
-        '204':
-          description: No response body
-  /api/v1/users/change_password/:
-    post:
-      operationId: users_change_password_create
-      description: Changer le mot de passe de l'utilisateur connecté
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-  /api/v1/users/me/:
-    get:
-      operationId: users_me_retrieve
-      description: Obtenir les informations de l'utilisateur connecté
-      tags:
-      - users
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-  /api/v1/users/statistics/:
-    get:
-      operationId: users_statistics_retrieve
-      description: Obtenir les statistiques des utilisateurs
-      tags:
-      - users
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-  /api/v1/users/team_members/:
-    get:
-      operationId: users_team_members_retrieve
-      description: Obtenir la liste des membres d'équipe pour les projets
-      tags:
-      - users
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-  /api/v1/users/update_me/:
-    put:
-      operationId: users_update_me_update
-      description: Mettre à jour les informations de l'utilisateur connecté
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-        required: true
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    patch:
-      operationId: users_update_me_partial_update
-      description: Mettre à jour les informations de l'utilisateur connecté
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-      security:
-      - cookieAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
 components:
   schemas:
     BlankEnum:
@@ -2175,6 +2863,90 @@ components:
         * `mp3` - Audio MP3
         * `zip` - Archive ZIP
         * `other` - Autre
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        recipient:
+          type: integer
+        recipient_name:
+          type: string
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/NotificationTypeEnum'
+        content_type_str:
+          type: string
+          readOnly: true
+        object_id:
+          type: string
+          maxLength: 50
+        metadata: {}
+        message:
+          type: string
+        is_read:
+          type: boolean
+          default: false
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content_type_str
+      - created_at
+      - id
+      - message
+      - object_id
+      - recipient
+      - recipient_name
+      - type
+      - updated_at
+    NotificationRequest:
+      type: object
+      properties:
+        recipient:
+          type: integer
+        type:
+          $ref: '#/components/schemas/NotificationTypeEnum'
+        object_id:
+          type: string
+          minLength: 1
+          maxLength: 50
+        metadata: {}
+        message:
+          type: string
+          minLength: 1
+        is_read:
+          type: boolean
+          default: false
+      required:
+      - message
+      - object_id
+      - recipient
+      - type
+    NotificationTypeEnum:
+      enum:
+      - project_member
+      - task_assignment
+      - task_update
+      - event_created
+      - event_update
+      - document_shared
+      - team_update
+      type: string
+      description: |-
+        * `project_member` - Membre de projet
+        * `task_assignment` - Attribution de tâche
+        * `task_update` - Mise à jour de tâche
+        * `event_created` - Événement créé
+        * `event_update` - Mise à jour d'événement
+        * `document_shared` - Document partagé
+        * `team_update` - Mise à jour d'équipe
     PaginatedDocumentList:
       type: object
       required:
@@ -2198,6 +2970,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Document'
+    PaginatedNotificationList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Notification'
+    PaginatedProjectEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectEvent'
     PaginatedProjectListList:
       type: object
       required:
@@ -2364,6 +3182,53 @@ components:
           type: string
           minLength: 1
           nullable: true
+    PatchedNotificationRequest:
+      type: object
+      properties:
+        recipient:
+          type: integer
+        type:
+          $ref: '#/components/schemas/NotificationTypeEnum'
+        object_id:
+          type: string
+          minLength: 1
+          maxLength: 50
+        metadata: {}
+        message:
+          type: string
+          minLength: 1
+        is_read:
+          type: boolean
+          default: false
+    PatchedProjectEventRequest:
+      type: object
+      description: Sérialiseur pour les événements d'un projet
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/ProjectEventTypeEnum'
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        location:
+          type: string
+          maxLength: 200
+        participant_ids:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
     PatchedProjectMemberRequest:
       type: object
       description: Sérialiseur pour les membres d'un projet
@@ -2394,6 +3259,10 @@ components:
           type: integer
           writeOnly: true
           nullable: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
         due_date:
           type: string
           format: date
@@ -2412,7 +3281,7 @@ components:
         objectives:
           type: string
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category700Enum'
@@ -2546,7 +3415,7 @@ components:
         objectives:
           type: string
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category700Enum'
@@ -2605,6 +3474,11 @@ components:
           items:
             $ref: '#/components/schemas/ProjectTask'
           readOnly: true
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectEvent'
+          readOnly: true
         tags: {}
         days_remaining:
           type: string
@@ -2620,6 +3494,7 @@ components:
       - days_remaining
       - deadline
       - description
+      - events
       - id
       - is_overdue
       - tasks
@@ -2696,7 +3571,7 @@ components:
         objectives:
           type: string
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category700Enum'
@@ -2747,7 +3622,7 @@ components:
         objectives:
           type: string
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category700Enum'
@@ -2789,8 +3664,112 @@ components:
       - client
       - deadline
       - description
+      - team_members
       - title
       - type
+    ProjectEvent:
+      type: object
+      description: Sérialiseur pour les événements d'un projet
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/ProjectEventTypeEnum'
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        location:
+          type: string
+          maxLength: 200
+        created_by:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - created_by
+      - date
+      - end_time
+      - id
+      - participants
+      - start_time
+      - title
+      - type
+      - updated_at
+    ProjectEventRequest:
+      type: object
+      description: Sérialiseur pour les événements d'un projet
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/ProjectEventTypeEnum'
+        date:
+          type: string
+          format: date
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        location:
+          type: string
+          maxLength: 200
+        participant_ids:
+          type: array
+          items:
+            type: integer
+          writeOnly: true
+      required:
+      - date
+      - end_time
+      - start_time
+      - title
+      - type
+    ProjectEventTypeEnum:
+      enum:
+      - Réunion
+      - Présentation
+      - Atelier
+      - Livraison
+      - Autre
+      type: string
+      description: |-
+        * `Réunion` - Réunion
+        * `Présentation` - Présentation
+        * `Atelier` - Atelier
+        * `Livraison` - Livraison
+        * `Autre` - Autre
     ProjectList:
       type: object
       description: Sérialiseur simplifié pour la liste des projets
@@ -2802,7 +3781,7 @@ components:
           type: string
           maxLength: 200
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         status:
           allOf:
           - $ref: '#/components/schemas/StatusB54Enum'
@@ -2920,7 +3899,7 @@ components:
         objectives:
           type: string
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category700Enum'
@@ -2981,6 +3960,10 @@ components:
           allOf:
           - $ref: '#/components/schemas/User'
           readOnly: true
+        start_date:
+          type: string
+          format: date
+          nullable: true
         due_date:
           type: string
           format: date
@@ -2993,9 +3976,15 @@ components:
           type: string
           format: date-time
           readOnly: true
+        executed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
       required:
       - assigned_to
       - created_at
+      - executed_at
       - id
       - title
       - updated_at
@@ -3016,6 +4005,10 @@ components:
         assigned_to_id:
           type: integer
           writeOnly: true
+          nullable: true
+        start_date:
+          type: string
+          format: date
           nullable: true
         due_date:
           type: string
@@ -3047,7 +4040,7 @@ components:
         objectives:
           type: string
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category700Enum'
@@ -3098,7 +4091,7 @@ components:
         objectives:
           type: string
         type:
-          $ref: '#/components/schemas/TypeEnum'
+          $ref: '#/components/schemas/Type5caEnum'
         category:
           oneOf:
           - $ref: '#/components/schemas/Category700Enum'
@@ -3279,7 +4272,7 @@ components:
           minLength: 1
       required:
       - refresh
-    TypeEnum:
+    Type5caEnum:
       enum:
       - Événementiel
       - Communication
@@ -3322,8 +4315,29 @@ components:
           format: email
           title: Adresse électronique
           maxLength: 254
+        profile:
+          allOf:
+          - $ref: '#/components/schemas/UserProfile'
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Date d’inscription
+        is_active:
+          type: boolean
+          default: true
+          title: Actif
+          description: Précise si l’utilisateur doit être considéré comme actif. Décochez
+            ceci plutôt que de supprimer le compte.
       required:
+      - date_joined
+      - full_name
       - id
+      - profile
       - username
     UserCreate:
       type: object
@@ -3557,6 +4571,12 @@ components:
           format: email
           title: Adresse électronique
           maxLength: 254
+        is_active:
+          type: boolean
+          default: true
+          title: Actif
+          description: Précise si l’utilisateur doit être considéré comme actif. Décochez
+            ceci plutôt que de supprimer le compte.
       required:
       - username
     UserUpdate:
@@ -3602,3 +4622,7 @@ components:
       type: apiKey
       in: cookie
       name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
