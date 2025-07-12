@@ -17,6 +17,7 @@ import { ProjectManagement } from './pages/ProjectManagement';
 import { ProjectReportPage } from './pages/ProjectReportPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProjectCalendarPage } from './pages/ProjectCalendarPage';
+import { ServicesPage } from './pages/ServicesPage';
 
 interface User {
   id: number;
@@ -115,6 +116,7 @@ function App() {
                   <Route path="/reports" element={<ReportsPage />} />
                   <Route path="/documents" element={<DocumentsPage />} />
                   <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/services" element={<ServicesPage />} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </main>

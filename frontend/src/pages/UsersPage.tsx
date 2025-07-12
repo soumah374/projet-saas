@@ -77,7 +77,7 @@ export const UsersPage = () => {
   const totalPages = Math.ceil(totalUsers / 20); // Assuming 20 users per page
 
   // Available filter options
-  const roles: UserProfileRole[] = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant', 'Managing Director', 'Finance/Admin'];
+  const roles: UserProfileRole[] = ['Managing Director', 'Chef de projet', 'Directeur de production', 'Responsable communication', 'Administrateur financier', 'Assistant', 'Consultant'];
   const departments = ['Développement', 'Design', 'Marketing', 'Commercial', 'Finance', 'RH', 'Direction'];
   const statuses = [
     { value: 'active', label: 'Actif', color: 'bg-green-100 text-green-800' },

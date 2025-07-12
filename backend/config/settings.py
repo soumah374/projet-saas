@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'documents',
     'teams',
     'notifications',
+    'catalog',
 ]
 
 MIDDLEWARE = [

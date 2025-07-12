@@ -248,7 +248,7 @@ export function ProjectTeamPage() {
     !teamMembers.some(member => member.user.id === user.id)
   ) || [];
 
-  const roles: ProjectMemberRole[] = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'];
+  const roles: ProjectMemberRole[] = ['Managing Director', 'Chef de projet', 'Directeur de production', 'Responsable communication', 'Administrateur financier', 'Assistant', 'Consultant'];
 
   if (isLoading) {
     return (

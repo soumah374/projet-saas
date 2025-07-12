@@ -104,9 +104,9 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
   // Form options
   const projectTypes = ['Événementiel', 'Communication', 'Audiovisuel', 'Production', 'Digital', 'Conseil'];
   const priorities = ['Basse', 'Normale', 'Haute', 'Urgente'];
-  const statuses = ['Planification', 'En cours', 'Production', 'En pause', 'Terminé'];
-  const categories = ['Corporate', 'Marketing', 'Institutionnel', 'Commercial', 'Interne'];
-  const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'];
+  const statuses = ['Planification', 'En cours', 'Production',  'Terminé'];
+  const categories = ['Externe', 'Interne'];
+  const memberRoles = ['Managing Director', 'Chef de projet', 'Directeur de production', 'Responsable communication', 'Administrateur financier', 'Assistant', 'Consultant'];
 
   const addTeamMember = () => {
     if (!newMember.user_id || !newMember.role) return;
@@ -610,7 +610,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                   <Users className="h-4 w-4 mr-2" />
                   Ajouter des membres individuellement
                 </Button>
-                <Button
+                {/* <Button
                   type="button"
                   variant={teamSelectionMode === 'team' ? 'default' : 'outline'}
                   onClick={() => setTeamSelectionMode('team')}
@@ -618,7 +618,7 @@ export const CreateProjectModal = ({ children, onProjectCreate }: CreateProjectM
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
                   Sélectionner une équipe existante
-                </Button>
+                </Button> */}
               </div>
             </Card>
 
