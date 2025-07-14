@@ -258,6 +258,15 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 <span>Prestations</span>
               </a>
             </li>
+            <li>
+              <Link to="/clients" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/clients') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+                <Users className="h-5 w-5" />
+                <span>Clients</span>
+              </Link>
+            </li>
           </nav>
         </div>
 

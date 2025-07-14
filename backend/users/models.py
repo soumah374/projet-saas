@@ -113,4 +113,22 @@ def create_user_profile(sender, instance, created, **kwargs):
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     """Sauvegarder le profil lors de la mise à jour d'un utilisateur"""
-    instance.profile.save() 
+    instance.profile.save()
+
+
+class ClientProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='client_profile')
+    adresse = models.CharField(max_length=255, blank=True)
+    ville = models.CharField(max_length=100, blank=True)
+    code_postal = models.CharField(max_length=20, blank=True)
+    pays = models.CharField(max_length=100, blank=True)
+    telephone = models.CharField(max_length=20, blank=True)
+    date_inscription = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = 'Profil client'
+        verbose_name_plural = 'Profils client'
+
+    def __str__(self):
+        return f"Client: {self.user.get_full_name()} ({self.user.email})" 

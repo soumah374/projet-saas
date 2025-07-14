@@ -4,7 +4,7 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import UserProfile, OTPCode
+from .models import UserProfile, OTPCode, ClientProfile
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -250,3 +250,30 @@ class OTPVerificationSerializer(serializers.Serializer):
         # Ajouter l'utilisateur au contexte
         attrs['user'] = user
         return attrs 
+
+
+class ClientProfileSerializer(serializers.ModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='user', required=False)
+    class Meta:
+        model = ClientProfile
+        fields = ['id', 'user_id', 'adresse', 'ville', 'code_postal', 'pays', 'telephone', 'date_inscription', 'is_active']
+        read_only_fields = ['id', 'date_inscription']
+
+
+class ClientUserCreateSerializer(serializers.ModelSerializer):
+    client_profile = ClientProfileSerializer(required=False)
+    password = serializers.CharField(write_only=True)
+    password_confirm = serializers.CharField(write_only=True)
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email', 'password', 'password_confirm', 'client_profile']
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError("Les mots de passe ne correspondent pas.")
+        return attrs
+    def create(self, validated_data):
+        password_confirm = validated_data.pop('password_confirm')
+        client_profile_data = validated_data.pop('client_profile', {})
+        user = User.objects.create_user(**validated_data)
+        ClientProfile.objects.create(user=user, **client_profile_data)
+        return user 
