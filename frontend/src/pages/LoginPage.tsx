@@ -5,13 +5,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff, Lock, User as UserIcon } from "lucide-react";
-import { authAPI } from "@/lib/api";
+import { useAuth } from "@/hooks/use-auth";
+import { useNavigate } from "react-router-dom";
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -23,23 +27,10 @@ export function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await authAPI.login({ username, password });
-      
-      console.log('Login successful:', response);
-      
-      // Stocker les tokens et informations utilisateur
-      localStorage.setItem('access_token', response.access);
-      localStorage.setItem('refresh_token', response.refresh);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      
-      console.log('Tokens stored in localStorage');
-      
-      toast.success(`Bienvenue ${response.user.first_name} !`);
-      
-      // Rediriger vers la page principale
-      window.location.href = '/';
-    } catch (error: any) {
-      toast.error(error.message || "Nom d'utilisateur ou mot de passe incorrect");
+      const success = await login(username, password);
+      if (success) {
+        navigate('/');
+      }
     } finally {
       setIsLoading(false);
     }

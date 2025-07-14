@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './use-toast';
+import { authAPI } from '@/lib/api';
 
 interface User {
   id: number;
@@ -16,10 +17,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, otp: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
-  requestOTP: (email: string) => Promise<boolean>;
-  resendOTP: (email: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -42,8 +41,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-
   // Vérifier l'authentification au chargement
   useEffect(() => {
     const checkAuth = () => {
@@ -65,115 +62,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     checkAuth();
   }, []);
 
-  const requestOTP = async (email: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/otp/request/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
+      const response = await authAPI.login({ username, password });
+      
+      // Stocker les tokens et informations utilisateur
+      localStorage.setItem('access_token', response.access);
+      localStorage.setItem('refresh_token', response.refresh);
+      localStorage.setItem('user', JSON.stringify(response.user));
+      
+      setUser(response.user);
+      
+      toast({
+        title: "Connexion réussie",
+        description: `Bienvenue ${response.user.first_name || response.user.username}!`,
       });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        return true;
-      } else {
-        const errorMessage = data.error || data.email?.[0] || 'Erreur lors de l\'envoi du code';
-        toast({
-          title: "Erreur",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
+      
+      return true;
+    } catch (error: any) {
       toast({
         title: "Erreur de connexion",
-        description: "Vérifiez votre connexion internet.",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
-  const login = async (email: string, otp: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/otp/verify/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, otp_code: otp }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Stocker les tokens et informations utilisateur
-        localStorage.setItem('access_token', data.access);
-        localStorage.setItem('refresh_token', data.refresh);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        setUser(data.user);
-        
-        toast({
-          title: "Connexion réussie",
-          description: `Bienvenue ${data.user.first_name || data.user.username}!`,
-        });
-        
-        return true;
-      } else {
-        const errorMessage = data.error || data.otp_code?.[0] || 'Code OTP invalide';
-        toast({
-          title: "Erreur de connexion",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur de connexion",
-        description: "Vérifiez votre connexion internet.",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
-  const resendOTP = async (email: string): Promise<boolean> => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/auth/otp/resend/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: "Code renvoyé",
-          description: "Un nouveau code de vérification a été envoyé.",
-        });
-        return true;
-      } else {
-        const errorMessage = data.error || 'Erreur lors du renvoi du code';
-        toast({
-          title: "Erreur",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return false;
-      }
-    } catch (error) {
-      toast({
-        title: "Erreur de connexion",
-        description: "Vérifiez votre connexion internet.",
+        description: error.message || "Nom d'utilisateur ou mot de passe incorrect",
         variant: "destructive",
       });
       return false;
@@ -199,8 +108,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isLoading,
     login,
     logout,
-    requestOTP,
-    resendOTP,
   };
 
   return (

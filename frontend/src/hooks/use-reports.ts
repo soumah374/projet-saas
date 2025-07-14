@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { config } from '@/lib/config';
 
 // Simple API request function for reports
@@ -55,133 +55,59 @@ export interface ProjectReportData {
   };
 }
 
-export interface ReportSummary {
-  projects: {
-    total: number;
-    active: number;
-    completed: number;
-    delayed: number;
-    on_time: number;
-  };
-  tasks: {
-    total: number;
-    completed: number;
-    pending: number;
-    overdue: number;
-    completion_rate: number;
-  };
-  team: {
-    total_members: number;
-    active_projects: number;
-    avg_productivity: number;
-  };
-  budget: {
-    total_allocated: number;
-    total_spent: number;
-    remaining: number;
-  };
-  timeline: {
-    labels: string[];
-    projects_completed: number[];
-    tasks_completed: number[];
-  };
-}
-
 export interface ReportFilters {
-  date_from?: string;
-  date_to?: string;
-  status?: string;
-  priority?: string;
-  team_member?: number;
+  start_date?: string;
+  end_date?: string;
   project_type?: string;
+  project_status?: string;
+  team?: string;
 }
 
 export const useProjectReports = (filters?: ReportFilters) => {
   return useQuery({
     queryKey: ['project-reports', filters],
-    queryFn: async (): Promise<ProjectReportData[]> => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       
-      if (filters?.date_from) params.append('date_from', filters.date_from);
-      if (filters?.date_to) params.append('date_to', filters.date_to);
-      if (filters?.status) params.append('status', filters.status);
-      if (filters?.priority) params.append('priority', filters.priority);
-      if (filters?.team_member) params.append('team_member', filters.team_member.toString());
+      if (filters?.start_date) params.append('start_date', filters.start_date);
+      if (filters?.end_date) params.append('end_date', filters.end_date);
+      if (filters?.project_status) params.append('status', filters.project_status);
       if (filters?.project_type) params.append('type', filters.project_type);
+      if (filters?.team) params.append('team', filters.team);
 
-      const response = await apiRequest<{ results?: ProjectReportData[]; data?: ProjectReportData[] }>(`/projects/reports/?${params.toString()}`);
-      return response.results || response.data || [];
+      const response = await apiRequest<any>(`/projects/reports/?${params.toString()}`);
+      return response;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
 
-export const useReportSummary = (filters?: ReportFilters) => {
-  return useQuery({
-    queryKey: ['report-summary', filters],
-    queryFn: async (): Promise<ReportSummary> => {
-      const params = new URLSearchParams();
-      
-      if (filters?.date_from) params.append('date_from', filters.date_from);
-      if (filters?.date_to) params.append('date_to', filters.date_to);
-      if (filters?.status) params.append('status', filters.status);
-      if (filters?.priority) params.append('priority', filters.priority);
-
-      const response = await apiRequest<ReportSummary>(`/projects/reports_summary/?${params.toString()}`);
-      return response;
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-};
-
 export const useExportReport = () => {
-  return {
-    exportPDF: async (filters?: ReportFilters) => {
+  return useMutation({
+    mutationFn: async (filters: ReportFilters) => {
       const params = new URLSearchParams();
-      if (filters?.date_from) params.append('date_from', filters.date_from);
-      if (filters?.date_to) params.append('date_to', filters.date_to);
-      if (filters?.status) params.append('status', filters.status);
-      if (filters?.priority) params.append('priority', filters.priority);
+      
+      if (filters.start_date) params.append('start_date', filters.start_date);
+      if (filters.end_date) params.append('end_date', filters.end_date);
+      if (filters.project_status) params.append('status', filters.project_status);
+      if (filters.project_type) params.append('type', filters.project_type);
+      if (filters.team) params.append('team', filters.team);
 
-      const response = await fetch(`${config.api.baseUrl}/projects/reports/export/pdf/?${params.toString()}`, {
+      const response = await fetch(`${config.api.baseUrl}/projects/reports/export/?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
+        }
       });
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `rapport-projets-${new Date().toISOString().split('T')[0]}.pdf`;
+      link.setAttribute('download', 'project_report.xlsx');
       document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    },
-
-    exportExcel: async (filters?: ReportFilters) => {
-      const params = new URLSearchParams();
-      if (filters?.date_from) params.append('date_from', filters.date_from);
-      if (filters?.date_to) params.append('date_to', filters.date_to);
-      if (filters?.status) params.append('status', filters.status);
-      if (filters?.priority) params.append('priority', filters.priority);
-
-      const response = await fetch(`${config.api.baseUrl}/projects/reports/export/excel/?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `rapport-projets-${new Date().toISOString().split('T')[0]}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      link.remove();
       window.URL.revokeObjectURL(url);
     }
-  };
+  });
 }; 

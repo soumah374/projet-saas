@@ -15,7 +15,7 @@ export const TaskDeadlineAlert = ({ projectId }: TaskDeadlineAlertProps) => {
   const { data: upcomingTasks, isLoading } = useUpcomingTaskDeadlines(projectId);
 
   useEffect(() => {
-    if (upcomingTasks && upcomingTasks.length > 0) {
+    if (upcomingTasks && Array.isArray(upcomingTasks) && upcomingTasks.length > 0) {
       upcomingTasks.forEach((task: TaskWithDeadline) => {
         if (task.days_remaining <= 2) {
           // Notification urgente pour les tâches à moins de 2 jours
@@ -32,7 +32,7 @@ export const TaskDeadlineAlert = ({ projectId }: TaskDeadlineAlertProps) => {
     }
   }, [upcomingTasks]);
 
-  if (isLoading || !upcomingTasks || upcomingTasks.length === 0) {
+  if (isLoading || !upcomingTasks || !Array.isArray(upcomingTasks) || upcomingTasks.length === 0) {
     return null;
   }
 
@@ -52,7 +52,7 @@ export const TaskDeadlineAlert = ({ projectId }: TaskDeadlineAlertProps) => {
           <AlertDescription className="mt-2">
             <p className="font-medium">{task.title}</p>
             <p className="text-sm mt-1">
-              Date d'échéance : {format(new Date(task.due_date), 'PPP', { locale: fr })}
+              Date d'échéance : {task.due_date ? format(new Date(task.due_date), 'PPP', { locale: fr }) : 'Non définie'}
               {' '}
               ({task.days_remaining} jour{task.days_remaining > 1 ? 's' : ''} restant{task.days_remaining > 1 ? 's' : ''})
             </p>

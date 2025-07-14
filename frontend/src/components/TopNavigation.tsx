@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useProjectStatistics } from '@/hooks/use-projects';
 
 interface User {
   id: number;
@@ -40,7 +39,6 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
 }) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
-  const { data: statistics } = useProjectStatistics();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

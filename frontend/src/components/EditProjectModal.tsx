@@ -25,10 +25,11 @@ import { useTeams } from '@/hooks/use-teams';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
+import type { ExtendedProject } from '@/lib/types';
 
 interface EditProjectModalProps {
   children: React.ReactNode;
-  project: Project;
+  project: ExtendedProject;
   onProjectUpdate: (projectId: string, data: Partial<CreateProjectForm>) => void;
 }
 

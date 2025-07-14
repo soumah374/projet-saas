@@ -20,7 +20,6 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { useProjectStatistics } from '@/hooks/use-projects';
 
 interface User {
   id: number;
@@ -48,7 +47,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
     rapports: false,
     documents: false 
   });
-  const { data: statistics } = useProjectStatistics();
 
   const toggleMenu = (key: string) => setOpenMenus(m => ({ ...m, [key]: !m[key] }));
 
@@ -107,7 +105,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 <FolderOpen className="h-5 w-5" /> Projets
                 <span className="ml-auto flex items-center gap-2">
                   <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    {statistics?.total_projects || 0}
+                    {/* {statistics?.total_projects || 0} */}
                   </Badge>
                   {openMenus.projets ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </span>
@@ -120,7 +118,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   <Link to="/projects?status=en_cours" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">
                     <Clock className="h-4 w-4" /> Mes projets
                     <Badge variant="secondary" className={getStatusColor("En cours")}>
-                      {statistics?.active_projects || 0}
+                      {/* {statistics?.active_projects || 0} */}
                     </Badge>
                   </Link>
                   {/* <Link to="/projects?status=termine" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">

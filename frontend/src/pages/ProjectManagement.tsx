@@ -45,13 +45,12 @@ import {
   ChevronRight
 } from "lucide-react";
 import { CreateProjectModal } from "@/components/CreateProjectModal";
-import { useProjects, useCreateProject, useProjectStatistics, useUpdateProject } from "@/hooks/use-projects";
+import { useProjects, useCreateProject, useUpdateProject } from "@/hooks/use-projects";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import type { ProjectList, CreateProjectForm } from "@/lib/types";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
-import { EditProjectModal } from '@/components/EditProjectModal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export function ProjectManagement() {
@@ -59,19 +58,19 @@ export function ProjectManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(viewMode === 'grid' ? 9 : 10); // 9 items pour la vue grille (3x3), 10 pour la liste
+  const [itemsPerPage, setItemsPerPage] = useState(10); // Default to 10 for list view
   const navigate = useNavigate();
 
   // Mettre à jour itemsPerPage quand viewMode change
   useEffect(() => {
-    setItemsPerPage(viewMode === 'grid' ? 9 : 10);
+    setItemsPerPage(viewMode === 'list' ? 9 : 10);
   }, [viewMode]);
 
   // React Query hooks
   const { data: backendStatus, isLoading: backendLoading } = useBackendStatus();
-  const { data: projects, isLoading: projectsLoading, error: projectsError } = useProjects({
+  const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
     search: searchTerm || undefined,
     status: statusFilter !== 'all' ? statusFilter : undefined,
     type: typeFilter !== 'all' ? typeFilter : undefined,
@@ -81,20 +80,31 @@ export function ProjectManagement() {
     page_size: itemsPerPage
   });
 
-  const { data: statistics, isLoading: statsLoading } = useProjectStatistics();
+  const projects = projectsData?.results || [];
+  const totalPages = projectsData?.count ? Math.ceil(projectsData.count / itemsPerPage) : 0;
+
+  const summary = {
+    projects: {
+      total: projects.length,
+      active: projects.filter(p => !['Terminé', 'Livraison'].includes(p.status)).length,
+      completed: projects.filter(p => p.status === 'Terminé').length,
+      delayed: projects.filter(p => new Date(p.deadline) < new Date() && !['Terminé', 'Livraison'].includes(p.status)).length
+    }
+  };
+
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Planification':
+      case 'Prospection':
         return 'bg-blue-100 text-blue-800';
-      case 'En cours':
+      case 'Devis':
         return 'bg-yellow-100 text-yellow-800';
       case 'Production':
         return 'bg-purple-100 text-purple-800';
-      case 'En pause':
-        return 'bg-gray-100 text-gray-800';
+      case 'Livraison':
+        return 'bg-orange-100 text-orange-800';
       case 'Terminé':
         return 'bg-green-100 text-green-800';
       default:
@@ -153,8 +163,6 @@ export function ProjectManagement() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const totalPages = projects?.count ? Math.ceil(projects.count / itemsPerPage) : 0;
-
   // Generate array of page numbers to display
   const getPageNumbers = () => {
     if (!totalPages) return [];
@@ -191,7 +199,24 @@ export function ProjectManagement() {
     return pageNumbers;
   };
 
-  const filteredProjects = projects?.results || [];
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) {
+      return 'Non défini';
+    }
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date value:', dateString);
+        return 'Date invalide';
+      }
+      return format(date, 'dd/MM/yyyy', { locale: fr });
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return 'Date invalide';
+    }
+  };
+
+  const filteredProjects = projects || [];
 
   const renderActionButtons = (project: ProjectList) => (
     <div className="flex items-center gap-2">
@@ -261,7 +286,7 @@ export function ProjectManagement() {
       </div>
 
       {/* Statistics Cards */}
-      {!statsLoading && statistics && (
+      {!projectsLoading && summary && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -269,7 +294,7 @@ export function ProjectManagement() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{statistics.total_projects}</div>
+              <div className="text-2xl font-bold">{summary.projects.total}</div>
               <p className="text-xs text-muted-foreground">
                 Tous les projets
               </p>
@@ -282,7 +307,7 @@ export function ProjectManagement() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{statistics.active_projects}</div>
+              <div className="text-2xl font-bold">{summary.projects.active}</div>
               <p className="text-xs text-muted-foreground">
                 En cours de réalisation
               </p>
@@ -295,7 +320,7 @@ export function ProjectManagement() {
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{statistics.completed_projects}</div>
+              <div className="text-2xl font-bold">{summary.projects.completed}</div>
               <p className="text-xs text-muted-foreground">
                 Projets finalisés
               </p>
@@ -308,7 +333,7 @@ export function ProjectManagement() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{statistics.overdue_projects}</div>
+              <div className="text-2xl font-bold text-red-600">{summary.projects.delayed}</div>
               <p className="text-xs text-muted-foreground">
                 Dépassement d'échéance
               </p>
@@ -334,10 +359,10 @@ export function ProjectManagement() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="Planification">Planification</SelectItem>
-            <SelectItem value="En cours">En cours</SelectItem>
+            <SelectItem value="Prospection">Prospection</SelectItem>
+            <SelectItem value="Devis">Devis</SelectItem>
             <SelectItem value="Production">Production</SelectItem>
-            <SelectItem value="En pause">En pause</SelectItem>
+            <SelectItem value="Livraison">Livraison</SelectItem>
             <SelectItem value="Terminé">Terminé</SelectItem>
           </SelectContent>
         </Select>
@@ -347,12 +372,8 @@ export function ProjectManagement() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="Événementiel">Événementiel</SelectItem>
-            <SelectItem value="Communication">Communication</SelectItem>
-            <SelectItem value="Audiovisuel">Audiovisuel</SelectItem>
-            <SelectItem value="Production">Production</SelectItem>
-            <SelectItem value="Digital">Digital</SelectItem>
-            <SelectItem value="Conseil">Conseil</SelectItem>
+            <SelectItem value="Externe">Externe</SelectItem>
+            <SelectItem value="Interne">Interne</SelectItem>
           </SelectContent>
         </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
@@ -399,7 +420,7 @@ export function ProjectManagement() {
             </p>
           )}
         </div>
-      ) : !projects?.results || projects.results.length === 0 ? (
+      ) : !projects || projects.length === 0 ? (
         <div className="text-center py-12">
           <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun projet trouvé</h3>
@@ -423,7 +444,7 @@ export function ProjectManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {projects.results.map((project) => (
+                  {projects.map((project) => (
                     <TableRow key={project.id}>
                       <TableCell className="font-medium">{project.title}</TableCell>
                       <TableCell>{project.client}</TableCell>
@@ -455,7 +476,7 @@ export function ProjectManagement() {
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           <span className={project.is_overdue ? 'text-red-600' : ''}>
-                            {format(new Date(project.deadline), 'dd/MM/yyyy', { locale: fr })}
+                            {formatDate(project.deadline)}
                           </span>
                         </div>
                       </TableCell>
@@ -468,8 +489,8 @@ export function ProjectManagement() {
               </Table>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {projects.results.map((project) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projects.map((project) => (
                 <Card key={project.id} className="hover:shadow-lg transition-shadow">
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -528,7 +549,7 @@ export function ProjectManagement() {
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4 text-gray-400" />
                           <span className={`font-medium ${project.is_overdue ? 'text-red-600' : ''}`}>
-                            {format(new Date(project.deadline), 'dd/MM/yyyy', { locale: fr })}
+                            {formatDate(project.deadline)}
                           </span>
                         </div>
                       </div>
@@ -547,14 +568,16 @@ export function ProjectManagement() {
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Créé par</span>
                         <span className="font-medium">
-                          {project.created_by.first_name} {project.created_by.last_name}
+                          {typeof project.created_by === 'object' 
+                            ? `${project.created_by.first_name} ${project.created_by.last_name}`
+                            : `ID: ${project.created_by}`}
                         </span>
                       </div>
 
                       {/* Created date */}
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Créé le</span>
-                        <span>{format(new Date(project.created_at), 'dd/MM/yyyy', { locale: fr })}</span>
+                        <span>{formatDate(project.created_at)}</span>
                       </div>
                     </div>
 

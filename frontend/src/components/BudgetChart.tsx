@@ -1,23 +1,29 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
 export interface BudgetChartProps {
-  allocated: number;
-  spent: number;
-  remaining: number;
+  budgetDetails: {
+    production: string;
+    personnel: string;
+    marketing: string;
+    other: string;
+  };
 }
 
-export function BudgetChart({ allocated, spent, remaining }: BudgetChartProps) {
+export function BudgetChart({ budgetDetails }: BudgetChartProps) {
   const data = [
-    { name: 'Dépensé', value: spent },
-    { name: 'Restant', value: remaining },
-  ];
+    { name: 'Production', value: parseFloat(budgetDetails.production) || 0 },
+    { name: 'Personnel', value: parseFloat(budgetDetails.personnel) || 0 },
+    { name: 'Marketing', value: parseFloat(budgetDetails.marketing) || 0 },
+    { name: 'Autres', value: parseFloat(budgetDetails.other) || 0 },
+  ].filter(item => item.value > 0);
 
-  const COLORS = ['#ef4444', '#22c55e'];
+  const COLORS = ['#3b82f6', '#22c55e', '#f59e0b', '#64748b'];
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
-      currency: 'EUR',
+      currency: 'GNF',
+      maximumFractionDigits: 0
     }).format(value);
   };
 
@@ -25,33 +31,44 @@ export function BudgetChart({ allocated, spent, remaining }: BudgetChartProps) {
     if (active && payload && payload.length) {
       return (
         <div className="bg-white p-2 border rounded shadow">
-          <p className="text-sm">{`${payload[0].name}: ${formatCurrency(payload[0].value)}`}</p>
+          <p className="text-sm font-medium">{payload[0].name}</p>
+          <p className="text-sm">{formatCurrency(payload[0].value)}</p>
         </div>
       );
     }
     return null;
   };
 
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-[300px] text-gray-500">
+        Aucune donnée budgétaire disponible
+      </div>
+    );
+  }
+
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          innerRadius={60}
-          outerRadius={80}
-          fill="#8884d8"
-          paddingAngle={5}
-          dataKey="value"
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip content={<CustomTooltip />} />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
+    <div className="h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={80}
+            fill="#8884d8"
+            paddingAngle={5}
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 } 

@@ -1,12 +1,12 @@
 // Types basés sur le schéma OpenAPI SAKOM
 
 // Enums
-export type ProjectType = 'Événementiel' | 'Communication' | 'Audiovisuel' | 'Production' | 'Digital' | 'Conseil';
+export type ProjectType = 'event' | 'communication' | 'audiovisual' | 'production' | 'digital' | 'consulting';
 export type ProjectCategory = 'Corporate' | 'Marketing' | 'Institutionnel' | 'Commercial' | 'Interne';
-export type ProjectStatus = 'Planification' | 'En cours' | 'Production' | 'En pause' | 'Terminé';
-export type ProjectPriority = 'Basse' | 'Normale' | 'Haute' | 'Urgente';
+export type ProjectStatus = 'Prospection' | 'Planification' | 'En cours' | 'Production' | 'En pause' | 'Terminé';
+export type ProjectPriority = 'Urgente' | 'Haute' | 'Normale' | 'Basse';
 export type ProjectMemberRole = 'Chef de projet' | 'Designer' | 'Développeur' | 'Rédacteur' | 'Consultant' | 'Assistant';
-export type ProjectTaskStatus = 'À faire' | 'En cours' | 'En pause' | 'Terminé';
+export type ProjectTaskStatus = 'À faire' | 'En cours' | 'Terminé' | 'En pause';
 export type TeamMemberRole = 'leader' | 'member' | 'consultant';
 export type UserProfileRole = 'Chef de projet' | 'Designer' | 'Développeur' | 'Rédacteur' | 'Consultant' | 'Assistant' | 'Managing Director' | 'Finance/Admin';
 export type DocumentType = 'pdf' | 'doc' | 'docx' | 'xls' | 'xlsx' | 'ppt' | 'pptx' | 'txt' | 'jpg' | 'jpeg' | 'png' | 'gif' | 'mp4' | 'avi' | 'mp3' | 'zip' | 'other';
@@ -68,23 +68,47 @@ export interface ProjectBudget {
 
 export interface ProjectMember {
   id: number;
-  user: User;
+  user_details: User;
+  total_hours: string;
   role: ProjectMemberRole;
   joined_at: string;
   is_active: boolean;
+  allocation_percentage: number;
+  project: string;
+  user: number;
+}
+
+export interface ProjectPhase {
+  id: number;
+  name: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  progress: number;
+  order: number;
+  project: string;
 }
 
 export interface ProjectTask {
   id: number;
+  completion_percentage: string;
+  phase_name: string;
+  assigned_to_name: string;
   title: string;
   description: string;
   status: ProjectTaskStatus;
-  assigned_to?: User;
-  start_date?: string;
-  due_date: string;
+  start_date: string | null;
+  due_date: string | null;
+  estimated_hours: string | null;
+  actual_hours: string;
   created_at: string;
   updated_at: string;
-  executed_at?: string;
+  executed_at: string | null;
+  is_template: boolean;
+  template_category?: string;
+  project: string;
+  phase: number | null;
+  assigned_to: number | null;
 }
 
 export interface TaskWithDeadline extends ProjectTask {
@@ -112,24 +136,39 @@ export interface Project {
   description: string;
   objectives?: string;
   type: ProjectType;
-  category?: ProjectCategory;
   status: ProjectStatus;
   priority: ProjectPriority;
-  start_date?: string;
+  start_date: string | null;
   deadline: string;
+  progress: number;
+  budget: string | null;
+  client: string;
+  departments: string[];
+  contract: string;
+  created_by: number;
   created_at: string;
   updated_at: string;
-  progress: number;
-  budget?: string;
-  client: string;
-  created_by: User;
+  phases: ProjectPhase[];
   team_members: ProjectMember[];
-  budget_details: ProjectBudget;
   tasks: ProjectTask[];
-  tags: any;
-  days_remaining: string;
-  is_overdue: string;
-  events: ProjectEvent[];
+  created_by_name: string;
+  total_hours: string;
+  total_estimated_hours: string;
+  tags?: string[];
+}
+
+export interface ExtendedProject extends Omit<Project, 'created_by' | 'budget' | 'team_members' | 'tasks'> {
+  created_by: number | User;
+  budget: string | number | null;
+  category?: ProjectCategory;
+  team_members?: ProjectMember[];
+  budget_details?: ProjectBudget | null;
+  tasks?: ProjectTask[];
+  tags?: string[];
+  days_remaining?: string | null;
+  is_overdue?: string | null;
+  events?: ProjectEvent[];
+  team_count?: string;
 }
 
 export interface ProjectList {
@@ -139,13 +178,13 @@ export interface ProjectList {
   status: ProjectStatus;
   priority: ProjectPriority;
   progress: number;
-  deadline: string;
+  deadline: string | null;
   client: string;
-  created_by: User;
+  created_by: User | number;
   team_count: string;
-  days_remaining: string;
-  is_overdue: string;
-  created_at: string;
+  days_remaining: string | null;
+  is_overdue: string | null;
+  created_at: string | null;
 }
 
 export interface ProjectCreate {
@@ -178,6 +217,36 @@ export interface ProjectUpdate {
   client: string;
   tags?: any;
   budget_details?: ProjectBudget;
+}
+
+export interface CreateProjectPayload {
+  title: string;
+  description: string;
+  objectives?: string;
+  type: ProjectType;
+  status?: ProjectStatus;
+  priority?: ProjectPriority;
+  start_date?: string;
+  deadline: string;
+  budget?: string;
+  client: string;
+  departments?: string[];
+  contract?: string;
+  tags?: string[];
+}
+
+export interface UpdateProjectPayload extends Partial<CreateProjectPayload> {
+  progress?: number;
+}
+
+export interface ProjectFilters {
+  status?: ProjectStatus;
+  type?: ProjectType;
+  priority?: ProjectPriority;
+  client?: string;
+  start_date?: string;
+  end_date?: string;
+  team_member?: number;
 }
 
 // Team types
@@ -279,6 +348,7 @@ export interface OTPVerification {
 
 // Form types
 export interface CreateProjectForm {
+  id?: string;
   title: string;
   description: string;
   objectives?: string;
@@ -310,6 +380,7 @@ export interface CreateTaskForm {
   assigned_to_id?: number;
   start_date?: string;
   due_date?: string;
+  dependencies?: string[];
 }
 
 export interface CreateTeamMemberForm {
@@ -321,6 +392,7 @@ export interface CreateTeamMemberForm {
 export interface Notification {
   id: number;
   type: 'project_member' | 'task_assignment';
+  title: string;
   project: Project;
   task?: ProjectTask;
   message: string;

@@ -97,13 +97,9 @@ export function TeamsPage() {
     ordering: 'first_name'
   });
 
-  const { data: teamMembers, isLoading: membersLoading } = useTeamMembers(
-    selectedTeam ? {
-      team: selectedTeam.id,
-      ordering: 'user__first_name',
-      is_active: true
-    } : undefined
-  );
+  const { data: teamMembers, isLoading: membersLoading } = useTeamMembers({
+    team: selectedTeam?.id
+  });
 
   // Calculate team stats
   const teamStats = useTeamStats(teamMembers?.results || []);

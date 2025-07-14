@@ -13,10 +13,10 @@ import {
   AlertCircle,
   BarChart3,
   Activity,
-  Loader2
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
-import { useProjectStatistics } from '@/hooks/use-projects';
-import { useProjectReports, useReportSummary } from '@/hooks/use-reports';
+import { useProjects } from '@/hooks/use-projects';
 import { useNavigate } from 'react-router-dom';
 import { BudgetChart } from '@/components/BudgetChart';
 
@@ -36,9 +36,17 @@ interface DashboardProps {
 
 export function Dashboard({ user }: DashboardProps) {
   const navigate = useNavigate();
-  const { data: statistics, isLoading: isLoadingStats } = useProjectStatistics();
-  const { data: reports } = useProjectReports();
-  const { data: summary } = useReportSummary();
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjects();
+  const projects = projectsData?.results || [];
+
+  const summary = {
+    projects: {
+      total: projects.length,
+      active: projects.filter(p => p.status !== 'Terminé').length,
+      completed: projects.filter(p => p.status === 'Terminé').length,
+      delayed: projects.filter(p => new Date(p.deadline) < new Date() && p.status !== 'Terminé').length
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -72,7 +80,7 @@ export function Dashboard({ user }: DashboardProps) {
     }
   };
 
-  if (isLoadingStats) {
+  if (isLoadingProjects) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -106,69 +114,75 @@ export function Dashboard({ user }: DashboardProps) {
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statistics?.total_projects || 0}</div>
+            <div className="text-2xl font-bold">{summary.projects.total}</div>
             <p className="text-xs text-muted-foreground">
-              {statistics?.active_projects || 0} actifs, {statistics?.completed_projects || 0} terminés
+              {summary.projects.active} actifs, {summary.projects.completed} terminés
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tâches</CardTitle>
+            <CardTitle className="text-sm font-medium">Projets actifs</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary?.tasks?.total || 0}</div>
+            <div className="text-2xl font-bold">{summary.projects.active}</div>
             <p className="text-xs text-muted-foreground">
-              {summary?.tasks?.completed || 0} terminées, {summary?.tasks?.pending || 0} en attente
+              En cours de réalisation
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Équipe</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Projets terminés</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary?.team?.total_members || 0}</div>
+            <div className="text-2xl font-bold">{summary.projects.completed}</div>
             <p className="text-xs text-muted-foreground">
-              {summary?.team?.active_projects || 0} projets actifs
+              Projets finalisés
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Échéances</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Projets en retard</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary?.projects?.delayed || 0}</div>
+            <div className="text-2xl font-bold text-red-600">{summary.projects.delayed}</div>
             <p className="text-xs text-muted-foreground">
-              Projets en retard
+              Dépassement d'échéance
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Projets récents et Tâches */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Projets récents */}
+      {/* Projets récents */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Projets récents</CardTitle>
             <CardDescription>
-              Aperçu des projets en cours
+              Les derniers projets créés ou mis à jour
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {reports?.slice(0, 5).map((project) => (
-              <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <h4 className="font-medium">{project.title}</h4>
-                  <div className="flex items-center space-x-2 mt-1">
+          <CardContent>
+            <div className="space-y-4">
+              {projects.slice(0, 5).map((project) => (
+                <div
+                  key={project.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  <div>
+                    <div className="font-medium">{project.title}</div>
+                    <div className="text-sm text-gray-500">{project.client}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Badge className={getStatusColor(project.status)}>
                       {project.status}
                     </Badge>
@@ -176,109 +190,30 @@ export function Dashboard({ user }: DashboardProps) {
                       {project.priority}
                     </Badge>
                   </div>
-                  <div className="mt-2">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Progression</span>
-                      <span>{project.progress}%</span>
-                    </div>
-                    <Progress value={project.progress} className="h-2" />
-                  </div>
-                  <div className="mt-2 text-sm text-gray-500">
-                    {project.team_members_count} membres • {project.tasks_completed}/{project.tasks_total} tâches
-                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Budget et Performance */}
         <Card>
           <CardHeader>
-            <CardTitle>Budget et Performance</CardTitle>
+            <CardTitle>Budget</CardTitle>
             <CardDescription>
-              Vue d'ensemble des budgets et de la performance
+              Répartition du budget par projet
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {summary && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Budget total alloué</span>
-                    <span className="font-medium">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(summary.budget.total_allocated)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Budget dépensé</span>
-                    <span className="font-medium">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(summary.budget.total_spent)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Budget restant</span>
-                    <span className="font-medium text-green-600">{new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(summary.budget.remaining)}</span>
-                  </div>
-                </div>
-
-                <div className="h-[200px]">
-                  <BudgetChart
-                    allocated={summary.budget.total_allocated}
-                    spent={summary.budget.total_spent}
-                    remaining={summary.budget.remaining}
-                  />
-                </div>
-
-                <div className="space-y-2 pt-4 border-t">
-                  <div className="flex justify-between text-sm">
-                    <span>Taux de complétion des tâches</span>
-                    <span className="font-medium">{summary.tasks.completion_rate}%</span>
-                  </div>
-                  <Progress value={summary.tasks.completion_rate} className="h-2" />
-                  
-                  <div className="flex justify-between text-sm mt-4">
-                    <span>Productivité moyenne de l'équipe</span>
-                    <span className="font-medium">{summary.team.avg_productivity}%</span>
-                  </div>
-                  <Progress value={summary.team.avg_productivity} className="h-2" />
-                </div>
-              </div>
-            )}
+            <BudgetChart budgetDetails={{
+              production: "0",
+              personnel: "0",
+              marketing: "0",
+              other: "0",
+              ...projects[0]?.budget_details || {}
+            }} />
           </CardContent>
         </Card>
       </div>
-
-      {/* Graphique d'activité */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Activité récente</CardTitle>
-          <CardDescription>
-            Progression des projets sur les 30 derniers jours
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {summary?.timeline ? (
-            <div className="h-[300px]">
-              {/* Ici, vous pouvez intégrer un composant de graphique comme recharts ou chart.js */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Projets terminés</div>
-                  <div className="text-2xl font-bold">{summary.projects.completed}</div>
-                </div>
-                <div className="space-y-2">
-                  <div className="text-sm font-medium">Tâches complétées</div>
-                  <div className="text-2xl font-bold">{summary.tasks.completed}</div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-              <div className="text-center text-gray-500">
-                <BarChart3 className="w-12 h-12 mx-auto mb-2" />
-                <p>Graphique d'activité</p>
-                <p className="text-sm">Données non disponibles</p>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 } 

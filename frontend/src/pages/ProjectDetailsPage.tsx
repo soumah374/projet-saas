@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import { DocumentManager } from "@/components/DocumentManager";
+import { ProjectTrackingAlerts } from "@/components/ProjectTrackingAlerts";
 import { 
   ArrowLeft, 
   Edit, 
@@ -14,7 +14,6 @@ import {
   Calendar, 
   DollarSign, 
   FileText, 
-  MessageSquare,
   CheckCircle,
   Clock,
   AlertTriangle,
@@ -26,7 +25,7 @@ import {
 } from "lucide-react";
 import { useProject, useUpdateProject, useDeleteProject, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask } from "@/hooks/use-projects";
 import { useUsers } from "@/hooks/use-users";
-import type { CreateProjectForm, CreateTaskForm, ProjectTaskStatus } from "@/lib/types";
+import type { CreateProjectForm, ExtendedProject } from "@/lib/types";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -34,10 +33,8 @@ import { EditProjectModal } from '@/components/EditProjectModal';
 import { TaskModal } from '@/components/TaskModal';
 import { UpdateBudgetModal } from '@/components/UpdateBudgetModal';
 import { BudgetChart } from '@/components/BudgetChart';
-import { ProjectCalendar } from '@/components/ProjectCalendar';
-import { TeamMembersList } from '@/components/TeamMembersList';
 import { TaskDeadlineAlert } from '@/components/TaskDeadlineAlert';
-import { Separator } from '@/components/ui/separator';
+import { ProjectTimesheets } from '@/components/ProjectTimesheets';
 
 export function ProjectDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -45,8 +42,9 @@ export function ProjectDetailsPage() {
   const [activeTab, setActiveTab] = useState('overview');
 
   // React Query hooks
-  const { data: project, isLoading, error } = useProject(id || '');
+  const { data: project, isLoading, error } = useProject(id || '') as { data: ExtendedProject | undefined, isLoading: boolean, error: unknown };
   const { data: users } = useUsers({ is_active: true });
+  // console.log(users)
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
   const createTaskMutation = useCreateProjectTask();
@@ -128,7 +126,7 @@ export function ProjectDetailsPage() {
 
   const handleProjectUpdate = async (projectId: string, data: Partial<CreateProjectForm>) => {
     try {
-      await updateProjectMutation.mutateAsync({ id: projectId, data });
+      await updateProjectMutation.mutateAsync({ projectId, data });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du projet:', error);
     }
@@ -210,25 +208,36 @@ export function ProjectDetailsPage() {
               id: project.id,
               title: project.title,
               description: project.description,
-              objectives: project.objectives,
+              objectives: project.objectives || '',
               type: project.type,
               category: project.category,
               status: project.status,
               priority: project.priority,
               start_date: project.start_date,
               deadline: project.deadline,
+              progress: project.progress,
               budget: project.budget,
               client: project.client,
+              departments: project.departments || [],
+              contract: project.contract,
               created_by: project.created_by,
-              team_members: project.team_members,
-              budget_details: project.budget_details,
-              tasks: project.tasks,
-              tags: project.tags,
-              days_remaining: project.days_remaining,
-              is_overdue: project.is_overdue,
               created_at: project.created_at,
               updated_at: project.updated_at,
-              progress: project.progress
+              team_members: project.team_members || [],
+              budget_details: project.budget_details || null,
+              tasks: project.tasks || [],
+              tags: project.tags || [],
+              days_remaining: project.days_remaining || null,
+              is_overdue: project.is_overdue || null,
+              events: project.events || [],
+              team_count: project.team_count || '0',
+              // Add missing required properties
+              phases: project.phases || [],
+              created_by_name: typeof project.created_by === 'object' && 'first_name' in project.created_by 
+                ? `${project.created_by.first_name} ${project.created_by.last_name}`
+                : '',
+              total_hours: project.total_hours?.toString() || '0',
+              total_estimated_hours: project.total_estimated_hours?.toString() || '0'
             }} 
             onProjectUpdate={handleProjectUpdate}
           >
@@ -288,15 +297,18 @@ export function ProjectDetailsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
           <TabsTrigger value="team">Équipe</TabsTrigger>
           <TabsTrigger value="tasks">Tâches</TabsTrigger>
+          <TabsTrigger value="timesheets">Feuilles de temps</TabsTrigger>
           <TabsTrigger value="budget">Budget</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          <ProjectTrackingAlerts projectId={project.id} />
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Project Details */}
             <Card>
@@ -321,7 +333,11 @@ export function ProjectDetailsPage() {
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-600">Créé par</label>
-                    <p className="mt-1">{project.created_by.first_name} {project.created_by.last_name}</p>
+                    <p className="mt-1">
+                      {typeof project.created_by === 'object' && 'first_name' in project.created_by
+                        ? `${project.created_by.first_name} ${project.created_by.last_name}`
+                        : `ID: ${project.created_by}`}
+                    </p>
                   </div>
                 </div>
                 {project.tags && project.tags.length > 0 && (
@@ -357,7 +373,7 @@ export function ProjectDetailsPage() {
                   <div>
                     <p className="text-sm font-medium">Date d'échéance</p>
                     <p className={`text-sm ${project.is_overdue ? 'text-red-600' : 'text-gray-600'}`}>
-                      {format(new Date(project.deadline), 'dd/MM/yyyy', { locale: fr })}
+                      {project.deadline ? format(new Date(project.deadline), 'dd/MM/yyyy', { locale: fr }) : 'Non définie'}
                     </p>
                   </div>
                 </div>
@@ -381,7 +397,7 @@ export function ProjectDetailsPage() {
                   <div>
                     <p className="text-sm font-medium">Créé le</p>
                     <p className="text-sm text-gray-600">
-                      {format(new Date(project.created_at), 'dd/MM/yyyy', { locale: fr })}
+                      {project.created_at ? format(new Date(project.created_at), 'dd/MM/yyyy', { locale: fr }) : 'Non définie'}
                     </p>
                   </div>
                 </div>
@@ -406,14 +422,14 @@ export function ProjectDetailsPage() {
                       <div className="flex items-center gap-3">
                         <Avatar>
                           <AvatarFallback>
-                            {member.user.first_name[0]}{member.user.last_name[0]}
+                            {member.user_details.first_name?.charAt(0) || ''}{member.user_details.last_name?.charAt(0) || ''}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-medium">
-                            {member.user.first_name} {member.user.last_name}
+                            {member.user_details?.first_name} {member.user_details?.last_name}
                           </p>
-                          <p className="text-sm text-gray-600">{member.user.email}</p>
+                          <p className="text-sm text-gray-600">{member.user_details.email}</p>
                         </div>
                       </div>
                       <Badge variant="outline">{member.role}</Badge>
@@ -475,7 +491,7 @@ export function ProjectDetailsPage() {
                               {task.assigned_to && (
                                 <div className="flex items-center gap-2">
                                   <User className="w-4 h-4" />
-                                  <span>Assigné à: {task.assigned_to.first_name} {task.assigned_to.last_name}</span>
+                                  {/* <span>Assigné à: {task.assigned_to.first_name} {task.assigned_to.last_name}</span> */}
                                 </div>
                               )}
                               {task.due_date && (
@@ -535,6 +551,10 @@ export function ProjectDetailsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="timesheets" className="space-y-6">
+          <ProjectTimesheets projectId={project.id} />
+        </TabsContent>
+
         <TabsContent value="budget" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Budget Overview */}
@@ -548,12 +568,12 @@ export function ProjectDetailsPage() {
                   <UpdateBudgetModal
                     projectId={project.id}
                     currentBudget={{
-                      total: project.budget || '0',
+                      total: project.budget?.toString() || '0',
                       details: {
-                        production: project.budget_details?.production || '0',
-                        personnel: project.budget_details?.personnel || '0',
-                        marketing: project.budget_details?.marketing || '0',
-                        other: project.budget_details?.other || '0'
+                        production: project.budget_details?.production?.toString() || '0',
+                        personnel: project.budget_details?.personnel?.toString() || '0',
+                        marketing: project.budget_details?.marketing?.toString() || '0',
+                        other: project.budget_details?.other?.toString() || '0'
                       }
                     }}
                     onBudgetUpdate={handleProjectUpdate}
@@ -567,7 +587,11 @@ export function ProjectDetailsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-green-600 mb-4">
-                  {project.budget ? `${parseInt(project.budget).toLocaleString()} GNF` : 'Non défini'}
+                  {project.budget 
+                    ? `${typeof project.budget === 'number' 
+                        ? project.budget.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ")
+                        : project.budget} GNF` 
+                    : 'Non défini'}
                 </div>
                 {project.budget_details && (
                   <div className="space-y-3">
@@ -605,7 +629,12 @@ export function ProjectDetailsPage() {
               </CardHeader>
               <CardContent>
                 {project.budget_details ? (
-                  <BudgetChart budgetDetails={project.budget_details} />
+                  <BudgetChart budgetDetails={{
+                    production: project.budget_details.production,
+                    personnel: project.budget_details.personnel,
+                    marketing: project.budget_details.marketing,
+                    other: project.budget_details.other
+                  }} />
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     Aucune donnée budgétaire disponible
