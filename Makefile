@@ -145,6 +145,8 @@ load-fixtures:
 	docker compose exec backend python manage.py loaddata initial_teams
 	docker compose exec backend python manage.py loaddata initial_projects
 	docker compose exec backend python manage.py loaddata initial_documents
+	docker compose exec backend python manage.py loaddata initial_departments
+	docker compose exec backend python manage.py loaddata initial_department_managers
 
 load-fixtures-clean:
 	@echo "Cleaning database and loading fixtures..."
@@ -153,10 +155,10 @@ load-fixtures-clean:
 
 dump-fixtures:
 	@echo "Dumping fixtures from database..."
-	docker compose exec backend python manage.py dumpdata users --indent 2 > users/fixtures/users_dump.json
-	docker compose exec backend python manage.py dumpdata teams --indent 2 > teams/fixtures/teams_dump.json
-	docker compose exec backend python manage.py dumpdata projects --indent 2 > projects/fixtures/projects_dump.json
-	docker compose exec backend python manage.py dumpdata documents --indent 2 > documents/fixtures/documents_dump.json
+	docker compose exec backend python manage.py dumpdata auth.user users --indent 2 --natural-foreign > backend/users/fixtures/users_dump.json
+	docker compose exec backend python manage.py dumpdata teams --indent 2 --natural-foreign > backend/teams/fixtures/teams_dump.json
+	docker compose exec backend python manage.py dumpdata projects --indent 2 --natural-foreign > backend/projects/fixtures/projects_dump.json
+	docker compose exec backend python manage.py dumpdata documents --indent 2 --natural-foreign > backend/documents/fixtures/documents_dump.json
 
 create-fixtures:
 	@echo "Creating fixtures from current data..."

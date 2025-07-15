@@ -1,9 +1,9 @@
 // Types basés sur le schéma OpenAPI SAKOM
 
 // Enums
-export type ProjectType = 'event' | 'communication' | 'audiovisual' | 'production' | 'digital' | 'consulting';
+export type ProjectType = 'Externe' | 'Interne';
 export type ProjectCategory = 'Corporate' | 'Marketing' | 'Institutionnel' | 'Commercial' | 'Interne';
-export type ProjectStatus = 'Prospection' | 'Planification' | 'En cours' | 'Production' | 'En pause' | 'Terminé';
+export type ProjectStatus = 'Prospection' | 'Devis' | 'Production' | 'Livraison' | 'Terminé';
 export type ProjectPriority = 'Urgente' | 'Haute' | 'Normale' | 'Basse';
 export type ProjectMemberRole = 'Chef de projet' | 'Designer' | 'Développeur' | 'Rédacteur' | 'Consultant' | 'Assistant';
 export type ProjectTaskStatus = 'À faire' | 'En cours' | 'Terminé' | 'En pause';

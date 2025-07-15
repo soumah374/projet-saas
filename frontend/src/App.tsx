@@ -21,6 +21,7 @@ import { ServicesPage } from './pages/ServicesPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { useAuth } from './hooks/use-auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import DepartmentsPage from './pages/DepartmentsPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -124,6 +125,11 @@ function App() {
                 <Route path="/clients" element={
                   <ProtectedRoute>
                     <ClientsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/departments" element={
+                  <ProtectedRoute>
+                    <DepartmentsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<Navigate to="/" replace />} />

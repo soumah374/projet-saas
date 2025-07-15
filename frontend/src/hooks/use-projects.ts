@@ -9,7 +9,9 @@ import type {
   ProjectMember,
   ProjectPhase,
   TaskWithDeadline,
-  ProjectEvent
+  ProjectEvent,
+  PaginatedResponse,
+  ExtendedProject
 } from '@/lib/types';
 import { useMemo } from 'react';
 
@@ -41,12 +43,20 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   return response.json();
 }
 
-export function useProjects(filters?: ProjectFilters) {
+interface ProjectsFilters extends ProjectFilters {
+  search?: string;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export function useProjects(filters?: ProjectsFilters) {
   return useQuery({
     queryKey: ['projects', filters],
     queryFn: async () => {
       const params = new URLSearchParams();
       
+      if (filters?.search) params.append('search', filters.search);
       if (filters?.status) params.append('status', filters.status);
       if (filters?.type) params.append('type', filters.type);
       if (filters?.priority) params.append('priority', filters.priority);
@@ -54,8 +64,11 @@ export function useProjects(filters?: ProjectFilters) {
       if (filters?.start_date) params.append('start_date', filters.start_date);
       if (filters?.end_date) params.append('end_date', filters.end_date);
       if (filters?.team_member) params.append('team_member', filters.team_member.toString());
+      if (filters?.ordering) params.append('ordering', filters.ordering);
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.page_size) params.append('page_size', filters.page_size.toString());
 
-      return apiRequest<Project[]>(`/?${params.toString()}`);
+      return apiRequest<PaginatedResponse<ExtendedProject>>(`/?${params.toString()}`);
     },
   });
 }

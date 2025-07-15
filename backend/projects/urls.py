@@ -1,19 +1,16 @@
-from django.urls import path, include
 from rest_framework_nested import routers
-from .views import (
-    ProjectViewSet, ProjectMemberViewSet,
-    ProjectTaskViewSet, ProjectEventViewSet,
-)
+from django.urls import path, include
+from . import views
 
-# Router principal pour les projets
+# Router principal
 router = routers.DefaultRouter()
-router.register(r'', ProjectViewSet, basename='project')
+router.register(r'', views.ProjectViewSet)
 
-# Router imbriqué pour les membres de projet
+# Router pour les ressources imbriquées
 project_router = routers.NestedDefaultRouter(router, r'', lookup='project')
-project_router.register(r'members', ProjectMemberViewSet, basename='project-members')
-project_router.register(r'tasks', ProjectTaskViewSet, basename='project-tasks')
-project_router.register(r'events', ProjectEventViewSet, basename='project-events')
+project_router.register(r'phases', views.ProjectPhaseViewSet, basename='project-phases')
+project_router.register(r'tasks', views.ProjectTaskViewSet, basename='project-tasks')
+project_router.register(r'timesheets', views.TimeSheetViewSet, basename='project-timesheets')
 
 urlpatterns = [
     path('', include(router.urls)),

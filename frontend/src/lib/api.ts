@@ -361,6 +361,45 @@ export const documentsAPI = {
     deleteDocument: (id: number) => api.delete(`/documents/${id}/`),
 };
 
+export const departmentsAPI = {
+    getDepartments: (params?: {
+        search?: string;
+        is_active?: boolean;
+        ordering?: string;
+        page?: number;
+    }) => api.get('/departments/', { params }),
+    
+    getDepartment: (id: number) => 
+        api.get(`/departments/${id}/`),
+    
+    createDepartment: (data: { 
+        name: string;
+        description: string;
+        is_active?: boolean;
+    }) => api.post('/departments/', data),
+    
+    updateDepartment: (id: number, data: {
+        name?: string;
+        description?: string;
+        is_active?: boolean;
+    }) => api.patch(`/departments/${id}/`, data),
+    
+    deleteDepartment: (id: number) => 
+        api.delete(`/departments/${id}/`),
+    
+    assignManager: (id: number, data: {
+        manager_id: number;
+        start_date?: string;
+        notes?: string;
+    }) => api.post(`/departments/${id}/assign_manager/`, data),
+    
+    toggleActive: (id: number) => 
+        api.post(`/departments/${id}/toggle_active/`),
+    
+    getManagerHistory: (id: number) => 
+        api.get(`/departments/${id}/manager_history/`),
+};
+
 // Calendar event functions
 export const fetchEvents = (params?: {
     start_date?: string;

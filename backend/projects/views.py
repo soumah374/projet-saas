@@ -1,19 +1,28 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q, Count, Avg, Sum
+from django.db.models import Q, Count, Avg, Sum, F, ExpressionWrapper, fields, Max
 from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import HttpResponse
+from rest_framework import serializers
+from notifications.models import Notification
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
-from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent, Notification
-from .serializers import (
-    ProjectSerializer, ProjectListSerializer, ProjectCreateSerializer,
-    ProjectUpdateSerializer, ProjectMemberSerializer, ProjectBudgetSerializer,
-    ProjectTaskSerializer, ProjectEventSerializer, NotificationSerializer
+from .models import (
+    Project, ProjectMember, ProjectPhase, ProjectTask, ProjectEvent, TimeSheet, Department
 )
+from .serializers import (
+    ProjectListSerializer, ProjectDetailSerializer, ProjectCreateSerializer,
+    ProjectUpdateSerializer, ProjectMemberSerializer, ProjectPhaseSerializer,
+    ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer, DepartmentSerializer,
+    UserSerializer
+)
+from notifications.serializers import NotificationSerializer
+from django.contrib.auth import get_user_model
+User = get_user_model()
 
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -22,7 +31,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'type', 'priority', 'category']
+    filterset_fields = ['status', 'type', 'priority']
     search_fields = ['title', 'description', 'client', 'id']
     ordering_fields = ['created_at', 'deadline', 'progress', 'title']
     ordering = ['-created_at']
@@ -30,431 +39,348 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtrer les projets selon les permissions de l'utilisateur"""
         user = self.request.user
-        if user.is_authenticated:
-            if user.is_staff:
-                return Project.objects.all()
-            return Project.objects.filter(
-                Q(created_by=user) | Q(team_members=user)
-            ).distinct()
-        else:
-            # For anonymous users, return all projects (or empty queryset if you want to restrict access)
+        if user.is_staff:
             return Project.objects.all()
+        return Project.objects.filter(
+            Q(created_by=user) | Q(team_members=user)
+        ).distinct()
     
     def get_serializer_class(self):
         """Choisir le bon sérialiseur selon l'action"""
         if self.action == 'list':
             return ProjectListSerializer
+        elif self.action == 'retrieve':
+            return ProjectDetailSerializer
         elif self.action == 'create':
             return ProjectCreateSerializer
         elif self.action in ['update', 'partial_update']:
             return ProjectUpdateSerializer
-        return ProjectSerializer
+        return ProjectDetailSerializer
     
     def perform_create(self, serializer):
         """Créer un projet avec l'utilisateur connecté"""
-        serializer.save()
+        serializer.save(created_by=self.request.user)
     
     @action(detail=True, methods=['post'])
     def add_member(self, request, pk=None):
         """Ajouter un membre à un projet"""
         project = self.get_object()
-        serializer = ProjectMemberSerializer(data=request.data)
+        serializer = ProjectMemberSerializer(
+            data=request.data,
+            context={'request': request}
+        )
         
         if serializer.is_valid():
+            # Vérifier l'allocation totale
+            total_allocation = project.get_total_allocated_time()
+            new_allocation = serializer.validated_data.get('allocation_percentage', 100)
+            
+            if total_allocation + new_allocation > 100:
+                return Response(
+                    {'error': "L'allocation totale ne peut pas dépasser 100%"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             serializer.save(project=project)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['delete'])
-    def remove_member(self, request, pk=None):
-        """Retirer un membre d'un projet"""
-        project = self.get_object()
-        user_id = request.data.get('user_id')
-        
-        try:
-            member = project.project_members.get(user_id=user_id)
-            member.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except ProjectMember.DoesNotExist:
-            return Response(
-                {'error': 'Membre non trouvé'}, 
-                status=status.HTTP_404_NOT_FOUND
-            )
-    
     @action(detail=True, methods=['post'])
-    def update_progress(self, request, pk=None):
-        """Mettre à jour la progression d'un projet"""
+    def update_phase(self, request, pk=None):
+        """Mettre à jour la phase d'un projet"""
         project = self.get_object()
-        progress = request.data.get('progress')
+        new_status = request.data.get('status')
         
-        if progress is not None and 0 <= progress <= 100:
-            project.progress = progress
-            project.save()
-            return Response({'progress': progress})
-        return Response(
-            {'error': 'Progression invalide'}, 
-            status=status.HTTP_400_BAD_REQUEST
-        )
+        status_choices = dict(Project.STATUS_CHOICES)
+        if new_status not in status_choices:
+            return Response(
+                {'error': 'Statut invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Vérifier la transition de phase
+        current_idx = [s[0] for s in Project.STATUS_CHOICES].index(project.status)
+        new_idx = [s[0] for s in Project.STATUS_CHOICES].index(new_status)
+        
+        # Empêcher le retour en arrière sauf cas particuliers
+        if new_idx < current_idx and new_status not in ['Production', 'Devis']:
+            return Response(
+                {'error': 'Impossible de revenir à une phase précédente'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        project.status = new_status
+        project.save()
+        
+        return Response({'status': new_status})
     
-    @action(detail=False, methods=['get'])
-    def statistics(self, request):
-        """Obtenir les statistiques des projets"""
-        user = request.user
-        if user.is_authenticated:
-            if user.is_staff:
-                queryset = Project.objects.all()
-            else:
-                queryset = Project.objects.filter(
-                    Q(created_by=user) | Q(team_members=user)
-                ).distinct()
-        else:
-            queryset = Project.objects.none()
-
-        # Calculer les statistiques
-        total_projects = queryset.count()
-        active_projects = queryset.filter(status__in=['Planification', 'En cours', 'Production']).count()
-        completed_projects = queryset.filter(status='Terminé').count()
-        avg_progress = queryset.aggregate(Avg('progress'))['progress__avg'] or 0
-        overdue_projects = queryset.filter(
-            deadline__lt=timezone.now().date(),
-            status__in=['Planification', 'En cours', 'Production']
-        ).count()
-
-        # Projets par type
-        projects_by_type = queryset.values('type').annotate(
-            count=Count('id')
-        ).order_by('-count')
-
-        # Projets par statut
-        projects_by_status = queryset.values('status').annotate(
-            count=Count('id')
-        ).order_by('-count')
-
+    @action(detail=True)
+    def timeline(self, request, pk=None):
+        """Obtenir les données pour le diagramme de Gantt"""
+        project = self.get_object()
+        
+        # Récupérer les phases
+        phases = project.phases.all().values(
+            'id', 'name', 'start_date', 'end_date', 'progress'
+        )
+        
+        # Récupérer les tâches
+        tasks = project.tasks.all().values(
+            'id', 'title', 'start_date', 'due_date', 'status',
+            'phase', 'assigned_to', 'estimated_hours', 'actual_hours'
+        )
+        
+        # Calculer la durée et le retard pour chaque tâche
+        for task in tasks:
+            if task['start_date'] and task['due_date']:
+                task['duration'] = (task['due_date'] - task['start_date']).days
+                if task['status'] != 'Terminé' and task['due_date'] < timezone.now().date():
+                    task['delay'] = (timezone.now().date() - task['due_date']).days
+                else:
+                    task['delay'] = 0
+        
         return Response({
-            'total_projects': total_projects,
-            'active_projects': active_projects,
-            'completed_projects': completed_projects,
-            'average_progress': round(avg_progress, 1),
-            'overdue_projects': overdue_projects,
-            'projects_by_type': projects_by_type,
-            'projects_by_status': projects_by_status,
+            'phases': phases,
+            'tasks': tasks
         })
     
-    @action(detail=False)
-    def upcoming_deadlines(self, request):
-        """Obtenir les projets avec des échéances proches"""
-        user = request.user
-        if user.is_authenticated:
-            if user.is_staff:
-                queryset = Project.objects.all()
-            else:
-                queryset = Project.objects.filter(
-                    Q(created_by=user) | Q(team_members=user)
-                ).distinct()
-        else:
-            # For anonymous users, return all projects
-            queryset = Project.objects.all()
+    @action(detail=True)
+    def workload(self, request, pk=None):
+        """Obtenir la charge de travail de l'équipe"""
+        project = self.get_object()
         
-        # Projets avec échéance dans les 7 prochains jours
-        week_from_now = timezone.now().date() + timedelta(days=7)
-        upcoming = queryset.filter(
-            deadline__lte=week_from_now,
-            deadline__gte=timezone.now().date(),
-            status__in=['Planification', 'En cours', 'Production']
-        ).order_by('deadline')
-        
-        serializer = ProjectListSerializer(upcoming, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False)
-    def my_projects(self, request):
-        """Obtenir les projets de l'utilisateur connecté"""
-        user = request.user
-        if user.is_authenticated:
-            projects = Project.objects.filter(created_by=user).order_by('-created_at')
-        else:
-            # For anonymous users, return empty queryset
-            projects = Project.objects.none()
-        serializer = ProjectListSerializer(projects, many=True)
-        return Response(serializer.data)
-    
-    @action(detail=False)
-    def team_projects(self, request):
-        """Obtenir les projets où l'utilisateur est membre de l'équipe"""
-        user = request.user
-        if user.is_authenticated:
-            projects = Project.objects.filter(team_members=user).order_by('-created_at')
-        else:
-            # For anonymous users, return empty queryset
-            projects = Project.objects.none()
-        serializer = ProjectListSerializer(projects, many=True)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['get'])
-    def reports(self, request):
-        """
-        Endpoint pour récupérer les données de rapport des projets
-        """
-        # Récupérer les filtres
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        status_filter = request.query_params.get('status')
-        priority_filter = request.query_params.get('priority')
-        team_member_filter = request.query_params.get('team_member')
-        type_filter = request.query_params.get('type')
-
-        # Construire la queryset de base
-        queryset = Project.objects.all()
-
-        # Appliquer les filtres
-        if date_from:
-            try:
-                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
-                queryset = queryset.filter(start_date__gte=date_from_obj)
-            except ValueError:
-                pass
-
-        if date_to:
-            try:
-                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
-                queryset = queryset.filter(deadline__lte=date_to_obj)
-            except ValueError:
-                pass
-
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-
-        if priority_filter:
-            queryset = queryset.filter(priority=priority_filter)
-
-        if type_filter:
-            queryset = queryset.filter(type=type_filter)
-
-        if team_member_filter:
-            try:
-                team_member_id = int(team_member_filter)
-                queryset = queryset.filter(team_members__id=team_member_id)
-            except (ValueError, TypeError):
-                pass
-
-        # Préparer les données pour chaque projet
-        report_data = []
-        for project in queryset.select_related('created_by').prefetch_related('team_members'):
-            # Calculer les statistiques des tâches (simulation pour l'exemple)
-            total_tasks = 10  # À remplacer par la vraie logique
-            completed_tasks = int(project.progress * total_tasks / 100)
-            pending_tasks = total_tasks - completed_tasks
-            overdue_tasks = 1 if project.deadline < timezone.now().date() and project.status != 'Terminé' else 0
-
-            project_data = {
-                'id': project.id,
-                'title': project.title,
-                'status': project.status,
-                'priority': project.priority,
-                'progress': project.progress,
-                'start_date': project.start_date.isoformat() if project.start_date else None,
-                'deadline': project.deadline.isoformat() if project.deadline else None,
-                'budget': str(project.budget) if project.budget else '0',
-                'team_members_count': project.team_members.count(),
-                'tasks_total': total_tasks,
-                'tasks_completed': completed_tasks,
-                'tasks_pending': pending_tasks,
-                'tasks_overdue': overdue_tasks,
-                'manager': {
-                    'id': project.created_by.id if project.created_by else None,
-                    'first_name': project.created_by.first_name if project.created_by else '',
-                    'last_name': project.created_by.last_name if project.created_by else '',
-                    'email': project.created_by.email if project.created_by else '',
-                } if project.created_by else None
-            }
-            report_data.append(project_data)
-
-        return Response(report_data)
-
-    @action(detail=False, methods=['get'])
-    def reports_summary(self, request):
-        """
-        Endpoint pour récupérer le résumé des rapports
-        """
-        # Récupérer les filtres (même logique que reports)
-        date_from = request.query_params.get('date_from')
-        date_to = request.query_params.get('date_to')
-        status_filter = request.query_params.get('status')
-        priority_filter = request.query_params.get('priority')
-
-        # Construire la queryset
-        queryset = Project.objects.all()
-
-        if date_from:
-            try:
-                date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
-                queryset = queryset.filter(start_date__gte=date_from_obj)
-            except ValueError:
-                pass
-
-        if date_to:
-            try:
-                date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
-                queryset = queryset.filter(deadline__lte=date_to_obj)
-            except ValueError:
-                pass
-
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-
-        if priority_filter:
-            queryset = queryset.filter(priority=priority_filter)
-
-        # Calculer les statistiques
-        total_projects = queryset.count()
-        active_projects = queryset.filter(status__in=['En cours', 'Production']).count()
-        completed_projects = queryset.filter(status='Terminé').count()
-        delayed_projects = queryset.filter(
-            deadline__lt=timezone.now().date(),
-            status__in=['En cours', 'Production', 'Planification']
-        ).count()
-        on_time_projects = total_projects - delayed_projects
-
-        # Statistiques des tâches (simulation)
-        total_tasks = total_projects * 10
-        completed_tasks = sum([int(p.progress * 10 / 100) for p in queryset])
-        pending_tasks = total_tasks - completed_tasks
-        overdue_tasks = delayed_projects * 2
-        completion_rate = int((completed_tasks / total_tasks * 100)) if total_tasks > 0 else 0
-
-        # Statistiques d'équipe
-        total_members = 15  # À remplacer par la vraie logique
-        active_projects_count = active_projects
-        avg_productivity = 85  # À calculer réellement
-
-        # Statistiques budgétaires
-        total_allocated = float(queryset.aggregate(total=Sum('budget'))['total'] or 0)
-        total_spent = total_allocated * 0.7  # Simulation
-        remaining = total_allocated - total_spent
-
-        # Timeline (simulation pour les 6 derniers mois)
-        timeline_data = {
-            'labels': ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
-            'projects_completed': [2, 3, 1, 4, 2, 3],
-            'tasks_completed': [45, 52, 38, 67, 43, 58]
-        }
-
-        summary = {
-            'projects': {
-                'total': total_projects,
-                'active': active_projects,
-                'completed': completed_projects,
-                'delayed': delayed_projects,
-                'on_time': on_time_projects
-            },
-            'tasks': {
-                'total': total_tasks,
-                'completed': completed_tasks,
-                'pending': pending_tasks,
-                'overdue': overdue_tasks,
-                'completion_rate': completion_rate
-            },
-            'team': {
-                'total_members': total_members,
-                'active_projects': active_projects_count,
-                'avg_productivity': avg_productivity
-            },
-            'budget': {
-                'total_allocated': total_allocated,
-                'total_spent': total_spent,
-                'remaining': remaining
-            },
-            'timeline': timeline_data
-        }
-
-        return Response(summary)
-
-    @action(detail=False, methods=['get'])
-    def export_pdf(self, request):
-        """
-        Exporter le rapport en PDF
-        """
-        # Pour l'instant, retourner une réponse simple
-        # Dans une vraie implémentation, utiliser une bibliothèque comme reportlab
-        response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="rapport_projets.pdf"'
-        
-        # Contenu PDF simulé
-        pdf_content = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n100 700 Td\n(Rapport des projets) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f \n0000000010 00000 n \n0000000053 00000 n \n0000000109 00000 n \n0000000158 00000 n \ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n238\n%%EOF"
-        response.write(pdf_content)
-        
-        return response
-
-    @action(detail=False, methods=['get'])
-    def export_excel(self, request):
-        """
-        Exporter le rapport en Excel
-        """
-        # Pour l'instant, retourner une réponse simple
-        # Dans une vraie implémentation, utiliser openpyxl ou xlsxwriter
-        response = HttpResponse(
-            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        # Calculer la charge par membre
+        workload = ProjectMember.objects.filter(project=project).values(
+            'user__id',
+            'user__first_name',
+            'user__last_name',
+            'role',
+            'allocation_percentage'
+        ).annotate(
+            total_hours=Sum('user__timesheets__hours'),
+            estimated_hours=Sum('user__assigned_tasks__estimated_hours')
         )
-        response['Content-Disposition'] = 'attachment; filename="rapport_projets.xlsx"'
         
-        # Contenu Excel simulé (un fichier Excel minimal)
-        excel_content = b'PK\x03\x04\x14\x00\x00\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x13\x00\x08\x02[Content_Types].xml \xa2\x04\x02(\xa0\x00\x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00PK\x07\x08\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00PK\x01\x02\x14\x00\x14\x00\x00\x00\x08\x00\x00\x00!\x00\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x13\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00[Content_Types].xmlPK\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00A\x00\x00\x00#\x00\x00\x00\x00\x00'
-        response.write(excel_content)
-        
-        return response
-
-
-class ProjectMemberViewSet(viewsets.ModelViewSet):
-    """ViewSet pour la gestion des membres de projet"""
+        return Response(workload)
     
-    serializer_class = ProjectMemberSerializer
+    @action(detail=True)
+    def alerts(self, request, pk=None):
+        """Obtenir les alertes du projet"""
+        project = self.get_object()
+        alerts = []
+        
+        # Alerte de retard sur les tâches
+        overdue_tasks = project.tasks.filter(
+            status__in=['À faire', 'En cours'],
+            due_date__lt=timezone.now().date()
+        )
+        if overdue_tasks.exists():
+            alerts.append({
+                'type': 'task_overdue',
+                'message': f"{overdue_tasks.count()} tâches en retard",
+                'tasks': list(overdue_tasks.values('id', 'title', 'due_date'))
+            })
+        
+        # Alerte de dépassement de temps
+        tasks_over_time = project.tasks.filter(
+            actual_hours__gt=F('estimated_hours')
+        ).exclude(estimated_hours=None)
+        if tasks_over_time.exists():
+            alerts.append({
+                'type': 'time_exceeded',
+                'message': f"{tasks_over_time.count()} tâches dépassent le temps estimé",
+                'tasks': list(tasks_over_time.values(
+                    'id', 'title', 'estimated_hours', 'actual_hours'
+                ))
+            })
+        
+        # Alerte de progression lente
+        slow_progress_tasks = project.tasks.filter(
+            status='En cours',
+            start_date__lt=timezone.now().date() - timedelta(days=7)
+        ).annotate(
+            completion=ExpressionWrapper(
+                F('actual_hours') * 100.0 / F('estimated_hours'),
+                output_field=fields.FloatField()
+            )
+        ).filter(completion__lt=50)
+        if slow_progress_tasks.exists():
+            alerts.append({
+                'type': 'slow_progress',
+                'message': f"{slow_progress_tasks.count()} tâches progressent lentement",
+                'tasks': list(slow_progress_tasks.values(
+                    'id', 'title', 'start_date', 'completion'
+                ))
+            })
+        
+        return Response(alerts)
+
+
+class ProjectPhaseViewSet(viewsets.ModelViewSet):
+    """ViewSet pour la gestion des phases de projet"""
+    
+    serializer_class = ProjectPhaseSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['order', 'start_date']
+    ordering = ['order', 'start_date']
     
     def get_queryset(self):
         """Filtrer selon le projet"""
         project_id = self.kwargs.get('project_pk')
         if project_id:
-            return ProjectMember.objects.filter(project_id=project_id)
-        return ProjectMember.objects.none()
+            return ProjectPhase.objects.filter(project_id=project_id)
+        return ProjectPhase.objects.none()
     
     def perform_create(self, serializer):
-        """Créer un membre avec le projet et envoyer une notification"""
+        """Créer une phase avec le projet"""
         project_id = self.kwargs.get('project_pk')
-        member = serializer.save(project_id=project_id)
-        
-        # Créer une notification pour le nouveau membre
-        project = Project.objects.get(id=project_id)
-        Notification.objects.create(
-            user=member.user,
-            type='project_member',
-            project=project,
-            message=f"Vous avez été ajouté(e) au projet '{project.title}' en tant que {member.role}"
-        )
+        if project_id:
+            serializer.save(project_id=project_id)
     
-    def perform_destroy(self, instance):
-        """Supprimer un membre et envoyer une notification"""
-        project = instance.project
-        user = instance.user
+    @action(detail=True, methods=['post'])
+    def reorder(self, request, project_pk=None, pk=None):
+        """Réorganiser les phases"""
+        phase = self.get_object()
+        new_order = request.data.get('order')
         
-        # Supprimer le membre
-        instance.delete()
+        if new_order is None:
+            return Response(
+                {'error': 'Ordre requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        # Créer une notification pour informer l'utilisateur
-        Notification.objects.create(
-            user=user,
-            type='project_member',
-            project=project,
-            message=f"Vous avez été retiré(e) du projet '{project.title}'"
-        )
+        # Mettre à jour l'ordre des autres phases
+        if new_order > phase.order:
+            ProjectPhase.objects.filter(
+                project_id=project_pk,
+                order__gt=phase.order,
+                order__lte=new_order
+            ).update(order=F('order') - 1)
+        else:
+            ProjectPhase.objects.filter(
+                project_id=project_pk,
+                order__lt=phase.order,
+                order__gte=new_order
+            ).update(order=F('order') + 1)
+        
+        phase.order = new_order
+        phase.save()
+        
+        return Response({'order': new_order})
+
+
+class TimeSheetViewSet(viewsets.ModelViewSet):
+    """ViewSet pour la gestion des feuilles de temps"""
+    
+    serializer_class = TimeSheetSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['user', 'project', 'task', 'date', 'validated_by']
+    ordering_fields = ['date', 'created_at', 'hours']
+    ordering = ['-date', '-created_at']
+    
+    def get_queryset(self):
+        """Filtrer selon l'utilisateur et le projet"""
+        user = self.request.user
+        project_id = self.kwargs.get('project_pk')
+        
+        queryset = TimeSheet.objects.all()
+        
+        if not user.is_staff:
+            # Les utilisateurs normaux ne voient que leurs propres feuilles de temps
+            # et celles qu'ils peuvent valider (en tant que chef de projet)
+            managed_projects = Project.objects.filter(
+                project_members__user=user,
+                project_members__role='Chef de projet'
+            )
+            queryset = queryset.filter(
+                Q(user=user) | Q(project__in=managed_projects)
+            )
+        
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        
+        return queryset.select_related('user', 'project', 'task', 'validated_by')
+    
+    def get_serializer_context(self):
+        """Ajouter le project_id au contexte du sérialiseur"""
+        context = super().get_serializer_context()
+        context['project_id'] = self.kwargs.get('project_pk')
+        return context
+    
+    def perform_create(self, serializer):
+        """Créer une feuille de temps"""
+        project_id = self.kwargs.get('project_pk')
+        try:
+            serializer.save(
+                user=self.request.user,
+                project_id=project_id
+            )
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+    
+    def perform_update(self, serializer):
+        """Mettre à jour une feuille de temps"""
+        try:
+            serializer.save()
+        except ValueError as e:
+            raise serializers.ValidationError(str(e))
+    
+    @action(detail=True, methods=['post'])
+    def validate(self, request, project_pk=None, pk=None):
+        """Valider une feuille de temps"""
+        timesheet = self.get_object()
+        
+        try:
+            timesheet.validate(request.user)
+            serializer = self.get_serializer(timesheet)
+            return Response(serializer.data)
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=False)
+    def stats(self, request, project_pk=None):
+        """Obtenir des statistiques sur les feuilles de temps"""
+        queryset = self.get_queryset()
+        
+        if project_pk:
+            # Statistiques par utilisateur pour le projet
+            stats = queryset.values(
+                'user__id',
+                'user__first_name',
+                'user__last_name'
+            ).annotate(
+                total_hours=Sum('hours'),
+                validated_hours=Sum('hours', filter=Q(validated_by__isnull=False)),
+                pending_hours=Sum('hours', filter=Q(validated_by__isnull=True)),
+                tasks_count=Count('task', distinct=True),
+                last_timesheet=Max('date')
+            ).order_by('-total_hours')
+        else:
+            # Statistiques globales
+            stats = {
+                'total_hours': queryset.aggregate(total=Sum('hours'))['total'] or 0,
+                'validated_hours': queryset.filter(
+                    validated_by__isnull=False
+                ).aggregate(total=Sum('hours'))['total'] or 0,
+                'users_count': queryset.values('user').distinct().count(),
+                'tasks_count': queryset.values('task').distinct().count()
+            }
+        
+        return Response(stats)
 
 
 class ProjectTaskViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des tâches de projet"""
     
     serializer_class = ProjectTaskSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['status', 'assigned_to']
+    filterset_fields = ['status', 'assigned_to', 'phase']
     ordering_fields = ['due_date', 'created_at', 'title']
     ordering = ['due_date', 'created_at']
     
@@ -466,36 +392,10 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
         return ProjectTask.objects.none()
     
     def perform_create(self, serializer):
-        """Créer une tâche avec le projet et envoyer une notification si assignée"""
+        """Créer une tâche avec le projet"""
         project_id = self.kwargs.get('project_pk')
-        task = serializer.save(project_id=project_id)
-        
-        # Si la tâche est assignée, créer une notification
-        if task.assigned_to:
-            project = Project.objects.get(id=project_id)
-            Notification.objects.create(
-                user=task.assigned_to,
-                type='task_assignment',
-                project=project,
-                task=task,
-                message=f"Vous avez été assigné(e) à la tâche '{task.title}' dans le projet '{project.title}'"
-            )
+        serializer.save(project_id=project_id)
     
-    def perform_update(self, serializer):
-        """Mettre à jour une tâche et envoyer une notification si l'assignation change"""
-        old_task = self.get_object()
-        task = serializer.save()
-        
-        # Si l'assignation a changé et qu'il y a un nouvel assigné
-        if old_task.assigned_to != task.assigned_to and task.assigned_to:
-            Notification.objects.create(
-                user=task.assigned_to,
-                type='task_assignment',
-                project=task.project,
-                task=task,
-                message=f"Vous avez été assigné(e) à la tâche '{task.title}' dans le projet '{task.project.title}'"
-            )
-
     @action(detail=True, methods=['post'])
     def update_status(self, request, pk=None, project_pk=None):
         """Mettre à jour le statut d'une tâche"""
@@ -504,59 +404,70 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
         
         if new_status in dict(ProjectTask.STATUS_CHOICES):
             task.status = new_status
+            if new_status == 'Terminé':
+                task.executed_at = timezone.now()
             task.save()
             return Response({'status': new_status})
         return Response(
-            {'error': 'Statut invalide'}, 
+            {'error': 'Statut invalide'},
             status=status.HTTP_400_BAD_REQUEST
         )
-
+    
     @action(detail=True, methods=['post'])
-    def execute(self, request, pk=None, project_pk=None):
-        """Exécuter une tâche"""
+    def assign(self, request, pk=None, project_pk=None):
+        """Assigner une tâche à un utilisateur"""
         task = self.get_object()
+        user_id = request.data.get('user_id')
         
-        if task.status == 'Terminé':
+        try:
+            # Vérifier que l'utilisateur est membre du projet
+            member = ProjectMember.objects.get(
+                project_id=project_pk,
+                user_id=user_id
+            )
+            task.assigned_to = member.user
+            task.save()
+            return Response(self.get_serializer(task).data)
+        except ProjectMember.DoesNotExist:
             return Response(
-                {'error': 'La tâche est déjà terminée'}, 
+                {'error': "L'utilisateur n'est pas membre du projet"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=False)
+    def templates(self, request, project_pk=None):
+        """Obtenir les modèles de tâches"""
+        templates = ProjectTask.objects.filter(
+            is_template=True
+        ).order_by('template_category', 'title')
+        
+        serializer = self.get_serializer(templates, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def create_from_template(self, request, pk=None, project_pk=None):
+        """Créer une tâche à partir d'un modèle"""
+        template = self.get_object()
+        
+        if not template.is_template:
+            return Response(
+                {'error': "Cette tâche n'est pas un modèle"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        task.execute()
-        serializer = self.get_serializer(task)
-        return Response(serializer.data)
-
-    @action(detail=False, methods=['get'])
-    def upcoming_deadlines(self, request, project_pk=None):
-        """Obtenir les tâches avec des échéances proches"""
-        # Récupérer les tâches du projet
-        queryset = self.get_queryset()
-        
-        # Filtrer les tâches non terminées avec une date d'échéance
-        queryset = queryset.filter(
-            status__in=['À faire', 'En cours', 'En pause'],
-            due_date__isnull=False
+        # Créer une nouvelle tâche basée sur le modèle
+        new_task = ProjectTask.objects.create(
+            project_id=project_pk,
+            title=template.title,
+            description=template.description,
+            estimated_hours=template.estimated_hours,
+            phase_id=request.data.get('phase_id'),
+            start_date=request.data.get('start_date'),
+            due_date=request.data.get('due_date')
         )
         
-        # Calculer la date limite (7 jours à partir d'aujourd'hui)
-        deadline = timezone.now().date() + timedelta(days=7)
-        
-        # Filtrer les tâches avec échéance dans les 7 prochains jours
-        upcoming_tasks = queryset.filter(
-            due_date__lte=deadline,
-            due_date__gte=timezone.now().date()
-        ).order_by('due_date')
-        
-        serializer = self.get_serializer(upcoming_tasks, many=True)
-        
-        # Ajouter le nombre de jours restants pour chaque tâche
-        data = serializer.data
-        for task in data:
-            due_date = datetime.strptime(task['due_date'], '%Y-%m-%d').date()
-            days_remaining = (due_date - timezone.now().date()).days
-            task['days_remaining'] = days_remaining
-        
-        return Response(data)
+        serializer = self.get_serializer(new_task)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class ProjectEventViewSet(viewsets.ModelViewSet):
@@ -615,4 +526,4 @@ class NotificationViewSet(viewsets.ModelViewSet):
         notification = self.get_object()
         notification.is_read = True
         notification.save()
-        return Response(status=status.HTTP_200_OK) 
+        return Response(status=status.HTTP_200_OK)

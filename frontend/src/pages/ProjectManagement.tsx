@@ -47,11 +47,45 @@ import {
 import { CreateProjectModal } from "@/components/CreateProjectModal";
 import { useProjects, useCreateProject, useUpdateProject } from "@/hooks/use-projects";
 import { useBackendStatus } from "@/hooks/use-backend-status";
-import type { ProjectList, CreateProjectForm } from "@/lib/types";
+import type { 
+  ProjectList, 
+  CreateProjectForm, 
+  ProjectStatus, 
+  ProjectType, 
+  ProjectPriority,
+  PaginatedResponse,
+  ExtendedProject,
+  ProjectFilters
+} from "@/lib/types";
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+// Extend ProjectFilters to include pagination and search params
+interface ExtendedProjectFilters extends ProjectFilters {
+  search?: string;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}
+
+// Helper function to convert ExtendedProject to ProjectList
+const toProjectList = (project: ExtendedProject): ProjectList => ({
+  id: project.id,
+  title: project.title,
+  type: project.type,
+  status: project.status,
+  priority: project.priority,
+  progress: project.progress,
+  deadline: project.deadline,
+  client: project.client,
+  created_by: project.created_by,
+  team_count: project.team_count || '0',
+  days_remaining: project.days_remaining || null,
+  is_overdue: project.is_overdue || null,
+  created_at: project.created_at || null
+});
 
 export function ProjectManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -61,6 +95,7 @@ export function ProjectManagement() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10); // Default to 10 for list view
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const navigate = useNavigate();
 
   // Mettre à jour itemsPerPage quand viewMode change
@@ -72,15 +107,15 @@ export function ProjectManagement() {
   const { data: backendStatus, isLoading: backendLoading } = useBackendStatus();
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
     search: searchTerm || undefined,
-    status: statusFilter !== 'all' ? statusFilter : undefined,
-    type: typeFilter !== 'all' ? typeFilter : undefined,
-    priority: priorityFilter !== 'all' ? priorityFilter : undefined,
+    status: statusFilter !== 'all' ? statusFilter as ProjectStatus : undefined,
+    type: typeFilter !== 'all' ? typeFilter as ProjectType : undefined,
+    priority: priorityFilter !== 'all' ? priorityFilter as ProjectPriority : undefined,
     ordering: '-created_at',
     page: currentPage,
     page_size: itemsPerPage
-  });
+  } as ExtendedProjectFilters);
 
-  const projects = projectsData?.results || [];
+  const projects = (projectsData?.results || []).map(toProjectList);
   const totalPages = projectsData?.count ? Math.ceil(projectsData.count / itemsPerPage) : 0;
 
   const summary = {
@@ -151,7 +186,7 @@ export function ProjectManagement() {
 
   const handleProjectUpdate = async (projectId: string, data: Partial<CreateProjectForm>) => {
     try {
-      await updateProjectMutation.mutateAsync({ id: projectId, data });
+      await updateProjectMutation.mutateAsync({ projectId, data });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du projet:', error);
     }
@@ -277,13 +312,17 @@ export function ProjectManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
           <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets SAKOM</p>
         </div>
-        <CreateProjectModal onProjectCreate={handleProjectCreate}>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Nouveau Projet
-          </Button>
-        </CreateProjectModal>
+        <Button onClick={() => setShowCreateModal(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nouveau Projet
+        </Button>
       </div>
+
+      <CreateProjectModal 
+        isOpen={showCreateModal} 
+        onClose={() => setShowCreateModal(false)}
+        onProjectCreate={handleProjectCreate}
+      />
 
       {/* Statistics Cards */}
       {!projectsLoading && summary && (

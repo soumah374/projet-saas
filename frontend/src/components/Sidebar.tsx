@@ -15,7 +15,8 @@ import {
   PieChart,
   Target,
   Clock,
-  List
+  List,
+  Building2
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -214,24 +215,30 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   <Link to="/documents" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
                     Tous les documents
                   </Link>
-                  <Link to="/documents?type=project" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    Documents projets
+                  <Link to="/documents?type=contract" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    Contrats
                   </Link>
-                  <Link to="/documents?type=team" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    Documents équipes
+                  <Link to="/documents?type=report" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    Rapports
                   </Link>
                 </div>
               )}
             </div>
 
-            <Link 
-              to="/teams" 
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                location.pathname === '/teams' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-              )}
-            > 
-              <Users className="h-5 w-5" /> Équipes 
+            {/* Départements */}
+            <Link to="/departments" className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              location.pathname.includes('/departments') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+            )}>
+              <Building2 className="h-5 w-5" /> Départements
+            </Link>
+
+            {/* Équipes */}
+            <Link to="/teams" className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+              location.pathname.includes('/teams') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+            )}>
+              <Users className="h-5 w-5" /> Équipes
             </Link>
 
             {user?.is_staff && (

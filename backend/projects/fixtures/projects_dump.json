@@ -1,0 +1,199 @@
+[
+{
+  "model": "projects.project",
+  "pk": "PROJ-2024-001",
+  "fields": {
+    "title": "Refonte Site Web Corporate",
+    "description": "Refonte complète du site web corporate de l'entreprise avec une approche moderne et responsive",
+    "objectives": "Améliorer l'expérience utilisateur, augmenter le taux de conversion, moderniser l'image de marque",
+    "type": "Externe",
+    "status": "En cours",
+    "priority": "Haute",
+    "start_date": "2024-01-15",
+    "deadline": "2024-06-30",
+    "created_at": "2024-01-15T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z",
+    "progress": 45,
+    "budget": "25000.00",
+    "client": "Entreprise ABC",
+    "created_by": [
+      "manager"
+    ],
+    "contract": "",
+    "tags": [
+      "web",
+      "responsive",
+      "corporate"
+    ],
+    "departments": []
+  }
+},
+{
+  "model": "projects.project",
+  "pk": "PROJ-2024-002",
+  "fields": {
+    "title": "Campagne Marketing Print",
+    "description": "Création d'une campagne marketing print pour le lancement d'un nouveau produit",
+    "objectives": "Augmenter la notoriété de la marque, générer des leads qualifiés",
+    "type": "Externe",
+    "status": "Planification",
+    "priority": "Normale",
+    "start_date": "2024-03-01",
+    "deadline": "2024-05-15",
+    "created_at": "2024-02-15T00:00:00Z",
+    "updated_at": "2024-02-15T00:00:00Z",
+    "progress": 20,
+    "budget": "15000.00",
+    "client": "Startup XYZ",
+    "created_by": [
+      "managing_director"
+    ],
+    "contract": "",
+    "tags": [
+      "print",
+      "marketing",
+      "lancement"
+    ],
+    "departments": []
+  }
+},
+{
+  "model": "projects.project",
+  "pk": "PROJ-2024-003",
+  "fields": {
+    "title": "Vidéo Institutionnelle",
+    "description": "Production d'une vidéo institutionnelle pour présenter l'entreprise et ses valeurs",
+    "objectives": "Communiquer les valeurs de l'entreprise, améliorer l'image de marque",
+    "type": "Interne",
+    "status": "Production",
+    "priority": "Normale",
+    "start_date": "2024-02-01",
+    "deadline": "2024-04-30",
+    "created_at": "2024-01-30T00:00:00Z",
+    "updated_at": "2024-01-30T00:00:00Z",
+    "progress": 70,
+    "budget": "30000.00",
+    "client": "Organisation DEF",
+    "created_by": [
+      "manager"
+    ],
+    "contract": "",
+    "tags": [
+      "vidéo",
+      "institutionnel",
+      "corporate"
+    ],
+    "departments": []
+  }
+},
+{
+  "model": "projects.projectmember",
+  "pk": 1,
+  "fields": {
+    "project": "PROJ-2024-001",
+    "user": [
+      "manager"
+    ],
+    "role": "Chef de projet",
+    "joined_at": "2024-01-15T00:00:00Z",
+    "is_active": true,
+    "allocation_percentage": 100
+  }
+},
+{
+  "model": "projects.projectmember",
+  "pk": 2,
+  "fields": {
+    "project": "PROJ-2024-001",
+    "user": [
+      "designer"
+    ],
+    "role": "Designer",
+    "joined_at": "2024-01-15T00:00:00Z",
+    "is_active": true,
+    "allocation_percentage": 100
+  }
+},
+{
+  "model": "projects.projectmember",
+  "pk": 3,
+  "fields": {
+    "project": "PROJ-2024-002",
+    "user": [
+      "managing_director"
+    ],
+    "role": "Chef de projet",
+    "joined_at": "2024-02-15T00:00:00Z",
+    "is_active": true,
+    "allocation_percentage": 100
+  }
+},
+{
+  "model": "projects.projecttask",
+  "pk": 1,
+  "fields": {
+    "project": "PROJ-2024-001",
+    "phase": null,
+    "title": "Analyse des besoins",
+    "description": "Analyser les besoins du client et définir les spécifications",
+    "status": "Terminé",
+    "assigned_to": [
+      "manager"
+    ],
+    "start_date": null,
+    "due_date": "2024-01-30",
+    "estimated_hours": null,
+    "actual_hours": "0.0",
+    "created_at": "2024-01-15T00:00:00Z",
+    "updated_at": "2024-01-30T00:00:00Z",
+    "executed_at": null,
+    "is_template": false,
+    "template_category": ""
+  }
+},
+{
+  "model": "projects.projecttask",
+  "pk": 2,
+  "fields": {
+    "project": "PROJ-2024-001",
+    "phase": null,
+    "title": "Design des maquettes",
+    "description": "Créer les maquettes de design pour les différentes pages",
+    "status": "En cours",
+    "assigned_to": [
+      "designer"
+    ],
+    "start_date": null,
+    "due_date": "2024-03-15",
+    "estimated_hours": null,
+    "actual_hours": "0.0",
+    "created_at": "2024-01-30T00:00:00Z",
+    "updated_at": "2024-01-30T00:00:00Z",
+    "executed_at": null,
+    "is_template": false,
+    "template_category": ""
+  }
+},
+{
+  "model": "projects.projectbudget",
+  "pk": 1,
+  "fields": {
+    "project": "PROJ-2024-001",
+    "production": "15000.00",
+    "personnel": "8000.00",
+    "marketing": "1500.00",
+    "other": "500.00"
+  }
+},
+{
+  "model": "projects.projectbudget",
+  "pk": 2,
+  "fields": {
+    "project": "PROJ-2024-002",
+    "production": "8000.00",
+    "personnel": "5000.00",
+    "marketing": "1500.00",
+    "other": "500.00"
+  }
+}
+]
