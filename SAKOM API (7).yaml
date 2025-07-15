@@ -4563,6 +4563,9 @@ components:
     PatchedProjectPhaseRequest:
       type: object
       properties:
+        project:
+          type: string
+          minLength: 1
         name:
           type: string
           minLength: 1
@@ -4588,6 +4591,12 @@ components:
     PatchedProjectTaskRequest:
       type: object
       properties:
+        project:
+          type: string
+          minLength: 1
+        phase:
+          type: integer
+          nullable: true
         title:
           type: string
           minLength: 1
@@ -4598,6 +4607,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/ProjectTaskStatusEnum'
           default: À faire
+        assigned_to:
+          type: integer
+          nullable: true
         start_date:
           type: string
           format: date
@@ -4611,10 +4623,6 @@ components:
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
           nullable: true
-        executed_at:
-          type: string
-          format: date-time
-          nullable: true
         is_template:
           type: boolean
           default: false
@@ -4623,15 +4631,6 @@ components:
           type: string
           description: Catégorie du modèle de tâche
           maxLength: 50
-        project:
-          type: string
-          minLength: 1
-        phase:
-          type: integer
-          nullable: true
-        assigned_to:
-          type: integer
-          nullable: true
     PatchedProjectUpdateRequest:
       type: object
       description: Sérialiseur pour la mise à jour d'un projet
@@ -4747,6 +4746,13 @@ components:
     PatchedTimeSheetRequest:
       type: object
       properties:
+        project:
+          type: string
+          minLength: 1
+        task:
+          type: integer
+        user:
+          type: integer
         date:
           type: string
           format: date
@@ -4756,13 +4762,6 @@ components:
           pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
         description:
           type: string
-        project:
-          type: string
-          minLength: 1
-        task:
-          type: integer
-        user:
-          type: integer
     PatchedUserRequest:
       type: object
       description: Sérialiseur pour les utilisateurs
@@ -4958,10 +4957,10 @@ components:
           type: string
           readOnly: true
         total_hours:
-          type: string
+          type: integer
           readOnly: true
         total_estimated_hours:
-          type: string
+          type: integer
           readOnly: true
         title:
           type: string
@@ -5142,10 +5141,10 @@ components:
           type: string
           maxLength: 200
         phase_count:
-          type: string
+          type: integer
           readOnly: true
         team_count:
-          type: string
+          type: integer
           readOnly: true
         current_phase:
           type: string
@@ -5165,13 +5164,10 @@ components:
         id:
           type: integer
           readOnly: true
-        user_details:
-          allOf:
-          - $ref: '#/components/schemas/User'
-          readOnly: true
-        total_hours:
+        project:
           type: string
-          readOnly: true
+        user:
+          type: integer
         role:
           $ref: '#/components/schemas/ProjectMemberRoleEnum'
         joined_at:
@@ -5187,11 +5183,13 @@ components:
           minimum: 0
           default: 100
           description: Pourcentage de temps alloué au projet
-        project:
-          type: string
-          readOnly: true
-        user:
+        total_hours:
           type: integer
+          readOnly: true
+        user_details:
+          allOf:
+          - $ref: '#/components/schemas/User'
+          readOnly: true
       required:
       - id
       - joined_at
@@ -5203,6 +5201,11 @@ components:
     ProjectMemberRequest:
       type: object
       properties:
+        project:
+          type: string
+          minLength: 1
+        user:
+          type: integer
         role:
           $ref: '#/components/schemas/ProjectMemberRoleEnum'
         is_active:
@@ -5214,9 +5217,8 @@ components:
           minimum: 0
           default: 100
           description: Pourcentage de temps alloué au projet
-        user:
-          type: integer
       required:
+      - project
       - role
       - user
     ProjectMemberRoleEnum:
@@ -5241,6 +5243,8 @@ components:
         id:
           type: integer
           readOnly: true
+        project:
+          type: string
         name:
           type: string
           maxLength: 100
@@ -5262,9 +5266,6 @@ components:
           maximum: 2147483647
           minimum: -2147483648
           default: 0
-        project:
-          type: string
-          readOnly: true
       required:
       - end_date
       - id
@@ -5274,6 +5275,9 @@ components:
     ProjectPhaseRequest:
       type: object
       properties:
+        project:
+          type: string
+          minLength: 1
         name:
           type: string
           minLength: 1
@@ -5299,6 +5303,7 @@ components:
       required:
       - end_date
       - name
+      - project
       - start_date
     ProjectTask:
       type: object
@@ -5306,15 +5311,11 @@ components:
         id:
           type: integer
           readOnly: true
-        completion_percentage:
+        project:
           type: string
-          readOnly: true
-        phase_name:
-          type: string
-          readOnly: true
-        assigned_to_name:
-          type: string
-          readOnly: true
+        phase:
+          type: integer
+          nullable: true
         title:
           type: string
           maxLength: 200
@@ -5324,6 +5325,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/ProjectTaskStatusEnum'
           default: À faire
+        assigned_to:
+          type: integer
+          nullable: true
         start_date:
           type: string
           format: date
@@ -5342,18 +5346,6 @@ components:
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
           readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-        executed_at:
-          type: string
-          format: date-time
-          nullable: true
         is_template:
           type: boolean
           default: false
@@ -5362,27 +5354,32 @@ components:
           type: string
           description: Catégorie du modèle de tâche
           maxLength: 50
-        project:
+        completion_percentage:
+          type: integer
+          readOnly: true
+        phase_name:
           type: string
-        phase:
-          type: integer
-          nullable: true
-        assigned_to:
-          type: integer
-          nullable: true
+          readOnly: true
+        assigned_to_name:
+          type: string
+          readOnly: true
       required:
       - actual_hours
       - assigned_to_name
       - completion_percentage
-      - created_at
       - id
       - phase_name
       - project
       - title
-      - updated_at
     ProjectTaskRequest:
       type: object
       properties:
+        project:
+          type: string
+          minLength: 1
+        phase:
+          type: integer
+          nullable: true
         title:
           type: string
           minLength: 1
@@ -5393,6 +5390,9 @@ components:
           allOf:
           - $ref: '#/components/schemas/ProjectTaskStatusEnum'
           default: À faire
+        assigned_to:
+          type: integer
+          nullable: true
         start_date:
           type: string
           format: date
@@ -5406,10 +5406,6 @@ components:
           format: decimal
           pattern: ^-?\d{0,4}(?:\.\d{0,1})?$
           nullable: true
-        executed_at:
-          type: string
-          format: date-time
-          nullable: true
         is_template:
           type: boolean
           default: false
@@ -5418,15 +5414,6 @@ components:
           type: string
           description: Catégorie du modèle de tâche
           maxLength: 50
-        project:
-          type: string
-          minLength: 1
-        phase:
-          type: integer
-          nullable: true
-        assigned_to:
-          type: integer
-          nullable: true
       required:
       - project
       - title
@@ -5778,18 +5765,12 @@ components:
         id:
           type: integer
           readOnly: true
-        user_name:
+        project:
           type: string
-          readOnly: true
-        validator_name:
-          type: string
-          readOnly: true
-        task_details:
-          type: string
-          readOnly: true
-        can_edit:
-          type: string
-          readOnly: true
+        task:
+          type: integer
+        user:
+          type: integer
         date:
           type: string
           format: date
@@ -5799,6 +5780,10 @@ components:
           pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
         description:
           type: string
+        validated_by:
+          type: integer
+          readOnly: true
+          nullable: true
         validated_at:
           type: string
           format: date-time
@@ -5812,34 +5797,27 @@ components:
           type: string
           format: date-time
           readOnly: true
-        project:
-          type: string
-        task:
-          type: integer
-        user:
-          type: integer
-        validated_by:
-          type: integer
-          readOnly: true
-          nullable: true
       required:
-      - can_edit
       - created_at
       - date
       - hours
       - id
       - project
       - task
-      - task_details
       - updated_at
       - user
-      - user_name
       - validated_at
       - validated_by
-      - validator_name
     TimeSheetRequest:
       type: object
       properties:
+        project:
+          type: string
+          minLength: 1
+        task:
+          type: integer
+        user:
+          type: integer
         date:
           type: string
           format: date
@@ -5849,13 +5827,6 @@ components:
           pattern: ^-?\d{0,3}(?:\.\d{0,1})?$
         description:
           type: string
-        project:
-          type: string
-          minLength: 1
-        task:
-          type: integer
-        user:
-          type: integer
       required:
       - date
       - hours

@@ -9,7 +9,6 @@ from datetime import timedelta, datetime
 from django.http import HttpResponse
 from rest_framework import serializers
 from notifications.models import Notification
-from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from .models import (
     Project, ProjectMember, ProjectPhase, ProjectTask, ProjectEvent, TimeSheet, Department
@@ -17,8 +16,7 @@ from .models import (
 from .serializers import (
     ProjectListSerializer, ProjectDetailSerializer, ProjectCreateSerializer,
     ProjectUpdateSerializer, ProjectMemberSerializer, ProjectPhaseSerializer,
-    ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer, DepartmentSerializer,
-    UserSerializer
+    ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer, DepartmentSerializer
 )
 from notifications.serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
@@ -214,6 +212,14 @@ class ProjectViewSet(viewsets.ModelViewSet):
             })
         
         return Response(alerts)
+
+    @action(detail=True)
+    def team(self, request, pk=None):
+        """Get project team members with their details"""
+        project = self.get_object()
+        team_members = project.project_members.select_related('user').all()
+        serializer = ProjectMemberSerializer(team_members, many=True, context={'request': request})
+        return Response(serializer.data)
 
 
 class ProjectPhaseViewSet(viewsets.ModelViewSet):

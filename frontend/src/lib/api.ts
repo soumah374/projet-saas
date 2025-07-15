@@ -1,6 +1,13 @@
 import axios from 'axios';
 import { config } from './config';
-import type { PaginatedResponse, ProjectType, ProjectStatus, ProjectPriority } from './types';
+import type { 
+    PaginatedResponse, 
+    ProjectType, 
+    ProjectStatus, 
+    ProjectPriority,
+    TeamMember,
+    ProjectPhase
+} from './types';
 
 export const api = axios.create({
     baseURL: config.api.baseUrl,
@@ -42,17 +49,6 @@ export interface Project {
     created_by: number;
     created_at: string;
     updated_at: string;
-}
-
-export interface ProjectPhase {
-    id: number;
-    project: string;
-    name: string;
-    description: string;
-    start_date: string;
-    end_date: string;
-    progress: number;
-    order: number;
 }
 
 export interface ProjectTask {
@@ -416,3 +412,46 @@ export const deleteEvent = (id: number) => api.delete(`/events/${id}/`);
 export const fetchUpcomingEvents = () => api.get('/events/upcoming/');
 
 export default api; 
+
+export const projectPhasesAPI = {
+    getProjectPhases: (projectId: string) => 
+        api.get<PaginatedResponse<ProjectPhase>>(`/projects/${projectId}/phases/`),
+    
+    createProjectPhase: (projectId: string, data: Omit<ProjectPhase, 'id'>) => 
+        api.post<ProjectPhase>(`/projects/${projectId}/phases/`, {
+            ...data,
+            project: projectId
+        }),
+    
+    updateProjectPhase: (projectId: string, phaseId: number, data: Partial<ProjectPhase>) => 
+        api.patch<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/`, data),
+    
+    deleteProjectPhase: (projectId: string, phaseId: number) => 
+        api.delete(`/projects/${projectId}/phases/${phaseId}/`),
+    
+    reorderProjectPhase: (projectId: string, phaseId: number, order: number) =>
+        api.post<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/reorder/`, { order }),
+};
+
+export const projectTeamAPI = {
+    getProjectTeam: (projectId: string) => 
+        api.get<PaginatedResponse<TeamMember>>(`/projects/${projectId}/team/`),
+    
+    addTeamMember: (projectId: string, data: {
+        user_id: number;
+        role: string;
+        allocation_percentage: number;
+    }) => api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
+    
+    updateTeamMember: (projectId: string, memberId: number, data: {
+        role?: string;
+        allocation_percentage?: number;
+        is_active?: boolean;
+    }) => api.patch<TeamMember>(`/projects/${projectId}/team/${memberId}/`, data),
+    
+    removeTeamMember: (projectId: string, memberId: number) => 
+        api.delete(`/projects/${projectId}/team/${memberId}/`),
+
+    applyTaskTemplate: (projectId: string, category: string) =>
+        api.post(`/projects/${projectId}/apply_template/`, { template_category: category }),
+}; 

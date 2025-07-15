@@ -1,16 +1,21 @@
-from rest_framework_nested import routers
 from django.urls import path, include
-from . import views
+from rest_framework.routers import DefaultRouter
+from rest_framework_nested import routers
+from .views import (
+    ProjectViewSet, ProjectPhaseViewSet, ProjectTaskViewSet,
+    ProjectEventViewSet, TimeSheetViewSet
+)
 
-# Router principal
-router = routers.DefaultRouter()
-router.register(r'', views.ProjectViewSet)
+# Create a router and register our viewsets with it.
+router = DefaultRouter()
+router.register(r'', ProjectViewSet, basename='project')
 
-# Router pour les ressources imbriquées
+# Create nested routers for project-related endpoints
 project_router = routers.NestedDefaultRouter(router, r'', lookup='project')
-project_router.register(r'phases', views.ProjectPhaseViewSet, basename='project-phases')
-project_router.register(r'tasks', views.ProjectTaskViewSet, basename='project-tasks')
-project_router.register(r'timesheets', views.TimeSheetViewSet, basename='project-timesheets')
+project_router.register(r'phases', ProjectPhaseViewSet, basename='project-phases')
+project_router.register(r'tasks', ProjectTaskViewSet, basename='project-tasks')
+project_router.register(r'events', ProjectEventViewSet, basename='project-events')
+project_router.register(r'timesheets', TimeSheetViewSet, basename='project-timesheets')
 
 urlpatterns = [
     path('', include(router.urls)),

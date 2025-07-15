@@ -18,7 +18,9 @@ import type {
   ProjectCategory, 
   ProjectStatus, 
   ProjectPriority, 
-  ProjectMemberRole 
+  ProjectMemberRole,
+  User,
+  Team
 } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useTeams } from '@/hooks/use-teams';
@@ -26,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import type { ExtendedProject } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface EditProjectModalProps {
   children: React.ReactNode;
@@ -115,24 +118,24 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   
   // Form data state
   const [formData, setFormData] = useState({
-    title: '',
-    type: undefined as ProjectType | undefined,
-    client: '',
-    description: '',
-    objectives: '',
-    budget: '',
+    title: project.title || '',
+    type: project.type as ProjectType,
+    client: project.client || '',
+    description: project.description || '',
+    objectives: project.objectives || '',
+    budget: project.budget || '',
     budgetDetails: {
-      production: '',
-      personnel: '',
-      marketing: '',
-      other: ''
+      production: project.budget_details?.production || '',
+      personnel: project.budget_details?.personnel || '',
+      marketing: project.budget_details?.marketing || '',
+      other: project.budget_details?.other || ''
     },
-    deadline: undefined as Date | undefined,
-    startDate: undefined as Date | undefined,
-    priority: 'Normale' as ProjectPriority,
-    status: 'Planification' as ProjectStatus,
-    category: undefined as ProjectCategory | undefined,
-    tags: [] as string[]
+    deadline: project.deadline ? parseISO(project.deadline) : undefined,
+    startDate: project.start_date ? parseISO(project.start_date) : undefined,
+    priority: project.priority as ProjectPriority,
+    status: project.status as ProjectStatus,
+    category: project.category as ProjectCategory,
+    tags: Array.isArray(project.tags) ? project.tags : []
   });
 
   // Team management state
@@ -162,18 +165,18 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   });
 
   // Form options
-  const projectTypes = ['Événementiel', 'Communication', 'Audiovisuel', 'Production', 'Digital', 'Conseil'];
-  const priorities = ['Basse', 'Normale', 'Haute', 'Urgente'];
-  const statuses = ['Planification', 'En cours', 'Production', 'En pause', 'Terminé'];
-  const categories = ['Corporate', 'Marketing', 'Institutionnel', 'Commercial', 'Interne'];
-  const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'];
+  const projectTypes = ['Externe', 'Interne'] as const;
+  const priorities = ['Basse', 'Normale', 'Haute', 'Urgente'] as const;
+  const statuses = ['Prospection', 'Devis', 'Production', 'Livraison', 'Terminé'] as const;
+  const categories = ['Corporate', 'Marketing', 'Institutionnel', 'Commercial', 'Interne'] as const;
+  const memberRoles = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'] as const;
 
   // Initialize form data with project values
   useEffect(() => {
     if (project && open) {
       setFormData({
         title: project.title || '',
-        type: project.type,
+        type: project.type as ProjectType,
         client: project.client || '',
         description: project.description || '',
         objectives: project.objectives || '',
@@ -186,9 +189,9 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
         },
         deadline: project.deadline ? parseISO(project.deadline) : undefined,
         startDate: project.start_date ? parseISO(project.start_date) : undefined,
-        priority: project.priority,
-        status: project.status,
-        category: project.category,
+        priority: project.priority as ProjectPriority,
+        status: project.status as ProjectStatus,
+        category: project.category as ProjectCategory,
         tags: Array.isArray(project.tags) ? project.tags : []
       });
 
@@ -350,7 +353,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
     if (project) {
       setFormData({
         title: project.title || '',
-        type: project.type,
+        type: project.type as ProjectType,
         client: project.client || '',
         description: project.description || '',
         objectives: project.objectives || '',
@@ -363,9 +366,9 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
         },
         deadline: project.deadline ? parseISO(project.deadline) : undefined,
         startDate: project.start_date ? parseISO(project.start_date) : undefined,
-        priority: project.priority,
-        status: project.status,
-        category: project.category,
+        priority: project.priority as ProjectPriority,
+        status: project.status as ProjectStatus,
+        category: project.category as ProjectCategory,
         tags: Array.isArray(project.tags) ? project.tags : []
       });
 

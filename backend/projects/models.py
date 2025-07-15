@@ -72,6 +72,7 @@ class Project(models.Model):
         return f"{self.id} - {self.title}"
     
     def save(self, *args, **kwargs):
+        is_new = not self.pk
         if not self.id:
             # Générer un ID unique
             year = timezone.now().year
@@ -82,13 +83,76 @@ class Project(models.Model):
             else:
                 new_number = 1
             self.id = f'PROJ-{year}-{new_number:03d}'
+        
         super().save(*args, **kwargs)
+        
+        # Create default phases for new projects
+        if is_new and self.start_date and self.deadline:
+            total_days = (self.deadline - self.start_date).days
+            prospection_days = total_days * 0.2  # 20% du temps
+            devis_days = total_days * 0.1       # 10% du temps
+            production_days = total_days * 0.6   # 60% du temps
+            livraison_days = total_days * 0.1    # 10% du temps
+            
+            phases = [
+                {
+                    'name': 'Prospection',
+                    'description': 'Phase de prospection et analyse des besoins',
+                    'start_date': self.start_date,
+                    'end_date': self.start_date + timezone.timedelta(days=int(prospection_days)),
+                    'order': 1
+                },
+                {
+                    'name': 'Devis',
+                    'description': 'Préparation et négociation du devis',
+                    'start_date': self.start_date + timezone.timedelta(days=int(prospection_days)),
+                    'end_date': self.start_date + timezone.timedelta(days=int(prospection_days + devis_days)),
+                    'order': 2
+                },
+                {
+                    'name': 'Production',
+                    'description': 'Phase de production et réalisation',
+                    'start_date': self.start_date + timezone.timedelta(days=int(prospection_days + devis_days)),
+                    'end_date': self.start_date + timezone.timedelta(days=int(prospection_days + devis_days + production_days)),
+                    'order': 3
+                },
+                {
+                    'name': 'Livraison',
+                    'description': 'Phase de livraison et finalisation',
+                    'start_date': self.start_date + timezone.timedelta(days=int(prospection_days + devis_days + production_days)),
+                    'end_date': self.deadline,
+                    'order': 4
+                }
+            ]
+            
+            # Create phases
+            for phase_data in phases:
+                ProjectPhase.objects.create(
+                    project=self,
+                    **phase_data
+                )
     
     def get_total_allocated_time(self):
         """Calcule le temps total alloué en pourcentage"""
         return self.project_members.aggregate(
             total=Sum('allocation_percentage')
         )['total'] or 0
+        
+    def create_from_template(self, template_category):
+        """Crée les tâches standard à partir des modèles"""
+        template_tasks = ProjectTask.objects.filter(
+            is_template=True,
+            template_category=template_category
+        )
+        
+        for template in template_tasks:
+            ProjectTask.objects.create(
+                project=self,
+                title=template.title,
+                description=template.description,
+                estimated_hours=template.estimated_hours,
+                status='À faire'
+            )
 
 
 class ProjectMember(models.Model):

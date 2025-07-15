@@ -28,18 +28,20 @@ interface ProjectCalendarProps {
 }
 
 // Ajout des types depuis le backend
+interface User {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+}
+
 interface ProjectTask {
   id: number;
   title: string;
   description: string;
   status: 'À faire' | 'En cours' | 'Terminé' | 'En pause';
-  assigned_to: {
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  } | null;
+  assigned_to: User | null;
   start_date: string | null;
   due_date: string | null;
   created_at: string;
@@ -55,31 +57,27 @@ interface ProjectEvent {
   start_time: string;
   end_time: string;
   location: string;
-  participants: {
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-  }[];
+  participants: User[];
+  created_by: User;
   created_at: string;
   updated_at: string;
 }
 
-export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
+interface ApiResponse<T> {
+  results: T[];
+  error?: string;
+}
 
+export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
   // 1. State hooks
   const [viewMode, setViewMode] = useState<'month' | 'week' | 'agenda' | 'gantt'>('month');
   const [filterType, setFilterType] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [selectedEvent, setSelectedEvent] = useState<ProjectEvent | null>(null);
 
   // 2. Data fetching
-  const { data: projectsData, isLoading: isLoadingProjects, error: projectsError } = useProjects(
-    undefined,
-    queryOptions
-  );
+  const { data: projectsData, isLoading: isLoadingProjects, error: projectsError } = useProjects();
 
   // 3. Derived state
   const activeProjects = useMemo(() => {
@@ -91,18 +89,27 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
 
   const projectIds = useMemo(() => activeProjects.map(project => project.id), [activeProjects]);
 
-  // 4. Task and Event queries - moved outside useMemo
-  const { data: tasks, isLoading: isLoadingTasks } = useProjectTasks(project?.id, undefined, queryOptions);
-  const { data: events, isLoading: isLoadingEvents } = useProjectEvents(project?.id, queryOptions);
+  // 4. Task and Event queries
+  const { data: tasksData, isLoading: isLoadingTasks, error: tasksError } = useProjectTasks(project?.id) as { 
+    data: ApiResponse<ProjectTask>, 
+    isLoading: boolean,
+    error?: string 
+  };
+
+  const { data: eventsData, isLoading: isLoadingEvents, error: eventsError } = useProjectEvents(project?.id) as {
+    data: ApiResponse<ProjectEvent>,
+    isLoading: boolean,
+    error?: string
+  };
 
   // 5. Events processing
   const allEvents = useMemo(() => {
-    if (!project?.id || !tasks?.results || !events?.results) return [];
+    if (!project?.id || !tasksData?.results || !eventsData?.results) return [];
     
     const eventsList: Event[] = [];
     
     // Add tasks with due dates
-    tasks.results
+    tasksData.results
       .filter((task: ProjectTask) => task.due_date)
       .forEach((task: ProjectTask) => {
         const now = new Date();
@@ -136,7 +143,7 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
       });
 
     // Add events
-    events.results.forEach((event: ProjectEvent) => {
+    eventsData.results.forEach((event: ProjectEvent) => {
       const startTime = new Date(`${event.date}T${event.start_time}`);
       const endTime = new Date(`${event.date}T${event.end_time}`);
       const durationInMinutes = Math.max(
@@ -162,13 +169,13 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
     });
 
     return eventsList;
-  }, [tasks?.results, events?.results, project?.id]);
+  }, [tasksData?.results, eventsData?.results, project?.id]);
 
   const filteredEvents = useMemo(() => {
     return allEvents.filter(event => {
       const matchesType = filterType === 'all' || event.type === filterType;
       const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           event.project.toLowerCase().includes(searchTerm.toLowerCase());
+                           event.project.toString().toLowerCase().includes(searchTerm.toLowerCase());
       return matchesType && matchesSearch;
     });
   }, [allEvents, filterType, searchTerm]);
@@ -176,14 +183,14 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
   const stats = useMemo(() => getEventStats(allEvents), [allEvents]);
 
   // Vérifier s'il y a des erreurs dans les requêtes
-  const taskErrors = isLoadingTasks ? [] : [tasks?.error].filter(Boolean);
-  const eventErrors = isLoadingEvents ? [] : [events?.error].filter(Boolean);
+  const taskErrors = isLoadingTasks ? [] : [tasksError].filter(Boolean);
+  const eventErrors = isLoadingEvents ? [] : [eventsError].filter(Boolean);
 
   // Gérer les événements du calendrier
   const handleEventClick = (eventId: string) => {
     if (eventId.startsWith('event-')) {
       const id = parseInt(eventId.replace('event-', ''));
-      const event = events?.results.find((e: any) => e?.id === id);
+      const event = eventsData?.results.find((e: ProjectEvent) => e.id === id);
       
       if (event) {
         setSelectedEvent(event);

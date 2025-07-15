@@ -1,7 +1,7 @@
 // Configuration for the application
 export const config = {
     api: {
-        baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:8000',
+        baseUrl: (import.meta.env.VITE_API_URL || 'http://localhost:8000'),
         timeout: 10000,
     },
     app: {
@@ -12,4 +12,6 @@ export const config = {
         enableNotifications: true,
         enableRealTimeUpdates: false,
     },
-}; 
+};
+
+export const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:8000'); 

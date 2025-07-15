@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useProjectLifecycle } from '../hooks/use-project-lifecycle';
-import { ProjectPhase } from '../lib/api';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Progress } from './ui/progress';
@@ -13,7 +12,18 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+
+interface Phase {
+    id: number;
+    name: string;
+    description: string;
+    start_date: string;
+    end_date: string;
+    progress: number;
+    order: number;
+    project: string;
+}
 
 const phaseSchema = z.object({
     name: z.string().min(1, 'Le nom est requis'),
@@ -38,7 +48,7 @@ export function ProjectPhases({ projectId }: ProjectPhasesProps) {
     } = useProjectLifecycle(projectId);
     
     const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [selectedPhase, setSelectedPhase] = useState<ProjectPhase | null>(null);
+    const [selectedPhase, setSelectedPhase] = useState<Phase | null>(null);
     
     const form = useForm<PhaseFormData>({
         resolver: zodResolver(phaseSchema),
@@ -58,17 +68,22 @@ export function ProjectPhases({ projectId }: ProjectPhasesProps) {
                 end_date: format(data.end_date, 'yyyy-MM-dd'),
             });
         } else {
-            await createPhase({
-                ...data,
+            const newPhase: Omit<Phase, 'id'> = {
+                name: data.name,
+                description: data.description,
                 start_date: format(data.start_date, 'yyyy-MM-dd'),
                 end_date: format(data.end_date, 'yyyy-MM-dd'),
-            });
+                progress: 0,
+                order: phases.length,
+                project: projectId
+            };
+            await createPhase(newPhase);
         }
         setIsDialogOpen(false);
         form.reset();
     };
     
-    const handleEdit = (phase: ProjectPhase) => {
+    const handleEdit = (phase: Phase) => {
         setSelectedPhase(phase);
         form.reset({
             name: phase.name,
@@ -103,7 +118,7 @@ export function ProjectPhases({ projectId }: ProjectPhasesProps) {
                             Ajouter une phase
                         </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="sm:max-w-[700px]" style={{ zIndex: 9999, pointerEvents: 'auto' }}>
                         <DialogHeader>
                             <DialogTitle>
                                 {selectedPhase ? 'Modifier la phase' : 'Nouvelle phase'}

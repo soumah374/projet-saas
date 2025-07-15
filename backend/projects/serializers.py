@@ -2,23 +2,19 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db import models
+from drf_spectacular.utils import extend_schema_field
 from .models import (
-    Project, ProjectMember, ProjectPhase, ProjectTask, TimeSheet, ProjectEvent
+    Project, ProjectMember, ProjectPhase, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget
 )
 from departments.serializers import DepartmentSerializer
-
-
-class UserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+from users.serializers import UserSerializer  # Import UserSerializer from users app
 
 
 class ProjectPhaseSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProjectPhase
-        fields = '__all__'
-        read_only_fields = ['project']
+        fields = ['id', 'project', 'name', 'description', 'start_date', 'end_date', 'progress', 'order']
+        read_only_fields = ['id']
 
 
 class TimeSheetSerializer(serializers.ModelSerializer):
@@ -32,12 +28,15 @@ class TimeSheetSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['validated_by', 'validated_at', 'user_name', 'validator_name', 'can_edit']
     
+    @extend_schema_field(str)
     def get_user_name(self, obj):
         return obj.user.get_full_name() if obj.user else None
     
+    @extend_schema_field(str)
     def get_validator_name(self, obj):
         return obj.validated_by.get_full_name() if obj.validated_by else None
     
+    @extend_schema_field(dict)
     def get_task_details(self, obj):
         return {
             'id': obj.task.id,
@@ -45,6 +44,7 @@ class TimeSheetSerializer(serializers.ModelSerializer):
             'status': obj.task.status
         } if obj.task else None
     
+    @extend_schema_field(bool)
     def get_can_edit(self, obj):
         request = self.context.get('request')
         if request and hasattr(request, 'user'):
@@ -119,15 +119,23 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ProjectTask
-        fields = '__all__'
-        read_only_fields = ['actual_hours']
+        fields = [
+            'id', 'project', 'phase', 'title', 'description', 'status',
+            'assigned_to', 'start_date', 'due_date', 'estimated_hours',
+            'actual_hours', 'is_template', 'template_category',
+            'completion_percentage', 'phase_name', 'assigned_to_name'
+        ]
+        read_only_fields = ['id', 'actual_hours']
     
+    @extend_schema_field(int)
     def get_completion_percentage(self, obj):
         return obj.get_completion_percentage()
     
+    @extend_schema_field(str)
     def get_phase_name(self, obj):
         return obj.phase.name if obj.phase else None
     
+    @extend_schema_field(str)
     def get_assigned_to_name(self, obj):
         return obj.assigned_to.get_full_name() if obj.assigned_to else None
 
@@ -138,9 +146,10 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ProjectMember
-        fields = '__all__'
-        read_only_fields = ['project']
+        fields = ['id', 'project', 'user', 'role', 'joined_at', 'is_active', 'allocation_percentage', 'total_hours', 'user_details']
+        read_only_fields = ['id', 'joined_at']
     
+    @extend_schema_field(int)
     def get_total_hours(self, obj):
         return obj.user.timesheets.filter(project=obj.project).aggregate(
             total=models.Sum('hours')
@@ -179,12 +188,15 @@ class ProjectListSerializer(serializers.ModelSerializer):
             'phase_count', 'team_count', 'current_phase'
         ]
     
+    @extend_schema_field(int)
     def get_phase_count(self, obj):
         return obj.phases.count()
     
+    @extend_schema_field(int)
     def get_team_count(self, obj):
         return obj.team_members.count()
     
+    @extend_schema_field(str)
     def get_current_phase(self, obj):
         current_phase = obj.phases.filter(
             start_date__lte=timezone.now().date(),
@@ -207,12 +219,15 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
         model = Project
         fields = '__all__'
     
+    @extend_schema_field(str)
     def get_created_by_name(self, obj):
         return obj.created_by.get_full_name() if obj.created_by else None
     
+    @extend_schema_field(int)
     def get_total_hours(self, obj):
         return obj.timesheets.aggregate(total=models.Sum('hours'))['total'] or 0
     
+    @extend_schema_field(int)
     def get_total_estimated_hours(self, obj):
         return obj.tasks.aggregate(
             total=models.Sum('estimated_hours')
@@ -298,3 +313,35 @@ class ProjectEventSerializer(serializers.ModelSerializer):
         """Créer un événement avec l'utilisateur connecté"""
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data) 
+
+class ProjectBudgetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectBudget
+        fields = ['id', 'project', 'production', 'personnel', 'marketing', 'other', 'total']
+        read_only_fields = ['id', 'total']
+
+class TimeSheetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TimeSheet
+        fields = [
+            'id', 'project', 'task', 'user', 'date', 'hours',
+            'description', 'validated_by', 'validated_at',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'validated_by', 'validated_at', 'created_at', 'updated_at']
+
+class ProjectSerializer(serializers.ModelSerializer):
+    phases = ProjectPhaseSerializer(many=True, read_only=True)
+    team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
+    budget_details = ProjectBudgetSerializer(read_only=True)
+    
+    class Meta:
+        model = Project
+        fields = [
+            'id', 'title', 'description', 'objectives', 'type',
+            'status', 'priority', 'start_date', 'deadline',
+            'progress', 'budget', 'client', 'created_by',
+            'contract', 'tags', 'phases', 'team_members',
+            'budget_details', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at'] 
