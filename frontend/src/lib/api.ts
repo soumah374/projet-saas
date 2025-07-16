@@ -16,18 +16,35 @@ export const api = axios.create({
     },
 });
 
+export const handleLogout = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+};
+
 // Intercepteur pour ajouter le token d'authentification
 api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Intercepteur pour gérer les réponses
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error);
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
+    return Promise.reject(error);
+  }
 );
 
 // Types
@@ -214,22 +231,16 @@ export const projectMembersAPI = {
 };
 
 export const projectTasksAPI = {
-    getProjectTasks: (projectId: string, params?: {
-        status?: string;
-        assigned_to?: number;
-        ordering?: string;
-        page?: number;
-    }) => api.get(`/projects/${projectId}/tasks/`, { params }),
-    createProjectTask: (projectId: string, data: any) => 
-        api.post(`/projects/${projectId}/tasks/`, data),
-    updateProjectTask: (projectId: string, taskId: number, data: any) => 
-        api.patch(`/projects/${projectId}/tasks/${taskId}/`, data),
-    deleteProjectTask: (projectId: string, taskId: number) => 
+    getProjectTasks: (projectId: string) => 
+        api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
+    createTask: (projectId: string, data: any) => 
+        api.post<ProjectTask>(`/projects/${projectId}/tasks/`, data),
+    updateTask: (projectId: string, taskId: number, data: any) => 
+        api.patch<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, data),
+    deleteTask: (projectId: string, taskId: number) => 
         api.delete(`/projects/${projectId}/tasks/${taskId}/`),
-    updateTaskStatus: (projectId: string, taskId: number, status: string) => 
-        api.post(`/projects/${projectId}/tasks/${taskId}/update-status/`, { status }),
-    executeTask: (projectId: string, taskId: number) => 
-        api.post(`/projects/${projectId}/tasks/${taskId}/execute/`)
+    applyTaskTemplate: (projectId: string, category: string) =>
+        api.post<void>(`/projects/${projectId}/tasks/create_from_template/`, { category })
 };
 
 export const notificationsAPI = {
@@ -435,23 +446,14 @@ export const projectPhasesAPI = {
 
 export const projectTeamAPI = {
     getProjectTeam: (projectId: string) => 
-        api.get<PaginatedResponse<TeamMember>>(`/projects/${projectId}/team/`),
-    
-    addTeamMember: (projectId: string, data: {
-        user_id: number;
-        role: string;
-        allocation_percentage: number;
-    }) => api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
-    
-    updateTeamMember: (projectId: string, memberId: number, data: {
-        role?: string;
-        allocation_percentage?: number;
-        is_active?: boolean;
-    }) => api.patch<TeamMember>(`/projects/${projectId}/team/${memberId}/`, data),
-    
+        api.get<TeamMember>(`/projects/${projectId}/team/`),
+    addTeamMember: (projectId: string, data: { user: string; role: string; allocation_percentage: number }) => 
+        api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
+    updateTeamMember: (projectId: string, memberId: number, data: { role?: string; allocation_percentage?: number }) => 
+        api.patch<TeamMember>(`/projects/${projectId}/team/${memberId}/`, data),
     removeTeamMember: (projectId: string, memberId: number) => 
         api.delete(`/projects/${projectId}/team/${memberId}/`),
-
-    applyTaskTemplate: (projectId: string, category: string) =>
-        api.post(`/projects/${projectId}/apply_template/`, { template_category: category }),
+    getUserAllocation: (userId: string) => 
+        api.get<{ total_allocation: number }>(`/projects/team/user/${userId}/allocation/`)
+    
 }; 

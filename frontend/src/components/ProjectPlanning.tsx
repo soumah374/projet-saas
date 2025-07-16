@@ -1,33 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Progress } from '@/components/ui/progress';
-import { Calendar } from '@/components/ui/calendar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { AlertCircle, Users, Calendar as CalendarIcon, Plus, X } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, Plus, X, Search } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
+import { useProjectTasks } from '@/hooks/use-projects';
 import { ProjectPhases } from './ProjectPhases';
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import { TaskModal } from './TaskModal';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
 interface ProjectPlanningProps {
   projectId: string;
 }
 
 const teamMemberSchema = z.object({
+  project: z.string().min(1, 'Sélectionnez un projet'),
   user: z.string().min(1, 'Sélectionnez un utilisateur'),
   role: z.string().min(1, 'Sélectionnez un rôle'),
-  allocation_percentage: z.number().min(1).max(100)
+  allocation_percentage: z.number().min(1, { message: "L'allocation doit être supérieure à 0%" }).max(100, { message: "L'allocation ne peut pas dépasser 100%" })
 });
 
 const roleOptions = [
@@ -38,40 +39,64 @@ const roleOptions = [
   'Consultant',
   'Assistant'
 ];
+const templateOptions = [
+  'Événementiel',
+  'Communication',
+  'Audiovisuel',
+  'Production',
+  'Digital',
+  'Conseil'
+];
 
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [activeTab, setActiveTab] = useState('phases');
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   
   const { 
     phases,
     teamMembers,
     addTeamMember,
     removeTeamMember,
-    updateTeamMember,
     applyTaskTemplate,
-    loading 
+    loading,
+    checkUserAllocation
   } = useProjectLifecycle(projectId);
   
   const { data: users } = useUsers();
+  const { data: tasks } = useProjectTasks(projectId);
   
-  const form = useForm({
+  const form = useForm<z.infer<typeof teamMemberSchema>>({
     resolver: zodResolver(teamMemberSchema),
     defaultValues: {
+      project: projectId,
       user: '',
       role: '',
       allocation_percentage: 100
     }
   });
   
-  const handleAddTeamMember = async (data: any) => {
+  const handleAddTeamMember = async (data: z.infer<typeof teamMemberSchema>) => {
     try {
       await addTeamMember(data);
       setIsTeamDialogOpen(false);
       form.reset();
-    } catch (error) {
-      console.error('Error adding team member:', error);
+    } catch (error: any) {
+      if (error.response?.data?.error) {
+        // Handle specific backend error messages
+        form.setError('allocation_percentage', {
+          type: 'manual',
+          message: error.response.data.error
+        });
+      } else {
+        console.error('Error adding team member:', error);
+        form.setError('allocation_percentage', {
+          type: 'manual',
+          message: "Une erreur s'est produite lors de l'ajout du membre"
+        });
+      }
     }
   };
   
@@ -84,6 +109,34 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       console.error('Error applying template:', error);
     }
   };
+
+  const filteredTasks = tasks?.results?.filter(task => {
+    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [currentAllocation, setCurrentAllocation] = useState<number | null>(null);
+
+  const handleUserChange = async (userId: string) => {
+    form.setValue('user', userId);
+    setSelectedUser(userId);
+    try {
+      const allocation = await checkUserAllocation(userId);
+      setCurrentAllocation(allocation);
+      form.setValue('allocation_percentage', allocation);
+      if (allocation > 0) {
+        form.setError('allocation_percentage', {
+          type: 'info',
+          message: `Allocation actuelle: ${allocation}%`
+        });
+      }
+    } catch (error) {
+      console.error('Error checking user allocation:', error);
+    }
+  };
   
   return (
     <Card className="w-full">
@@ -92,14 +145,113 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="phases">Phases</TabsTrigger>
+            <TabsTrigger value="tasks">Tâches</TabsTrigger>
             <TabsTrigger value="team">Équipe</TabsTrigger>
             <TabsTrigger value="templates">Tâches standards</TabsTrigger>
           </TabsList>
           
           <TabsContent value="phases" className="space-y-4">
             <ProjectPhases projectId={projectId} />
+          </TabsContent>
+
+          <TabsContent value="tasks" className="space-y-4">
+            <div className="flex justify-between items-center mb-4">
+              <div className="flex-1 flex gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Rechercher une tâche..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="À faire">À faire</SelectItem>
+                    <SelectItem value="En cours">En cours</SelectItem>
+                    <SelectItem value="En pause">En pause</SelectItem>
+                    <SelectItem value="Terminé">Terminé</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <TaskModal projectId={projectId} mode="create">
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouvelle tâche
+                </Button>
+              </TaskModal>
+            </div>
+
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-4">
+                {filteredTasks?.map((task) => {
+                  const extendedTask = {
+                    ...task,
+                    assigned_to: task.assigned_to_name ? {
+                      id: task.assigned_to as number,
+                      first_name: task.assigned_to_name.split(' ')[0],
+                      last_name: task.assigned_to_name.split(' ')[1] || '',
+                      email: '',
+                      username: '',
+                      profile: {
+                        is_active: true,
+                        created_at: '',
+                        updated_at: ''
+                      },
+                      full_name: task.assigned_to_name,
+                      project_count: '0',
+                      is_active: true
+                    } : null
+                  };
+                  
+                  return (
+                    <Card key={task.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium">{task.title}</h3>
+                              <Badge variant={task.status === 'Terminé' ? 'default' : 'secondary'}>
+                                {task.status}
+                              </Badge>
+                            </div>
+                            {task.description && (
+                              <p className="text-sm text-gray-500">{task.description}</p>
+                            )}
+                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                              {task.assigned_to_name && (
+                                <div className="flex items-center gap-1">
+                                  <Users className="h-4 w-4" />
+                                  <span>{task.assigned_to_name}</span>
+                                </div>
+                              )}
+                              {task.due_date && (
+                                <div className="flex items-center gap-1">
+                                  <CalendarIcon className="h-4 w-4" />
+                                  <span>{format(new Date(task.due_date), 'dd MMM yyyy', { locale: fr })}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <TaskModal projectId={projectId} task={extendedTask} mode="edit">
+                            <Button variant="ghost" size="icon">
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </TaskModal>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </ScrollArea>
           </TabsContent>
           
           <TabsContent value="team" className="space-y-4">
@@ -116,57 +268,91 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                   <DialogHeader>
                     <DialogTitle>Ajouter un membre à l'équipe</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={form.handleSubmit(handleAddTeamMember)} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Membre</Label>
-                      <Select
-                        onValueChange={(value) => form.setValue('user', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un membre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users?.data?.results?.map((user: any) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.first_name} {user.last_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Rôle</Label>
-                      <Select
-                        onValueChange={(value) => form.setValue('role', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un rôle" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {roleOptions.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label>Allocation (%)</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="100"
-                        {...form.register('allocation_percentage', { valueAsNumber: true })}
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(handleAddTeamMember)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="user"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Membre</FormLabel>
+                            <Select 
+                              onValueChange={handleUserChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionner un membre" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {users?.data?.results?.map((user: any) => (
+                                  <SelectItem key={user.id} value={user.id.toString()}>
+                                    {user.first_name} {user.last_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                            {currentAllocation !== null && (
+                              <p className="text-sm text-gray-500">
+                                Allocation actuelle: {currentAllocation}%
+                              </p>
+                            )}
+                          </FormItem>
+                        )}
                       />
-                    </div>
-                    
-                    <Button type="submit" className="w-full">
-                      Ajouter
-                    </Button>
-                  </form>
+                      
+                      <FormField
+                        control={form.control}
+                        name="role"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Rôle</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionner un rôle" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {roleOptions.map((role) => (
+                                  <SelectItem key={role} value={role}>
+                                    {role}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="allocation_percentage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Allocation (%)</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                inputMode="numeric"
+                                pattern="[0-9]*"
+                                placeholder="100"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <Button type="submit" className="w-full">
+                        Ajouter
+                      </Button>
+                    </form>
+                  </Form>
                 </DialogContent>
               </Dialog>
             </div>
@@ -202,41 +388,31 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
               </div>
             </ScrollArea>
           </TabsContent>
-          
+
           <TabsContent value="templates" className="space-y-4">
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Catégorie de tâches</Label>
-                <Select
-                  value={selectedTemplateCategory}
-                  onValueChange={setSelectedTemplateCategory}
-                >
-                  <SelectTrigger>
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Tâches standards</h3>
+                <Select value={selectedTemplateCategory} onValueChange={setSelectedTemplateCategory}>
+                  <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Sélectionner une catégorie" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Événementiel">Événementiel</SelectItem>
-                    <SelectItem value="Communication">Communication</SelectItem>
-                    <SelectItem value="Production">Production</SelectItem>
-                    <SelectItem value="Digital">Digital</SelectItem>
+                    {templateOptions.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
               
-              <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Les tâches standards seront créées selon le modèle sélectionné.
-                  Vous pourrez ensuite les personnaliser selon vos besoins.
-                </AlertDescription>
-              </Alert>
-              
-              <Button
+              <Button 
                 onClick={handleApplyTemplate}
                 disabled={!selectedTemplateCategory}
                 className="w-full"
               >
-                Appliquer le modèle
+                Appliquer le template
               </Button>
             </div>
           </TabsContent>

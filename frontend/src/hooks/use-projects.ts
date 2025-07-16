@@ -130,7 +130,7 @@ export function useDeleteProject() {
 export function useProjectTasks(projectId: string) {
   return useQuery({
     queryKey: ['project-tasks', projectId],
-    queryFn: () => apiRequest<ProjectTask[]>(`/${projectId}/tasks/`),
+    queryFn: () => apiRequest<PaginatedResponse<ProjectTask>>(`/${projectId}/tasks/`),
     enabled: !!projectId,
   });
 }

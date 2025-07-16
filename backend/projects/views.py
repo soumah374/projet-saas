@@ -221,6 +221,24 @@ class ProjectViewSet(viewsets.ModelViewSet):
         serializer = ProjectMemberSerializer(team_members, many=True, context={'request': request})
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], url_path='team/user/(?P<user_id>[^/.]+)/allocation')
+    def get_user_allocation(self, request, user_id=None):
+        """Obtenir l'allocation totale d'un utilisateur"""
+        try:
+            total_allocation = ProjectMember.objects.filter(
+                user_id=user_id,
+                is_active=True
+            ).aggregate(total=Sum('allocation_percentage'))['total'] or 0
+            
+            return Response({
+                'total_allocation': total_allocation
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
 
 class ProjectPhaseViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des phases de projet"""
@@ -482,10 +500,10 @@ class ProjectEventViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectEventSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['type', 'date']
+    filterset_fields = ['event_type', 'start_date', 'end_date']
     search_fields = ['title', 'description', 'location']
-    ordering_fields = ['date', 'start_time', 'created_at']
-    ordering = ['date', 'start_time']
+    ordering_fields = ['start_date', 'end_date', 'created_at']
+    ordering = ['start_date', 'end_date']
     
     def get_queryset(self):
         """Filtrer selon le projet"""
@@ -510,26 +528,26 @@ class ProjectEventViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class NotificationViewSet(viewsets.ModelViewSet):
-    """ViewSet pour la gestion des notifications"""
+# class NotificationViewSet(viewsets.ModelViewSet):
+#     """ViewSet pour la gestion des notifications"""
     
-    serializer_class = NotificationSerializer
-    permission_classes = [IsAuthenticated]
+#     serializer_class = NotificationSerializer
+#     permission_classes = [IsAuthenticated]
     
-    def get_queryset(self):
-        """Retourner uniquement les notifications de l'utilisateur connecté"""
-        return Notification.objects.filter(user=self.request.user)
+#     def get_queryset(self):
+#         """Retourner uniquement les notifications de l'utilisateur connecté"""
+#         return Notification.objects.filter(user=self.request.user)
     
-    @action(detail=False, methods=['post'])
-    def mark_all_read(self, request):
-        """Marquer toutes les notifications comme lues"""
-        self.get_queryset().update(is_read=True)
-        return Response(status=status.HTTP_200_OK)
+#     @action(detail=False, methods=['post'])
+#     def mark_all_read(self, request):
+#         """Marquer toutes les notifications comme lues"""
+#         self.get_queryset().update(is_read=True)
+#         return Response(status=status.HTTP_200_OK)
     
-    @action(detail=True, methods=['post'])
-    def mark_read(self, request, pk=None):
-        """Marquer une notification comme lue"""
-        notification = self.get_object()
-        notification.is_read = True
-        notification.save()
-        return Response(status=status.HTTP_200_OK)
+#     @action(detail=True, methods=['post'])
+#     def mark_read(self, request, pk=None):
+#         """Marquer une notification comme lue"""
+#         notification = self.get_object()
+#         notification.is_read = True
+#         notification.save()
+#         return Response(status=status.HTTP_200_OK)

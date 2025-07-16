@@ -6,22 +6,25 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { FileText, User, Loader2, Edit, Plus, Eye } from 'lucide-react';
+import { FileText, User as UserIcon, Loader2, Edit, Plus, Eye, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ProjectTask, ProjectTaskStatus } from '@/lib/types';
+import { ProjectTask, ProjectTaskStatus, User, PaginatedResponse, UserList } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask, useExecuteTask } from '@/hooks/use-projects';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
+interface ExtendedProjectTask extends Omit<ProjectTask, 'assigned_to'> {
+  assigned_to?: UserList | null;
+}
+
 interface TaskModalProps {
   children: React.ReactNode;
-  task?: ProjectTask;
+  task?: ExtendedProjectTask;
   projectId: string;
   onTaskSave?: (taskData: CreateTaskData | UpdateTaskData) => void;
   mode: 'create' | 'edit' | 'view';
@@ -34,6 +37,7 @@ export interface CreateTaskData {
   assigned_to_id?: number;
   start_date?: string;
   due_date: string;
+  project: string;
 }
 
 export interface UpdateTaskData extends CreateTaskData {
@@ -92,13 +96,15 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     status: 'À faire',
     assigned_to_id: '',
     start_date: undefined as Date | undefined,
-    due_date: undefined as Date | undefined
+    due_date: undefined as Date | undefined,
+    project: projectId,
   });
 
-  const { data: users, isLoading: usersLoading } = useUsers({
+  const { data: usersResponse, isLoading: usersLoading } = useUsers({
     is_active: true,
     ordering: 'first_name'
   });
+  const users = usersResponse?.data;
 
   const taskStatuses = ['À faire', 'En cours', 'En pause', 'Terminé'];
 
@@ -115,12 +121,14 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       assigned_to_id: task.assigned_to?.id,
       start_date: task.start_date,
       due_date: task.due_date,
+      project: projectId,
     } : {
       title: '',
       description: '',
       status: 'À faire',
       start_date: '',
       due_date: '',
+      project: projectId,
     }
   });
 
@@ -132,7 +140,8 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
         status: task?.status || 'À faire',
         assigned_to_id: task?.assigned_to?.id?.toString() || '',
         start_date: task?.start_date ? new Date(task.start_date) : undefined,
-        due_date: task?.due_date ? new Date(task.due_date) : undefined
+        due_date: task?.due_date ? new Date(task.due_date) : undefined,
+        project: projectId,
       });
       setFormKey(prev => prev + 1);
     }
@@ -140,8 +149,11 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!onTaskSave) return;
+
+    console.log(onTaskSave)
+    console.log(onTaskSave)
+     
+    // if (!onTaskSave) return;
     
     if (!formData.title.trim()) {
       alert('Le titre de la tâche est requis');
@@ -179,6 +191,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       assigned_to_id: formData.assigned_to_id ? parseInt(formData.assigned_to_id) : undefined,
       start_date: formData.start_date ? format(formData.start_date, 'yyyy-MM-dd') : undefined,
       due_date: format(formData.due_date, 'yyyy-MM-dd'),
+      project: projectId,
     };
 
     if (mode === 'edit' && task) {
@@ -200,7 +213,8 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       status: 'À faire',
       assigned_to_id: '',
       start_date: undefined,
-      due_date: undefined
+      due_date: undefined,
+      project: projectId,
     });
   };
 
@@ -212,7 +226,8 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       status: 'À faire',
       assigned_to_id: '',
       start_date: undefined,
-      due_date: undefined
+      due_date: undefined,
+      project: projectId,
     });
   };
 
@@ -389,12 +404,12 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           Chargement des utilisateurs...
                         </div>
-                      ) : users?.results?.length === 0 ? (
+                      ) : !users?.results || users.results.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                           Aucun utilisateur disponible
                         </div>
                       ) : (
-                        users?.results?.map(user => (
+                                                 users.results.map((user: UserList) => (
                           <SelectItem key={user.id} value={user.id.toString()}>
                             {user.first_name} {user.last_name} ({user.email})
                           </SelectItem>

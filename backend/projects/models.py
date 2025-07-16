@@ -119,7 +119,7 @@ class Project(models.Model):
                 {
                     'name': 'Livraison',
                     'description': 'Phase de livraison et finalisation',
-                    'start_date': self.start_date + timezone.timedelta(days=int(prospection_days + devis_days + production_days)),
+                    'start_date': self.start_date + timezone.timedelta(days=int(prospection_days + devis_days + livraison_days)),
                     'end_date': self.deadline,
                     'order': 4
                 }
@@ -174,7 +174,7 @@ class ProjectMember(models.Model):
     is_active = models.BooleanField(default=True)
     allocation_percentage = models.IntegerField(
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        default=100,
+        default=0,
         help_text="Pourcentage de temps alloué au projet"
     )
     

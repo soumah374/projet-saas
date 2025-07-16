@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectPhasesAPI, projectTeamAPI } from '@/lib/api';
+import { projectPhasesAPI, projectTeamAPI, projectTasksAPI } from '@/lib/api';
 import { ProjectPhase, TeamMember } from '@/lib/types';
 
 interface UseProjectLifecycle {
@@ -16,6 +15,7 @@ interface UseProjectLifecycle {
   updatePhase: (phaseId: number, data: Partial<ProjectPhase>) => Promise<void>;
   deletePhase: (phaseId: number) => Promise<void>;
   reorderPhase: (phaseId: number, newOrder: number) => Promise<void>;
+  checkUserAllocation: (userId: string) => Promise<number>;
 }
 
 export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
@@ -110,7 +110,7 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
   // Task template mutation
   const applyTemplateMutation = useMutation({
     mutationFn: (category: string) => 
-      projectTeamAPI.applyTaskTemplate(projectId, category),
+      projectTasksAPI.applyTaskTemplate(projectId, category),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
     }
@@ -133,7 +133,27 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     await reorderPhaseMutation.mutateAsync({ phaseId, newOrder });
   };
 
+  // Check user's current allocation
+  const checkUserAllocation = async (userId: string) => {
+    try {
+      const response = await projectTeamAPI.getUserAllocation(userId);
+      return response.data.total_allocation;
+    } catch (error) {
+      console.error('Error checking user allocation:', error);
+      return 0;
+    }
+  };
+
+  // Modify addTeamMember to check allocation first
   const addTeamMember = async (data: any) => {
+    const currentAllocation = await checkUserAllocation(data.user);
+    const newAllocation = parseInt(data.allocation_percentage);
+    
+    console.log(currentAllocation, newAllocation)
+    if (currentAllocation + newAllocation > 100) {
+      throw new Error(`L'allocation totale (${currentAllocation + newAllocation}%) ne peut pas dépasser 100%`);
+    }
+    
     await addTeamMemberMutation.mutateAsync(data);
   };
 
@@ -151,16 +171,17 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     
   return {
     phases: phasesData?.results || [],
-    teamMembers: teamData?.results || [],
+    teamMembers: Array.isArray(teamData) ? teamData : [],
     loading: phasesLoading || teamLoading,
     error: phasesError || teamError,
     createPhase,
-    updatePhase,
+    updatePhase, 
     deletePhase,
     reorderPhase,
     addTeamMember,
     removeTeamMember,
     updateTeamMember,
-    applyTaskTemplate
+    applyTaskTemplate,
+    checkUserAllocation
   };
 } 
