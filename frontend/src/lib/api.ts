@@ -150,8 +150,10 @@ export const projectApi = {
         api.patch<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, data),
     deleteProjectTask: (projectId: string, taskId: number) => 
         api.delete(`/projects/${projectId}/tasks/${taskId}/`),
+
     updateTaskStatus: (projectId: string, taskId: number, status: ProjectTask['status']) =>
-        api.post(`/projects/${projectId}/tasks/${taskId}/update_status/`, { status }),
+        api.patch(`/projects/${projectId}/tasks/${taskId}/`, { status }),
+
     assignTask: (projectId: string, taskId: number, userId: number) =>
         api.post(`/projects/${projectId}/tasks/${taskId}/assign/`, { user_id: userId }),
     getTaskTemplates: (projectId: string) => 
@@ -222,13 +224,7 @@ export const projectMembersAPI = {
     addProjectMember: (projectId: string, data: any) => 
         api.post(`/projects/${projectId}/members/`, data),
     updateProjectMember: (projectId: string, memberId: number, data: any) => 
-        api.patch(`/projects/${projectId}/members/${memberId}/`, data),
-    
-    // Membres
-    // addProjectMember: (projectId: string, data: Partial<ProjectMember>) =>
-    //     api.post<ProjectMember>(`/projects/${projectId}/add_member/`, data),
-    // deleteProjectMember: (projectId: string, userId: number) =>
-    //     api.delete(`/projects/${projectId}/team/user/${userId}/delete/`),
+        api.patch(`/projects/${projectId}/members/${memberId}/`, data)
 };
 
 export const projectTasksAPI = {
@@ -342,6 +338,7 @@ export const usersAPI = {
         ordering?: string;
         page?: number;
     }) => api.get('/auth/users/', { params }),
+    getCurrentUser: () => api.get('/auth/users/me/'),
     getUser: (id: number) => api.get(`/auth/users/${id}/`),
     createUser: (data: any) => api.post('/auth/users/', data),
     updateUser: (id: number, data: any) => api.patch(`/auth/users/${id}/`, data),
@@ -464,3 +461,6 @@ export const projectTeamAPI = {
 export const servicesAPI = {
     getServices: () => api.get('/catalog/services/'),
 };
+
+// PATCHs
+// 

@@ -8,7 +8,6 @@ from django.utils import timezone
 from datetime import timedelta, datetime
 from django.http import HttpResponse
 from rest_framework import serializers
-from notifications.models import Notification
 
 from .models import (
     Project, ProjectMember, ProjectPhase, ProjectTask, ProjectEvent, TimeSheet, Department
@@ -537,28 +536,3 @@ class ProjectEventViewSet(viewsets.ModelViewSet):
         ).order_by('date', 'start_time')
         serializer = self.get_serializer(upcoming, many=True)
         return Response(serializer.data)
-
-
-# class NotificationViewSet(viewsets.ModelViewSet):
-#     """ViewSet pour la gestion des notifications"""
-    
-#     serializer_class = NotificationSerializer
-#     permission_classes = [IsAuthenticated]
-    
-#     def get_queryset(self):
-#         """Retourner uniquement les notifications de l'utilisateur connecté"""
-#         return Notification.objects.filter(user=self.request.user)
-    
-#     @action(detail=False, methods=['post'])
-#     def mark_all_read(self, request):
-#         """Marquer toutes les notifications comme lues"""
-#         self.get_queryset().update(is_read=True)
-#         return Response(status=status.HTTP_200_OK)
-    
-#     @action(detail=True, methods=['post'])
-#     def mark_read(self, request, pk=None):
-#         """Marquer une notification comme lue"""
-#         notification = self.get_object()
-#         notification.is_read = True
-#         notification.save()
-#         return Response(status=status.HTTP_200_OK)

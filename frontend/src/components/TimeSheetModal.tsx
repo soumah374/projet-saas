@@ -13,8 +13,11 @@ import { TimeSheet } from '@/lib/api';
 import { StyledDateInput } from './ui/DateInput';
 import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
-import { Check } from 'lucide-react';
+import { CalendarIcon, Check } from 'lucide-react';
 import { useToast } from './ui/use-toast';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Calendar } from './ui/calendar';
+import { useCurrentUser } from '@/hooks/use-users';
 
 interface TimeSheetModalProps {
   projectId: string;
@@ -45,7 +48,7 @@ export const TimeSheetModal = ({
   const [taskId, setTaskId] = useState(timeSheet?.task?.toString() || '');
   const [description, setDescription] = useState(timeSheet?.description || '');
   const [errors, setErrors] = useState<FormErrors>({});
-  
+
   const { toast } = useToast();
   const { data: tasksData } = useProjectTasks(projectId);
   const createTimesheet = useCreateTimesheet();
@@ -55,6 +58,8 @@ export const TimeSheetModal = ({
   const tasks = tasksData?.results || [];
   const selectedTask = tasks.find(t => t.id.toString() === taskId);
   const isReadOnly = mode === 'view' || (timeSheet?.validated_by && mode === 'edit');
+
+  const [dateTimeSheetOpen, setDateTimeSheetOpen] = useState(false);
   
   useEffect(() => {
     if (open) {
@@ -112,6 +117,8 @@ export const TimeSheetModal = ({
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
+
+  const { data: currentUser } = useCurrentUser();
   
   const handleSubmit = async () => {
     if (!validateForm()) {
@@ -123,7 +130,10 @@ export const TimeSheetModal = ({
         date: format(date!, 'yyyy-MM-dd'),
         hours: parseFloat(hours),
         task: parseInt(taskId),
-        description: description.trim()
+        description: description.trim(),
+        project: projectId,
+        user: currentUser?.data?.id,
+        status: 'En cours'
       };
       
       if (mode === 'create') {
@@ -227,14 +237,32 @@ export const TimeSheetModal = ({
           
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <StyledDateInput
-                label="Date"
-                value={date}
-                onChange={setDate}
-                disabled={isReadOnly}
-                error={errors.date}
-                required
-              />
+              <Label htmlFor="date">Date</Label>
+              <Popover open={dateTimeSheetOpen} onOpenChange={setDateTimeSheetOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, 'PPP', { locale: fr }) : 'Sélectionner une date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-auto p-0" 
+                  style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                >
+                  <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={(date) => {
+                        setDate(date || undefined);
+                        setDateTimeSheetOpen(false);
+                      }}
+                      initialFocus
+                    />
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div>
@@ -249,6 +277,7 @@ export const TimeSheetModal = ({
                 onChange={(e) => setHours(e.target.value)}
                 disabled={isReadOnly}
                 className={errors.hours ? 'border-red-500' : ''}
+                placeholder="Saisir le nombre d'heures"
               />
               {errors.hours && (
                 <span className="text-sm text-red-500">{errors.hours}</span>

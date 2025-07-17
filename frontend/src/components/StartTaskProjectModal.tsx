@@ -1,34 +1,43 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { useState } from 'react';
 import { Label } from './ui/label';
-import { Popover } from './ui/popover';
-import { PopoverTrigger } from './ui/popover';
 import { Button } from './ui/button';
-import { CalendarIcon } from 'lucide-react';
-import { PopoverContent } from './ui/popover';
-import { Calendar } from './ui/calendar';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { Separator } from '@radix-ui/react-dropdown-menu';
 import { Select, SelectContent, SelectItem } from './ui/select';
 import { SelectTrigger } from './ui/select';
 import { SelectValue } from './ui/select';
+import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
+import { toast } from 'sonner';
+import { ProjectTask, ProjectTaskStatus } from '@/lib/types';
 
 interface StartTaskProjectModalProps {
   children: React.ReactNode;
-  taskId: string;
+  task: ProjectTask;
+  projectId: string;
 }
 
-export const StartTaskProjectModal = ({children, taskId}: StartTaskProjectModalProps) => {
+export const StartTaskProjectModal = ({children, task, projectId}: StartTaskProjectModalProps) => {
   const [open, setOpen] = useState(false);
-  const [startDateOpen, setStartDateOpen] = useState(false);
+  
+
+  const taskStatuses: ProjectTaskStatus[] = ['À faire', 'En cours', 'En pause', 'Terminé'];
+  const { updateTaskStatus } = useProjectLifecycle(projectId);
+
   const [formData, setFormData] = useState({
-    start_date: undefined,
-    status: 'À faire',
+    start_date: task.start_date || undefined,
+    status: task.status || 'À faire',
   });
 
-  const taskStatuses = ['À faire', 'En cours', 'En pause', 'Terminé'];
-
+  const handlerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateTaskStatus(Number(task.id), formData.status as 'À faire' | 'En cours' | 'En pause' | 'Terminé');
+      toast.success('Tâche démarrée avec succès');
+    } catch (error) {
+      toast.error('Une erreur est survenue');
+    }
+    setOpen(false);
+  }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -41,10 +50,7 @@ export const StartTaskProjectModal = ({children, taskId}: StartTaskProjectModalP
         </DialogHeader>
 
         <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            console.log(formData);
-          }}
+          onSubmit={handlerSubmit}
         >
           <div className="space-y-4">
             <p>Etes-vous sûr de vouloir démarrer la tâche ?</p>
@@ -53,7 +59,7 @@ export const StartTaskProjectModal = ({children, taskId}: StartTaskProjectModalP
             <Label htmlFor="status">Statut</Label>
             <Select 
               value={formData.status} 
-              onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as ProjectTaskStatus }))}
             >
               <SelectTrigger>
                 <SelectValue />

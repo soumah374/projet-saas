@@ -122,7 +122,7 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
             'id', 'project', 'phase', 'title', 'description', 'status',
             'assigned_to', 'start_date', 'due_date', 'estimated_hours',
             'actual_hours', 'is_template', 'template_category',
-            'completion_percentage', 'phase_name', 'assigned_to_name'
+            'completion_percentage', 'phase_name', 'assigned_to_name','created_at'
         ]
         read_only_fields = ['id', 'actual_hours']
     

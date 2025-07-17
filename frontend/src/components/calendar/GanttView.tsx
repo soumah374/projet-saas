@@ -2,17 +2,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Plus, Link2, Link2Off } from 'lucide-react';
-import { useState, useEffect, useMemo } from 'react';
-import { useProjects, useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
+import { ChevronLeft, ChevronRight, Link2, Link2Off } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { format, addDays, eachDayOfInterval, isSameDay, isWithinInterval, differenceInDays, addMonths, subMonths } from 'date-fns';
+import { format, addDays, eachDayOfInterval, differenceInDays, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { TaskModal } from '../TaskModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
 import { ProjectTask } from '@/lib/types';
 
 interface GanttViewProps {
@@ -42,13 +40,9 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
   const [visibleDays, setVisibleDays] = useState(30);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [showDependencies, setShowDependencies] = useState(true);
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
-  const [isAddingDependency, setIsAddingDependency] = useState(false);
 
   const { data: tasks } = useProjectTasks(projectId);
   
-  const updateTaskMutation = useUpdateProjectTask();
-
   const dateRange = useMemo(() => {
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const end = addDays(start, visibleDays - 1);
@@ -74,8 +68,6 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
       };
     });
   }, [tasks]);
-
-  console.log('ganttTasks', ganttTasks)
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => subMonths(prev, 1));
@@ -133,6 +125,7 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
           <Select
             value={selectedProject || projectId}
             onValueChange={(value) => setSelectedProject(value)}
+            disabled={true}
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Sélectionner un projet" />
@@ -172,11 +165,13 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
               </DragDropContext>
             </ScrollArea>
           </div>
+
+          
           <div className="border rounded-lg">
             <div className="p-4 border-b bg-gray-50">
               <h3 className="font-semibold">Diagramme</h3>
             </div>
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-[500px] overflow-y-auto">
               <div className="min-w-[800px]">
                 {/* Timeline header */}
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(30px,1fr))] border-b">
@@ -202,7 +197,7 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
                         style={{
                           left: `${(differenceInDays(task.start, dateRange[0]) * 100) / visibleDays}%`,
                           width: `${(differenceInDays(task.end, task.start) * 100) / visibleDays}%`,
-                          backgroundColor: task.status === 'Terminé' ? '#22c55e' : undefined
+                          backgroundColor: task.status === 'Terminé' ? '#22c55e' : task.status === 'En cours' ? '#f59e0b' : task.status === 'En pause' ? '#f43f5e' : '#3b82f6'
                         }}
                       >
                         <TooltipProvider>
@@ -231,6 +226,7 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
               </div>
             </ScrollArea>
           </div>
+
         </div>
       </CardContent>
     </Card>

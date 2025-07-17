@@ -187,8 +187,9 @@ export function useExecuteTask() {
 
   return useMutation({
     mutationFn: ({ projectId, taskId }: { projectId: string; taskId: number }) =>
-      apiRequest<ProjectTask>(`/${projectId}/tasks/${taskId}/execute/`, {
-        method: 'POST',
+      apiRequest<ProjectTask>(`/${projectId}/tasks/$  {taskId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'En cours' }),
       }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });

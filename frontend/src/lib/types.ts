@@ -434,3 +434,14 @@ export interface Service {
   price: string;
   duration: string;
 }
+
+export interface Phase {
+  id: number;
+  name: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  progress: number;
+  order: number;
+  project: string;
+}

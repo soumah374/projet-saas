@@ -12,3 +12,9 @@ export function formatDate(date: string) {
     day: 'numeric'
   })
 }
+
+export function safeParseDate(date?: string | Date | null): Date | null {
+  if (!date) return null;
+  const parsed = typeof date === 'string' ? new Date(date) : date;
+  return parsed instanceof Date && !isNaN(parsed.getTime()) ? parsed : null;
+}

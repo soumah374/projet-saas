@@ -5,6 +5,7 @@ import { TimeSheetList } from './TimeSheetList';
 import { useTimesheets } from '@/hooks/use-timesheets';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { TimeSheet } from '@/lib/api';
 
 interface ProjectTimesheetsProps {
   projectId: string;
@@ -24,16 +25,17 @@ export const ProjectTimesheets = ({ projectId }: ProjectTimesheetsProps) => {
     pendingHours: timeSheets
       .filter(ts => !ts.validated_by)
       .reduce((sum, ts) => sum + ts.hours, 0),
-    byTask: timeSheets.reduce((acc, ts) => {
-      const taskId = ts.task_details.id;
+    byTask: timeSheets.reduce((acc, ts: TimeSheet) => {
+      const taskId = ts.task_details?.id;
+      if (!taskId) return acc;
       if (!acc[taskId]) {
         acc[taskId] = {
-          title: ts.task_details.title,
+          title: ts.task_details?.title,
           hours: 0,
           entries: 0
         };
       }
-      acc[taskId].hours += ts.hours;
+      acc[taskId].hours += ts?.hours || 0;
       acc[taskId].entries += 1;
       return acc;
     }, {} as Record<number, { title: string; hours: number; entries: number }>)

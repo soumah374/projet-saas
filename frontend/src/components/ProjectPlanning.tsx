@@ -141,8 +141,8 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="phases">Phases</TabsTrigger>
-            <TabsTrigger value="tasks">Tâches</TabsTrigger>
             <TabsTrigger value="team">Équipe</TabsTrigger>
+            <TabsTrigger value="tasks">Tâches</TabsTrigger>
             <TabsTrigger value="templates">Tâches standards</TabsTrigger>
           </TabsList>
           
@@ -175,7 +175,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <TaskModal projectId={projectId} mode="create">
+              <TaskModal projectId={projectId} mode="create" phases={phases}>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
                   Nouvelle tâche
@@ -234,22 +234,30 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                               )}
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <StartTaskProjectModal taskId={task.id.toString()}>
-                              <Button variant="ghost" size="icon">
-                                <Play className="h-4 w-4" />
-                              </Button>
-                            </StartTaskProjectModal>
-                            <TaskModal projectId={projectId} task={extendedTask} mode="edit">
-                              <Button variant="ghost" size="icon">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </TaskModal>
-                            <TaskModal projectId={projectId} task={extendedTask} mode="view">
+                          <div className="flex gap-1">
+
+                            {task.status !== 'Terminé' && ( 
+                              <StartTaskProjectModal task={task} projectId={projectId}>
+                                <Button variant="ghost" size="icon">
+                                  <Play className="h-4 w-4" />
+                                </Button>
+                              </StartTaskProjectModal>
+                            )}
+
+                            {task.status !== 'Terminé' && (
+                              <TaskModal projectId={projectId} task={extendedTask} mode="edit" phases={phases}>
+                                <Button variant="ghost" size="icon">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TaskModal>
+                            )}
+                            
+                            <TaskModal projectId={projectId} task={extendedTask} mode="view" phases={phases}>
                               <Button variant="ghost" size="icon">
                                 <View className="h-4 w-4" />
                               </Button>
                             </TaskModal>
+                          
                           </div>
                         </div>
                       </CardContent>
@@ -294,7 +302,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                               <SelectContent>
                                 {users?.data?.results?.map((user: any) => (
                                   <SelectItem key={user.id} value={user.id.toString()}>
-                                    {user.first_name} {user.last_name}
+                                    {user.first_name} {user.last_name} ({user.email})
                                   </SelectItem>
                                 ))}
                               </SelectContent>

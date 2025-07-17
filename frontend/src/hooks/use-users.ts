@@ -105,7 +105,7 @@ export const useUserStatistics = () => {
 export const useCurrentUser = () => {
   return useQuery({
     queryKey: ['currentUser'],
-    queryFn: () => usersAPI.getUser(1),
+    queryFn: () => usersAPI.getCurrentUser(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };

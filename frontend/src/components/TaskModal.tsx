@@ -9,14 +9,15 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Edit, Plus, Eye, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ProjectTask, UserList } from '@/lib/types';
+import { Phase, ProjectTask, UserList } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useForm } from 'react-hook-form';
-import { useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask, useExecuteTask } from '@/hooks/use-projects';
+import { useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask } from '@/hooks/use-projects';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { safeParseDate } from '@/lib/utils';
 
 interface ExtendedProjectTask extends Omit<ProjectTask, 'assigned_to'> {
   assigned_to?: UserList | null;
@@ -28,6 +29,7 @@ interface TaskModalProps {
   projectId: string;
   onTaskSave?: (taskData: CreateTaskData | UpdateTaskData) => void;
   mode: 'create' | 'edit' | 'view';
+  phases: Phase[];
 }
 
 export interface CreateTaskData {
@@ -37,6 +39,7 @@ export interface CreateTaskData {
   due_date: string;
   project: string;
   estimated_hours?: number;
+  phase?: number | null;
 }
 
 export interface ExecuteTaskData extends CreateTaskData {
@@ -90,11 +93,10 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
-export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskModalProps) => {
+export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}: TaskModalProps) => {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [deadlineOpen, setDeadlineOpen] = useState(false);
-  const [startDateOpen, setStartDateOpen] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -102,6 +104,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     due_date: undefined as Date | undefined,
     project: projectId,
     estimated_hours: 0,
+    phase: null,
   });
 
   const { data: usersResponse, isLoading: usersLoading } = useUsers({
@@ -113,7 +116,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
   const createTaskMutation = useCreateProjectTask();
   const updateTaskMutation = useUpdateProjectTask();
   const deleteTaskMutation = useDeleteProjectTask();
-  const executeTaskMutation = useExecuteTask();
 
   const form = useForm<CreateTaskData>({
     defaultValues: task ? {
@@ -123,6 +125,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       due_date: task.due_date,
       project: projectId,
       estimated_hours: task.estimated_hours || 0,
+      phase: task.phase || null,
     } : {
       title: '',
       description: '',
@@ -130,6 +133,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       due_date: '',
       project: projectId,
       estimated_hours: 0,
+      phase: null,
     }
   });
 
@@ -142,6 +146,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
         due_date: task?.due_date ? new Date(task.due_date) : undefined,
         project: projectId,
         estimated_hours: task?.estimated_hours || 0,
+        phase: task?.phase || null,
       });
       setFormKey(prev => prev + 1);
     }
@@ -182,6 +187,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       due_date: format(formData.due_date, 'yyyy-MM-dd'),
       project: projectId,
       estimated_hours: formData.estimated_hours,
+      phase: formData.phase,
     };
 
     if (mode === 'edit' && task) {
@@ -204,6 +210,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       due_date: undefined,
       project: projectId,
       estimated_hours: 0,
+      phase: null,
     });
   };
 
@@ -216,6 +223,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       due_date: undefined,
       project: projectId,
       estimated_hours: 0,
+      phase: null,
     });
   };
 
@@ -233,14 +241,13 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
   const handleExecute = async () => {
     if (!task) return;
     try {
-      await executeTaskMutation.mutateAsync({ projectId, taskId: task.id });
+      await updateTaskMutation.mutateAsync({ projectId, taskId: task.id, data: { status: 'En cours' } });
+      toast.success('Tâche exécutée avec succès');
       setOpen(false);
     } catch (error) {
       toast.error('Une erreur est survenue');
     }
   };
-
-  console.log(task)
 
   const renderViewMode = () => {
     if (!task) return null;
@@ -297,8 +304,13 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
           <div>
             <Label>Créée le</Label>
             <p className="mt-1">
-              {/* {format(new Date(task?.created_at), 'PPP', { locale: fr })} */}
-              {/* {task?.created_by} */}
+              {safeParseDate(task?.created_at)?.toLocaleString('fr-FR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </div>
         </div>
@@ -376,11 +388,11 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                       {usersLoading ? (
                         <div className="flex items-center justify-center p-4">
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Chargement des utilisateurs...
+                          Chargement des membres...
                         </div>
                       ) : !users?.results || users.results.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
-                          Aucun utilisateur disponible
+                          Aucun membre disponible
                         </div>
                       ) : (
                           users.results.map((user: UserList) => (
@@ -441,26 +453,27 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                 <div>
                   <Label htmlFor="assigned_to">Phase</Label>
                   <Select 
-                    value={formData.assigned_to?.toString() || ''} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: parseInt(value) }))}
+                    value={formData.phase?.toString() || ''} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, phase: parseInt(value) }))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un membre" />
+                      <SelectValue placeholder="Sélectionner une phase" />
                     </SelectTrigger>
                     <SelectContent>
-                      {usersLoading ? (
-                        <div className="flex items-center justify-center p-4">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Chargement des utilisateurs...
-                        </div>
-                      ) : !users?.results || users.results.length === 0 ? (
+                      {phases.length > 0 ? (
+                        phases.map((phase: Phase) => (
+                          <SelectItem key={phase.id} value={phase.id.toString()}>
+                            {phase.name}
+                          </SelectItem>
+                        ))
+                      ) : phases.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
-                          Aucun utilisateur disponible
+                          Aucune phase disponible
                         </div>
                       ) : (
-                          users.results.map((user: UserList) => (
-                          <SelectItem key={user.id} value={user.id.toString()}>
-                            {user.first_name} {user.last_name} ({user.email})
+                          phases.map((phase: Phase) => (
+                          <SelectItem key={phase.id} value={phase.id.toString()}>
+                            {phase.name}
                           </SelectItem>
                         ))
                       )}
@@ -512,7 +525,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
             >
               Fermer
             </Button>
-            {task && task.status !== 'Terminé' && (
+            {task && task.status !== 'En cours' && task.status !== 'Terminé' && task.status !== 'En pause' && (
               <Button
                 type="button"
                 variant="default"
@@ -521,27 +534,29 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                 Exécuter
               </Button>
             )}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button type="button" variant="destructive">
-                  Supprimer
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Cette action ne peut pas être annulée. La tâche sera définitivement supprimée.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Annuler</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>
+            {task && task.status !== 'Terminé' && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button type="button" variant="destructive">
                     Supprimer
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action ne peut pas être annulée. La tâche sera définitivement supprimée.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
           </div>
         )}
       </DialogContent>

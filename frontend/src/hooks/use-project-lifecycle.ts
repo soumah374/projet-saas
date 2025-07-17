@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectPhasesAPI, projectTeamAPI, projectTasksAPI, projectMembersAPI, servicesAPI } from '@/lib/api';
+import { projectPhasesAPI, projectTeamAPI, projectTasksAPI, projectMembersAPI, servicesAPI, projectApi } from '@/lib/api';
 import { ProjectPhase, Service, TeamMember } from '@/lib/types';
 
 interface UseProjectLifecycle {
@@ -17,6 +17,7 @@ interface UseProjectLifecycle {
   reorderPhase: (phaseId: number, newOrder: number) => Promise<void>;
   checkUserAllocation: (userId: string) => Promise<number>;
   services: Service[];
+  updateTaskStatus: (taskId: number, status: 'À faire' | 'En cours' | 'Terminé' | 'En pause') => Promise<void>;
 }
 
 export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
@@ -121,6 +122,14 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     }
   });
 
+  const updateTaskStatusMutation = useMutation({
+    mutationFn: ({ taskId, status }: { taskId: number; status: 'À faire' | 'En cours' | 'Terminé' | 'En pause' }) => 
+      projectApi.updateTaskStatus(projectId, taskId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+    }
+  });
+
   // Task template mutation
   const applyTemplateMutation = useMutation({
     mutationFn: (category: string) => 
@@ -162,8 +171,6 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
   const addTeamMember = async (data: any) => {
     const currentAllocation = await checkUserAllocation(data.user);
     const newAllocation = parseInt(data.allocation_percentage);
-    
-    console.log(currentAllocation, newAllocation)
     if (currentAllocation + newAllocation > 100) {
       throw new Error(`L'allocation totale (${currentAllocation + newAllocation}%) ne peut pas dépasser 100%`);
     }
@@ -183,6 +190,10 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     await applyTemplateMutation.mutateAsync(category);
   };
 
+  const updateTaskStatus = async (taskId: number, status: 'À faire' | 'En cours' | 'Terminé' | 'En pause') => {
+    await updateTaskStatusMutation.mutateAsync({ taskId, status });
+  };
+
     
   return {
     phases: phasesData?.results || [],
@@ -198,6 +209,7 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     updateTeamMember,
     applyTaskTemplate,
     checkUserAllocation,
-    services: servicesData?.results || []
+    services: servicesData?.results || [],
+    updateTaskStatus
   };
 } 
