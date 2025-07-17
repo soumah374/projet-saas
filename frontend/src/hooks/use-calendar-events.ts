@@ -50,8 +50,8 @@ export const useCalendarEvents = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchEvents();
-      setEvents(data);
+      const response = await fetchEvents();
+      setEvents(response.data);
     } catch (err) {
       setError('Erreur lors du chargement des événements');
       toast({
@@ -69,7 +69,7 @@ export const useCalendarEvents = () => {
       setLoading(true);
       setError(null);
       const newEvent = await createEvent(eventData);
-      setEvents(prev => [...prev, newEvent]);
+      setEvents(prev => [...prev, newEvent.data]);
       toast({
         title: 'Succès',
         description: 'Événement créé avec succès',
@@ -94,7 +94,7 @@ export const useCalendarEvents = () => {
       setError(null);
       const updatedEvent = await updateEvent(eventId, eventData);
       setEvents(prev => prev.map(event => 
-        event.id === eventId ? updatedEvent : event
+        event.id === eventId ? updatedEvent.data : event
       ));
       toast({
         title: 'Succès',
@@ -141,8 +141,8 @@ export const useCalendarEvents = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await fetchUpcomingEvents();
-      return data;
+      const response = await fetchUpcomingEvents();
+      return response.data;
     } catch (err) {
       setError('Erreur lors du chargement des événements à venir');
       toast({

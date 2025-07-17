@@ -16,7 +16,7 @@ from .models import (
 from .serializers import (
     ProjectListSerializer, ProjectDetailSerializer, ProjectCreateSerializer,
     ProjectUpdateSerializer, ProjectMemberSerializer, ProjectPhaseSerializer,
-    ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer, DepartmentSerializer
+    ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer
 )
 from notifications.serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
@@ -238,6 +238,17 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+    
+    @action(detail=True, methods=['delete'],url_path='team/(?P<id>[^/.]+)/delete')
+    def delete_member(self, request, pk=None, id=None):
+        """Supprimer un membre d'un projet"""
+        project = self.get_object()
+        if project.project_members.filter(id=id).exists():
+            project.project_members.filter(id=id).delete()
+        else:
+            return Response({'error': 'Membre non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+        return Response({'message': 'Membre supprimé avec succès'}, status=status.HTTP_200_OK)
+        
 
 
 class ProjectPhaseViewSet(viewsets.ModelViewSet):

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, Calendar as CalendarIcon, Plus, X, Search } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
 import { useProjectTasks } from '@/hooks/use-projects';
@@ -19,6 +19,9 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { TaskModal } from './TaskModal';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { DeleteMemberProject } from './deleteMemberProject';
+import { Service } from '@/lib/types';
+import { StartTaskProjectModal } from './StartTaskProjectModal';
 
 interface ProjectPlanningProps {
   projectId: string;
@@ -39,14 +42,6 @@ const roleOptions = [
   'Consultant',
   'Assistant'
 ];
-const templateOptions = [
-  'Événementiel',
-  'Communication',
-  'Audiovisuel',
-  'Production',
-  'Digital',
-  'Conseil'
-];
 
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [activeTab, setActiveTab] = useState('phases');
@@ -59,12 +54,12 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
     phases,
     teamMembers,
     addTeamMember,
-    removeTeamMember,
     applyTaskTemplate,
     loading,
-    checkUserAllocation
+    checkUserAllocation,
+    services
   } = useProjectLifecycle(projectId);
-  
+
   const { data: users } = useUsers();
   const { data: tasks } = useProjectTasks(projectId);
   
@@ -85,7 +80,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       form.reset();
     } catch (error: any) {
       if (error.response?.data?.error) {
-        // Handle specific backend error messages
         form.setError('allocation_percentage', {
           type: 'manual',
           message: error.response.data.error
@@ -240,11 +234,23 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                               )}
                             </div>
                           </div>
-                          <TaskModal projectId={projectId} task={extendedTask} mode="edit">
-                            <Button variant="ghost" size="icon">
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </TaskModal>
+                          <div className="flex gap-2">
+                            <StartTaskProjectModal taskId={task.id.toString()}>
+                              <Button variant="ghost" size="icon">
+                                <Play className="h-4 w-4" />
+                              </Button>
+                            </StartTaskProjectModal>
+                            <TaskModal projectId={projectId} task={extendedTask} mode="edit">
+                              <Button variant="ghost" size="icon">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </TaskModal>
+                            <TaskModal projectId={projectId} task={extendedTask} mode="view">
+                              <Button variant="ghost" size="icon">
+                                <View className="h-4 w-4" />
+                              </Button>
+                            </TaskModal>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -330,6 +336,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                       
                       <FormField
                         control={form.control}
+                        rules={{ validate: (value) => Number(value) >= 0 && Number(value) <= 100 }}
                         name="allocation_percentage"
                         render={({ field }) => (
                           <FormItem>
@@ -341,13 +348,21 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                                 pattern="[0-9]*"
                                 placeholder="100"
                                 {...field}
+                                min={0}
+                                max={100}
+                                value={field.value}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
+                                    field.onChange(Number(value));
+                                  }
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      
                       <Button type="submit" className="w-full">
                         Ajouter
                       </Button>
@@ -365,7 +380,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                       <div className="flex items-center space-x-4">
                         <div>
                           <p className="font-medium">
-                            {member.user.first_name} {member.user.last_name}
+                            {member.user_details.first_name} {member.user_details.last_name}
                           </p>
                           <p className="text-sm text-gray-500">{member.role}</p>
                         </div>
@@ -374,13 +389,18 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                         <Badge variant="secondary">
                           {member.allocation_percentage}% alloué
                         </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeTeamMember(member.id)}
+                        
+                        <DeleteMemberProject 
+                          projectId={projectId} 
+                          userId={member.id} 
+                          firstName={member.user_details.first_name} 
+                          lastName={member.user_details.last_name} 
+                          role={member.role}
                         >
-                          <X className="h-4 w-4" />
-                        </Button>
+                          <Button variant="ghost" size="icon">
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </DeleteMemberProject>
                       </div>
                     </CardContent>
                   </Card>
@@ -398,9 +418,9 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                     <SelectValue placeholder="Sélectionner une catégorie" />
                   </SelectTrigger>
                   <SelectContent>
-                    {templateOptions.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
+                    {services.map((service: Service) => (
+                      <SelectItem key={service.id} value={service.name}>
+                        {service.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

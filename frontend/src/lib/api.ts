@@ -181,10 +181,7 @@ export const projectApi = {
     getTimeSheetSummary: (projectId: string) =>
         api.get(`/projects/${projectId}/timesheets/summary/`),
     
-    // Membres
-    addProjectMember: (projectId: string, data: Partial<ProjectMember>) =>
-        api.post<ProjectMember>(`/projects/${projectId}/add_member/`, data),
-    
+
     // Suivi et alertes
     getProjectTimeline: (projectId: string) => api.get(`/projects/${projectId}/timeline/`),
     getProjectWorkload: (projectId: string) => api.get(`/projects/${projectId}/workload/`),
@@ -226,8 +223,12 @@ export const projectMembersAPI = {
         api.post(`/projects/${projectId}/members/`, data),
     updateProjectMember: (projectId: string, memberId: number, data: any) => 
         api.patch(`/projects/${projectId}/members/${memberId}/`, data),
-    deleteProjectMember: (projectId: string, memberId: number) => 
-        api.delete(`/projects/${projectId}/members/${memberId}/`),
+    
+    // Membres
+    // addProjectMember: (projectId: string, data: Partial<ProjectMember>) =>
+    //     api.post<ProjectMember>(`/projects/${projectId}/add_member/`, data),
+    // deleteProjectMember: (projectId: string, userId: number) =>
+    //     api.delete(`/projects/${projectId}/team/user/${userId}/delete/`),
 };
 
 export const projectTasksAPI = {
@@ -454,6 +455,12 @@ export const projectTeamAPI = {
     removeTeamMember: (projectId: string, memberId: number) => 
         api.delete(`/projects/${projectId}/team/${memberId}/`),
     getUserAllocation: (userId: string) => 
-        api.get<{ total_allocation: number }>(`/projects/team/user/${userId}/allocation/`)
-    
+        api.get<{ total_allocation: number }>(`/projects/team/user/${userId}/allocation/`),
+    deleteProjectMember: (projectId: string, id: number) => 
+        api.delete(`/projects/${projectId}/team/${id}/delete/`),
 }; 
+
+// Services
+export const servicesAPI = {
+    getServices: () => api.get('/catalog/services/'),
+};

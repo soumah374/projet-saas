@@ -119,7 +119,7 @@ export interface ProjectTask {
   status: ProjectTaskStatus;
   start_date: string | null;
   due_date: string | null;
-  estimated_hours: string | null;
+  estimated_hours: number | null;
   actual_hours: string;
   created_at: string;
   updated_at: string;
@@ -424,3 +424,13 @@ export interface ProjectMemberUpdate {
   role: string;
   is_active: boolean;
 } 
+
+export interface Service {
+  id: number;
+  name: string;
+  description: string;
+  category: string;
+  profile_intervenant: string;
+  price: string;
+  duration: string;
+}

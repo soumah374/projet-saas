@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectPhasesAPI, projectTeamAPI, projectTasksAPI } from '@/lib/api';
-import { ProjectPhase, TeamMember } from '@/lib/types';
+import { projectPhasesAPI, projectTeamAPI, projectTasksAPI, projectMembersAPI, servicesAPI } from '@/lib/api';
+import { ProjectPhase, Service, TeamMember } from '@/lib/types';
 
 interface UseProjectLifecycle {
   phases: ProjectPhase[];
@@ -16,6 +16,7 @@ interface UseProjectLifecycle {
   deletePhase: (phaseId: number) => Promise<void>;
   reorderPhase: (phaseId: number, newOrder: number) => Promise<void>;
   checkUserAllocation: (userId: string) => Promise<number>;
+  services: Service[];
 }
 
 export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
@@ -33,6 +34,19 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
       return response.data;
     },
     enabled: !!projectId
+  });
+
+  // Fetch services
+  const { 
+    data: servicesData,
+    isLoading: servicesLoading,
+    error: servicesError
+  } = useQuery({
+    queryKey: ['services'],
+    queryFn: async () => {
+      const response = await servicesAPI.getServices();
+      return response.data;
+    }
   });
 
   // Fetch team members
@@ -90,10 +104,10 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
       queryClient.invalidateQueries({ queryKey: ['project-team', projectId] });
     }
   });
-
+  // Team member mutations
   const removeTeamMemberMutation = useMutation({
     mutationFn: (memberId: number) => 
-      projectTeamAPI.removeTeamMember(projectId, memberId),
+      projectTeamAPI.deleteProjectMember(projectId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-team', projectId] });
     }
@@ -168,6 +182,7 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
   const applyTaskTemplate = async (category: string) => {
     await applyTemplateMutation.mutateAsync(category);
   };
+
     
   return {
     phases: phasesData?.results || [],
@@ -182,6 +197,7 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     removeTeamMember,
     updateTeamMember,
     applyTaskTemplate,
-    checkUserAllocation
+    checkUserAllocation,
+    services: servicesData?.results || []
   };
 } 

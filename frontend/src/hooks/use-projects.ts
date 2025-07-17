@@ -308,11 +308,11 @@ export function useUpdateTask() {
 }
 
 // Project Team Members
-export function useProjectTeam(projectId: string) {
+export function useProjectTeam(projectId: string, userId: number) {
   return useQuery({
     queryKey: ['project-team', projectId],
-    queryFn: () => apiRequest<ProjectMember[]>(`/${projectId}/team/`),
-    enabled: !!projectId,
+    queryFn: () => apiRequest<ProjectMember[]>(`/projects/${projectId}/team/user/${userId}/delete/`),
+    enabled: !!projectId && !!userId
   });
 }
 

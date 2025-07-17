@@ -6,7 +6,6 @@ from drf_spectacular.utils import extend_schema_field
 from .models import (
     Project, ProjectMember, ProjectPhase, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget
 )
-from departments.serializers import DepartmentSerializer
 from users.serializers import UserSerializer  # Import UserSerializer from users app
 
 

@@ -279,7 +279,7 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
         </TabsContent>
 
         <TabsContent value="gantt">
-          <GanttView projects={activeProjects} />
+          <GanttView projectId={project?.id} />
         </TabsContent>
       </Tabs>
 

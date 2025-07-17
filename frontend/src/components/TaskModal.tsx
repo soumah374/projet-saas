@@ -6,10 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { FileText, User as UserIcon, Loader2, Edit, Plus, Eye, CalendarIcon } from 'lucide-react';
+import { Loader2, Edit, Plus, Eye, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ProjectTask, ProjectTaskStatus, User, PaginatedResponse, UserList } from '@/lib/types';
+import { ProjectTask, UserList } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -33,11 +33,16 @@ interface TaskModalProps {
 export interface CreateTaskData {
   title: string;
   description: string;
-  status: string;
-  assigned_to_id?: number;
-  start_date?: string;
+  assigned_to?: number | null;
   due_date: string;
   project: string;
+  estimated_hours?: number;
+}
+
+export interface ExecuteTaskData extends CreateTaskData {
+  id: number;
+  status: string;
+  start_date: string;
 }
 
 export interface UpdateTaskData extends CreateTaskData {
@@ -93,11 +98,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    status: 'À faire',
-    assigned_to_id: '',
-    start_date: undefined as Date | undefined,
+    assigned_to: null,
     due_date: undefined as Date | undefined,
     project: projectId,
+    estimated_hours: 0,
   });
 
   const { data: usersResponse, isLoading: usersLoading } = useUsers({
@@ -105,8 +109,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     ordering: 'first_name'
   });
   const users = usersResponse?.data;
-
-  const taskStatuses = ['À faire', 'En cours', 'En pause', 'Terminé'];
 
   const createTaskMutation = useCreateProjectTask();
   const updateTaskMutation = useUpdateProjectTask();
@@ -117,18 +119,17 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     defaultValues: task ? {
       title: task.title,
       description: task.description,
-      status: task.status,
-      assigned_to_id: task.assigned_to?.id,
-      start_date: task.start_date,
+      assigned_to: task.assigned_to?.id || 0,
       due_date: task.due_date,
       project: projectId,
+      estimated_hours: task.estimated_hours || 0,
     } : {
       title: '',
       description: '',
-      status: 'À faire',
-      start_date: '',
+      assigned_to: null,
       due_date: '',
       project: projectId,
+      estimated_hours: 0,
     }
   });
 
@@ -137,11 +138,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       setFormData({
         title: task?.title || '',
         description: task?.description || '',
-        status: task?.status || 'À faire',
-        assigned_to_id: task?.assigned_to?.id?.toString() || '',
-        start_date: task?.start_date ? new Date(task.start_date) : undefined,
+        assigned_to: task?.assigned_to?.id || 0,
         due_date: task?.due_date ? new Date(task.due_date) : undefined,
         project: projectId,
+        estimated_hours: task?.estimated_hours || 0,
       });
       setFormKey(prev => prev + 1);
     }
@@ -149,10 +149,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    console.log(onTaskSave)
-    console.log(onTaskSave)
-     
+    
     // if (!onTaskSave) return;
     
     if (!formData.title.trim()) {
@@ -164,12 +161,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       alert('La date d\'échéance est requise');
       return;
     }
-
-    if (formData.start_date && formData.due_date && formData.start_date > formData.due_date) {
-      alert('La date de début ne peut pas être postérieure à la date d\'échéance');
-      return;
-    }
-
     // Vérifier si la date d'échéance est proche
     const daysUntilDue = Math.ceil((formData.due_date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     if (daysUntilDue <= 2) {
@@ -187,11 +178,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     const taskData = {
       title: formData.title.trim(),
       description: formData.description.trim(),
-      status: formData.status as ProjectTaskStatus,
-      assigned_to_id: formData.assigned_to_id ? parseInt(formData.assigned_to_id) : undefined,
-      start_date: formData.start_date ? format(formData.start_date, 'yyyy-MM-dd') : undefined,
+      assigned_to: formData.assigned_to,
       due_date: format(formData.due_date, 'yyyy-MM-dd'),
       project: projectId,
+      estimated_hours: formData.estimated_hours,
     };
 
     if (mode === 'edit' && task) {
@@ -210,11 +200,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     setFormData({
       title: '',
       description: '',
-      status: 'À faire',
-      assigned_to_id: '',
-      start_date: undefined,
+      assigned_to: null,
       due_date: undefined,
       project: projectId,
+      estimated_hours: 0,
     });
   };
 
@@ -223,11 +212,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
     setFormData({
       title: '',
       description: '',
-      status: 'À faire',
-      assigned_to_id: '',
-      start_date: undefined,
+      assigned_to: null,
       due_date: undefined,
       project: projectId,
+      estimated_hours: 0,
     });
   };
 
@@ -251,6 +239,8 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
       toast.error('Une erreur est survenue');
     }
   };
+
+  console.log(task)
 
   const renderViewMode = () => {
     if (!task) return null;
@@ -307,7 +297,8 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
           <div>
             <Label>Créée le</Label>
             <p className="mt-1">
-              {format(new Date(task.created_at), 'PPP', { locale: fr })}
+              {/* {format(new Date(task?.created_at), 'PPP', { locale: fr })} */}
+              {/* {task?.created_by} */}
             </p>
           </div>
         </div>
@@ -373,27 +364,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="status">Statut</Label>
-                  <Select 
-                    value={formData.status} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {taskStatuses.map(status => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <Label htmlFor="assigned_to">Assigné à</Label>
                   <Select 
-                    value={formData.assigned_to_id} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to_id: value }))}
+                    value={formData.assigned_to?.toString() || ''} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: parseInt(value) }))}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Sélectionner un membre" />
@@ -409,7 +383,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                           Aucun utilisateur disponible
                         </div>
                       ) : (
-                                                 users.results.map((user: UserList) => (
+                          users.results.map((user: UserList) => (
                           <SelectItem key={user.id} value={user.id.toString()}>
                             {user.first_name} {user.last_name} ({user.email})
                           </SelectItem>
@@ -418,38 +392,24 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label>Estimation (nombre d'heures)</Label>
+                  <Input
+                    id="estimated_hours"
+                    type="number"
+                    value={formData.estimated_hours}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        estimated_hours: value === '' ? 0 : parseInt(value, 10),
+                      }));
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Date de début</Label>
-                  <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full justify-start text-left font-normal"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.start_date ? format(formData.start_date, 'PPP', { locale: fr }) : 'Sélectionner une date'}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent 
-                      className="w-auto p-0" 
-                      style={{ zIndex: 9999, pointerEvents: 'auto' }}
-                    >
-                      <Calendar
-                         mode="single"
-                         selected={formData.start_date as Date | undefined}
-                         onSelect={(date) => {
-                           setFormData(prev => ({ ...prev, start_date: date || undefined }));
-                           setStartDateOpen(false);
-                         }}
-                         initialFocus
-                       />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
                 <div>
                   <Label>Date d'échéance *</Label>
                   <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
@@ -477,6 +437,35 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode }: TaskM
                        />
                     </PopoverContent>
                   </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="assigned_to">Phase</Label>
+                  <Select 
+                    value={formData.assigned_to?.toString() || ''} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, assigned_to: parseInt(value) }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner un membre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {usersLoading ? (
+                        <div className="flex items-center justify-center p-4">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Chargement des utilisateurs...
+                        </div>
+                      ) : !users?.results || users.results.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500">
+                          Aucun utilisateur disponible
+                        </div>
+                      ) : (
+                          users.results.map((user: UserList) => (
+                          <SelectItem key={user.id} value={user.id.toString()}>
+                            {user.first_name} {user.last_name} ({user.email})
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

@@ -126,13 +126,13 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
   };
 
   const roles: UserProfileRole[] = [
-    'Managing Director',
-    'Chef de projet',
-    'Directeur de production',
-    'Responsable communication',
-    'Administrateur financier',
-    'Assistant',
-    'Consultant'
+    "Managing Director",
+    "Chef de projet",
+    "Directeur de production",
+    "Responsable communication",
+    "Administrateur financier",
+    "Assistant",
+    "Consultant"
   ];
 
   const departments = [

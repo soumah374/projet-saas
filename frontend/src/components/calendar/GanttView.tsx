@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Plus, Link2, Link2Off } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
-import { useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
+import { useProjects, useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { format, addDays, eachDayOfInterval, isSameDay, isWithinInterval, differenceInDays, addMonths, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import { ProjectTask } from '@/lib/types';
 
 interface GanttViewProps {
-  projects: any[];
+  projectId: string;
 }
 
 interface GanttTask {
@@ -30,15 +30,22 @@ interface GanttTask {
   status: string;
 }
 
-export const GanttView = ({ projects }: GanttViewProps) => {
+function safeParseDate(date?: string | Date | null): Date | null {
+  if (!date) return null;
+  const parsed = typeof date === 'string' ? new Date(date) : date;
+  return parsed instanceof Date && !isNaN(parsed.getTime()) ? parsed : null;
+}
+
+
+export const GanttView = ({ projectId }: GanttViewProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [visibleDays, setVisibleDays] = useState(30);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [showDependencies, setShowDependencies] = useState(true);
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [isAddingDependency, setIsAddingDependency] = useState(false);
-  
-  const { data: tasks } = useProjectTasks(selectedProject || projects[0]?.id);
+
+  const { data: tasks } = useProjectTasks(projectId);
   
   const updateTaskMutation = useUpdateProjectTask();
 
@@ -50,17 +57,25 @@ export const GanttView = ({ projects }: GanttViewProps) => {
 
   const ganttTasks = useMemo(() => {
     if (!tasks) return [];
-    return tasks.map((task: ProjectTask) => ({
-      id: task.id.toString(),
-      title: task.title,
-      start: new Date(task.start_date || task.created_at),
-      end: new Date(task.due_date || addDays(new Date(task.created_at), 1)),
-      progress: task.completion_percentage || 0,
-      dependencies: [], // Initialize as empty array since it's not in the API response
-      assignee: task.assigned_to_name,
-      status: task.status
-    }));
+    return tasks.results.map((task: ProjectTask) => {
+      const fallbackDate = addDays(new Date(), 1);
+      const start = safeParseDate(task.start_date) || fallbackDate;
+      const end = safeParseDate(task.due_date) || fallbackDate;
+  
+      return {
+        id: task.id.toString(),
+        title: task.title,
+        start,
+        end,
+        progress: task.completion_percentage || 0,
+        dependencies: [],
+        assignee: task.assigned_to_name,
+        status: task.status
+      };
+    });
   }, [tasks]);
+
+  console.log('ganttTasks', ganttTasks)
 
   const handlePreviousMonth = () => {
     setCurrentDate(prev => subMonths(prev, 1));
@@ -116,18 +131,14 @@ export const GanttView = ({ projects }: GanttViewProps) => {
         <CardTitle>Vue Gantt</CardTitle>
         <div className="flex items-center space-x-2">
           <Select
-            value={selectedProject || projects[0]?.id}
+            value={selectedProject || projectId}
             onValueChange={(value) => setSelectedProject(value)}
           >
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Sélectionner un projet" />
             </SelectTrigger>
             <SelectContent>
-              {projects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.title}
-                </SelectItem>
-              ))}
+              <SelectItem value={projectId}>{projectId}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
@@ -207,7 +218,7 @@ export const GanttView = ({ projects }: GanttViewProps) => {
                             <TooltipContent>
                               <p className="font-medium">{task.title}</p>
                               <p className="text-sm">
-                                {format(task.start, 'dd/MM/yyyy')} - {format(task.end, 'dd/MM/yyyy')}
+                                {format(task?.start, 'dd/MM/yyyy')} - {format(task?.end, 'dd/MM/yyyy')}
                               </p>
                               <p className="text-sm">Progression: {task.progress}%</p>
                             </TooltipContent>
