@@ -439,7 +439,7 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
         if new_status in dict(ProjectTask.STATUS_CHOICES):
             task.status = new_status
             if new_status == 'Terminé':
-                task.executed_at = timezone.now()
+                task.execute()
             task.save()
             return Response({'status': new_status})
         return Response(

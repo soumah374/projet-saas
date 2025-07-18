@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useTimesheets } from '@/hooks/use-timesheets';
 import { TimeSheetModal } from './TimeSheetModal';
-import { Plus, Search, Filter, Check, Clock } from 'lucide-react';
+import { Plus, Search, Filter, Check, Clock, Eye } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { TimeSheet } from '@/lib/api';
 
@@ -151,20 +151,26 @@ export const TimeSheetList = ({ projectId }: TimeSheetListProps) => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleView(timeSheet)}
+                      <TimeSheetModal
+                        projectId={projectId}
+                        timeSheet={timeSheet}
+                        mode="view"
                       >
-                        Voir
-                      </Button>
+                        <Button size="sm" variant="outline">
+                          <Eye className="h-4 w-4 mr-2" />
+                          Voir
+                        </Button>
+                      </TimeSheetModal>
                       {!timeSheet.validated_by && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleEdit(timeSheet)}
+                        <TimeSheetModal
+                          projectId={projectId}
+                          timeSheet={timeSheet}
+                          mode="edit"
                         >
+                        <Button size="sm">
                           Modifier
                         </Button>
+                      </TimeSheetModal>
                       )}
                     </div>
                   </TableCell>
@@ -180,17 +186,6 @@ export const TimeSheetList = ({ projectId }: TimeSheetListProps) => {
             </TableBody>
           </Table>
         </div>
-
-        {selectedTimeSheet && (
-          <TimeSheetModal
-            projectId={projectId}
-            timeSheet={selectedTimeSheet}
-            mode={viewMode}
-            onClose={handleClose}
-          >
-            <div /> {/* Empty div as trigger since we control the modal state */}
-          </TimeSheetModal>
-        )}
       </CardContent>
     </Card>
   );

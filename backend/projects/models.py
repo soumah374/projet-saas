@@ -4,7 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.db.models import Sum
 from departments.models import Department
-
+from decimal import Decimal
 
 class Project(models.Model):
     """Modèle pour les projets SAKOM"""
@@ -153,6 +153,32 @@ class Project(models.Model):
                 estimated_hours=template.estimated_hours,
                 status='À faire'
             )
+    
+    def update_overall_progress(self):
+        """Mettre à jour la progression globale du projet basée sur les phases"""
+        phases = self.phases.all()
+        
+        if not phases.exists():
+            return
+        
+        # Calculer la progression pondérée par phase
+        total_progress = 0
+        total_weight = 0
+        
+        for phase in phases:
+            # Poids basé sur la durée de la phase
+            phase_duration = (phase.end_date - phase.start_date).days
+            total_duration = (self.deadline - self.start_date).days if self.start_date else 1
+            
+            # Éviter la division par zéro
+            if total_duration > 0:
+                weight = phase_duration / total_duration
+                total_progress += phase.progress * weight
+                total_weight += weight
+        
+        if total_weight > 0:
+            self.progress = int(total_progress / total_weight)
+            self.save()
 
 
 class ProjectMember(models.Model):
@@ -200,7 +226,6 @@ class ProjectMember(models.Model):
 
 class ProjectPhase(models.Model):
     """Modèle pour les phases d'un projet"""
-    
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='phases')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
@@ -219,6 +244,60 @@ class ProjectPhase(models.Model):
     
     def __str__(self):
         return f"{self.name} - {self.project.title}"
+
+    def calculate_progress_from_tasks(self):
+        """Calculer la progression de la phase basée sur les tâches"""
+        tasks = self.tasks.all()
+        
+        if not tasks.exists():
+            return 0
+        
+        # Méthode 1: Basée sur le statut des tâches
+        completed_tasks = tasks.filter(status='Terminé').count()
+        total_tasks = tasks.count()
+        
+        # Éviter la division par zéro
+        if total_tasks == 0:
+            progress_by_status = 0
+        else:
+            progress_by_status = (completed_tasks / total_tasks) * 100
+        
+        # Méthode 2: Basée sur les heures estimées vs réelles
+        # Filtrer seulement les tâches qui ont des heures estimées
+        tasks_with_estimates = tasks.exclude(estimated_hours__isnull=True).exclude(estimated_hours=0)
+        
+        if tasks_with_estimates.exists():
+            total_estimated_hours = tasks_with_estimates.aggregate(
+                total=models.Sum('estimated_hours')
+            )['total'] or Decimal('0')
+            
+            total_actual_hours = tasks_with_estimates.aggregate(
+                total=models.Sum('actual_hours')
+            )['total'] or Decimal('0')
+            
+            progress_by_hours = 0
+            # Vérifier que total_estimated_hours n'est pas 0
+            if total_estimated_hours and total_estimated_hours > 0:
+                progress_by_hours = min(100, float(total_actual_hours / total_estimated_hours * 100))
+        else:
+            # Si aucune tâche n'a d'heures estimées, utiliser seulement le statut
+            progress_by_hours = 0
+        
+        # Méthode 3: Pondérée (statut + heures)
+        # Si pas d'heures estimées, utiliser 100% basé sur le statut
+        if progress_by_hours == 0 and tasks_with_estimates.count() == 0:
+            weighted_progress = progress_by_status
+        else:
+            weighted_progress = (progress_by_status * 0.7) + (progress_by_hours * 0.3)
+        
+        return int(weighted_progress)
+    
+    def update_progress(self):
+        """Mettre à jour la progression de la phase"""
+        self.progress = self.calculate_progress_from_tasks()
+        self.save()
+        # Mettre à jour aussi la progression du projet
+        self.project.update_overall_progress()
 
 
 class TimeSheet(models.Model):
@@ -278,6 +357,15 @@ class TimeSheet(models.Model):
         
         # Mettre à jour les heures réelles de la tâche
         self.task.update_actual_hours()
+        
+    def details_task(self):
+        """Obtenir les détails de la tâche"""
+        return {
+            'title': self.task.title,
+            'description': self.task.description,
+            'estimated_hours': self.task.estimated_hours,
+        }
+    
     
     def can_edit(self, user):
         """Vérifier si un utilisateur peut modifier la feuille de temps"""
@@ -287,10 +375,13 @@ class TimeSheet(models.Model):
     
     def get_daily_total(self):
         """Obtenir le total des heures pour ce jour et cet utilisateur"""
-        return TimeSheet.objects.filter(
+        total = TimeSheet.objects.filter(
             user=self.user,
             date=self.date
-        ).exclude(id=self.id).aggregate(total=models.Sum('hours'))['total'] or 0
+        ).exclude(id=self.id).aggregate(total=models.Sum('hours'))['total']
+        
+        # Retourner 0 si total est None
+        return total or 0
     
     def save(self, *args, **kwargs):
         # Vérifier que les heures ne dépassent pas l'allocation
@@ -301,7 +392,7 @@ class TimeSheet(models.Model):
             except ProjectMember.DoesNotExist:
                 raise ValueError("L'utilisateur n'est pas membre de ce projet")
                 
-            max_hours = (member.allocation_percentage / 100) * 24
+            max_hours = round((member.allocation_percentage / 100) * 24, 1)
             
             if self.hours > max_hours:
                 raise ValueError(f"Les heures saisies dépassent l'allocation maximale ({max_hours}h)")
@@ -364,15 +455,27 @@ class ProjectTask(models.Model):
     def __str__(self):
         return f"{self.title} - {self.project.title}"
 
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        
+        # Mettre à jour la progression de la phase si la tâche a changé
+        if not is_new and self.phase:
+            self.phase.update_progress()
+    
     def execute(self):
         """Marquer la tâche comme exécutée"""
         self.status = 'Terminé'
         self.executed_at = timezone.now()
         self.save()
+        
+        # Mettre à jour la progression de la phase
+        if self.phase:
+            self.phase.update_progress()
     
     def get_completion_percentage(self):
         """Calculer le pourcentage de complétion basé sur les heures"""
-        if not self.estimated_hours:
+        if not self.estimated_hours or self.estimated_hours == 0:
             return 0
         return min(100, int((self.actual_hours / self.estimated_hours) * 100))
     
@@ -380,7 +483,7 @@ class ProjectTask(models.Model):
         """Mettre à jour les heures réelles basées sur les timesheets"""
         total_hours = self.timesheets.aggregate(total=Sum('hours'))['total'] or 0
         self.actual_hours = total_hours
-        self.save() 
+        self.save()
 
 
 class ProjectBudget(models.Model):

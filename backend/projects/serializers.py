@@ -115,7 +115,6 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
     completion_percentage = serializers.SerializerMethodField()
     phase_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
-    
     class Meta:
         model = ProjectTask
         fields = [
@@ -320,14 +319,20 @@ class ProjectBudgetSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'total']
 
 class TimeSheetSerializer(serializers.ModelSerializer):
+    task_details = serializers.SerializerMethodField()
     class Meta:
         model = TimeSheet
         fields = [
             'id', 'project', 'task', 'user', 'date', 'hours',
             'description', 'validated_by', 'validated_at',
-            'created_at', 'updated_at'
+            'created_at', 'updated_at', 'task_details'
         ]
         read_only_fields = ['id', 'validated_by', 'validated_at', 'created_at', 'updated_at']
+    
+    @extend_schema_field(dict)
+    def get_task_details(self, obj):
+        return obj.details_task()
+        
 
 class ProjectSerializer(serializers.ModelSerializer):
     phases = ProjectPhaseSerializer(many=True, read_only=True)

@@ -103,7 +103,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     assigned_to: null,
     due_date: undefined as Date | undefined,
     project: projectId,
-    estimated_hours: 0,
+    estimated_hours: 1,
     phase: null,
   });
 
@@ -124,7 +124,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       assigned_to: task.assigned_to?.id || 0,
       due_date: task.due_date,
       project: projectId,
-      estimated_hours: task.estimated_hours || 0,
+      estimated_hours: task.estimated_hours || 1,
       phase: task.phase || null,
     } : {
       title: '',
@@ -132,7 +132,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       assigned_to: null,
       due_date: '',
       project: projectId,
-      estimated_hours: 0,
+      estimated_hours: 1,
       phase: null,
     }
   });
@@ -145,7 +145,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
         assigned_to: task?.assigned_to?.id || 0,
         due_date: task?.due_date ? new Date(task.due_date) : undefined,
         project: projectId,
-        estimated_hours: task?.estimated_hours || 0,
+        estimated_hours: task?.estimated_hours || 1,
         phase: task?.phase || null,
       });
       setFormKey(prev => prev + 1);
@@ -209,7 +209,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       assigned_to: null,
       due_date: undefined,
       project: projectId,
-      estimated_hours: 0,
+      estimated_hours: 1,
       phase: null,
     });
   };
@@ -222,7 +222,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       assigned_to: null,
       due_date: undefined,
       project: projectId,
-      estimated_hours: 0,
+      estimated_hours: 1,
       phase: null,
     });
   };
@@ -410,11 +410,12 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                     id="estimated_hours"
                     type="number"
                     value={formData.estimated_hours}
+                    
                     onChange={(e) => {
                       const value = e.target.value;
                       setFormData((prev) => ({
                         ...prev,
-                        estimated_hours: value === '' ? 0 : parseInt(value, 10),
+                        estimated_hours: value === '' ? 1 : parseFloat(value),
                       }));
                     }}
                   />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogOverlay} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -179,6 +179,7 @@ export const TimeSheetModal = ({
     }
   };
   
+  const [errorValidate, setErrorValidate] = useState<string | null>(null);
   const handleValidate = async () => {
     if (!timeSheet) return;
     
@@ -194,9 +195,10 @@ export const TimeSheetModal = ({
       setOpen(false);
       onClose?.();
     } catch (error: any) {
+      setErrorValidate(error?.response?.data?.error);
       toast({
         title: 'Erreur',
-        description: error?.response?.data?.error || 'Une erreur est survenue lors de la validation',
+        description: errorValidate || 'Une erreur est survenue lors de la validation',
         variant: 'destructive'
       });
     }
@@ -233,6 +235,12 @@ export const TimeSheetModal = ({
                 le {format(new Date(timeSheet.validated_at!), 'dd/MM/yyyy', { locale: fr })}
               </span>
             </div>
+          )}
+
+          {errorValidate && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>{errorValidate}</AlertDescription>
+            </Alert>
           )}
           
           <div className="grid grid-cols-2 gap-4">
