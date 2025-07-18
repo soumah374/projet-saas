@@ -429,10 +429,19 @@ export interface Service {
   id: number;
   name: string;
   description: string;
-  category: string;
-  profile_intervenant: string;
-  price: string;
-  duration: string;
+  category?: {
+    id: number;
+    name: string;
+  } | null;
+  profile_intervenant?: {
+    id: number;
+    name: string;
+  } | null;
+  price?: number | null;
+  duration?: number | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Phase {

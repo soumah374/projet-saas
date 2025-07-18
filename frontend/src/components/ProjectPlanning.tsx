@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
 import { useProjectTasks } from '@/hooks/use-projects';
@@ -22,6 +22,7 @@ import { fr } from 'date-fns/locale';
 import { DeleteMemberProject } from './deleteMemberProject';
 import { Service } from '@/lib/types';
 import { StartTaskProjectModal } from './StartTaskProjectModal';
+import { StandardTasksManager } from './StandardTasksManager';
 
 interface ProjectPlanningProps {
   projectId: string;
@@ -226,10 +227,22 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                                   <span>{task.assigned_to_name}</span>
                                 </div>
                               )}
+
                               {task.due_date && (
                                 <div className="flex items-center gap-1">
                                   <CalendarIcon className="h-4 w-4" />
                                   <span>{format(new Date(task.due_date), 'dd MMM yyyy', { locale: fr })}</span>
+                                </div>
+                              )}
+                              {task.estimated_hours && (
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-4 w-4" />
+                                  <span>{task.estimated_hours}h</span>
+                                </div>
+                              )}
+                              {task.phase && (
+                                <div className="flex items-center gap-1">
+                                  <Badge variant="secondary">{task.phase_name}</Badge>
                                 </div>
                               )}
                             </div>
@@ -418,31 +431,14 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
           </TabsContent>
 
           <TabsContent value="templates" className="space-y-4">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Tâches standards</h3>
-                <Select value={selectedTemplateCategory} onValueChange={setSelectedTemplateCategory}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Sélectionner une catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {services.map((service: Service) => (
-                      <SelectItem key={service.id} value={service.name}>
-                        {service.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <Button 
-                onClick={handleApplyTemplate}
-                disabled={!selectedTemplateCategory}
-                className="w-full"
-              >
-                Appliquer le template
-              </Button>
-            </div>
+            <StandardTasksManager 
+              projectId={projectId}
+              phases={phases}
+              onTasksCreated={() => {
+                // Rafraîchir les données des tâches
+                window.location.reload();
+              }}
+            />
           </TabsContent>
         </Tabs>
       </CardContent>

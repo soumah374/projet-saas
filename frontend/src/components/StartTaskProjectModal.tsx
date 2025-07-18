@@ -75,7 +75,7 @@ export const StartTaskProjectModal = ({children, task, projectId}: StartTaskProj
           <DialogFooter>
             <div className="flex justify-between w-full mt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-              <Button type="submit">Démarrer la tâche</Button>
+              <Button type="submit">{formData.status === 'Terminé' ? 'Terminer la tâche' : 'Démarrer la tâche'}</Button>
             </div>
           </DialogFooter>
         </form>
