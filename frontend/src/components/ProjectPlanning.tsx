@@ -436,7 +436,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
               phases={phases}
               onTasksCreated={() => {
                 // Rafraîchir les données des tâches
-                window.location.reload();
+                // window.location.reload();
               }}
             />
           </TabsContent>

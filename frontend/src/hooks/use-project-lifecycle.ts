@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectPhasesAPI, projectTeamAPI, projectTasksAPI, projectMembersAPI, servicesAPI, projectApi } from '@/lib/api';
+import { projectPhasesAPI, projectTeamAPI, projectTasksAPI, servicesAPI, projectApi } from '@/lib/api';
 import { ProjectPhase, Service, TeamMember } from '@/lib/types';
 
 interface UseProjectLifecycle {

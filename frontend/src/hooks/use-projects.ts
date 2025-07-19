@@ -8,7 +8,6 @@ import type {
   ProjectTask,
   ProjectMember,
   ProjectPhase,
-  TaskWithDeadline,
   ProjectEvent,
   PaginatedResponse,
   ExtendedProject

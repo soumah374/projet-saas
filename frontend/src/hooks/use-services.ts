@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { config } from '@/lib/config';
-import type { Service, PaginatedResponse } from '@/lib/types';
+import type { Service, PaginatedResponse, Category } from '@/lib/types';
 
 const BASE_URL = `${config.api.baseUrl}/catalog`;
 
@@ -66,3 +66,20 @@ export function useService(id: number) {
     enabled: !!id,
   });
 } 
+
+export function useCategories() {
+  return useQuery({
+    queryKey: ['categories'],
+    queryFn: () => apiRequest<PaginatedResponse<Category>>('/categories/'),
+  });
+}
+
+
+export function useServicesByCategory(categoryId: number) {
+  return useQuery({
+    queryKey: ['services', categoryId],
+    queryFn: () => apiRequest<PaginatedResponse<Service>>(`/services/category/${categoryId}/services/`),
+  });
+}
+
+// catalog/services/category/2/services/

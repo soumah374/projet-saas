@@ -129,6 +129,7 @@ export interface ProjectTask {
   project: string;
   phase: number | null;
   assigned_to: number | null;
+  is_standard_task: boolean | false;
 }
 
 export interface TaskWithDeadline extends ProjectTask {
@@ -453,4 +454,14 @@ export interface Phase {
   progress: number;
   order: number;
   project: string;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+}
+
+export interface IntervenantProfile {
+  id: number;
+  name: string;
 }
