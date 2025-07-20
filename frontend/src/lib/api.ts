@@ -348,6 +348,47 @@ export const usersAPI = {
     getStatistics: () => api.get('/auth/users/statistics/'),
 };
 
+export const clientsAPI = {
+    getClients: (params?: {
+        search?: string;
+        is_active?: boolean;
+        ville?: string;
+        pays?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/auth/clients/', { params }),
+    getClient: (id: number) => api.get(`/auth/clients/${id}/`),
+    createClient: (data: {
+        first_name: string;
+        last_name: string;
+        email: string;
+        client_profile: {
+            telephone: string;
+            adresse: string;
+            ville: string;
+            code_postal: string;
+            pays: string;
+            is_active: boolean;
+        };
+    }) => api.post('/auth/clients-create/', data),
+    updateClient: (id: number, data: {
+        telephone?: string;
+        adresse?: string;
+        ville?: string;
+        code_postal?: string;
+        pays?: string;
+        is_active?: boolean;
+    }) => api.patch(`/auth/clients/${id}/`, data),
+    updateClientUser: (id: number, data: {
+        first_name?: string;
+        last_name?: string;
+        email?: string;
+    }) => api.patch(`/auth/users/${id}/`, data),
+    deleteClient: (id: number) => api.delete(`/auth/clients/${id}/`),
+    toggleClientStatus: (id: number, isActive: boolean) => api.patch(`/auth/clients/${id}/`, { is_active: isActive }),
+};
+
 export const documentsAPI = {
     getDocuments: (params?: {
         search?: string;

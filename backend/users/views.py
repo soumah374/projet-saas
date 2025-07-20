@@ -219,4 +219,6 @@ class ClientProfileViewSet(viewsets.ModelViewSet):
 class ClientUserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = User.objects.all()
     serializer_class = ClientUserCreateSerializer
-    permission_classes = [permissions.IsAdminUser] 
+    permission_classes = [permissions.IsAdminUser]
+    
+    

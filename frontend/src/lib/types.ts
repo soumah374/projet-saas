@@ -465,3 +465,15 @@ export interface IntervenantProfile {
   id: number;
   name: string;
 }
+
+export interface ClientCreateData {
+  first_name: string;
+  last_name: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+  ville: string;
+  code_postal: string;
+  pays: string;
+  is_active: boolean;
+}

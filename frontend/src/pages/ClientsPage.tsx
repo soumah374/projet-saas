@@ -1,57 +1,30 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { api } from '@/lib/api';
 import { Loader2, Plus, Edit, Trash2, Download, Eye } from 'lucide-react';
-import { toast } from 'sonner';
-
-interface User {
-  id: number;
-  username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-}
-
-interface ClientProfile {
-  id: number;
-  user: User;
-  adresse: string;
-  ville: string;
-  code_postal: string;
-  pays: string;
-  telephone: string;
-  date_inscription: string;
-  is_active: boolean;
-}
-
-interface PaginatedResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: ClientProfile[];
-}
+import { 
+  useClients, 
+  useCreateClient, 
+  useUpdateClient, 
+  useUpdateClientUser, 
+  useDeleteClient, 
+  useToggleClientStatus,
+  type ClientProfile,
+  type ClientCreateData
+} from '@/hooks/use-clients';
+import { Label } from 'recharts';
 
 export function ClientsPage() {
-  const [clients, setClients] = useState<ClientProfile[]>([]);
-  const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
-  const [hasPrev, setHasPrev] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [editClient, setEditClient] = useState<ClientProfile | null>(null);
   const [form, setForm] = useState<any>({
-    username: '',
     first_name: '',
     last_name: '',
     email: '',
-    password: '',
-    password_confirm: '',
     telephone: '',
     adresse: '',
     ville: '',
@@ -60,7 +33,6 @@ export function ClientsPage() {
     is_active: true,
   });
   const pageSize = 10;
-  const [toggling, setToggling] = useState<number | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [villeFilter, setVilleFilter] = useState('');
@@ -68,31 +40,30 @@ export function ClientsPage() {
   const [detailClient, setDetailClient] = useState<ClientProfile | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const fetchClients = async (page = 1) => {
-    setLoading(true);
-    try {
-      const params: any = { page, page_size: pageSize };
-      if (search) params.search = search;
-      if (statusFilter) params.is_active = statusFilter === 'actif' ? true : statusFilter === 'inactif' ? false : undefined;
-      if (villeFilter) params.ville = villeFilter;
-      if (paysFilter) params.pays = paysFilter;
-      const res = await api.get('/users/clients/', { params });
-      const data: PaginatedResponse = res.data;
-      setClients(data.results);
-      setTotalPages(Math.ceil(data.count / pageSize));
-      setHasNext(!!data.next);
-      setHasPrev(!!data.previous);
-    } catch (err) {
-      toast.error('Erreur lors du chargement des clients');
-    } finally {
-      setLoading(false);
-    }
+  // Hooks pour les opérations CRUD
+  const createClientMutation = useCreateClient();
+  const updateClientMutation = useUpdateClient();
+  const updateClientUserMutation = useUpdateClientUser();
+  const deleteClientMutation = useDeleteClient();
+  const toggleClientStatusMutation = useToggleClientStatus();
+
+  // Paramètres pour la requête des clients
+  const queryParams = {
+    page: currentPage,
+    page_size: pageSize,
+    search: search || undefined,
+    is_active: statusFilter === 'actif' ? true : statusFilter === 'inactif' ? false : undefined,
+    ville: villeFilter || undefined,
+    pays: paysFilter || undefined,
   };
 
-  useEffect(() => {
-    fetchClients(currentPage);
-    // eslint-disable-next-line
-  }, [search, statusFilter, villeFilter, paysFilter, currentPage]);
+  // Hook pour récupérer les clients
+  const { data: clientsData, isLoading: loading } = useClients(queryParams);
+
+  const clients = clientsData?.results || [];
+  const totalPages = clientsData ? Math.ceil(clientsData.count / pageSize) : 1;
+  const hasNext = !!clientsData?.next;
+  const hasPrev = !!clientsData?.previous;
 
   const handleOpenDialog = (client?: ClientProfile) => {
     if (client) {
@@ -102,8 +73,6 @@ export function ClientsPage() {
         first_name: client.user.first_name,
         last_name: client.user.last_name,
         email: client.user.email,
-        password: '',
-        password_confirm: '',
         telephone: client.telephone,
         adresse: client.adresse,
         ville: client.ville,
@@ -118,8 +87,6 @@ export function ClientsPage() {
         first_name: '',
         last_name: '',
         email: '',
-        password: '',
-        password_confirm: '',
         telephone: '',
         adresse: '',
         ville: '',
@@ -139,8 +106,6 @@ export function ClientsPage() {
       first_name: '',
       last_name: '',
       email: '',
-      password: '',
-      password_confirm: '',
       telephone: '',
       adresse: '',
       ville: '',
@@ -155,38 +120,44 @@ export function ClientsPage() {
   };
 
   const handleSave = async () => {
-    setSaving(true);
-    try {
-      if (editClient) {
-        // Edition
+    if (editClient) {
+      // Edition
+      try {
         // 1. Mettre à jour le profil client
-        await api.patch(`/users/clients/${editClient.id}/`, {
-          telephone: form.telephone,
-          adresse: form.adresse,
-          ville: form.ville,
-          code_postal: form.code_postal,
-          pays: form.pays,
-          is_active: form.is_active,
+        await updateClientMutation.mutateAsync({
+          id: editClient.id,
+          data: {
+            telephone: form.telephone,
+            adresse: form.adresse,
+            ville: form.ville,
+            code_postal: form.code_postal,
+            pays: form.pays,
+            is_active: form.is_active,
+          }
         });
+        
         // 2. Mettre à jour l'utilisateur (nom, prénom, email, username)
-        await api.patch(`/users/users/${editClient.user.id}/`, {
-          username: form.username,
-          first_name: form.first_name,
-          last_name: form.last_name,
-          email: form.email,
+        await updateClientUserMutation.mutateAsync({
+          id: editClient.user.id,
+          data: {
+            username: form.username,
+            first_name: form.first_name,
+            last_name: form.last_name,
+            email: form.email,
+          }
         });
-        toast.success('Client modifié');
-        fetchClients(currentPage);
+        
         handleCloseDialog();
-      } else {
-        // Création
-        const payload = {
-          username: form.username,
+      } catch (err) {
+        // Les erreurs sont gérées par les hooks
+      }
+    } else {
+      // Création
+      try {
+        const payload: ClientCreateData = {
           first_name: form.first_name,
           last_name: form.last_name,
           email: form.email,
-          password: form.password,
-          password_confirm: form.password_confirm,
           client_profile: {
             telephone: form.telephone,
             adresse: form.adresse,
@@ -196,39 +167,31 @@ export function ClientsPage() {
             is_active: form.is_active,
           },
         };
-        await api.post('/auth/clients-create/', payload);
-        toast.success('Client ajouté');
-        fetchClients(currentPage);
+        await createClientMutation.mutateAsync(payload);
         handleCloseDialog();
+      } catch (err) {
+        // Les erreurs sont gérées par les hooks
       }
-    } catch (err: any) {
-      toast.error('Erreur lors de la sauvegarde');
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleDelete = async (client: ClientProfile) => {
     if (!window.confirm(`Supprimer le client ${client.user.first_name} ${client.user.last_name} ?`)) return;
     try {
-      await api.delete(`/users/clients/${client.id}/`);
-      toast.success('Client supprimé');
-      fetchClients(currentPage);
+      await deleteClientMutation.mutateAsync(client.id);
     } catch (err) {
-      toast.error('Erreur lors de la suppression');
+      // Les erreurs sont gérées par les hooks
     }
   };
 
   const handleToggleStatus = async (client: ClientProfile) => {
-    setToggling(client.id);
     try {
-      await api.patch(`/users/clients/${client.id}/`, { is_active: !client.is_active });
-      toast.success(`Client ${client.is_active ? 'désactivé' : 'activé'}`);
-      fetchClients(currentPage);
+      await toggleClientStatusMutation.mutateAsync({
+        id: client.id,
+        isActive: !client.is_active
+      });
     } catch (err) {
-      toast.error('Erreur lors du changement de statut');
-    } finally {
-      setToggling(null);
+      // Les erreurs sont gérées par les hooks
     }
   };
 
@@ -270,8 +233,8 @@ export function ClientsPage() {
   };
 
   // Générer les options uniques pour ville et pays
-  const villes = Array.from(new Set(clients.map(c => c.ville).filter(Boolean)));
-  const paysList = Array.from(new Set(clients.map(c => c.pays).filter(Boolean)));
+  const villes = Array.from(new Set(clients.map(c => c.ville).filter(Boolean))) as string[];
+  const paysList = Array.from(new Set(clients.map(c => c.pays).filter(Boolean))) as string[];
 
   return (
     <div className="max-w-7xl mx-auto">
@@ -287,20 +250,44 @@ export function ClientsPage() {
                 <DialogTitle>{editClient ? 'Modifier' : 'Ajouter'} un client</DialogTitle>
               </DialogHeader>
               <div className="space-y-3">
-                <Input name="username" placeholder="Nom d'utilisateur" value={form.username} onChange={handleChange} required />
-                <Input name="first_name" placeholder="Prénom" value={form.first_name} onChange={handleChange} required />
-                <Input name="last_name" placeholder="Nom" value={form.last_name} onChange={handleChange} required />
-                <Input name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
-                {!editClient && <Input name="password" type="password" placeholder="Mot de passe" value={form.password} onChange={handleChange} required />}
-                {!editClient && <Input name="password_confirm" type="password" placeholder="Confirmer le mot de passe" value={form.password_confirm} onChange={handleChange} required />}
-                <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
-                <Input name="adresse" placeholder="Adresse" value={form.adresse} onChange={handleChange} />
-                <Input name="ville" placeholder="Ville" value={form.ville} onChange={handleChange} />
-                <Input name="code_postal" placeholder="Code postal" value={form.code_postal} onChange={handleChange} />
-                <Input name="pays" placeholder="Pays" value={form.pays} onChange={handleChange} />
+                <div>
+                  <Label className="text-sm font-medium">Prénom</Label>
+                  <Input name="first_name" placeholder="Prénom" value={form.first_name} onChange={handleChange} required />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Nom</Label>
+                  <Input name="last_name" placeholder="Nom" value={form.last_name} onChange={handleChange} required />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Email</Label>
+                  <Input name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Téléphone</Label>
+                  <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Adresse</Label>
+                  <Input name="adresse" placeholder="Adresse" value={form.adresse} onChange={handleChange} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Code postal</Label>
+                  <Input name="code_postal" placeholder="Code postal" value={form.code_postal} onChange={handleChange} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Pays</Label>
+                  <Input name="pays" placeholder="Pays" value={form.pays} onChange={handleChange} />
+                </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'}</Button>
+                <Button 
+                  onClick={handleSave} 
+                  disabled={createClientMutation.isPending || updateClientMutation.isPending}
+                >
+                  {(createClientMutation.isPending || updateClientMutation.isPending) ? 
+                    <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'
+                  }
+                </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -361,8 +348,17 @@ export function ClientsPage() {
                           <span className={client.is_active ? 'text-green-600' : 'text-red-600'}>
                             {client.is_active ? 'Actif' : 'Inactif'}
                           </span>
-                          <Button size="sm" variant="ghost" onClick={() => handleToggleStatus(client)} disabled={toggling === client.id} className="text-xs">
-                            {toggling === client.id ? <Loader2 size={12} className="animate-spin" /> : client.is_active ? 'Désactiver' : 'Activer'}
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => handleToggleStatus(client)} 
+                            disabled={toggleClientStatusMutation.isPending} 
+                            className="text-xs"
+                          >
+                            {toggleClientStatusMutation.isPending ? 
+                              <Loader2 size={12} className="animate-spin" /> : 
+                              client.is_active ? 'Désactiver' : 'Activer'
+                            }
                           </Button>
                         </div>
                       </TableCell>

@@ -1,3 +1,4 @@
+import random
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
@@ -262,18 +263,21 @@ class ClientProfileSerializer(serializers.ModelSerializer):
 
 class ClientUserCreateSerializer(serializers.ModelSerializer):
     client_profile = ClientProfileSerializer(required=False)
-    password = serializers.CharField(write_only=True)
-    password_confirm = serializers.CharField(write_only=True)
     class Meta:
         model = User
-        fields = ['username', 'first_name', 'last_name', 'email', 'password', 'password_confirm', 'client_profile']
+        fields = ['first_name', 'last_name', 'email', 'client_profile']
     def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError("Les mots de passe ne correspondent pas.")
         return attrs
     def create(self, validated_data):
-        password_confirm = validated_data.pop('password_confirm')
         client_profile_data = validated_data.pop('client_profile', {})
-        user = User.objects.create_user(**validated_data)
-        ClientProfile.objects.create(user=user, **client_profile_data)
-        return user 
+        print(validated_data)
+        user = User.objects.create(
+            username=random.randint(100000, 999999),
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            email=validated_data['email'],
+            is_active=True,
+        )
+        client_profile_data['user'] = user.id
+        ClientProfile.objects.create(**client_profile_data)
+        return user

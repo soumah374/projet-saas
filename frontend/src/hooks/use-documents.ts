@@ -20,7 +20,7 @@ interface UpdateDocumentDTO extends Partial<CreateDocumentDTO> {
 export const useDocuments = (projectId?: string) => {
   return useQuery({
     queryKey: ['documents', projectId],
-    queryFn: () => documentsAPI.getDocuments(projectId),
+    queryFn: () => documentsAPI.getDocuments(projectId ? { project: projectId } : undefined),
   });
 };
 
@@ -39,7 +39,7 @@ export const useCreateDocument = () => {
       if (data.tags) formData.append('tags', JSON.stringify(data.tags));
       if (data.project) formData.append('project', data.project);
 
-      return documentsAPI.createDocument(formData);
+      return documentsAPI.uploadDocument(formData);
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['documents', variables.project] });

@@ -100,7 +100,7 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
   const [isPublic, setIsPublic] = useState(false);
 
   const { data: documentsData, isLoading } = useDocuments(projectId);
-  const documents = documentsData?.results || [];
+  const documents = documentsData?.data?.results || [];
   const createDocumentMutation = useCreateDocument();
   const deleteDocumentMutation = useDeleteDocument();
 
