@@ -16,7 +16,9 @@ import {
   Target,
   Clock,
   List,
-  Building2
+  Building2,
+  Activity,
+  Euro
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -46,7 +48,8 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
     projets: true, 
     planning: false,
     rapports: false,
-    documents: false 
+    documents: false,
+    prestations: false
   });
 
   const toggleMenu = (key: string) => setOpenMenus(m => ({ ...m, [key]: !m[key] }));
@@ -259,6 +262,43 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             )}> 
               <FolderOpen className="h-5 w-5" />
               <span>Prestations</span>
+            </Link>
+
+            {/* Prestations accordéon */}
+            <div className="space-y-2">
+              <button 
+                onClick={() => toggleMenu('prestations')} 
+                className={cn(
+                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname.includes('/services') || location.pathname.includes('/activities') || location.pathname.includes('/taux-horaires') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                <FolderOpen className="h-5 w-5" /> Prestations
+                <span className="ml-auto">
+                  {openMenus.prestations ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </span>
+              </button>
+              {openMenus.prestations && (
+                <div className="ml-8 space-y-1">
+                  <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <List className="h-4 w-4" /> Catalogue des prestations
+                  </Link>
+                  <Link to="/activities" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <Activity className="h-4 w-4" /> Activités
+                  </Link>
+                  <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <Euro className="h-4 w-4" /> Taux horaires
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            <Link to="/activities" className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+              location.pathname === '/activities' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+            )}> 
+              <Activity className="h-5 w-5" />
+              <span>Activités</span>
             </Link>
 
               <Link to="/clients" className={cn(

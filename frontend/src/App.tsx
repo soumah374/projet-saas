@@ -18,7 +18,10 @@ import { ProjectReportPage } from './pages/ProjectReportPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProjectCalendarPage } from './pages/ProjectCalendarPage';
 import { ServicesPage } from './pages/ServicesPage';
+import { ServiceDetailsPage } from './pages/ServiceDetailsPage';
 import { ClientsPage } from './pages/ClientsPage';
+import { ActivitiesPage } from './pages/ActivitiesPage';
+import { TauxHorairesPage } from './pages/TauxHorairesPage';
 import { useAuth } from './hooks/use-auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import DepartmentsPage from './pages/DepartmentsPage';
@@ -122,6 +125,11 @@ function App() {
                     <ServicesPage />
                   </ProtectedRoute>
                 } />
+                <Route path="/services/:serviceId" element={
+                  <ProtectedRoute>
+                    <ServiceDetailsPage />
+                  </ProtectedRoute>
+                } />
                 <Route path="/clients" element={
                   <ProtectedRoute>
                     <ClientsPage />
@@ -130,6 +138,16 @@ function App() {
                 <Route path="/departments" element={
                   <ProtectedRoute>
                     <DepartmentsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/activities" element={
+                  <ProtectedRoute>
+                    <ActivitiesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/taux-horaires" element={
+                  <ProtectedRoute>
+                    <TauxHorairesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<Navigate to="/" replace />} />

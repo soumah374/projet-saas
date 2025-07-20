@@ -1,9 +1,11 @@
 from rest_framework.routers import DefaultRouter
-from .views import ServiceViewSet, IntervenantProfileViewSet, CategoryViewSet
+from .views import ServiceViewSet, CategoryViewSet, ActivityViewSet, IntervenantProfileViewSet, TauxHoraireViewSet
 
 router = DefaultRouter()
 router.register(r'services', ServiceViewSet, basename='service')
-router.register(r'profiles', IntervenantProfileViewSet, basename='profile')
 router.register(r'categories', CategoryViewSet, basename='category')
+router.register(r'activities', ActivityViewSet, basename='activity')
+router.register(r'profiles', IntervenantProfileViewSet, basename='profile')
+router.register(r'taux-horaires', TauxHoraireViewSet, basename='taux-horaire')
 
 urlpatterns = router.urls 
