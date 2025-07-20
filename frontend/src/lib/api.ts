@@ -354,39 +354,48 @@ export const clientsAPI = {
         is_active?: boolean;
         ville?: string;
         pays?: string;
+        type_client?: string;
+        statut_commercial?: string;
         ordering?: string;
         page?: number;
         page_size?: number;
     }) => api.get('/auth/clients/', { params }),
     getClient: (id: number) => api.get(`/auth/clients/${id}/`),
     createClient: (data: {
-        first_name: string;
-        last_name: string;
+        nom: string;
+        prenom: string;
         email: string;
-        client_profile: {
-            telephone: string;
-            adresse: string;
-            ville: string;
-            code_postal: string;
-            pays: string;
-            is_active: boolean;
-        };
-    }) => api.post('/auth/clients-create/', data),
+        telephone: string;
+        type_client: 'personne_physique' | 'personne_morale';
+        raison_sociale?: string;
+        rccm_nif?: string;
+        contact?: string;
+        adresse_complete?: string;
+        adresse: string;
+        ville: string;
+        code_postal: string;
+        pays: string;
+        statut_commercial: 'prospect' | 'actif' | 'inactif' | 'bloque';
+        is_active: boolean;
+    }) => api.post('/auth/clients/', data),
     updateClient: (id: number, data: {
+        nom?: string;
+        prenom?: string;
+        email?: string;
         telephone?: string;
+        type_client?: 'personne_physique' | 'personne_morale';
+        raison_sociale?: string;
+        rccm_nif?: string;
+        contact?: string;
+        adresse_complete?: string;
         adresse?: string;
         ville?: string;
         code_postal?: string;
         pays?: string;
+        statut_commercial?: 'prospect' | 'actif' | 'inactif' | 'bloque';
         is_active?: boolean;
     }) => api.patch(`/auth/clients/${id}/`, data),
-    updateClientUser: (id: number, data: {
-        first_name?: string;
-        last_name?: string;
-        email?: string;
-    }) => api.patch(`/auth/users/${id}/`, data),
     deleteClient: (id: number) => api.delete(`/auth/clients/${id}/`),
-    toggleClientStatus: (id: number, isActive: boolean) => api.patch(`/auth/clients/${id}/`, { is_active: isActive }),
 };
 
 export const documentsAPI = {
@@ -502,6 +511,112 @@ export const projectTeamAPI = {
 export const servicesAPI = {
     getServices: () => api.get('/catalog/services/'),
 };
+
+// Devis
+export const devisAPI = {
+    getDevis: (params?: {
+        search?: string;
+        statut?: string;
+        client?: number;
+        date_creation?: string;
+        date_validite?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/devis/devis/', { params }),
+    
+    getDevisById: (id: number) => api.get(`/devis/devis/${id}/`),
+    
+    createDevis: (data: {
+        client_id: number;
+        date_validite: string;
+        notes?: string;
+        conditions?: string;
+    }) => api.post('/devis/devis/', data),
+    
+    updateDevis: (id: number, data: {
+        client_id?: number;
+        date_validite?: string;
+        statut?: string;
+        notes?: string;
+        conditions?: string;
+    }) => api.patch(`/devis/devis/${id}/`, data),
+    
+    deleteDevis: (id: number) => api.delete(`/devis/devis/${id}/`),
+    
+    envoyerDevis: (id: number) => api.post(`/devis/devis/${id}/envoyer/`),
+    accepterDevis: (id: number) => api.post(`/devis/devis/${id}/accepter/`),
+    refuserDevis: (id: number) => api.post(`/devis/devis/${id}/refuser/`),
+    calculerMontants: (id: number) => api.post(`/devis/devis/${id}/calculer_montants/`),
+};
+
+// Lignes de devis
+export const lignesDevisAPI = {
+    getLignes: (params?: {
+        devis?: number;
+        service?: number;
+        activity?: number;
+        unite?: number;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/devis/lignes/', { params }),
+    
+    getLigne: (id: number) => api.get(`/devis/lignes/${id}/`),
+    
+    createLigne: (data: {
+        devis: number;
+        service_id: number;
+        activity_id: number;
+        description: string;
+        quantite: number;
+        unite_id: number;
+    }) => api.post('/devis/lignes/', data),
+    
+    updateLigne: (id: number, data: {
+        service_id?: number;
+        activity_id?: number;
+        description?: string;
+        quantite?: number;
+        unite_id?: number;
+    }) => api.patch(`/devis/lignes/${id}/`, data),
+    
+    deleteLigne: (id: number) => api.delete(`/devis/lignes/${id}/`),
+    
+    getActivitesParService: (service_id: number) => 
+        api.get(`/devis/lignes/activites_par_service/?service_id=${service_id}`),
+    
+    getIntervenantsParActivite: (activity_id: number) => 
+        api.get(`/devis/lignes/intervenants_par_activite/?activity_id=${activity_id}`),
+};
+
+// Intervenants de ligne de devis
+export const intervenantsDevisAPI = {
+    getIntervenants: (params?: {
+        ligne_devis?: number;
+        profile_intervenant?: number;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/devis/intervenants/', { params }),
+    
+    getIntervenant: (id: number) => api.get(`/devis/intervenants/${id}/`),
+    
+    createIntervenant: (data: {
+        ligne_devis: number;
+        profile_intervenant_id: number;
+        temps_intervenant: number;
+        taux_horaire: number;
+    }) => api.post('/devis/intervenants/', data),
+    
+    updateIntervenant: (id: number, data: {
+        profile_intervenant_id?: number;
+        temps_intervenant?: number;
+        taux_horaire?: number;
+    }) => api.patch(`/devis/intervenants/${id}/`, data),
+    
+    deleteIntervenant: (id: number) => api.delete(`/devis/intervenants/${id}/`),
+}; 
 
 // PATCHs
 // 

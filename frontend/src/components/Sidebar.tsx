@@ -18,7 +18,9 @@ import {
   List,
   Building2,
   Activity,
-  Euro
+  Euro,
+  Ruler,
+  Receipt
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -97,6 +99,56 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               <Home className="h-5 w-5" /> Tableau de bord 
             </Link>
 
+            {/* Prestations accordéon */}
+            <div className="space-y-2">
+              <button 
+                onClick={() => toggleMenu('prestations')} 
+                className={cn(
+                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname.includes('/services') || location.pathname.includes('/activities') || location.pathname.includes('/taux-horaires') || location.pathname.includes('/unites-standards') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                <FolderOpen className="h-5 w-5" /> Prestations
+                <span className="ml-auto">
+                  {openMenus.prestations ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </span>
+              </button>
+              {openMenus.prestations && (
+                <div className="ml-8 space-y-1">
+                  <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <List className="h-4 w-4" /> Catalogue des prestations
+                  </Link>
+                  {/* <Link to="/activities" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <Activity className="h-4 w-4" /> Activités
+                  </Link> */}
+                  <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <Euro className="h-4 w-4" /> Taux horaires
+                  </Link>
+                  <Link to="/unites-standards" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <Ruler className="h-4 w-4" /> Unités standards
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Clients */}
+            <Link to="/clients" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/clients') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+                <Users className="h-5 w-5" />
+                <span>Clients</span>
+              </Link>
+
+            {/* Devis */}
+            <Link to="/devis" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/devis') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+                <Receipt className="h-5 w-5" />
+                <span>Devis</span>
+              </Link>
+
             {/* Projets accordéon */}
             <div className="space-y-2">
               <button 
@@ -142,7 +194,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             </div>
 
             {/* Planning accordéon */}
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <button 
                 onClick={() => toggleMenu('planning')} 
                 className={cn(
@@ -168,10 +220,10 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   </Link>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* Rapports accordéon */}
-            <div className="space-y-2">
+            {/* <div className="space-y-2">
               <button 
                 onClick={() => toggleMenu('rapports')} 
                 className={cn(
@@ -197,7 +249,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   </Link>
                 </div>
               )}
-            </div>
+            </div> */}
 
             {/* Documents accordéon */}
             <div className="space-y-2">
@@ -237,12 +289,12 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             </Link>
 
             {/* Équipes */}
-            <Link to="/teams" className={cn(
+            {/* <Link to="/teams" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
               location.pathname.includes('/teams') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}>
               <Users className="h-5 w-5" /> Équipes
-            </Link>
+            </Link> */}
 
             {user?.is_staff && (
               <Link 
@@ -256,58 +308,25 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </Link>
             )}
 
-            <Link to="/services" className={cn(
+            {/* <Link to="/services" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
               location.pathname === '/services' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}> 
               <FolderOpen className="h-5 w-5" />
               <span>Prestations</span>
-            </Link>
+            </Link> */}
 
-            {/* Prestations accordéon */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => toggleMenu('prestations')} 
-                className={cn(
-                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/services') || location.pathname.includes('/activities') || location.pathname.includes('/taux-horaires') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <FolderOpen className="h-5 w-5" /> Prestations
-                <span className="ml-auto">
-                  {openMenus.prestations ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </span>
-              </button>
-              {openMenus.prestations && (
-                <div className="ml-8 space-y-1">
-                  <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    <List className="h-4 w-4" /> Catalogue des prestations
-                  </Link>
-                  <Link to="/activities" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    <Activity className="h-4 w-4" /> Activités
-                  </Link>
-                  <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    <Euro className="h-4 w-4" /> Taux horaires
-                  </Link>
-                </div>
-              )}
-            </div>
+            
 
-            <Link to="/activities" className={cn(
+            {/* <Link to="/activities" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
               location.pathname === '/activities' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}> 
               <Activity className="h-5 w-5" />
               <span>Activités</span>
-            </Link>
+            </Link> */}
 
-              <Link to="/clients" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/clients') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <Users className="h-5 w-5" />
-                <span>Clients</span>
-              </Link>
+             
           </nav>
         </div>
 
@@ -321,12 +340,12 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               >
                 <Plus className="w-4 h-4" /> Nouveau projet
               </button>
-              <button 
+              {/* <button 
                 onClick={() => navigate('/reports')}
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"
               >
                 <PieChart className="w-4 h-4" /> Rapports
-              </button>
+              </button> */}
               <button 
                 onClick={() => navigate('/documents')}
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"

@@ -22,6 +22,10 @@ import { ServiceDetailsPage } from './pages/ServiceDetailsPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { ActivitiesPage } from './pages/ActivitiesPage';
 import { TauxHorairesPage } from './pages/TauxHorairesPage';
+import { UnitesStandardsPage } from './pages/UnitesStandardsPage';
+import { DevisPage } from './pages/DevisPage';
+import { DevisDetailPage } from './pages/DevisDetailPage';
+import { DevisCreatePage } from './pages/DevisCreatePage';
 import { useAuth } from './hooks/use-auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import DepartmentsPage from './pages/DepartmentsPage';
@@ -148,6 +152,26 @@ function App() {
                 <Route path="/taux-horaires" element={
                   <ProtectedRoute>
                     <TauxHorairesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/unites-standards" element={
+                  <ProtectedRoute>
+                    <UnitesStandardsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/devis" element={
+                  <ProtectedRoute>
+                    <DevisPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/devis/create" element={
+                  <ProtectedRoute>
+                    <DevisCreatePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/devis/:id" element={
+                  <ProtectedRoute>
+                    <DevisDetailPage />
                   </ProtectedRoute>
                 } />
                 <Route path="*" element={<Navigate to="/" replace />} />

@@ -2,14 +2,15 @@ from django.shortcuts import render
 from rest_framework import viewsets, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
-from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire
+from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, UniteStandard
 from .serializers import (
     ServiceSerializer, 
     ServiceDetailSerializer,
     CategorySerializer, 
     ActivitySerializer, 
     IntervenantProfileSerializer, 
-    TauxHoraireSerializer
+    TauxHoraireSerializer,
+    UniteStandardSerializer
 )
 from rest_framework.decorators import action
 
@@ -19,8 +20,14 @@ class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all().order_by('name')
     serializer_class = CategorySerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    
-    
+
+class UniteStandardViewSet(viewsets.ModelViewSet):
+    queryset = UniteStandard.objects.all().order_by('intitule')
+    serializer_class = UniteStandardSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['is_active']
+    search_fields = ['intitule', 'code', 'description']
 
 class IntervenantProfileViewSet(viewsets.ModelViewSet):
     queryset = IntervenantProfile.objects.all().order_by('name')

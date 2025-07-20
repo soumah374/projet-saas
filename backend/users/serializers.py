@@ -254,30 +254,25 @@ class OTPVerificationSerializer(serializers.Serializer):
 
 
 class ClientProfileSerializer(serializers.ModelSerializer):
-    user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), source='user', required=False)
+    type_client_display = serializers.CharField(source='get_type_client_display', read_only=True)
+    statut_commercial_display = serializers.CharField(source='get_statut_commercial_display', read_only=True)
+    nom_complet = serializers.CharField(read_only=True)
+    
     class Meta:
         model = ClientProfile
-        fields = ['id', 'user_id', 'adresse', 'ville', 'code_postal', 'pays', 'telephone', 'date_inscription', 'is_active']
-        read_only_fields = ['id', 'date_inscription']
-
-
-class ClientUserCreateSerializer(serializers.ModelSerializer):
-    client_profile = ClientProfileSerializer(required=False)
-    class Meta:
-        model = User
-        fields = ['first_name', 'last_name', 'email', 'client_profile']
+        fields = [
+            'id', 'nom', 'prenom', 'email', 'telephone', 'type_client', 'type_client_display',
+            'statut_commercial', 'statut_commercial_display', 'raison_sociale', 'rccm_nif',
+            'contact', 'adresse_complete', 'adresse', 'ville', 'code_postal', 'pays', 
+            'date_inscription', 'is_active', 'nom_complet'
+        ]
+        read_only_fields = ['id', 'date_inscription', 'type_client_display', 'statut_commercial_display', 'nom_complet']
+    
     def validate(self, attrs):
+        # Validation : si type_client est personne_physique, raison_sociale et rccm_nif doivent être vides
+        if attrs.get('type_client') == 'personne_physique':
+            if attrs.get('raison_sociale'):
+                raise serializers.ValidationError("La raison sociale ne peut pas être définie pour une personne physique")
+            if attrs.get('rccm_nif'):
+                raise serializers.ValidationError("Le RCCM/NIF ne peut pas être défini pour une personne physique")
         return attrs
-    def create(self, validated_data):
-        client_profile_data = validated_data.pop('client_profile', {})
-        print(validated_data)
-        user = User.objects.create(
-            username=random.randint(100000, 999999),
-            first_name=validated_data['first_name'],
-            last_name=validated_data['last_name'],
-            email=validated_data['email'],
-            is_active=True,
-        )
-        client_profile_data['user'] = user.id
-        ClientProfile.objects.create(**client_profile_data)
-        return user

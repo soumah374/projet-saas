@@ -14,6 +14,22 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+class UniteStandard(models.Model):
+    intitule = models.CharField(max_length=200, verbose_name="Intitulé")
+    code = models.CharField(max_length=50, unique=True, verbose_name="Code")
+    description = models.TextField(blank=True, verbose_name="Description")
+    is_active = models.BooleanField(default=True, verbose_name="Actif ?")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Unité standard"
+        verbose_name_plural = "Unités standards"
+        ordering = ["intitule"]
+
+    def __str__(self):
+        return f"{self.code} - {self.intitule}"
+
 class IntervenantProfile(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name="Nom du profil")
     created_at = models.DateTimeField(auto_now_add=True)

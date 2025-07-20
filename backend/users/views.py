@@ -13,8 +13,7 @@ from .models import UserProfile, OTPCode, ClientProfile
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     UserListSerializer, ChangePasswordSerializer, CustomTokenObtainPairSerializer,
-    LoginRequestSerializer, OTPVerificationSerializer, ClientProfileSerializer,
-    ClientUserCreateSerializer
+    LoginRequestSerializer, OTPVerificationSerializer, ClientProfileSerializer
 )
 
 
@@ -209,16 +208,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class ClientProfileViewSet(viewsets.ModelViewSet):
-    queryset = ClientProfile.objects.select_related('user').all()
+    queryset = ClientProfile.objects.all()
     serializer_class = ClientProfileSerializer
     permission_classes = [permissions.IsAdminUser]
-    filterset_fields = ['is_active', 'pays', 'ville']
-    search_fields = ['user__first_name', 'user__last_name', 'user__email', 'telephone']
+    filterset_fields = ['is_active', 'pays', 'ville', 'type_client', 'statut_commercial']
+    search_fields = ['nom', 'prenom', 'email', 'telephone', 'contact', 'raison_sociale', 'rccm_nif']
 
-
-class ClientUserCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
-    queryset = User.objects.all()
-    serializer_class = ClientUserCreateSerializer
-    permission_classes = [permissions.IsAdminUser]
-    
     

@@ -4,28 +4,34 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Plus, Edit, Trash2, Download, Eye } from 'lucide-react';
 import { 
   useClients, 
   useCreateClient, 
   useUpdateClient, 
-  useUpdateClientUser, 
-  useDeleteClient, 
-  useToggleClientStatus,
+  useDeleteClient,
   type ClientProfile,
   type ClientCreateData
 } from '@/hooks/use-clients';
-import { Label } from 'recharts';
+import { Label } from '@/components/ui/label';
 
 export function ClientsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editClient, setEditClient] = useState<ClientProfile | null>(null);
   const [form, setForm] = useState<any>({
-    first_name: '',
-    last_name: '',
+    nom: '',
+    prenom: '',
     email: '',
     telephone: '',
+    type_client: 'personne_physique',
+    statut_commercial: 'prospect',
+    raison_sociale: '',
+    rccm_nif: '',
+    contact: '',
+    adresse_complete: '',
     adresse: '',
     ville: '',
     code_postal: '',
@@ -35,6 +41,8 @@ export function ClientsPage() {
   const pageSize = 10;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statutCommercialFilter, setStatutCommercialFilter] = useState('');
   const [villeFilter, setVilleFilter] = useState('');
   const [paysFilter, setPaysFilter] = useState('');
   const [detailClient, setDetailClient] = useState<ClientProfile | null>(null);
@@ -43,9 +51,7 @@ export function ClientsPage() {
   // Hooks pour les opérations CRUD
   const createClientMutation = useCreateClient();
   const updateClientMutation = useUpdateClient();
-  const updateClientUserMutation = useUpdateClientUser();
   const deleteClientMutation = useDeleteClient();
-  const toggleClientStatusMutation = useToggleClientStatus();
 
   // Paramètres pour la requête des clients
   const queryParams = {
@@ -53,6 +59,8 @@ export function ClientsPage() {
     page_size: pageSize,
     search: search || undefined,
     is_active: statusFilter === 'actif' ? true : statusFilter === 'inactif' ? false : undefined,
+    type_client: typeFilter || undefined,
+    statut_commercial: statutCommercialFilter || undefined,
     ville: villeFilter || undefined,
     pays: paysFilter || undefined,
   };
@@ -69,11 +77,16 @@ export function ClientsPage() {
     if (client) {
       setEditClient(client);
       setForm({
-        username: client.user.username,
-        first_name: client.user.first_name,
-        last_name: client.user.last_name,
-        email: client.user.email,
+        nom: client.nom,
+        prenom: client.prenom,
+        email: client.email,
         telephone: client.telephone,
+        type_client: client.type_client,
+        statut_commercial: client.statut_commercial,
+        raison_sociale: client.raison_sociale || '',
+        rccm_nif: client.rccm_nif || '',
+        contact: client.contact || '',
+        adresse_complete: client.adresse_complete || '',
         adresse: client.adresse,
         ville: client.ville,
         code_postal: client.code_postal,
@@ -83,11 +96,16 @@ export function ClientsPage() {
     } else {
       setEditClient(null);
       setForm({
-        username: '',
-        first_name: '',
-        last_name: '',
+        nom: '',
+        prenom: '',
         email: '',
         telephone: '',
+        type_client: 'personne_physique',
+        statut_commercial: 'prospect',
+        raison_sociale: '',
+        rccm_nif: '',
+        contact: '',
+        adresse_complete: '',
         adresse: '',
         ville: '',
         code_postal: '',
@@ -102,11 +120,16 @@ export function ClientsPage() {
     setDialogOpen(false);
     setEditClient(null);
     setForm({
-      username: '',
-      first_name: '',
-      last_name: '',
+      nom: '',
+      prenom: '',
       email: '',
       telephone: '',
+      type_client: 'personne_physique',
+      statut_commercial: 'prospect',
+      raison_sociale: '',
+      rccm_nif: '',
+      contact: '',
+      adresse_complete: '',
       adresse: '',
       ville: '',
       code_postal: '',
@@ -115,19 +138,40 @@ export function ClientsPage() {
     });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
+    setForm({ ...form, [name]: value });
+    // Si le type client change vers personne physique, vider les champs entreprise
+    if (name === 'type_client' && value === 'personne_physique') {
+      setForm(prev => ({
+        ...prev,
+        [name]: value,
+        raison_sociale: '',
+        rccm_nif: '',
+      }));
+    }
   };
 
   const handleSave = async () => {
     if (editClient) {
       // Edition
       try {
-        // 1. Mettre à jour le profil client
         await updateClientMutation.mutateAsync({
           id: editClient.id,
           data: {
+            nom: form.nom,
+            prenom: form.prenom,
+            email: form.email,
             telephone: form.telephone,
+            type_client: form.type_client,
+            statut_commercial: form.statut_commercial,
+            raison_sociale: form.type_client === 'personne_morale' ? form.raison_sociale : undefined,
+            rccm_nif: form.type_client === 'personne_morale' ? form.rccm_nif : undefined,
+            contact: form.contact,
+            adresse_complete: form.adresse_complete,
             adresse: form.adresse,
             ville: form.ville,
             code_postal: form.code_postal,
@@ -135,18 +179,6 @@ export function ClientsPage() {
             is_active: form.is_active,
           }
         });
-        
-        // 2. Mettre à jour l'utilisateur (nom, prénom, email, username)
-        await updateClientUserMutation.mutateAsync({
-          id: editClient.user.id,
-          data: {
-            username: form.username,
-            first_name: form.first_name,
-            last_name: form.last_name,
-            email: form.email,
-          }
-        });
-        
         handleCloseDialog();
       } catch (err) {
         // Les erreurs sont gérées par les hooks
@@ -155,17 +187,21 @@ export function ClientsPage() {
       // Création
       try {
         const payload: ClientCreateData = {
-          first_name: form.first_name,
-          last_name: form.last_name,
+          nom: form.nom,
+          prenom: form.prenom,
           email: form.email,
-          client_profile: {
-            telephone: form.telephone,
-            adresse: form.adresse,
-            ville: form.ville,
-            code_postal: form.code_postal,
-            pays: form.pays,
-            is_active: form.is_active,
-          },
+          telephone: form.telephone,
+          type_client: form.type_client,
+          statut_commercial: form.statut_commercial,
+          raison_sociale: form.type_client === 'personne_morale' ? form.raison_sociale : undefined,
+          rccm_nif: form.type_client === 'personne_morale' ? form.rccm_nif : undefined,
+          contact: form.contact,
+          adresse_complete: form.adresse_complete,
+          adresse: form.adresse,
+          ville: form.ville,
+          code_postal: form.code_postal,
+          pays: form.pays,
+          is_active: form.is_active,
         };
         await createClientMutation.mutateAsync(payload);
         handleCloseDialog();
@@ -176,7 +212,7 @@ export function ClientsPage() {
   };
 
   const handleDelete = async (client: ClientProfile) => {
-    if (!window.confirm(`Supprimer le client ${client.user.first_name} ${client.user.last_name} ?`)) return;
+    if (!window.confirm(`Supprimer le client ${client.nom_complet} ?`)) return;
     try {
       await deleteClientMutation.mutateAsync(client.id);
     } catch (err) {
@@ -186,9 +222,9 @@ export function ClientsPage() {
 
   const handleToggleStatus = async (client: ClientProfile) => {
     try {
-      await toggleClientStatusMutation.mutateAsync({
+      await updateClientMutation.mutateAsync({
         id: client.id,
-        isActive: !client.is_active
+        data: { is_active: !client.is_active }
       });
     } catch (err) {
       // Les erreurs sont gérées par les hooks
@@ -197,13 +233,19 @@ export function ClientsPage() {
 
   const handleExportCSV = () => {
     const headers = [
-      'Nom', 'Prénom', 'Email', 'Téléphone', 'Adresse', 'Ville', 'Code postal', 'Pays', 'Statut'
+      'Nom', 'Prénom', 'Email', 'Téléphone', 'Type', 'Statut Commercial', 'Raison Sociale', 'RCCM/NIF', 'Contact', 
+      'Adresse', 'Ville', 'Code postal', 'Pays', 'Statut'
     ];
     const rows = clients.map(c => [
-      c.user.last_name,
-      c.user.first_name,
-      c.user.email,
+      c.nom,
+      c.prenom,
+      c.email,
       c.telephone,
+      c.type_client_display,
+      c.statut_commercial_display,
+      c.raison_sociale || '',
+      c.rccm_nif || '',
+      c.contact || '',
       c.adresse,
       c.ville,
       c.code_postal,
@@ -245,38 +287,109 @@ export function ClientsPage() {
             <DialogTrigger asChild>
               <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editClient ? 'Modifier' : 'Ajouter'} un client</DialogTitle>
               </DialogHeader>
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-sm font-medium">Prénom</Label>
-                  <Input name="first_name" placeholder="Prénom" value={form.first_name} onChange={handleChange} required />
+              <div className="space-y-4">
+                {/* Informations de base */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Prénom</Label>
+                    <Input name="prenom" placeholder="Prénom" value={form.prenom} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Nom</Label>
+                    <Input name="nom" placeholder="Nom" value={form.nom} onChange={handleChange} required />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Nom</Label>
-                  <Input name="last_name" placeholder="Nom" value={form.last_name} onChange={handleChange} required />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Email</Label>
+                    <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Téléphone</Label>
+                    <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Email</Label>
-                  <Input name="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Type client</Label>
+                    <Select value={form.type_client} onValueChange={(value) => handleSelectChange('type_client', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="personne_physique">Personne physique</SelectItem>
+                        <SelectItem value="personne_morale">Personne morale</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Statut commercial</Label>
+                    <Select value={form.statut_commercial} onValueChange={(value) => handleSelectChange('statut_commercial', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="prospect">Prospect</SelectItem>
+                        <SelectItem value="actif">Actif</SelectItem>
+                        <SelectItem value="inactif">Inactif</SelectItem>
+                        <SelectItem value="bloque">Bloqué</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-sm font-medium">Téléphone</Label>
-                  <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Adresse</Label>
-                  <Input name="adresse" placeholder="Adresse" value={form.adresse} onChange={handleChange} />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Code postal</Label>
-                  <Input name="code_postal" placeholder="Code postal" value={form.code_postal} onChange={handleChange} />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Pays</Label>
-                  <Input name="pays" placeholder="Pays" value={form.pays} onChange={handleChange} />
+
+                {/* Champs pour personne morale */}
+                {form.type_client === 'personne_morale' && (
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="font-medium">Informations entreprise</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium">Raison sociale</Label>
+                        <Input name="raison_sociale" placeholder="Raison sociale" value={form.raison_sociale} onChange={handleChange} />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">RCCM ou NIF</Label>
+                        <Input name="rccm_nif" placeholder="RCCM ou NIF" value={form.rccm_nif} onChange={handleChange} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Contact</Label>
+                      <Input name="contact" placeholder="Contact" value={form.contact} onChange={handleChange} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Adresse */}
+                <div className="space-y-4 border-t pt-4">
+                  <h4 className="font-medium">Adresse</h4>
+                  <div>
+                    <Label className="text-sm font-medium">Adresse complète</Label>
+                    <Textarea name="adresse_complete" placeholder="Adresse complète" value={form.adresse_complete} onChange={handleChange} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Adresse</Label>
+                      <Input name="adresse" placeholder="Adresse" value={form.adresse} onChange={handleChange} />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Ville</Label>
+                      <Input name="ville" placeholder="Ville" value={form.ville} onChange={handleChange} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Code postal</Label>
+                      <Input name="code_postal" placeholder="Code postal" value={form.code_postal} onChange={handleChange} />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Pays</Label>
+                      <Input name="pays" placeholder="Pays" value={form.pays} onChange={handleChange} />
+                    </div>
+                  </div>
                 </div>
               </div>
               <DialogFooter>
@@ -300,7 +413,7 @@ export function ClientsPage() {
             <>
               <div className="flex flex-wrap gap-2 mb-4 items-center">
                 <Input
-                  placeholder="Recherche (nom, prénom, email, téléphone)"
+                  placeholder="Recherche (nom, prénom, email, téléphone, raison sociale, RCCM/NIF)"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                   className="w-64"
@@ -309,6 +422,18 @@ export function ClientsPage() {
                   <option value="">Tous statuts</option>
                   <option value="actif">Actifs</option>
                   <option value="inactif">Inactifs</option>
+                </select>
+                <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
+                  <option value="">Tous types</option>
+                  <option value="personne_physique">Personne physique</option>
+                  <option value="personne_morale">Personne morale</option>
+                </select>
+                <select value={statutCommercialFilter} onChange={e => { setStatutCommercialFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
+                  <option value="">Tous statuts commerciaux</option>
+                  <option value="prospect">Prospect</option>
+                  <option value="actif">Actif</option>
+                  <option value="inactif">Inactif</option>
+                  <option value="bloque">Bloqué</option>
                 </select>
                 <select value={villeFilter} onChange={e => { setVilleFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
                   <option value="">Toutes villes</option>
@@ -322,10 +447,11 @@ export function ClientsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nom</TableHead>
+                    <TableHead>Nom complet</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Téléphone</TableHead>
-                    <TableHead>Adresse</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Statut commercial</TableHead>
                     <TableHead>Ville</TableHead>
                     <TableHead>Pays</TableHead>
                     <TableHead>Statut</TableHead>
@@ -334,13 +460,14 @@ export function ClientsPage() {
                 </TableHeader>
                 <TableBody>
                   {clients.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center">Aucun client</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={9} className="text-center">Aucun client</TableCell></TableRow>
                   ) : clients.map(client => (
                     <TableRow key={client.id}>
-                      <TableCell>{client.user.first_name} {client.user.last_name}</TableCell>
-                      <TableCell>{client.user.email}</TableCell>
+                      <TableCell>{client.nom_complet}</TableCell>
+                      <TableCell>{client.email}</TableCell>
                       <TableCell>{client.telephone}</TableCell>
-                      <TableCell>{client.adresse}</TableCell>
+                      <TableCell>{client.type_client_display}</TableCell>
+                      <TableCell>{client.statut_commercial_display}</TableCell>
                       <TableCell>{client.ville}</TableCell>
                       <TableCell>{client.pays}</TableCell>
                       <TableCell>
@@ -352,10 +479,10 @@ export function ClientsPage() {
                             size="sm" 
                             variant="ghost" 
                             onClick={() => handleToggleStatus(client)} 
-                            disabled={toggleClientStatusMutation.isPending} 
+                            disabled={updateClientMutation.isPending} 
                             className="text-xs"
                           >
-                            {toggleClientStatusMutation.isPending ? 
+                            {updateClientMutation.isPending ? 
                               <Loader2 size={12} className="animate-spin" /> : 
                               client.is_active ? 'Désactiver' : 'Activer'
                             }
@@ -388,9 +515,19 @@ export function ClientsPage() {
           </DialogHeader>
           {detailClient && (
             <div className="space-y-2">
-              <div><b>Nom :</b> {detailClient.user.first_name} {detailClient.user.last_name}</div>
-              <div><b>Email :</b> {detailClient.user.email}</div>
+              <div><b>Nom complet :</b> {detailClient.nom_complet}</div>
+              <div><b>Email :</b> {detailClient.email}</div>
               <div><b>Téléphone :</b> {detailClient.telephone}</div>
+              <div><b>Type :</b> {detailClient.type_client_display}</div>
+              <div><b>Statut commercial :</b> {detailClient.statut_commercial_display}</div>
+              {detailClient.type_client === 'personne_morale' && (
+                <>
+                  <div><b>Raison sociale :</b> {detailClient.raison_sociale}</div>
+                  <div><b>RCCM/NIF :</b> {detailClient.rccm_nif}</div>
+                  <div><b>Contact :</b> {detailClient.contact}</div>
+                </>
+              )}
+              <div><b>Adresse complète :</b> {detailClient.adresse_complete}</div>
               <div><b>Adresse :</b> {detailClient.adresse}</div>
               <div><b>Ville :</b> {detailClient.ville}</div>
               <div><b>Code postal :</b> {detailClient.code_postal}</div>

@@ -117,18 +117,66 @@ def save_user_profile(sender, instance, **kwargs):
 
 
 class ClientProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='client_profile')
+    TYPE_CLIENT_CHOICES = [
+        ('personne_physique', 'Personne physique'),
+        ('personne_morale', 'Personne morale'),
+    ]
+    
+    STATUT_COMMERCIAL_CHOICES = [
+        ('prospect', 'Prospect'),
+        ('actif', 'Actif'),
+        ('inactif', 'Inactif'),
+        ('bloque', 'Bloqué'),
+    ]
+    
+    # Informations de base
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    email = models.EmailField(unique=True)
+    telephone = models.CharField(max_length=20, blank=True)
+    
+    # Type et statut
+    type_client = models.CharField(max_length=20, choices=TYPE_CLIENT_CHOICES, default='personne_physique')
+    statut_commercial = models.CharField(max_length=20, choices=STATUT_COMMERCIAL_CHOICES, default='prospect')
+    
+    # Champs pour personne morale uniquement
+    raison_sociale = models.CharField(max_length=255, blank=True, null=True)
+    rccm_nif = models.CharField(max_length=50, blank=True, null=True)
+    contact = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Adresse
+    adresse_complete = models.TextField(blank=True, null=True)
     adresse = models.CharField(max_length=255, blank=True)
     ville = models.CharField(max_length=100, blank=True)
     code_postal = models.CharField(max_length=20, blank=True)
     pays = models.CharField(max_length=100, blank=True)
-    telephone = models.CharField(max_length=20, blank=True)
+    
+    # Métadonnées
     date_inscription = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = 'Profil client'
-        verbose_name_plural = 'Profils client'
+        verbose_name = 'Client'
+        verbose_name_plural = 'Clients'
+        ordering = ['-date_inscription']
 
     def __str__(self):
-        return f"Client: {self.user.get_full_name()} ({self.user.email})" 
+        if self.type_client == 'personne_morale' and self.raison_sociale:
+            return f"{self.raison_sociale} ({self.email})"
+        return f"{self.prenom} {self.nom} ({self.email})"
+    
+    @property
+    def nom_complet(self):
+        """Retourne le nom complet du client"""
+        if self.type_client == 'personne_morale' and self.raison_sociale:
+            return self.raison_sociale
+        return f"{self.prenom} {self.nom}"
+    
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # Validation : si type_client est personne_physique, raison_sociale et rccm_nif doivent être vides
+        if self.type_client == 'personne_physique':
+            if self.raison_sociale:
+                raise ValidationError("La raison sociale ne peut pas être définie pour une personne physique")
+            if self.rccm_nif:
+                raise ValidationError("Le RCCM/NIF ne peut pas être défini pour une personne physique") 

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'notifications',
     'catalog',
     'departments',
+    'devis',
 ]
 
 MIDDLEWARE = [

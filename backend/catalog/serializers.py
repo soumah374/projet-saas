@@ -1,15 +1,22 @@
 from rest_framework import serializers
-from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, ActivityProfile
+from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, ActivityProfile, UniteStandard
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'name']
 
+class UniteStandardSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UniteStandard
+        fields = ['id', 'intitule', 'code', 'description', 'is_active', 'created_at', 'updated_at']
+
 class IntervenantProfileSerializer(serializers.ModelSerializer):
+    intitule = serializers.CharField(source='name', read_only=True)
+    
     class Meta:
         model = IntervenantProfile
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'intitule']
 
 class ActivityProfileSerializer(serializers.ModelSerializer):
     profile_intervenant = IntervenantProfileSerializer(read_only=True)
@@ -28,6 +35,7 @@ class ServiceSerializer(serializers.ModelSerializer):
     category_id = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(), source='category', write_only=True, required=False, allow_null=True
     )
+    intitule = serializers.CharField(source='name', read_only=True)
     
     class Meta:
         model = Service
@@ -39,6 +47,7 @@ class ServiceDetailSerializer(serializers.ModelSerializer):
         queryset=Category.objects.all(), source='category', write_only=True, required=False, allow_null=True
     )
     activities = serializers.SerializerMethodField()
+    intitule = serializers.CharField(source='name', read_only=True)
     
     class Meta:
         model = Service
@@ -61,6 +70,7 @@ class ActivitySerializer(serializers.ModelSerializer):
         write_only=True,
         required=False
     )
+    intitule = serializers.CharField(source='name', read_only=True)
     
     class Meta:
         model = Activity
