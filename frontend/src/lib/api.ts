@@ -271,7 +271,7 @@ export const authAPI = {
                     role: string;
                     is_staff: boolean;
                 }
-            }>('/auth/login/', { username, password });
+            }>('auth/login/', { username, password });
             return response.data;
         } catch (error: any) {
             if (error.response) {
