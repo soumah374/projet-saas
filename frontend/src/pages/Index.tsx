@@ -9,7 +9,7 @@ import { TopNavigation } from '@/components/TopNavigation';
 import { StatsOverview } from '@/components/StatsOverview';
 import { UserSidebar } from '@/components/UserSidebar';
 import { CreateProjectModal } from '@/components/CreateProjectModal';
-import { ProjectDetailsPage } from '@/components/ProjectDetailsPage';
+import { ProjectDetailsPage } from '@/pages/ProjectDetailsPage';
 import { DocumentManager } from '@/components/DocumentManager';
 import { ProjectCalendar } from '@/components/ProjectCalendar';
 import { useAuth } from '@/hooks/use-auth';

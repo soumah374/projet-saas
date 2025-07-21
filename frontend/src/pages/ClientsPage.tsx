@@ -287,7 +287,7 @@ export function ClientsPage() {
   const paysList = Array.from(new Set(clients.map(c => c.pays).filter(Boolean))) as string[];
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-8xl mx-auto space-y-8">
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle>Gestion des Clients</CardTitle>

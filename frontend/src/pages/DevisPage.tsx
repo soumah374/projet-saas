@@ -224,7 +224,7 @@ export function DevisPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-8xl mx-auto space-y-8">
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <CardTitle>Gestion des Devis</CardTitle>

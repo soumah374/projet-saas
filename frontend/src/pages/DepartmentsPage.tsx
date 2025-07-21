@@ -127,7 +127,7 @@ export default function DepartmentsPage() {
   )
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="max-w-8xl mx-auto space-y-8">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Départements</CardTitle>
