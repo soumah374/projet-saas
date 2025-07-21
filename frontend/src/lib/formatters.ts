@@ -20,10 +20,13 @@ export const formatMontant = (montant: number | string) => {
   const num = typeof montant === 'string' ? parseFloat(montant) : montant;
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(num || 0);
+    currency: 'GNF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  })
+    .format(num || 0)
+    .replace('GNF', '') // On retire le code devise pour le remplacer par le suffixe
+    .trim() + ' GNF';
 };
 
 /**

@@ -85,11 +85,15 @@ class Devis(models.Model):
         
         # Calculer la TVA selon la configuration
         if self.appliquer_tva:
-            self.montant_tva = total_ht * (self.taux_tva / Decimal('100'))
+            # S'assurer que taux_tva est bien un Decimal
+            taux = self.taux_tva / 100
+            if isinstance(taux, float):
+                taux = Decimal(str(taux))
+            self.montant_tva = self.montant_ht * taux
         else:
             self.montant_tva = Decimal('0')
-            
-        self.montant_ttc = total_ht + self.montant_tva
+        
+        self.montant_ttc = self.montant_ht + self.montant_tva
         self.save()
     
     def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id):

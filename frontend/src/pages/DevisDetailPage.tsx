@@ -727,7 +727,7 @@ export function DevisDetailPage() {
                         ) : (
                           intervenants.map(interv => (
                             <SelectItem key={interv.id} value={interv.id.toString()}>
-                              {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire}€/h)
+                              {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire} GNF/h)
                             </SelectItem>
                           ))
                         )}

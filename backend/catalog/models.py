@@ -134,4 +134,4 @@ class TauxHoraire(models.Model):
         unique_together = ['niveau_intervenant', 'activity', 'profile_intervenant']
 
     def __str__(self):
-        return f"{self.activity.name} - {self.profile_intervenant.name} - {self.get_niveau_intervenant_display()} ({self.taux_heure}€/h)"
+        return f"{self.activity.name} - {self.profile_intervenant.name} - {self.get_niveau_intervenant_display()} ({self.taux_heure}GNF/h)"

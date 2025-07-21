@@ -440,7 +440,7 @@ export function TauxHorairesPage() {
                       <TableCell>{tauxHoraire.activity?.name || '-'}</TableCell>
                       <TableCell>{tauxHoraire.profile_intervenant?.name || '-'}</TableCell>
                       <TableCell>{getNiveauDisplay(tauxHoraire.niveau_intervenant)}</TableCell>
-                      <TableCell>{tauxHoraire.taux_heure} €/h</TableCell>
+                      <TableCell>{tauxHoraire.taux_heure} GNF/h</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Badge variant={tauxHoraire.is_active ? "default" : "destructive"}>
@@ -507,7 +507,7 @@ export function TauxHorairesPage() {
                   </div>
                   <div>
                     <span className="font-medium">Taux horaire :</span>
-                    <p className="text-gray-600">{tauxHoraireToDelete.taux_heure} €/h</p>
+                    <p className="text-gray-600">{tauxHoraireToDelete.taux_heure} GNF/h</p>
                   </div>
                   <div>
                     <span className="font-medium">Statut :</span>

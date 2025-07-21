@@ -18,7 +18,8 @@ import {
   Calendar,
   Building2,
   FileText,
-  Plus
+  Plus,
+  Currency
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -569,7 +570,7 @@ export function ServiceDetailsPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Euro className="h-5 w-5" />
+                <Currency className="h-5 w-5" />
                 Taux horaires
                 {loadingTaux && <Loader2 className="h-4 w-4 animate-spin" />}
               </CardTitle>
@@ -586,7 +587,7 @@ export function ServiceDetailsPage() {
                         </Badge>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{formatMontant(taux.taux_heure)} €/h</p>
+                        <p className="font-semibold">{taux.taux_heure} GNF/h</p>
                         <Badge variant={taux.is_active ? "default" : "destructive"} className="text-xs">
                           {taux.is_active ? 'Actif' : 'Inactif'}
                         </Badge>
@@ -596,7 +597,7 @@ export function ServiceDetailsPage() {
                 </div>
               ) : (
                 <div className="text-center py-6 text-gray-500">
-                  <Euro className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                  <Currency className="h-8 w-8 mx-auto mb-2 text-gray-300" />
                   <p className="text-sm">Aucun taux horaire défini</p>
                 </div>
               )}

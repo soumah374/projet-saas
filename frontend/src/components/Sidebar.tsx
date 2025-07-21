@@ -20,7 +20,8 @@ import {
   Activity,
   Euro,
   Ruler,
-  Receipt
+  Receipt,
+  Currency
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -122,7 +123,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                     <Activity className="h-4 w-4" /> Activités
                   </Link> */}
                   <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    <Euro className="h-4 w-4" /> Taux horaires
+                    <Currency className="h-4 w-4" /> Taux horaires GNF
                   </Link>
                   <Link to="/unites-standards" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
                     <Ruler className="h-4 w-4" /> Unités standards
