@@ -80,7 +80,8 @@ class DevisSerializer(serializers.ModelSerializer):
         model = Devis
         fields = [
             'id', 'numero', 'client', 'client_id', 'date_creation', 'date_validite',
-            'statut', 'statut_display', 'montant_ht', 'montant_tva', 'montant_ttc',
+            'statut', 'statut_display', 'taux_tva', 'appliquer_tva',
+            'montant_ht', 'montant_tva', 'montant_ttc',
             'notes', 'conditions', 'lignes', 'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -100,7 +101,7 @@ class DevisCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Devis
         fields = [
-            'client_id', 'date_validite', 'notes', 'conditions'
+            'client_id', 'date_validite', 'taux_tva', 'appliquer_tva', 'notes', 'conditions'
         ]
 
 

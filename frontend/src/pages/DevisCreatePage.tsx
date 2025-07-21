@@ -47,6 +47,8 @@ export function DevisCreatePage() {
   const [form, setForm] = useState({
     client_id: '',
     date_validite: undefined as Date | undefined,
+    taux_tva: 18.00,
+    appliquer_tva: true,
     notes: '',
     conditions: '',
   });
@@ -243,6 +245,8 @@ export function DevisCreatePage() {
       await createDevisAvecLignesMutation.mutateAsync({
         client_id: parseInt(form.client_id),
         date_validite: form.date_validite.toISOString().split('T')[0],
+        taux_tva: form.taux_tva,
+        appliquer_tva: form.appliquer_tva,
         notes: form.notes,
         conditions: form.conditions,
         lignes: lignesData,
@@ -308,6 +312,34 @@ export function DevisCreatePage() {
                 onChange={handleDateChange}
                 required
               />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Taux de TVA (%)</Label>
+              <Input 
+                type="number"
+                name="taux_tva"
+                value={form.taux_tva}
+                onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="18.00"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Appliquer la TVA</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="appliquer_tva"
+                  checked={form.appliquer_tva}
+                  onChange={(e) => setForm({ ...form, appliquer_tva: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="appliquer_tva" className="text-sm">
+                  Activer la TVA sur ce devis
+                </Label>
+              </div>
             </div>
             <div className="md:col-span-2">
               <Label className="text-sm font-medium">Notes</Label>

@@ -530,6 +530,8 @@ export const devisAPI = {
     createDevis: (data: {
         client_id: number;
         date_validite: string;
+        taux_tva?: number;
+        appliquer_tva?: boolean;
         notes?: string;
         conditions?: string;
     }) => api.post('/devis/devis/', data),
@@ -538,6 +540,8 @@ export const devisAPI = {
         client_id?: number;
         date_validite?: string;
         statut?: string;
+        taux_tva?: number;
+        appliquer_tva?: boolean;
         notes?: string;
         conditions?: string;
     }) => api.patch(`/devis/devis/${id}/`, data),

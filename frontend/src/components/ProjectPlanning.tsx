@@ -19,8 +19,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { TaskModal } from './TaskModal';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { DeleteMemberProject } from './deleteMemberProject';
-import { Service } from '@/lib/types';
+import { DeleteMemberProject } from './DeleteMemberProject';
 import { StartTaskProjectModal } from './StartTaskProjectModal';
 import { StandardTasksManager } from './StandardTasksManager';
 

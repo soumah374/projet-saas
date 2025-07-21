@@ -16,6 +16,8 @@ export interface Devis {
   date_validite: string;
   statut: 'brouillon' | 'envoye' | 'accepte' | 'refuse' | 'expire';
   statut_display: string;
+  taux_tva: number;
+  appliquer_tva: boolean;
   montant_ht: number;
   montant_tva: number;
   montant_ttc: number;
@@ -146,6 +148,8 @@ export const useCreateDevisAvecLignes = () => {
     mutationFn: (data: {
       client_id: number;
       date_validite: string;
+      taux_tva?: number;
+      appliquer_tva?: boolean;
       notes?: string;
       conditions?: string;
       lignes: Array<{

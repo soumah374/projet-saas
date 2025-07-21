@@ -28,6 +28,10 @@ class Devis(models.Model):
     date_validite = models.DateField()
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
     
+    # Configuration TVA
+    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(0)])
+    appliquer_tva = models.BooleanField(default=True, verbose_name="Appliquer la TVA")
+    
     # Informations commerciales
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -78,8 +82,13 @@ class Devis(models.Model):
         
         total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
         self.montant_ht = total_ht
-        # TVA à 20% (à adapter selon vos besoins)
-        self.montant_tva = total_ht * Decimal('0.20')
+        
+        # Calculer la TVA selon la configuration
+        if self.appliquer_tva:
+            self.montant_tva = total_ht * (self.taux_tva / Decimal('100'))
+        else:
+            self.montant_tva = Decimal('0')
+            
         self.montant_ttc = total_ht + self.montant_tva
         self.save()
     

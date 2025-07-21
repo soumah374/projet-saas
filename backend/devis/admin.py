@@ -23,7 +23,7 @@ class LigneDevisInline(admin.TabularInline):
 class DevisAdmin(admin.ModelAdmin):
     """Admin pour les devis"""
     list_display = ['numero', 'client', 'date_creation', 'date_validite', 'statut', 'montant_ttc']
-    list_filter = ['statut', 'date_creation', 'date_validite']
+    list_filter = ['statut', 'date_creation', 'date_validite', 'appliquer_tva']
     search_fields = ['numero', 'client__nom', 'client__prenom', 'client__raison_sociale']
     readonly_fields = ['numero', 'date_creation', 'montant_ht', 'montant_tva', 'montant_ttc']
     inlines = [LigneDevisInline]
@@ -31,6 +31,10 @@ class DevisAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Informations générales', {
             'fields': ('numero', 'client', 'date_creation', 'date_validite', 'statut')
+        }),
+        ('Configuration TVA', {
+            'fields': ('taux_tva', 'appliquer_tva'),
+            'classes': ('collapse',)
         }),
         ('Montants', {
             'fields': ('montant_ht', 'montant_tva', 'montant_ttc'),

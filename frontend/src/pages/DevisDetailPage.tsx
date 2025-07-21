@@ -98,6 +98,8 @@ export function DevisDetailPage() {
     if (devis) {
       setForm({
         date_validite: devis.date_validite,
+        taux_tva: devis.taux_tva,
+        appliquer_tva: devis.appliquer_tva,
         notes: devis.notes || '',
         conditions: devis.conditions || '',
       });
@@ -134,6 +136,8 @@ export function DevisDetailPage() {
         id: devisId,
         data: {
           date_validite: dateValidite ? dateValidite.toISOString().split('T')[0] : form.date_validite,
+          taux_tva: form.taux_tva,
+          appliquer_tva: form.appliquer_tva,
           notes: form.notes,
           conditions: form.conditions,
         }
@@ -398,10 +402,12 @@ export function DevisDetailPage() {
               <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
               <p className="font-medium">{formatMontant(devis.montant_ht)}</p>
             </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">TVA</Label>
-              <p className="font-medium">{formatMontant(devis.montant_tva)}</p>
-            </div>
+            {devis.appliquer_tva && (
+              <div>
+                <Label className="text-sm font-medium text-gray-600">TVA ({devis.taux_tva}%)</Label>
+                <p className="font-medium">{formatMontant(devis.montant_tva)}</p>
+              </div>
+            )}
             <div>
               <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
               <p className="font-medium text-lg">{formatMontant(devis.montant_ttc)}</p>
@@ -522,6 +528,34 @@ export function DevisDetailPage() {
                   />
                 </PopoverContent>
               </Popover>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Taux de TVA (%)</Label>
+              <Input 
+                type="number"
+                name="taux_tva"
+                value={form.taux_tva}
+                onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="18.00"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Appliquer la TVA</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="appliquer_tva"
+                  checked={form.appliquer_tva}
+                  onChange={(e) => setForm({ ...form, appliquer_tva: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="appliquer_tva" className="text-sm">
+                  Activer la TVA sur ce devis
+                </Label>
+              </div>
             </div>
             <div>
               <Label className="text-sm font-medium">Notes</Label>

@@ -357,16 +357,18 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                 <span style={{ fontWeight: 'bold', marginRight: '25px' }}>Montant HT:</span>
                 <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_ht)}</span>
               </div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between',
-                marginBottom: '5px',
-                fontSize: '11px',
-                color: '#718096'
-              }}>
-                <span style={{ fontWeight: 'bold', marginRight: '25px' }}>TVA (16%):</span>
-                <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_tva)}</span>
-              </div>
+              {devis.appliquer_tva && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  marginBottom: '5px',
+                  fontSize: '11px',
+                  color: '#718096'
+                }}>
+                  <span style={{ fontWeight: 'bold', marginRight: '25px' }}>TVA ({devis.taux_tva}%):</span>
+                  <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_tva)}</span>
+                </div>
+              )}
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between',
