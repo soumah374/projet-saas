@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { formatMontant } from '@/lib/formatters';
 
 interface Category {
   id: number;
@@ -21,6 +22,8 @@ interface Service {
   description: string;
   category?: Category;
   category_id?: number;
+  price?: number | null;
+  duration?: number | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -38,7 +41,7 @@ export function ServicesPage() {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editService, setEditService] = useState<Service | null>(null);
-  const [form, setForm] = useState<Partial<Service>>({ name: '', description: '', is_active: true });
+  const [form, setForm] = useState<Partial<Service>>({ name: '', description: '', price: null, duration: null, is_active: true });
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<number | ''>('');
@@ -101,7 +104,7 @@ export function ServicesPage() {
       setNewCategoryName('');
     } else {
       setEditService(null);
-      setForm({ name: '', description: '', is_active: true });
+      setForm({ name: '', description: '', price: null, duration: null, is_active: true });
       setCategoryId(null);
       setNewCategoryName('');
     }
@@ -111,13 +114,18 @@ export function ServicesPage() {
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditService(null);
-    setForm({ name: '', description: '', is_active: true });
+    setForm({ name: '', description: '', price: null, duration: null, is_active: true });
     setCategoryId(null);
     setNewCategoryName('');
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'price' || name === 'duration') {
+      setForm({ ...form, [name]: value === '' ? null : parseFloat(value) });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleSave = async () => {
@@ -292,7 +300,7 @@ export function ServicesPage() {
                 </TableHeader>
                 <TableBody>
                   {services.length === 0 ? (
-                    <TableRow><TableCell colSpan={5} className="text-center">Aucune prestation</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7} className="text-center">Aucune prestation</TableCell></TableRow>
                   ) : services.map(service => (
                     <TableRow key={service.id}>
                       <TableCell>

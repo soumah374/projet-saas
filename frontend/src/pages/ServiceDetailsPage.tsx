@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { formatMontant } from '@/lib/formatters';
 
 interface Category {
   id: number;
@@ -87,6 +88,15 @@ export function ServiceDetailsPage() {
     is_active: true
   });
   const [newProfileName, setNewProfileName] = useState('');
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    category_id: '',
+    description: '',
+    is_active: true
+  });
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchServiceDetails = async () => {
     if (!serviceId) return;
@@ -141,43 +151,29 @@ export function ServiceDetailsPage() {
     }
   }, [service]);
 
-  const getNiveauDisplay = (niveau: string) => {
-    switch (niveau) {
-      case 'intermediaire': return 'Intermédiaire';
-      case 'operationnel': return 'Opérationnel';
-      case 'senior': return 'Senior';
-      default: return niveau;
-    }
-  };
+  // Charger les catégories pour l'édition
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await api.get('/catalog/categories/');
+        setCategories(res.data.results || res.data);
+      } catch (err) {
+        setCategories([]);
+      }
+    };
+    fetchCategories();
+  }, []);
 
-  const getNiveauColor = (niveau: string) => {
-    switch (niveau) {
-      case 'intermediaire': return 'bg-blue-100 text-blue-800';
-      case 'operationnel': return 'bg-green-100 text-green-800';
-      case 'senior': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const handleOpenDialog = () => {
-    setForm({
-      name: '',
-      duree_standard: '',
-      profiles_data: [],
-      is_active: true
+  // Pré-remplir le formulaire d'édition quand on ouvre la modale
+  const handleOpenEditDialog = () => {
+    if (!service) return;
+    setEditForm({
+      name: service.name || '',
+      category_id: service.category?.id?.toString() || '',
+      description: service.description || '',
+      is_active: service.is_active
     });
-    setDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setForm({
-      name: '',
-      duree_standard: '',
-      profiles_data: [],
-      is_active: true
-    });
-    setNewProfileName('');
+    setEditDialogOpen(true);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -305,6 +301,76 @@ export function ServiceDetailsPage() {
     }
   };
 
+  const handleEditChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value, type } = e.target;
+    if (type === 'checkbox' && e.target instanceof HTMLInputElement) {
+      setEditForm({ ...editForm, [name]: e.target.checked });
+    } else {
+      setEditForm({ ...editForm, [name]: value });
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!service) return;
+    setSavingEdit(true);
+    try {
+      await api.put(`/catalog/services/${service.id}/`, {
+        name: editForm.name,
+        category_id: editForm.category_id ? Number(editForm.category_id) : null,
+        description: editForm.description,
+        is_active: editForm.is_active
+      });
+      toast.success('Prestation modifiée');
+      setEditDialogOpen(false);
+      fetchServiceDetails();
+    } catch (err) {
+      toast.error('Erreur lors de la modification');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const getNiveauDisplay = (niveau: string) => {
+    switch (niveau) {
+      case 'intermediaire': return 'Intermédiaire';
+      case 'operationnel': return 'Opérationnel';
+      case 'senior': return 'Senior';
+      default: return niveau;
+    }
+  };
+
+  const getNiveauColor = (niveau: string) => {
+    switch (niveau) {
+      case 'intermediaire': return 'bg-blue-100 text-blue-800';
+      case 'operationnel': return 'bg-green-100 text-green-800';
+      case 'senior': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const handleOpenDialog = () => {
+    setForm({
+      name: '',
+      duree_standard: '',
+      profiles_data: [],
+      is_active: true
+    });
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setForm({
+      name: '',
+      duree_standard: '',
+      profiles_data: [],
+      is_active: true
+    });
+    setNewProfileName('');
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto">
@@ -348,12 +414,10 @@ export function ServiceDetailsPage() {
           <Badge variant={service.is_active ? "default" : "destructive"}>
             {service.is_active ? 'Active' : 'Inactive'}
           </Badge>
-          <Link to={`/services/${service.id}/edit`}>
-            <Button size="sm" variant="outline">
-              <Edit className="h-4 w-4 mr-2" />
-              Modifier
-            </Button>
-          </Link>
+          <Button size="sm" variant="outline" onClick={handleOpenEditDialog}>
+            <Edit className="h-4 w-4 mr-2" />
+            Modifier
+          </Button>
         </div>
       </div>
 
@@ -522,7 +586,7 @@ export function ServiceDetailsPage() {
                         </Badge>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{taux.taux_heure} €/h</p>
+                        <p className="font-semibold">{formatMontant(taux.taux_heure)} €/h</p>
                         <Badge variant={taux.is_active ? "default" : "destructive"} className="text-xs">
                           {taux.is_active ? 'Actif' : 'Inactif'}
                         </Badge>
@@ -685,6 +749,69 @@ export function ServiceDetailsPage() {
             </Button>
             <Button onClick={handleSaveActivity} disabled={saving}>
               {saving ? <Loader2 className="animate-spin" size={16}/> : 'Ajouter'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modale d'édition du service */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier la prestation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nom</label>
+              <Input
+                name="name"
+                value={editForm.name}
+                onChange={handleEditChange}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Catégorie</label>
+              <select
+                name="category_id"
+                className="border rounded px-2 py-1 w-full"
+                value={editForm.category_id}
+                onChange={handleEditChange}
+              >
+                <option value="">Sélectionner...</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Description</label>
+              <textarea
+                name="description"
+                className="w-full border rounded p-2"
+                value={editForm.description}
+                onChange={handleEditChange}
+              />
+            </div>
+            <div>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  name="is_active"
+                  checked={editForm.is_active}
+                  onChange={handleEditChange}
+                  className="rounded"
+                />
+                <span className="text-sm">Prestation active</span>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'}
             </Button>
           </DialogFooter>
         </DialogContent>

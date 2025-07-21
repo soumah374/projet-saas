@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { formatDate, formatMontant, formatTemps } from '@/lib/formatters';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface PDFExportProps {
   devis: any;
@@ -7,364 +9,53 @@ interface PDFExportProps {
 }
 
 export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
+  const pdfRef = useRef<HTMLDivElement>(null);
+
   const handlePrint = () => {
     window.print();
   };
 
-  const handleDownload = () => {
-    // Créer un blob avec le contenu HTML
-    const htmlContent = document.getElementById('pdf-content')?.innerHTML;
-    if (htmlContent) {
-      const blob = new Blob([`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Devis ${devis.numero}</title>
-          <style>
-            ${getPDFStyles()}
-          </style>
-        </head>
-        <body>
-          ${htmlContent}
-        </body>
-        </html>
-      `], { type: 'text/html' });
-      
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `devis-${devis.numero}.html`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+  const generatePDF = async () => {
+    if (!pdfRef.current) return;
+
+    try {
+      const canvas = await html2canvas(pdfRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: 794, // A4 width in pixels at 96 DPI
+        height: 1123, // A4 height in pixels at 96 DPI
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 295; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`devis-${devis.numero}.pdf`);
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
     }
   };
 
-  const getPDFStyles = () => `
-    @page {
-      size: A4;
-      margin: 15mm;
-    }
-    
-    body {
-      font-family: 'Arial', sans-serif;
-      margin: 0;
-      padding: 0;
-      color: #1a202c;
-      line-height: 1.5;
-      font-size: 11px;
-    }
-    
-    .header {
-      text-align: center;
-      margin-bottom: 25px;
-      border-bottom: 3px solid #2563eb;
-      padding-bottom: 15px;
-    }
-    
-    .header h1 {
-      color: #2563eb;
-      margin: 0;
-      font-size: 28px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-    }
-    
-    .header .devis-info {
-      margin-top: 8px;
-      font-size: 13px;
-      color: #4a5568;
-      font-weight: 500;
-    }
-    
-    .header .devis-number {
-      font-size: 16px;
-      font-weight: bold;
-      color: #2d3748;
-      margin-bottom: 5px;
-    }
-    
-    .company-info {
-      float: left;
-      width: 48%;
-      margin-bottom: 20px;
-    }
-    
-    .company-info h3 {
-      color: #2563eb;
-      margin: 0 0 8px 0;
-      font-size: 16px;
-      font-weight: bold;
-    }
-    
-    .company-info p {
-      margin: 3px 0;
-      font-size: 11px;
-      color: #4a5568;
-    }
-    
-    .client-info {
-      float: right;
-      width: 48%;
-      text-align: right;
-      margin-bottom: 20px;
-    }
-    
-    .client-info h3 {
-      color: #2563eb;
-      margin: 0 0 8px 0;
-      font-size: 16px;
-      font-weight: bold;
-    }
-    
-    .client-info p {
-      margin: 3px 0;
-      font-size: 11px;
-      color: #4a5568;
-    }
-    
-    .client-info .client-name {
-      font-weight: bold;
-      color: #2d3748;
-      font-size: 12px;
-    }
-    
-    .clear {
-      clear: both;
-    }
-    
-    .devis-details {
-      margin: 20px 0;
-      padding: 12px;
-      background-color: #f7fafc;
-      border-radius: 6px;
-      border: 1px solid #e2e8f0;
-    }
-    
-    .devis-details h3 {
-      margin: 0 0 10px 0;
-      color: #1e40af;
-      font-size: 14px;
-      font-weight: bold;
-    }
-    
-    .devis-details .grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    
-    .devis-details .item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .devis-details .label {
-      font-weight: bold;
-      color: #4a5568;
-      font-size: 10px;
-    }
-    
-    .devis-details .value {
-      color: #2d3748;
-      font-size: 10px;
-      font-weight: 500;
-    }
-    
-    .section-title {
-      color: #1e40af;
-      font-size: 14px;
-      font-weight: bold;
-      margin: 20px 0 10px 0;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 5px;
-    }
-    
-    .lignes-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-      font-size: 9px;
-    }
-    
-    .lignes-table th,
-    .lignes-table td {
-      border: 1px solid #cbd5e0;
-      padding: 4px 6px;
-      text-align: left;
-      vertical-align: top;
-    }
-    
-    .lignes-table th {
-      background-color: #edf2f7;
-      font-weight: bold;
-      color: #2d3748;
-      font-size: 9px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    
-    .lignes-table .text-right {
-      text-align: right;
-    }
-    
-    .lignes-table .text-center {
-      text-align: center;
-    }
-    
-    .lignes-table .description {
-      max-width: 150px;
-      word-wrap: break-word;
-    }
-    
-    .intervenants-section {
-      margin-top: 10px;
-      padding: 8px;
-      background-color: #f7fafc;
-      border-radius: 4px;
-      border: 1px solid #e2e8f0;
-    }
-    
-    .intervenants-section h4 {
-      margin: 0 0 5px 0;
-      font-size: 9px;
-      color: #4a5568;
-      font-weight: bold;
-    }
-    
-    .intervenants-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 8px;
-    }
-    
-    .intervenants-table th,
-    .intervenants-table td {
-      border: 1px solid #e2e8f0;
-      padding: 2px 4px;
-      text-align: left;
-    }
-    
-    .intervenants-table th {
-      background-color: #f1f5f9;
-      font-weight: bold;
-      color: #475569;
-      font-size: 8px;
-    }
-    
-    .intervenants-table .text-right {
-      text-align: right;
-    }
-    
-    .totals {
-      margin-top: 20px;
-      text-align: right;
-      border-top: 2px solid #e2e8f0;
-      padding-top: 15px;
-    }
-    
-    .totals .total-item {
-      display: flex;
-      justify-content: space-between;
-      margin: 3px 0;
-      padding: 3px 0;
-      font-size: 11px;
-    }
-    
-    .totals .total-label {
-      font-weight: bold;
-      margin-right: 25px;
-      color: #4a5568;
-    }
-    
-    .totals .total-value {
-      font-weight: bold;
-      color: #2d3748;
-    }
-    
-    .totals .total-ht {
-      font-size: 12px;
-    }
-    
-    .totals .total-tva {
-      font-size: 11px;
-      color: #718096;
-    }
-    
-    .totals .total-ttc {
-      font-size: 14px;
-      color: #2563eb;
-      border-top: 1px solid #e2e8f0;
-      padding-top: 8px;
-      margin-top: 8px;
-      font-weight: bold;
-    }
-    
-    .notes-conditions {
-      margin-top: 25px;
-      page-break-inside: avoid;
-    }
-    
-    .notes-conditions h3 {
-      color: #1e40af;
-      margin-bottom: 8px;
-      font-size: 13px;
-      font-weight: bold;
-    }
-    
-    .notes-conditions .content {
-      background-color: #f7fafc;
-      padding: 10px;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      border: 1px solid #e2e8f0;
-      font-size: 10px;
-      line-height: 1.4;
-      color: #4a5568;
-    }
-    
-    .footer {
-      margin-top: 30px;
-      text-align: center;
-      font-size: 9px;
-      color: #718096;
-      border-top: 1px solid #e2e8f0;
-      padding-top: 15px;
-    }
-    
-    .footer p {
-      margin: 3px 0;
-    }
-    
-    .footer .company-name {
-      font-weight: bold;
-      color: #4a5568;
-      font-size: 10px;
-    }
-    
-    @media print {
-      body {
-        margin: 0;
-        padding: 0;
-      }
-      
-      .no-print {
-        display: none !important;
-      }
-      
-      .print-actions {
-        display: none !important;
-      }
-      
-      .page-break {
-        page-break-before: always;
-      }
-    }
-  `;
+  const handleDownload = () => {
+    generatePDF();
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -383,7 +74,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
               onClick={handleDownload}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
             >
-              Télécharger HTML
+              Télécharger PDF
             </button>
             <button
               onClick={onClose}
@@ -396,171 +87,384 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
 
         {/* Contenu PDF */}
         <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6">
-          <div id="pdf-content" className="bg-white">
-            {/* En-tête */}
-            <div className="header">
-              <h1>Devis</h1>
-              <div className="devis-number">N° {devis.numero}</div>
-              <div className="devis-info">
-                Date de création: {formatDate(devis.date_creation)} | 
-                Date de validité: {formatDate(devis.date_validite)} | 
-                Statut: {devis.statut_display}
+          <div 
+            ref={pdfRef} 
+            className="bg-white w-[794px] mx-auto shadow-lg"
+            style={{ 
+              minHeight: '1123px',
+              padding: '20px',
+              fontFamily: 'Arial, sans-serif',
+              fontSize: '11px',
+              lineHeight: '1.4',
+              color: '#1a202c'
+            }}
+          >
+            {/* En-tête avec logo et informations */}
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start',
+              marginBottom: '30px',
+              borderBottom: '3px solid #2563eb',
+              paddingBottom: '15px'
+            }}>
+              {/* Logo et services */}
+              <div style={{ flex: '1' }}>
+                <div style={{ 
+                  fontSize: '32px', 
+                  fontWeight: 'bold', 
+                  color: '#2563eb',
+                  marginBottom: '10px'
+                }}>
+                  <span style={{ color: '#2563eb' }}>sa</span>
+                  <span style={{ color: '#6b7280' }}>k</span>
+                  <span style={{ color: '#2563eb' }}>om</span>
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '2px',
+                  fontSize: '10px',
+                  color: '#4a5568'
+                }}>
+                  <div>Communication</div>
+                  <div>Relations publiques</div>
+                  <div>Évènementiel</div>
+                  <div>Production Audiovisuelle</div>
+                </div>
+              </div>
+
+              {/* Titre du document */}
+              <div style={{ 
+                flex: '2', 
+                textAlign: 'center',
+                marginTop: '10px'
+              }}>
+                <h1 style={{ 
+                  fontSize: '24px', 
+                  fontWeight: 'bold', 
+                  textTransform: 'uppercase',
+                  margin: '0 0 10px 0',
+                  color: '#1a202c'
+                }}>
+                  Facture Proforma
+                </h1>
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 'bold',
+                  color: '#2d3748'
+                }}>
+                  N° {devis.numero}
+                </div>
+                <div style={{ 
+                  fontSize: '12px',
+                  color: '#4a5568',
+                  marginTop: '5px'
+                }}>
+                  Date: {formatDate(devis.date_creation)}
+                </div>
+              </div>
+
+              {/* Informations client */}
+              <div style={{ 
+                flex: '1', 
+                textAlign: 'right',
+                fontSize: '10px'
+              }}>
+                <div style={{ 
+                  fontWeight: 'bold', 
+                  marginBottom: '5px',
+                  color: '#2d3748'
+                }}>
+                  {devis.client.nom_complet}
+                </div>
+                <div style={{ color: '#4a5568' }}>
+                  {devis.client.email}
+                </div>
+                <div style={{ color: '#4a5568' }}>
+                  {devis.client.telephone}
+                </div>
+                <div style={{ color: '#4a5568' }}>
+                  {(devis.client as any).adresse_complete || 'Adresse non renseignée'}
+                </div>
               </div>
             </div>
 
-            {/* Informations entreprise et client */}
-            <div className="company-info">
-              <h3>SAKOM</h3>
-              <p>Votre partenaire de confiance</p>
-              <p>Email: contact@sakom.com</p>
-              <p>Téléphone: +243 XXX XXX XXX</p>
-              <p>Adresse: Kinshasa, République Démocratique du Congo</p>
-              <p>Site web: www.sakom.com</p>
+            {/* Titre de l'événement */}
+            <div style={{ 
+              textAlign: 'center', 
+              marginBottom: '25px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              textTransform: 'uppercase',
+              color: '#1a202c'
+            }}>
+              {devis.titre || 'Prestation de services'}
             </div>
 
-            <div className="client-info">
-              <h3>Client</h3>
-              <p className="client-name">{devis.client.nom_complet}</p>
-              <p>Email: {devis.client.email}</p>
-              <p>Téléphone: {devis.client.telephone}</p>
-              <p>Adresse: {(devis.client as any).adresse_complete || 'Non renseignée'}</p>
-              <p>Type: {(devis.client as any).type_client_display || 'Non spécifié'}</p>
-            </div>
-
-            <div className="clear"></div>
-
-            {/* Détails du devis */}
-            <div className="devis-details">
-              <h3>Informations du devis</h3>
-              <div className="grid">
-                <div className="item">
-                  <span className="label">Numéro de devis:</span>
-                  <span className="value">{devis.numero}</span>
-                </div>
-                <div className="item">
-                  <span className="label">Statut:</span>
-                  <span className="value">{devis.statut_display}</span>
-                </div>
-                <div className="item">
-                  <span className="label">Date de création:</span>
-                  <span className="value">{formatDate(devis.date_creation)}</span>
-                </div>
-                <div className="item">
-                  <span className="label">Date de validité:</span>
-                  <span className="value">{formatDate(devis.date_validite)}</span>
-                </div>
-                <div className="item">
-                  <span className="label">Type de client:</span>
-                  <span className="value">{(devis.client as any).type_client_display || 'Non spécifié'}</span>
-                </div>
-                <div className="item">
-                  <span className="label">Nombre de lignes:</span>
-                  <span className="value">{devis.lignes.length}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Lignes de devis */}
-            <div className="section-title">Détail des prestations</div>
-            <table className="lignes-table">
+            {/* Tableau des services */}
+            <table style={{ 
+              width: '100%', 
+              borderCollapse: 'collapse',
+              marginBottom: '20px',
+              fontSize: '9px'
+            }}>
               <thead>
-                <tr>
-                  <th>Service</th>
-                  <th>Activité</th>
-                  <th>Description</th>
-                  <th className="text-center">Quantité</th>
-                  <th>Unité</th>
-                  <th className="text-right">Prix unitaire HT</th>
-                  <th className="text-right">Montant HT</th>
+                <tr style={{ backgroundColor: '#edf2f7' }}>
+                  <th style={{ 
+                    border: '1px solid #cbd5e0', 
+                    padding: '8px', 
+                    textAlign: 'left',
+                    fontWeight: 'bold',
+                    fontSize: '9px',
+                    textTransform: 'uppercase'
+                  }}>
+                    Désignation
+                  </th>
+                  <th style={{ 
+                    border: '1px solid #cbd5e0', 
+                    padding: '8px', 
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '9px',
+                    textTransform: 'uppercase'
+                  }}>
+                    Qté
+                  </th>
+                  <th style={{ 
+                    border: '1px solid #cbd5e0', 
+                    padding: '8px', 
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    fontSize: '9px',
+                    textTransform: 'uppercase'
+                  }}>
+                    Prix unitaire
+                  </th>
+                  <th style={{ 
+                    border: '1px solid #cbd5e0', 
+                    padding: '8px', 
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    fontSize: '9px',
+                    textTransform: 'uppercase'
+                  }}>
+                    Montant
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {devis.lignes.map((ligne: any, index: number) => (
-                  <React.Fragment key={ligne.id}>
-                    <tr>
-                      <td><strong>{ligne.service.intitule}</strong></td>
-                      <td>{ligne.activity.intitule}</td>
-                      <td className="description">{ligne.description || '-'}</td>
-                      <td className="text-center">{ligne.quantite}</td>
-                      <td>{ligne.unite.intitule}</td>
-                      <td className="text-right">{formatMontant(ligne.prix_unitaire_ht)}</td>
-                      <td className="text-right"><strong>{formatMontant(ligne.montant_ht)}</strong></td>
-                    </tr>
-                    {/* Intervenants pour cette ligne */}
-                    {ligne.intervenants && ligne.intervenants.length > 0 && (
-                      <tr>
-                        <td colSpan={7} style={{ padding: '0', border: 'none' }}>
-                          <div className="intervenants-section">
-                            <h4>Intervenants pour cette ligne :</h4>
-                            <table className="intervenants-table">
-                              <thead>
-                                <tr>
-                                  <th>Profil</th>
-                                  <th className="text-right">Temps</th>
-                                  <th className="text-right">Taux horaire</th>
-                                  <th className="text-right">Montant</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {ligne.intervenants.map((intervenant: any) => (
-                                  <tr key={intervenant.id}>
-                                    <td>{intervenant.profile_intervenant.nom_complet}</td>
-                                    <td className="text-right">{formatTemps(intervenant.temps_intervenant)}</td>
-                                    <td className="text-right">{formatMontant(intervenant.taux_horaire)}</td>
-                                    <td className="text-right">{formatMontant(intervenant.temps_intervenant * intervenant.taux_horaire)}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                {/* Grouper les lignes par service */}
+                {(() => {
+                  const groupedLines = devis.lignes.reduce((acc: any, ligne: any) => {
+                    const serviceName = ligne.service.intitule;
+                    if (!acc[serviceName]) {
+                      acc[serviceName] = [];
+                    }
+                    acc[serviceName].push(ligne);
+                    return acc;
+                  }, {});
+
+                  const rows: JSX.Element[] = [];
+                  
+                  Object.entries(groupedLines).forEach(([serviceName, lines]: [string, any]) => {
+                    // En-tête de section
+                    rows.push(
+                      <tr key={`header-${serviceName}`} style={{ backgroundColor: '#f7fafc' }}>
+                        <td 
+                          colSpan={4} 
+                          style={{ 
+                            border: '1px solid #cbd5e0', 
+                            padding: '6px 8px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            fontSize: '9px',
+                            color: '#4a5568'
+                          }}
+                        >
+                          {serviceName}
                         </td>
                       </tr>
-                    )}
-                  </React.Fragment>
-                ))}
+                    );
+
+                    // Lignes de ce service
+                    lines.forEach((ligne: any, index: number) => {
+                      rows.push(
+                        <tr key={ligne.id}>
+                          <td style={{ 
+                            border: '1px solid #cbd5e0', 
+                            padding: '6px 8px',
+                            textAlign: 'left'
+                          }}>
+                            <div style={{ fontWeight: '500' }}>
+                              {ligne.activity.intitule}
+                            </div>
+                            {ligne.description && (
+                              <div style={{ 
+                                fontSize: '8px', 
+                                color: '#718096',
+                                marginTop: '2px'
+                              }}>
+                                {ligne.description}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #cbd5e0', 
+                            padding: '6px 8px',
+                            textAlign: 'center'
+                          }}>
+                            {ligne.quantite}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #cbd5e0', 
+                            padding: '6px 8px',
+                            textAlign: 'right'
+                          }}>
+                            {formatMontant(ligne.prix_unitaire_ht)}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #cbd5e0', 
+                            padding: '6px 8px',
+                            textAlign: 'right',
+                            fontWeight: 'bold'
+                          }}>
+                            {formatMontant(ligne.montant_ht)}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  });
+
+                  return rows;
+                })()}
               </tbody>
             </table>
 
             {/* Totaux */}
-            <div className="totals">
-              <div className="total-item total-ht">
-                <span className="total-label">Montant HT:</span>
-                <span className="total-value">{formatMontant(devis.montant_ht)}</span>
+            <div style={{ 
+              textAlign: 'right',
+              marginTop: '20px',
+              borderTop: '2px solid #e2e8f0',
+              paddingTop: '15px'
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                marginBottom: '5px',
+                fontSize: '11px'
+              }}>
+                <span style={{ fontWeight: 'bold', marginRight: '25px' }}>Montant HT:</span>
+                <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_ht)}</span>
               </div>
-              <div className="total-item total-tva">
-                <span className="total-label">TVA (16%):</span>
-                <span className="total-value">{formatMontant(devis.montant_tva)}</span>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                marginBottom: '5px',
+                fontSize: '11px',
+                color: '#718096'
+              }}>
+                <span style={{ fontWeight: 'bold', marginRight: '25px' }}>TVA (16%):</span>
+                <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_tva)}</span>
               </div>
-              <div className="total-item total-ttc">
-                <span className="total-label">Montant TTC:</span>
-                <span className="total-value">{formatMontant(devis.montant_ttc)}</span>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between',
+                fontSize: '14px',
+                color: '#2563eb',
+                borderTop: '1px solid #e2e8f0',
+                paddingTop: '8px',
+                marginTop: '8px',
+                fontWeight: 'bold'
+              }}>
+                <span style={{ fontWeight: 'bold', marginRight: '25px' }}>Montant TTC:</span>
+                <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_ttc)}</span>
               </div>
             </div>
 
             {/* Notes et conditions */}
             {(devis.notes || devis.conditions) && (
-              <div className="notes-conditions">
+              <div style={{ 
+                marginTop: '25px',
+                pageBreakInside: 'avoid'
+              }}>
                 {devis.notes && (
-                  <>
-                    <h3>Notes</h3>
-                    <div className="content">{devis.notes}</div>
-                  </>
+                  <div style={{ marginBottom: '15px' }}>
+                    <h3 style={{ 
+                      color: '#1e40af',
+                      marginBottom: '8px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}>
+                      Notes
+                    </h3>
+                    <div style={{ 
+                      backgroundColor: '#f7fafc',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '10px',
+                      lineHeight: '1.4',
+                      color: '#4a5568',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {devis.notes}
+                    </div>
+                  </div>
                 )}
                 {devis.conditions && (
-                  <>
-                    <h3>Conditions générales</h3>
-                    <div className="content">{devis.conditions}</div>
-                  </>
+                  <div>
+                    <h3 style={{ 
+                      color: '#1e40af',
+                      marginBottom: '8px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
+                    }}>
+                      Conditions générales
+                    </h3>
+                    <div style={{ 
+                      backgroundColor: '#f7fafc',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '10px',
+                      lineHeight: '1.4',
+                      color: '#4a5568',
+                      whiteSpace: 'pre-wrap'
+                    }}>
+                      {devis.conditions}
+                    </div>
+                  </div>
                 )}
               </div>
             )}
 
             {/* Pied de page */}
-            <div className="footer">
-              <p>Ce devis est valable jusqu'au {formatDate(devis.date_validite)}</p>
-              <p>Pour toute question ou modification, n'hésitez pas à nous contacter</p>
-              <p className="company-name">SAKOM - Votre partenaire de confiance</p>
-              <p>Email: contact@sakom.com | Téléphone: +243 XXX XXX XXX</p>
+            <div style={{ 
+              marginTop: '30px',
+              textAlign: 'center',
+              fontSize: '9px',
+              color: '#718096',
+              borderTop: '1px solid #e2e8f0',
+              paddingTop: '15px'
+            }}>
+              <p style={{ margin: '3px 0' }}>
+                Ce devis est valable jusqu'au {formatDate(devis.date_validite)}
+              </p>
+              <p style={{ margin: '3px 0' }}>
+                Pour toute question ou modification, n'hésitez pas à nous contacter
+              </p>
+              <p style={{ 
+                fontWeight: 'bold', 
+                color: '#4a5568', 
+                fontSize: '10px',
+                margin: '3px 0'
+              }}>
+                SAKOM - Votre partenaire de confiance
+              </p>
+              <p style={{ margin: '3px 0' }}>
+                Email: contact@sakom.com | Téléphone: +243 XXX XXX XXX
+              </p>
             </div>
           </div>
         </div>
