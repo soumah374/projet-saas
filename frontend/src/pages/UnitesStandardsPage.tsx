@@ -46,6 +46,8 @@ export function UnitesStandardsPage() {
   const [hasPrev, setHasPrev] = useState(false);
   const pageSize = 10;
   const [togglingUnitesStandards, setTogglingUnitesStandards] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [uniteStandardToDelete, setUniteStandardToDelete] = useState<UniteStandard | null>(null);
 
   const fetchUnitesStandards = async (page = 1) => {
     setLoading(true);
@@ -127,14 +129,20 @@ export function UnitesStandardsPage() {
   };
 
   const handleDelete = async (uniteStandard: UniteStandard) => {
-    if (!window.confirm(`Supprimer l'unité standard "${uniteStandard.intitule}" ?`)) return;
     try {
       await api.delete(`/catalog/unites-standards/${uniteStandard.id}/`);
+      setDeleteDialogOpen(false);
+      setUniteStandardToDelete(null);
       toast.success('Unité standard supprimée');
       fetchUnitesStandards(currentPage);
     } catch (err) {
       toast.error('Erreur lors de la suppression');
     }
+  };
+
+  const openDeleteDialog = (uniteStandard: UniteStandard) => {
+    setUniteStandardToDelete(uniteStandard);
+    setDeleteDialogOpen(true);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -299,7 +307,7 @@ export function UnitesStandardsPage() {
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(uniteStandard)}>
                           <Edit size={16}/>
                         </Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(uniteStandard)}>
+                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(uniteStandard)}>
                           <Trash2 size={16}/>
                         </Button>
                       </TableCell>
@@ -331,6 +339,68 @@ export function UnitesStandardsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de suppression d'unité standard */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer l'unité standard</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer cette unité standard ?
+            </p>
+            {uniteStandardToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Intitulé :</span>
+                    <p className="text-gray-600">{uniteStandardToDelete.intitule}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Code :</span>
+                    <p className="text-gray-600">
+                      <Badge variant="outline">{uniteStandardToDelete.code}</Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Description :</span>
+                    <p className="text-gray-600">{uniteStandardToDelete.description || 'Aucune'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Statut :</span>
+                    <div className="mt-1">
+                      <Badge variant={uniteStandardToDelete.is_active ? "default" : "destructive"}>
+                        {uniteStandardToDelete.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera définitivement cette unité standard.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setUniteStandardToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDelete(uniteStandardToDelete!)}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

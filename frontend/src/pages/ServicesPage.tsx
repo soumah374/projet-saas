@@ -52,6 +52,8 @@ export function ServicesPage() {
   const [categoryId, setCategoryId] = useState<number | 'other' | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [togglingServices, setTogglingServices] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
 
   // Charger toutes les catégories depuis l'API
   useEffect(() => {
@@ -152,14 +154,20 @@ export function ServicesPage() {
   };
 
   const handleDelete = async (service: Service) => {
-    if (!window.confirm(`Supprimer la prestation "${service.name}" ?`)) return;
     try {
       await api.delete(`/catalog/services/${service.id}/`);
+      setDeleteDialogOpen(false);
+      setServiceToDelete(null);
       toast.success('Prestation supprimée');
       fetchServices(currentPage);
     } catch (err) {
       toast.error('Erreur lors de la suppression');
     }
+  };
+
+  const openDeleteDialog = (service: Service) => {
+    setServiceToDelete(service);
+    setDeleteDialogOpen(true);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -324,7 +332,7 @@ export function ServicesPage() {
                           </Button>
                         </Link>
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(service)}><Edit size={16}/></Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(service)}><Trash2 size={16}/></Button>
+                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(service)}><Trash2 size={16}/></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -340,6 +348,66 @@ export function ServicesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de suppression de service */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la prestation</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer cette prestation ?
+            </p>
+            {serviceToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Nom :</span>
+                    <p className="text-gray-600">{serviceToDelete.name}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Catégorie :</span>
+                    <p className="text-gray-600">{serviceToDelete.category?.name || 'Aucune'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Description :</span>
+                    <p className="text-gray-600">{serviceToDelete.description || 'Aucune'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Statut :</span>
+                    <div className="mt-1">
+                      <Badge variant={serviceToDelete.is_active ? "default" : "destructive"}>
+                        {serviceToDelete.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera définitivement cette prestation et toutes ses activités associées.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setServiceToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDelete(serviceToDelete!)}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

@@ -58,20 +58,50 @@ class Devis(models.Model):
     def generate_numero(self):
         """Générer un numéro de devis unique"""
         year = timezone.now().year
-        # Compter les devis de cette année
-        count = Devis.objects.filter(
+        # Trouver le plus grand numéro existant pour cette année
+        last_devis = Devis.objects.filter(
             numero__startswith=f"DEV{year}"
-        ).count() + 1
-        return f"DEV{year}{count:04d}"
+        ).order_by('-numero').first()
+        
+        if last_devis:
+            # Extraire le numéro et incrémenter
+            last_number = int(last_devis.numero[-4:])
+            new_number = last_number + 1
+        else:
+            new_number = 1
+            
+        return f"DEV{year}{new_number:04d}"
     
     def calculer_montants(self):
         """Calculer les montants HT, TVA et TTC"""
+        from decimal import Decimal
+        
         total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
         self.montant_ht = total_ht
         # TVA à 20% (à adapter selon vos besoins)
-        self.montant_tva = total_ht * 0.20
+        self.montant_tva = total_ht * Decimal('0.20')
         self.montant_ttc = total_ht + self.montant_tva
         self.save()
+    
+    def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id):
+        """Ajouter une ligne au devis"""
+        from catalog.models import Service, Activity, UniteStandard
+        
+        service = Service.objects.get(id=service_id)
+        activity = Activity.objects.get(id=activity_id)
+        unite = UniteStandard.objects.get(id=unite_id)
+        
+        # Créer la ligne avec un prix unitaire initial de 0
+        ligne = self.lignes.create(
+            service=service,
+            activity=activity,
+            description=description,
+            quantite=quantite,
+            unite=unite,
+            prix_unitaire_ht=0  # Sera recalculé quand les intervenants seront ajoutés
+        )
+        
+        return ligne
 
 
 class LigneDevis(models.Model):

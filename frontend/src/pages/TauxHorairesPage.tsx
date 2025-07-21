@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -49,6 +50,7 @@ interface PaginatedResponse {
 }
 
 export function TauxHorairesPage() {
+  const navigate = useNavigate();
   const [tauxHoraires, setTauxHoraires] = useState<TauxHoraire[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -74,6 +76,8 @@ export function TauxHorairesPage() {
   const [activityFilter, setActivityFilter] = useState<number | ''>('');
   const [profileFilter, setProfileFilter] = useState<number | ''>('');
   const [togglingTauxHoraires, setTogglingTauxHoraires] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [tauxHoraireToDelete, setTauxHoraireToDelete] = useState<TauxHoraire | null>(null);
 
   // Charger les profils intervenant
   useEffect(() => {
@@ -225,14 +229,20 @@ export function TauxHorairesPage() {
   };
 
   const handleDelete = async (tauxHoraire: TauxHoraire) => {
-    if (!window.confirm(`Supprimer le taux horaire "${tauxHoraire.activity.name} - ${tauxHoraire.profile_intervenant.name}" ?`)) return;
     try {
       await api.delete(`/catalog/taux-horaires/${tauxHoraire.id}/`);
+      setDeleteDialogOpen(false);
+      setTauxHoraireToDelete(null);
       toast.success('Taux horaire supprimé');
       fetchTauxHoraires(currentPage);
     } catch (err) {
       toast.error('Erreur lors de la suppression');
     }
+  };
+
+  const openDeleteDialog = (tauxHoraire: TauxHoraire) => {
+    setTauxHoraireToDelete(tauxHoraire);
+    setDeleteDialogOpen(true);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -288,10 +298,21 @@ export function TauxHorairesPage() {
   };
 
   return (
-    <div className="max-w-10xl mx-auto">
+    <div className="max-w-10xl mx-auto space-y-6">
+      {/* Header avec bouton retour */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft size={16} className="mr-2" />
+          Retour
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Gestion des Taux Horaires</h1>
+        </div>
+      </div>
+
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle>Gestion des Taux Horaires</CardTitle>
+          <CardTitle>Liste des Taux Horaires</CardTitle>
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative">
               <Input
@@ -442,7 +463,7 @@ export function TauxHorairesPage() {
                       </TableCell>
                       <TableCell className="flex gap-2">
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(tauxHoraire)}><Edit size={16}/></Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(tauxHoraire)}><Trash2 size={16}/></Button>
+                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(tauxHoraire)}><Trash2 size={16}/></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -458,6 +479,70 @@ export function TauxHorairesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de suppression de taux horaire */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le taux horaire</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer ce taux horaire ?
+            </p>
+            {tauxHoraireToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Activité :</span>
+                    <p className="text-gray-600">{tauxHoraireToDelete.activity?.name || 'Aucune'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Profil intervenant :</span>
+                    <p className="text-gray-600">{tauxHoraireToDelete.profile_intervenant?.name || 'Aucun'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Niveau :</span>
+                    <p className="text-gray-600">{getNiveauDisplay(tauxHoraireToDelete.niveau_intervenant)}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Taux horaire :</span>
+                    <p className="text-gray-600">{tauxHoraireToDelete.taux_heure} €/h</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Statut :</span>
+                    <div className="mt-1">
+                      <Badge variant={tauxHoraireToDelete.is_active ? "default" : "destructive"}>
+                        {tauxHoraireToDelete.is_active ? 'Actif' : 'Inactif'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera définitivement ce taux horaire.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setTauxHoraireToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDelete(tauxHoraireToDelete!)}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

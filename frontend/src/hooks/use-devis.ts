@@ -77,7 +77,7 @@ export interface IntervenantActivite {
   intitule: string;
   description: string;
   taux_horaire: number;
-  temps_standard: number;
+  temps_intervenant: number;
 }
 
 export interface PaginatedResponse<T> {
@@ -128,6 +128,39 @@ export const useCreateDevis = () => {
       notes?: string;
       conditions?: string;
     }) => devisAPI.createDevis(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devis'] });
+      toast.success('Devis créé avec succès');
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la création du devis:', error);
+      toast.error('Erreur lors de la création du devis');
+    },
+  });
+};
+
+export const useCreateDevisAvecLignes = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: {
+      client_id: number;
+      date_validite: string;
+      notes?: string;
+      conditions?: string;
+      lignes: Array<{
+        service_id: number;
+        activity_id: number;
+        description: string;
+        quantite: number;
+        unite_id: number;
+        intervenants: Array<{
+          profile_intervenant_id: number;
+          temps_intervenant: number;
+          taux_horaire: number;
+        }>;
+      }>;
+    }) => devisAPI.createDevisAvecLignes(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devis'] });
       toast.success('Devis créé avec succès');
@@ -253,7 +286,7 @@ export const useCreateLigneDevis = () => {
   
   return useMutation({
     mutationFn: (data: {
-      devis: number;
+      devis_id: number;
       service_id: number;
       activity_id: number;
       description: string;
@@ -261,7 +294,7 @@ export const useCreateLigneDevis = () => {
       unite_id: number;
     }) => lignesDevisAPI.createLigne(data),
     onSuccess: (_, data) => {
-      queryClient.invalidateQueries({ queryKey: ['devis', data.devis] });
+      queryClient.invalidateQueries({ queryKey: ['devis', data.devis_id] });
       toast.success('Ligne ajoutée avec succès');
     },
     onError: (error) => {
@@ -310,7 +343,7 @@ export const useCreateIntervenantLigne = () => {
   
   return useMutation({
     mutationFn: (data: {
-      ligne_devis: number;
+      devis_id: number;
       profile_intervenant_id: number;
       temps_intervenant: number;
       taux_horaire: number;
@@ -358,3 +391,5 @@ export const useDeleteIntervenantLigne = () => {
     },
   });
 }; 
+
+import { formatDate, formatMontantPDF } from '@/lib/formatters'; 

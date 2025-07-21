@@ -21,6 +21,7 @@ import { useClients } from '@/hooks/use-clients';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { formatMontant } from '@/lib/formatters';
 
 export function DevisPage() {
   const navigate = useNavigate();
@@ -37,6 +38,8 @@ export function DevisPage() {
   const [search, setSearch] = useState('');
   const [statutFilter, setStatutFilter] = useState('');
   const [clientFilter, setClientFilter] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [devisToDelete, setDevisToDelete] = useState<Devis | null>(null);
 
   // Hooks pour les opérations CRUD
   const createDevisMutation = useCreateDevis();
@@ -141,12 +144,18 @@ export function DevisPage() {
   };
 
   const handleDelete = async (devis: Devis) => {
-    if (!window.confirm(`Supprimer le devis ${devis.numero} ?`)) return;
     try {
       await deleteDevisMutation.mutateAsync(devis.id);
+      setDeleteDialogOpen(false);
+      setDevisToDelete(null);
     } catch (err) {
       // Les erreurs sont gérées par les hooks
     }
+  };
+
+  const openDeleteDialog = (devis: Devis) => {
+    setDevisToDelete(devis);
+    setDeleteDialogOpen(true);
   };
 
   const handleEnvoyer = async (devis: Devis) => {
@@ -172,6 +181,8 @@ export function DevisPage() {
       // Les erreurs sont gérées par les hooks
     }
   };
+
+
 
   const handleExportCSV = () => {
     const headers = [
@@ -215,82 +226,18 @@ export function DevisPage() {
   return (
     <div className="max-w-7xl mx-auto">
       <Card>
-        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <CardTitle>Gestion des Devis</CardTitle>
-          <Button onClick={() => navigate('/devis/create')} size="sm" className="gap-2">
-            <Plus size={16}/> Nouveau devis
-          </Button>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2">
-                <Plus size={16}/> Nouveau devis
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>{editDevis ? 'Modifier' : 'Créer'} un devis</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium">Client</Label>
-                  <Select value={form.client_id} onValueChange={(value) => handleSelectChange('client_id', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un client" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clients.map(client => (
-                        <SelectItem key={client.id} value={client.id.toString()}>
-                          {client.nom_complet}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Date de validité</Label>
-                  <Input 
-                    name="date_validite" 
-                    type="date" 
-                    value={form.date_validite} 
-                    onChange={handleChange} 
-                    required 
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Notes</Label>
-                  <Textarea 
-                    name="notes" 
-                    placeholder="Notes du devis" 
-                    value={form.notes} 
-                    onChange={handleChange} 
-                  />
-                </div>
-                <div>
-                  <Label className="text-sm font-medium">Conditions</Label>
-                  <Textarea 
-                    name="conditions" 
-                    placeholder="Conditions du devis" 
-                    value={form.conditions} 
-                    onChange={handleChange} 
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button 
-                  onClick={handleSave} 
-                  disabled={createDevisMutation.isPending || updateDevisMutation.isPending}
-                >
-                  {(createDevisMutation.isPending || updateDevisMutation.isPending) ? 
-                    <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'
-                  }
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2">
-            <Download size={16}/> Exporter CSV
-          </Button>
+          <div className="flex flex-row gap-2 justify-end">
+            <Button onClick={() => navigate('/devis/create')} size="sm" className="gap-2">
+              <Plus size={16}/> Nouveau devis
+            </Button>
+            <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2">
+              <Download size={16}/> Exporter CSV
+            </Button>
+          </div>
         </CardHeader>
+
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-10"><Loader2 className="animate-spin" size={32}/></div>
@@ -340,7 +287,7 @@ export function DevisPage() {
                       <TableCell>{new Date(devis.date_creation).toLocaleDateString()}</TableCell>
                       <TableCell>{new Date(devis.date_validite).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatutBadge(devis.statut)}</TableCell>
-                      <TableCell>{devis.montant_ttc.toFixed(2)} €</TableCell>
+                      <TableCell>{formatMontant(devis.montant_ttc)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button size="icon" variant="ghost" asChild>
@@ -366,7 +313,7 @@ export function DevisPage() {
                               </Button>
                             </>
                           )}
-                          <Button size="icon" variant="ghost" onClick={() => handleDelete(devis)}>
+                          <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(devis)}>
                             <Trash2 size={16}/>
                           </Button>
                         </div>
@@ -385,6 +332,76 @@ export function DevisPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de suppression de devis */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le devis</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer ce devis ?
+            </p>
+            {devisToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Numéro :</span>
+                    <p className="text-gray-600">{devisToDelete.numero}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Client :</span>
+                    <p className="text-gray-600">{devisToDelete.client.nom_complet}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Date de création :</span>
+                    <p className="text-gray-600">{new Date(devisToDelete.date_creation).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Date de validité :</span>
+                    <p className="text-gray-600">{new Date(devisToDelete.date_validite).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Statut :</span>
+                    <div className="mt-1">
+                      {getStatutBadge(devisToDelete.statut)}
+                    </div>
+                  </div>
+                                      <div>
+                      <span className="font-medium">Montants :</span>
+                      <div className="mt-1 space-y-1 text-xs">
+                        <div>HT : {formatMontant(devisToDelete.montant_ht)}</div>
+                        <div>TVA : {formatMontant(devisToDelete.montant_tva)}</div>
+                        <div>TTC : {formatMontant(devisToDelete.montant_ttc)}</div>
+                      </div>
+                    </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera également toutes les lignes de devis et intervenants associés.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setDevisToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDelete(devisToDelete!)}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

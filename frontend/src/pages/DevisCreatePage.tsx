@@ -11,9 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { DateInput } from '@/components/ui/DateInput';
 import { 
-  useCreateDevis,
-  useCreateLigneDevis,
-  useCreateIntervenantLigne,
+  useCreateDevisAvecLignes,
   useActivitesParService,
   useIntervenantsParActivite,
   type LigneDevis,
@@ -21,7 +19,9 @@ import {
 } from '@/hooks/use-devis';
 import { useClients } from '@/hooks/use-clients';
 import { useServices } from '@/hooks/use-services';
+import { useUnitesStandards } from '@/hooks/use-unites';
 import { toast } from 'sonner';
+import { formatMontant } from '@/lib/formatters';
 
 interface LigneForm {
   service_id: string;
@@ -30,6 +30,10 @@ interface LigneForm {
   quantite: string;
   unite_id: string;
   intervenants: IntervenantForm[];
+  // Stocker les données complètes pour l'affichage
+  service_name?: string;
+  activity_intitule?: string;
+  unite_intitule?: string;
 }
 
 interface IntervenantForm {
@@ -57,12 +61,11 @@ export function DevisCreatePage() {
   });
 
   // Hooks
-  const createDevisMutation = useCreateDevis();
-  const createLigneMutation = useCreateLigneDevis();
-  const createIntervenantMutation = useCreateIntervenantLigne();
+  const createDevisAvecLignesMutation = useCreateDevisAvecLignes();
   
   const { data: clientsData } = useClients({ page_size: 1000 });
   const { data: servicesData } = useServices({ page_size: 1000 });
+  const { data: unitesData } = useUnitesStandards({ page_size: 1000, is_active: true });
   const { data: activitesData, refetch: refetchActivites, isLoading: isLoadingActivites } = useActivitesParService(
     parseInt(currentLigne.service_id) || 0
   );
@@ -72,6 +75,7 @@ export function DevisCreatePage() {
 
   const clients = clientsData?.results || [];
   const services = servicesData?.results || [];
+  const unites = unitesData?.results || [];
   const activites = activitesData || [];
   const intervenants = intervenantsData || [];
 
@@ -131,6 +135,19 @@ export function DevisCreatePage() {
   const handleIntervenantChange = (index: number, field: keyof IntervenantForm, value: string) => {
     const newIntervenants = [...currentLigne.intervenants];
     newIntervenants[index] = { ...newIntervenants[index], [field]: value };
+    
+    // Si on change le profil intervenant, remplir automatiquement le temps et le taux
+    if (field === 'profile_intervenant_id' && value) {
+      const selectedIntervenant = intervenants.find(interv => interv.id.toString() === value);
+      if (selectedIntervenant) {
+        newIntervenants[index] = {
+          ...newIntervenants[index],
+          temps_intervenant: selectedIntervenant.temps_intervenant.toString(),
+          taux_horaire: selectedIntervenant.taux_horaire.toString()
+        };
+      }
+    }
+    
     setCurrentLigne({ ...currentLigne, intervenants: newIntervenants });
   };
 
@@ -149,6 +166,15 @@ export function DevisCreatePage() {
     setCurrentLigne({ ...currentLigne, intervenants: newIntervenants });
   };
 
+
+
+  // Calculer le montant pour un intervenant
+  const calculateIntervenantMontant = (intervenant: IntervenantForm) => {
+    const temps = parseFloat(intervenant.temps_intervenant) || 0;
+    const taux = parseFloat(intervenant.taux_horaire) || 0;
+    return formatMontant(temps * taux);
+  };
+
   const addLigne = () => {
     if (!currentLigne.service_id || !currentLigne.activity_id || !currentLigne.unite_id) {
       toast.error('Veuillez remplir tous les champs obligatoires');
@@ -160,7 +186,19 @@ export function DevisCreatePage() {
       return;
     }
 
-    setLignes([...lignes, { ...currentLigne }]);
+    // Récupérer les données complètes pour l'affichage
+    const selectedService = services.find(s => s.id.toString() === currentLigne.service_id);
+    const selectedActivity = activites.find(a => a.id.toString() === currentLigne.activity_id);
+    const selectedUnite = unites.find(u => u.id.toString() === currentLigne.unite_id);
+
+    const ligneWithData = {
+      ...currentLigne,
+      service_name: selectedService?.name,
+      activity_intitule: selectedActivity?.intitule,
+      unite_intitule: selectedUnite?.intitule
+    };
+
+    setLignes([...lignes, ligneWithData]);
     setCurrentLigne({
       service_id: '',
       activity_id: '',
@@ -187,39 +225,28 @@ export function DevisCreatePage() {
     }
 
     try {
-      // Créer le devis
-      const devisResponse = await createDevisMutation.mutateAsync({
+      // Préparer les données des lignes avec leurs intervenants
+      const lignesData = lignes.map(ligne => ({
+        service_id: parseInt(ligne.service_id),
+        activity_id: parseInt(ligne.activity_id),
+        description: ligne.description,
+        quantite: parseFloat(ligne.quantite),
+        unite_id: parseInt(ligne.unite_id),
+        intervenants: ligne.intervenants.map(intervenant => ({
+          profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
+          temps_intervenant: parseFloat(intervenant.temps_intervenant),
+          taux_horaire: parseFloat(intervenant.taux_horaire),
+        }))
+      }));
+
+      // Créer le devis avec toutes ses lignes en une seule requête
+      await createDevisAvecLignesMutation.mutateAsync({
         client_id: parseInt(form.client_id),
         date_validite: form.date_validite.toISOString().split('T')[0],
         notes: form.notes,
         conditions: form.conditions,
+        lignes: lignesData,
       });
-
-      const devisId = devisResponse.data.id;
-
-      // Créer les lignes
-      for (const ligne of lignes) {
-        const ligneResponse = await createLigneMutation.mutateAsync({
-          devis: devisId,
-          service_id: parseInt(ligne.service_id),
-          activity_id: parseInt(ligne.activity_id),
-          description: ligne.description,
-          quantite: parseFloat(ligne.quantite),
-          unite_id: parseInt(ligne.unite_id),
-        });
-
-        const ligneId = ligneResponse.data.id;
-
-        // Créer les intervenants
-        for (const intervenant of ligne.intervenants) {
-          await createIntervenantMutation.mutateAsync({
-            ligne_devis: ligneId,
-            profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
-            temps_intervenant: parseFloat(intervenant.temps_intervenant),
-            taux_horaire: parseFloat(intervenant.taux_horaire),
-          });
-        }
-      }
 
       toast.success('Devis créé avec succès');
       navigate('/devis');
@@ -242,8 +269,8 @@ export function DevisCreatePage() {
             <h1 className="text-2xl font-bold">Créer un devis</h1>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={createDevisMutation.isPending}>
-          {createDevisMutation.isPending ? (
+        <Button onClick={handleSave} disabled={createDevisAvecLignesMutation.isPending}>
+          {createDevisAvecLignesMutation.isPending ? (
             <Loader2 className="animate-spin" size={16} />
           ) : (
             <Save size={16} />
@@ -328,11 +355,11 @@ export function DevisCreatePage() {
                 <TableBody>
                   {lignes.map((ligne, index) => (
                     <TableRow key={index}>
-                      <TableCell>{services.find(s => s.id.toString() === ligne.service_id)?.name}</TableCell>
-                      <TableCell>{activites.find(a => a.id.toString() === ligne.activity_id)?.intitule}</TableCell>
+                      <TableCell>{ligne.service_name}</TableCell>
+                      <TableCell>{ligne.activity_intitule}</TableCell>
                       <TableCell>{ligne.description}</TableCell>
                       <TableCell>{ligne.quantite}</TableCell>
-                      <TableCell>{ligne.unite_id}</TableCell>
+                      <TableCell>{ligne.unite_intitule}</TableCell>
                       <TableCell>
                         <Button size="icon" variant="ghost" onClick={() => removeLigne(index)}>
                           <Trash2 size={16}/>
@@ -401,11 +428,18 @@ export function DevisCreatePage() {
               </div>
               <div>
                 <Label className="text-sm font-medium">Unité *</Label>
-                <Input 
-                  value={currentLigne.unite_id} 
-                  onChange={(e) => handleLigneChange('unite_id', e.target.value)}
-                  placeholder="Unité (ex: heure, jour)"
-                />
+                <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner une unité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unites.map(unite => (
+                      <SelectItem key={unite.id} value={unite.id.toString()}>
+                        {unite.intitule} ({unite.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -439,7 +473,7 @@ export function DevisCreatePage() {
                 </Button>
               </div>
               {currentLigne.intervenants.map((intervenant, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                   <div>
                     <Label className="text-sm font-medium">Profil *</Label>
                     <Select 
@@ -471,7 +505,7 @@ export function DevisCreatePage() {
                         ) : (
                           intervenants.map(interv => (
                             <SelectItem key={interv.id} value={interv.id.toString()}>
-                              {interv.intitule}
+                              {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire}€/h)
                             </SelectItem>
                           ))
                         )}
@@ -486,6 +520,8 @@ export function DevisCreatePage() {
                       value={intervenant.temps_intervenant} 
                       onChange={(e) => handleIntervenantChange(index, 'temps_intervenant', e.target.value)}
                       placeholder="0"
+                      className={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "border-green-200 bg-green-50" : ""}
+                      title={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "Valeur pré-remplie automatiquement" : ""}
                     />
                   </div>
                   <div>
@@ -496,13 +532,24 @@ export function DevisCreatePage() {
                       value={intervenant.taux_horaire} 
                       onChange={(e) => handleIntervenantChange(index, 'taux_horaire', e.target.value)}
                       placeholder="0"
+                      className={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "border-green-200 bg-green-50" : ""}
+                      title={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "Valeur pré-remplie automatiquement" : ""}
                     />
                   </div>
-                  <div>
-                    <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
-                      <Trash2 size={16}/>
-                    </Button>
-                  </div>
+                                        <div>
+                        <Label className="text-sm font-medium">Montant</Label>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            value={calculateIntervenantMontant(intervenant)}
+                            readOnly
+                            className="bg-gray-50 text-gray-700"
+                            placeholder="0,00 €"
+                          />
+                          <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
+                            <Trash2 size={16}/>
+                          </Button>
+                        </div>
+                      </div>
                 </div>
               ))}
             </div>

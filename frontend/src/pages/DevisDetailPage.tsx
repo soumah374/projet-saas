@@ -4,26 +4,69 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Edit, Download, Send, Check, X } from 'lucide-react';
+import { Loader2, ArrowLeft, Edit, Download, Send, Check, X, Plus, Trash2 } from 'lucide-react';
 import { 
   useDevisById,
   useUpdateDevis,
   useEnvoyerDevis,
   useAccepterDevis,
   useRefuserDevis,
+  useCreateLigneDevis,
+  useCreateIntervenantLigne,
+  useDeleteLigneDevis,
+  useActivitesParService,
+  useIntervenantsParActivite,
   type Devis
 } from '@/hooks/use-devis';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useServices } from '@/hooks/use-services';
+import { useUnitesStandards } from '@/hooks/use-unites';
+import { formatDate, formatMontant, formatMontantPDF } from '@/lib/formatters';
+import { PDFExport } from '@/components/PDFExport';
+
+interface LigneForm {
+  service_id: string;
+  activity_id: string;
+  description: string;
+  quantite: string;
+  unite_id: string;
+  intervenants: IntervenantForm[];
+}
+
+interface IntervenantForm {
+  profile_intervenant_id: string;
+  temps_intervenant: string;
+  taux_horaire: string;
+}
 
 export function DevisDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [addLigneDialogOpen, setAddLigneDialogOpen] = useState(false);
+  const [deleteLigneDialogOpen, setDeleteLigneDialogOpen] = useState(false);
+  const [ligneToDelete, setLigneToDelete] = useState<any>(null);
   const [form, setForm] = useState<any>({});
+  const [dateValidite, setDateValidite] = useState<Date | undefined>(undefined);
+  const [pdfExportOpen, setPdfExportOpen] = useState(false);
+  const [currentLigne, setCurrentLigne] = useState<LigneForm>({
+    service_id: '',
+    activity_id: '',
+    description: '',
+    quantite: '1',
+    unite_id: '',
+    intervenants: []
+  });
 
   const devisId = parseInt(id || '0');
   
@@ -32,6 +75,24 @@ export function DevisDetailPage() {
   const envoyerDevisMutation = useEnvoyerDevis();
   const accepterDevisMutation = useAccepterDevis();
   const refuserDevisMutation = useRefuserDevis();
+  const createLigneMutation = useCreateLigneDevis();
+  const createIntervenantMutation = useCreateIntervenantLigne();
+  const deleteLigneMutation = useDeleteLigneDevis();
+
+  // Hooks pour les données de référence
+  const { data: servicesData } = useServices({ page_size: 1000 });
+  const { data: unitesData } = useUnitesStandards({ page_size: 1000, is_active: true });
+  const { data: activitesData, refetch: refetchActivites, isLoading: isLoadingActivites } = useActivitesParService(
+    parseInt(currentLigne.service_id) || 0
+  );
+  const { data: intervenantsData, refetch: refetchIntervenants, isLoading: isLoadingIntervenants } = useIntervenantsParActivite(
+    parseInt(currentLigne.activity_id) || 0
+  );
+
+  const services = servicesData?.results || [];
+  const unites = unitesData?.results || [];
+  const activites = activitesData || [];
+  const intervenants = intervenantsData || [];
 
   useEffect(() => {
     if (devis) {
@@ -40,15 +101,39 @@ export function DevisDetailPage() {
         notes: devis.notes || '',
         conditions: devis.conditions || '',
       });
+      setDateValidite(new Date(devis.date_validite));
     }
   }, [devis]);
+
+  // Réinitialiser l'activité et les intervenants quand le service change
+  useEffect(() => {
+    if (currentLigne.service_id) {
+      setCurrentLigne(prev => ({
+        ...prev,
+        activity_id: '',
+        intervenants: []
+      }));
+      refetchActivites();
+    }
+  }, [currentLigne.service_id, refetchActivites]);
+
+  // Réinitialiser les intervenants quand l'activité change
+  useEffect(() => {
+    if (currentLigne.activity_id) {
+      setCurrentLigne(prev => ({
+        ...prev,
+        intervenants: []
+      }));
+      refetchIntervenants();
+    }
+  }, [currentLigne.activity_id, refetchIntervenants]);
 
   const handleSave = async () => {
     try {
       await updateDevisMutation.mutateAsync({
         id: devisId,
         data: {
-          date_validite: form.date_validite,
+          date_validite: dateValidite ? dateValidite.toISOString().split('T')[0] : form.date_validite,
           notes: form.notes,
           conditions: form.conditions,
         }
@@ -83,6 +168,102 @@ export function DevisDetailPage() {
     }
   };
 
+  const handleLigneChange = (field: keyof LigneForm, value: string) => {
+    setCurrentLigne({ ...currentLigne, [field]: value });
+  };
+
+  const handleIntervenantChange = (index: number, field: keyof IntervenantForm, value: string) => {
+    const newIntervenants = [...currentLigne.intervenants];
+    newIntervenants[index] = { ...newIntervenants[index], [field]: value };
+    
+    // Si on change le profil intervenant, remplir automatiquement le temps et le taux
+    if (field === 'profile_intervenant_id' && value) {
+      const selectedIntervenant = intervenants.find(interv => interv.id.toString() === value);
+      if (selectedIntervenant) {
+        newIntervenants[index] = {
+          ...newIntervenants[index],
+          temps_intervenant: selectedIntervenant.temps_intervenant.toString(),
+          taux_horaire: selectedIntervenant.taux_horaire.toString()
+        };
+      }
+    }
+    
+    setCurrentLigne({ ...currentLigne, intervenants: newIntervenants });
+  };
+
+  const addIntervenant = () => {
+    setCurrentLigne({
+      ...currentLigne,
+      intervenants: [
+        ...currentLigne.intervenants,
+        { profile_intervenant_id: '', temps_intervenant: '', taux_horaire: '' }
+      ]
+    });
+  };
+
+  const removeIntervenant = (index: number) => {
+    const newIntervenants = currentLigne.intervenants.filter((_, i) => i !== index);
+    setCurrentLigne({ ...currentLigne, intervenants: newIntervenants });
+  };
+
+
+
+  const calculateIntervenantMontant = (intervenant: IntervenantForm) => {
+    const temps = parseFloat(intervenant.temps_intervenant) || 0;
+    const taux = parseFloat(intervenant.taux_horaire) || 0;
+    return formatMontant(temps * taux);
+  };
+
+  const handleAddLigne = async () => {
+    if (!currentLigne.service_id || !currentLigne.activity_id || !currentLigne.unite_id) {
+      toast.error('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+
+    if (currentLigne.intervenants.length === 0) {
+      toast.error('Veuillez ajouter au moins un intervenant');
+      return;
+    }
+
+    try {
+      // Créer la ligne
+      await createLigneMutation.mutateAsync({
+        devis_id:  devis.id,
+        service_id: parseInt(currentLigne.service_id),
+        activity_id: parseInt(currentLigne.activity_id),
+        description: currentLigne.description,
+        quantite: parseFloat(currentLigne.quantite),
+        unite_id: parseInt(currentLigne.unite_id),
+      });
+
+      // Créer les intervenants
+      for (const intervenant of currentLigne.intervenants) {
+        await createIntervenantMutation.mutateAsync({
+          devis_id: devis.id,
+          profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
+          temps_intervenant: parseFloat(intervenant.temps_intervenant),
+          taux_horaire: parseFloat(intervenant.taux_horaire),
+        });
+      }
+
+      // Réinitialiser le formulaire
+      setCurrentLigne({
+        service_id: '',
+        activity_id: '',
+        description: '',
+        quantite: '1',
+        unite_id: '',
+        intervenants: []
+      });
+
+      setAddLigneDialogOpen(false);
+      toast.success('Ligne ajoutée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout de la ligne:', error);
+      toast.error('Erreur lors de l\'ajout de la ligne');
+    }
+  };
+
   const getStatutBadge = (statut: string) => {
     const variants = {
       brouillon: 'secondary',
@@ -95,8 +276,25 @@ export function DevisDetailPage() {
     return <Badge variant={variants[statut as keyof typeof variants]}>{statut}</Badge>;
   };
 
-  const handleExportPDF = () => {
-    toast.info('Export PDF en cours de développement');
+    const handleExportPDF = () => {
+    setPdfExportOpen(true);
+  };
+
+  const handleDeleteLigne = async (ligneId: number) => {
+    try {
+      await deleteLigneMutation.mutateAsync(ligneId);
+      setDeleteLigneDialogOpen(false);
+      setLigneToDelete(null);
+      toast.success('Ligne supprimée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la ligne:', error);
+      toast.error('Erreur lors de la suppression de la ligne');
+    }
+  };
+
+  const openDeleteDialog = (ligne: any) => {
+    setLigneToDelete(ligne);
+    setDeleteLigneDialogOpen(true);
   };
 
   if (isLoading) {
@@ -138,6 +336,10 @@ export function DevisDetailPage() {
               <Button onClick={() => setEditDialogOpen(true)} variant="outline">
                 <Edit size={16} className="mr-2" />
                 Modifier
+              </Button>
+              <Button onClick={() => setAddLigneDialogOpen(true)} variant="outline">
+                <Plus size={16} className="mr-2" />
+                Ajouter ligne
               </Button>
               <Button onClick={handleEnvoyer}>
                 <Send size={16} className="mr-2" />
@@ -194,15 +396,15 @@ export function DevisDetailPage() {
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
-              <p className="font-medium">{devis.montant_ht.toFixed(2)} €</p>
+              <p className="font-medium">{formatMontant(devis.montant_ht)}</p>
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-600">TVA</Label>
-              <p className="font-medium">{devis.montant_tva.toFixed(2)} €</p>
+              <p className="font-medium">{formatMontant(devis.montant_tva)}</p>
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
-              <p className="font-medium text-lg">{devis.montant_ttc.toFixed(2)} €</p>
+              <p className="font-medium text-lg">{formatMontant(devis.montant_ttc)}</p>
             </div>
           </div>
         </CardContent>
@@ -227,6 +429,7 @@ export function DevisDetailPage() {
                   <TableHead>Unité</TableHead>
                   <TableHead>Prix unitaire HT</TableHead>
                   <TableHead>Montant HT</TableHead>
+                  {devis.statut === 'brouillon' && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -237,8 +440,20 @@ export function DevisDetailPage() {
                     <TableCell>{ligne.description}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
                     <TableCell>{ligne.unite.intitule}</TableCell>
-                    <TableCell>{ligne.prix_unitaire_ht.toFixed(2)} €</TableCell>
-                    <TableCell className="font-medium">{ligne.montant_ht.toFixed(2)} €</TableCell>
+                    <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
+                    <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
+                    {devis.statut === 'brouillon' && (
+                      <TableCell>
+                        <Button 
+                          size="icon" 
+                          variant="ghost" 
+                          onClick={() => openDeleteDialog(ligne)}
+                          disabled={deleteLigneMutation.isPending}
+                        >
+                          <Trash2 size={16}/>
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -282,13 +497,31 @@ export function DevisDetailPage() {
           <div className="space-y-4">
             <div>
               <Label className="text-sm font-medium">Date de validité</Label>
-              <Input 
-                name="date_validite" 
-                type="date" 
-                value={form.date_validite} 
-                onChange={(e) => setForm({ ...form, date_validite: e.target.value })} 
-                required 
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateValidite ? (
+                      format(dateValidite, "PPP", { locale: fr })
+                    ) : (
+                      <span className="text-muted-foreground">Sélectionner une date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateValidite}
+                    onSelect={setDateValidite}
+                    initialFocus
+                    disabled={(date) => date < new Date()}
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label className="text-sm font-medium">Notes</Label>
@@ -321,6 +554,279 @@ export function DevisDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog d'ajout de ligne */}
+      <Dialog open={addLigneDialogOpen} onOpenChange={setAddLigneDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Ajouter une ligne de devis</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            {/* Informations de la ligne */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label className="text-sm font-medium">Service *</Label>
+                <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner un service" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map(service => (
+                      <SelectItem key={service.id} value={service.id.toString()}>
+                        {service.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Activité *</Label>
+                <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={
+                      !currentLigne.service_id 
+                        ? "Sélectionnez d'abord un service" 
+                        : isLoadingActivites 
+                          ? "Chargement des activités..." 
+                          : "Sélectionner une activité"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {!currentLigne.service_id ? (
+                      <SelectItem value="no-service" disabled>
+                        Sélectionnez d'abord un service
+                      </SelectItem>
+                    ) : isLoadingActivites ? (
+                      <SelectItem value="loading" disabled>
+                        Chargement...
+                      </SelectItem>
+                    ) : activites.length === 0 ? (
+                      <SelectItem value="no-activities" disabled>
+                        Aucune activité trouvée pour ce service
+                      </SelectItem>
+                    ) : (
+                      activites.map(activite => (
+                        <SelectItem key={activite.id} value={activite.id.toString()}>
+                          {activite.intitule}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Unité *</Label>
+                <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionner une unité" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unites.map(unite => (
+                      <SelectItem key={unite.id} value={unite.id.toString()}>
+                        {unite.intitule} ({unite.code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-sm font-medium">Description</Label>
+                <Input 
+                  value={currentLigne.description} 
+                  onChange={(e) => handleLigneChange('description', e.target.value)}
+                  placeholder="Description de la ligne"
+                />
+              </div>
+              <div>
+                <Label className="text-sm font-medium">Quantité</Label>
+                <Input 
+                  type="number"
+                  step="0.01"
+                  value={currentLigne.quantite} 
+                  onChange={(e) => handleLigneChange('quantite', e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+            </div>
+
+            {/* Intervenants */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Intervenants</Label>
+                <Button size="sm" onClick={addIntervenant}>
+                  <Plus size={16} className="mr-2" />
+                  Ajouter intervenant
+                </Button>
+              </div>
+              {currentLigne.intervenants.map((intervenant, index) => (
+                <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                  <div>
+                    <Label className="text-sm font-medium">Profil *</Label>
+                    <Select 
+                      value={intervenant.profile_intervenant_id} 
+                      onValueChange={(value) => handleIntervenantChange(index, 'profile_intervenant_id', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={
+                          !currentLigne.activity_id 
+                            ? "Sélectionnez d'abord une activité" 
+                            : isLoadingIntervenants 
+                              ? "Chargement des intervenants..." 
+                              : "Sélectionner un profil"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {!currentLigne.activity_id ? (
+                          <SelectItem value="no-activity" disabled>
+                            Sélectionnez d'abord une activité
+                          </SelectItem>
+                        ) : isLoadingIntervenants ? (
+                          <SelectItem value="loading-intervenants" disabled>
+                            Chargement...
+                          </SelectItem>
+                        ) : intervenants.length === 0 ? (
+                          <SelectItem value="no-intervenants" disabled>
+                            Aucun intervenant trouvé pour cette activité
+                          </SelectItem>
+                        ) : (
+                          intervenants.map(interv => (
+                            <SelectItem key={interv.id} value={interv.id.toString()}>
+                              {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire}€/h)
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Temps (h) *</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={intervenant.temps_intervenant} 
+                      onChange={(e) => handleIntervenantChange(index, 'temps_intervenant', e.target.value)}
+                      placeholder="0"
+                      className={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "border-green-200 bg-green-50" : ""}
+                      title={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "Valeur pré-remplie automatiquement" : ""}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Taux horaire (€) *</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={intervenant.taux_horaire} 
+                      onChange={(e) => handleIntervenantChange(index, 'taux_horaire', e.target.value)}
+                      placeholder="0"
+                      className={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "border-green-200 bg-green-50" : ""}
+                      title={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "Valeur pré-remplie automatiquement" : ""}
+                    />
+                  </div>
+                                        <div>
+                        <Label className="text-sm font-medium">Montant</Label>
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            value={calculateIntervenantMontant(intervenant)}
+                            readOnly
+                            className="bg-gray-50 text-gray-700"
+                            placeholder="0,00 €"
+                          />
+                          <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
+                            <Trash2 size={16}/>
+                          </Button>
+                        </div>
+                      </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              onClick={handleAddLigne} 
+              disabled={createLigneMutation.isPending || createIntervenantMutation.isPending}
+            >
+              {(createLigneMutation.isPending || createIntervenantMutation.isPending) ? 
+                <Loader2 className="animate-spin" size={16}/> : 'Ajouter la ligne'
+              }
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de suppression de ligne */}
+      <Dialog open={deleteLigneDialogOpen} onOpenChange={setDeleteLigneDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la ligne</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer cette ligne de devis ?
+            </p>
+            {ligneToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Service :</span>
+                    <p className="text-gray-600">{ligneToDelete.service.intitule}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Activité :</span>
+                    <p className="text-gray-600">{ligneToDelete.activity.intitule}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Description :</span>
+                    <p className="text-gray-600">{ligneToDelete.description || 'Aucune'}</p>
+                  </div>
+                                        <div>
+                        <span className="font-medium">Montant HT :</span>
+                        <p className="text-gray-600">{formatMontant(ligneToDelete.montant_ht)}</p>
+                      </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera également tous les intervenants associés à cette ligne.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteLigneDialogOpen(false);
+                setLigneToDelete(null);
+              }}
+              disabled={deleteLigneMutation.isPending}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDeleteLigne(ligneToDelete?.id)}
+              disabled={deleteLigneMutation.isPending}
+            >
+              {deleteLigneMutation.isPending ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16}/>
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Composant d'export PDF */}
+      {pdfExportOpen && devis && (
+        <PDFExport 
+          devis={devis} 
+          onClose={() => setPdfExportOpen(false)} 
+        />
+      )}
     </div>
   );
 } 

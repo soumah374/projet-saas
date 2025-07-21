@@ -47,6 +47,8 @@ export function ClientsPage() {
   const [paysFilter, setPaysFilter] = useState('');
   const [detailClient, setDetailClient] = useState<ClientProfile | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [clientToDelete, setClientToDelete] = useState<ClientProfile | null>(null);
 
   // Hooks pour les opérations CRUD
   const createClientMutation = useCreateClient();
@@ -212,12 +214,18 @@ export function ClientsPage() {
   };
 
   const handleDelete = async (client: ClientProfile) => {
-    if (!window.confirm(`Supprimer le client ${client.nom_complet} ?`)) return;
     try {
       await deleteClientMutation.mutateAsync(client.id);
+      setDeleteDialogOpen(false);
+      setClientToDelete(null);
     } catch (err) {
       // Les erreurs sont gérées par les hooks
     }
+  };
+
+  const openDeleteDialog = (client: ClientProfile) => {
+    setClientToDelete(client);
+    setDeleteDialogOpen(true);
   };
 
   const handleToggleStatus = async (client: ClientProfile) => {
@@ -283,128 +291,130 @@ export function ClientsPage() {
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle>Gestion des Clients</CardTitle>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editClient ? 'Modifier' : 'Ajouter'} un client</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                {/* Informations de base */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">Prénom</Label>
-                    <Input name="prenom" placeholder="Prénom" value={form.prenom} onChange={handleChange} required />
+          <div className="flex flex-wrap gap-2 items-center">
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{editClient ? 'Modifier' : 'Ajouter'} un client</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  {/* Informations de base */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Prénom</Label>
+                      <Input name="prenom" placeholder="Prénom" value={form.prenom} onChange={handleChange} required />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Nom</Label>
+                      <Input name="nom" placeholder="Nom" value={form.nom} onChange={handleChange} required />
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium">Nom</Label>
-                    <Input name="nom" placeholder="Nom" value={form.nom} onChange={handleChange} required />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Email</Label>
+                      <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Téléphone</Label>
+                      <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">Email</Label>
-                    <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm font-medium">Type client</Label>
+                      <Select value={form.type_client} onValueChange={(value) => handleSelectChange('type_client', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="personne_physique">Personne physique</SelectItem>
+                          <SelectItem value="personne_morale">Personne morale</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Statut commercial</Label>
+                      <Select value={form.statut_commercial} onValueChange={(value) => handleSelectChange('statut_commercial', value)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="prospect">Prospect</SelectItem>
+                          <SelectItem value="actif">Actif</SelectItem>
+                          <SelectItem value="inactif">Inactif</SelectItem>
+                          <SelectItem value="bloque">Bloqué</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium">Téléphone</Label>
-                    <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">Type client</Label>
-                    <Select value={form.type_client} onValueChange={(value) => handleSelectChange('type_client', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="personne_physique">Personne physique</SelectItem>
-                        <SelectItem value="personne_morale">Personne morale</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium">Statut commercial</Label>
-                    <Select value={form.statut_commercial} onValueChange={(value) => handleSelectChange('statut_commercial', value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="prospect">Prospect</SelectItem>
-                        <SelectItem value="actif">Actif</SelectItem>
-                        <SelectItem value="inactif">Inactif</SelectItem>
-                        <SelectItem value="bloque">Bloqué</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
 
-                {/* Champs pour personne morale */}
-                {form.type_client === 'personne_morale' && (
+                  {/* Champs pour personne morale */}
+                  {form.type_client === 'personne_morale' && (
+                    <div className="space-y-4 border-t pt-4">
+                      <h4 className="font-medium">Informations entreprise</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Raison sociale</Label>
+                          <Input name="raison_sociale" placeholder="Raison sociale" value={form.raison_sociale} onChange={handleChange} />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">RCCM ou NIF</Label>
+                          <Input name="rccm_nif" placeholder="RCCM ou NIF" value={form.rccm_nif} onChange={handleChange} />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Contact</Label>
+                        <Input name="contact" placeholder="Contact" value={form.contact} onChange={handleChange} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Adresse */}
                   <div className="space-y-4 border-t pt-4">
-                    <h4 className="font-medium">Informations entreprise</h4>
+                    <h4 className="font-medium">Adresse</h4>
+                    <div>
+                      <Label className="text-sm font-medium">Adresse complète</Label>
+                      <Textarea name="adresse_complete" placeholder="Adresse complète" value={form.adresse_complete} onChange={handleChange} />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-sm font-medium">Raison sociale</Label>
-                        <Input name="raison_sociale" placeholder="Raison sociale" value={form.raison_sociale} onChange={handleChange} />
+                        <Label className="text-sm font-medium">Adresse</Label>
+                        <Input name="adresse" placeholder="Adresse" value={form.adresse} onChange={handleChange} />
                       </div>
                       <div>
-                        <Label className="text-sm font-medium">RCCM ou NIF</Label>
-                        <Input name="rccm_nif" placeholder="RCCM ou NIF" value={form.rccm_nif} onChange={handleChange} />
+                        <Label className="text-sm font-medium">Ville</Label>
+                        <Input name="ville" placeholder="Ville" value={form.ville} onChange={handleChange} />
                       </div>
                     </div>
-                    <div>
-                      <Label className="text-sm font-medium">Contact</Label>
-                      <Input name="contact" placeholder="Contact" value={form.contact} onChange={handleChange} />
-                    </div>
-                  </div>
-                )}
-
-                {/* Adresse */}
-                <div className="space-y-4 border-t pt-4">
-                  <h4 className="font-medium">Adresse</h4>
-                  <div>
-                    <Label className="text-sm font-medium">Adresse complète</Label>
-                    <Textarea name="adresse_complete" placeholder="Adresse complète" value={form.adresse_complete} onChange={handleChange} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">Adresse</Label>
-                      <Input name="adresse" placeholder="Adresse" value={form.adresse} onChange={handleChange} />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Ville</Label>
-                      <Input name="ville" placeholder="Ville" value={form.ville} onChange={handleChange} />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">Code postal</Label>
-                      <Input name="code_postal" placeholder="Code postal" value={form.code_postal} onChange={handleChange} />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Pays</Label>
-                      <Input name="pays" placeholder="Pays" value={form.pays} onChange={handleChange} />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-medium">Code postal</Label>
+                        <Input name="code_postal" placeholder="Code postal" value={form.code_postal} onChange={handleChange} />
+                      </div>
+                      <div>
+                        <Label className="text-sm font-medium">Pays</Label>
+                        <Input name="pays" placeholder="Pays" value={form.pays} onChange={handleChange} />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button 
-                  onClick={handleSave} 
-                  disabled={createClientMutation.isPending || updateClientMutation.isPending}
-                >
-                  {(createClientMutation.isPending || updateClientMutation.isPending) ? 
-                    <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'
-                  }
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-          <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2"><Download size={16}/> Exporter CSV</Button>
+                <DialogFooter>
+                  <Button 
+                    onClick={handleSave} 
+                    disabled={createClientMutation.isPending || updateClientMutation.isPending}
+                  >
+                    {(createClientMutation.isPending || updateClientMutation.isPending) ? 
+                      <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'
+                    }
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2"><Download size={16}/> Exporter CSV</Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -492,7 +502,7 @@ export function ClientsPage() {
                       <TableCell>
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDetail(client)}><Eye size={16}/></Button>
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(client)}><Edit size={16}/></Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(client)}><Trash2 size={16}/></Button>
+                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(client)}><Trash2 size={16}/></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -536,6 +546,82 @@ export function ClientsPage() {
               <div><b>Statut :</b> <span className={detailClient.is_active ? 'text-green-600' : 'text-red-600'}>{detailClient.is_active ? 'Actif' : 'Inactif'}</span></div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de suppression de client */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le client</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer ce client ?
+            </p>
+            {clientToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Nom complet :</span>
+                    <p className="text-gray-600">{clientToDelete.nom_complet}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Email :</span>
+                    <p className="text-gray-600">{clientToDelete.email}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Téléphone :</span>
+                    <p className="text-gray-600">{clientToDelete.telephone}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Type :</span>
+                    <p className="text-gray-600">{clientToDelete.type_client_display}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Statut commercial :</span>
+                    <p className="text-gray-600">{clientToDelete.statut_commercial_display}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Ville :</span>
+                    <p className="text-gray-600">{clientToDelete.ville}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Pays :</span>
+                    <p className="text-gray-600">{clientToDelete.pays}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Statut :</span>
+                    <div className="mt-1">
+                      <span className={clientToDelete.is_active ? 'text-green-600' : 'text-red-600'}>
+                        {clientToDelete.is_active ? 'Actif' : 'Inactif'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera définitivement ce client et toutes ses données associées.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setClientToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDelete(clientToDelete!)}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

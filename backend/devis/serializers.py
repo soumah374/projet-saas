@@ -107,6 +107,8 @@ class DevisCreateSerializer(serializers.ModelSerializer):
 class LigneDevisCreateSerializer(serializers.ModelSerializer):
     """Serializer pour la création de lignes de devis"""
     
+    devis_id = serializers.IntegerField(write_only=True, required=False)
+    
     service_id = serializers.PrimaryKeyRelatedField(
         queryset=Service.objects.all(),
         source='service'
@@ -125,12 +127,14 @@ class LigneDevisCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = LigneDevis
         fields = [
-            'service_id', 'activity_id', 'description', 'quantite', 'unite_id'
+            'devis_id', 'service_id', 'activity_id', 'description', 'quantite', 'unite_id'
         ]
 
 
 class LigneDevisIntervenantCreateSerializer(serializers.ModelSerializer):
     """Serializer pour la création d'intervenants de ligne de devis"""
+    
+    devis_id = serializers.IntegerField(write_only=True)
     
     profile_intervenant_id = serializers.PrimaryKeyRelatedField(
         queryset=IntervenantProfile.objects.all(),
@@ -140,5 +144,19 @@ class LigneDevisIntervenantCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = LigneDevisIntervenant
         fields = [
-            'profile_intervenant_id', 'temps_intervenant', 'taux_horaire'
-        ] 
+            'devis_id', 'profile_intervenant_id', 'temps_intervenant', 'taux_horaire'
+        ]
+    
+    def create(self, validated_data):
+        """Override create method to handle devis_id properly"""
+        devis_id = validated_data.pop('devis_id', None)
+        if devis_id:
+            # Trouver la ligne de devis la plus récente du devis
+            from devis.models import LigneDevis
+            ligne_devis = LigneDevis.objects.filter(devis_id=devis_id).order_by('-created_at').first()
+            if ligne_devis:
+                validated_data['ligne_devis'] = ligne_devis
+            else:
+                raise serializers.ValidationError("Aucune ligne de devis trouvée pour ce devis")
+        
+        return super().create(validated_data) 

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatTemps } from '@/lib/formatters';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -50,6 +52,7 @@ interface PaginatedResponse {
 }
 
 export function ActivitiesPage() {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,6 +81,10 @@ export function ActivitiesPage() {
   const [serviceFilter, setServiceFilter] = useState<number | ''>('');
   const [serviceId, setServiceId] = useState<number | null>(null);
   const [togglingActivities, setTogglingActivities] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<Activity | null>(null);
+
+
 
   // Charger les profils intervenant
   useEffect(() => {
@@ -277,14 +284,20 @@ export function ActivitiesPage() {
   };
 
   const handleDelete = async (activity: Activity) => {
-    if (!window.confirm(`Supprimer l'activité "${activity.name}" ?`)) return;
     try {
       await api.delete(`/catalog/activities/${activity.id}/`);
+      setDeleteDialogOpen(false);
+      setActivityToDelete(null);
       toast.success('Activité supprimée');
       fetchActivities(currentPage);
     } catch (err) {
       toast.error('Erreur lors de la suppression');
     }
+  };
+
+  const openDeleteDialog = (activity: Activity) => {
+    setActivityToDelete(activity);
+    setDeleteDialogOpen(true);
   };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,10 +339,21 @@ export function ActivitiesPage() {
   };
 
   return (
-    <div className="max-w-10xl mx-auto">
+    <div className="max-w-10xl mx-auto space-y-6">
+      {/* Header avec bouton retour */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" onClick={() => navigate(-1)}>
+          <ArrowLeft size={16} className="mr-2" />
+          Retour
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold">Gestion des Activités</h1>
+        </div>
+      </div>
+
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle>Gestion des Activités</CardTitle>
+          <CardTitle>Liste des Activités</CardTitle>
           <div className="flex flex-wrap gap-2 items-center">
             <div className="relative">
               <Input
@@ -503,7 +527,7 @@ export function ActivitiesPage() {
                     <TableRow key={activity.id}>
                       <TableCell className="font-medium">{activity.name}</TableCell>
                       <TableCell>{activity.service?.name || '-'}</TableCell>
-                      <TableCell>{activity.duree_standard} h</TableCell>
+                      <TableCell>{formatTemps(activity.duree_standard)} h</TableCell>
                       <TableCell>
                         <div className="space-y-1">
                           {activity.activity_profiles?.map(profile => (
@@ -512,7 +536,7 @@ export function ActivitiesPage() {
                                 {profile.profile_intervenant.name}
                               </Badge>
                               <span className="text-xs text-gray-500">
-                                {profile.temps_intervenant} h
+                                {formatTemps(profile.temps_intervenant)} h
                               </span>
                             </div>
                           ))}
@@ -540,7 +564,7 @@ export function ActivitiesPage() {
                       </TableCell>
                       <TableCell className="flex gap-2">
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(activity)}><Edit size={16}/></Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(activity)}><Trash2 size={16}/></Button>
+                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(activity)}><Trash2 size={16}/></Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -556,6 +580,73 @@ export function ActivitiesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de suppression d'activité */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer l'activité</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer cette activité ?
+            </p>
+            {activityToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="grid grid-cols-1 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Nom :</span>
+                    <p className="text-gray-600">{activityToDelete.name}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Service :</span>
+                    <p className="text-gray-600">{activityToDelete.service?.name || 'Aucun'}</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Durée standard :</span>
+                    <p className="text-gray-600">{formatTemps(activityToDelete.duree_standard)} heures</p>
+                  </div>
+                  <div>
+                    <span className="font-medium">Profils intervenant :</span>
+                    <div className="mt-1 space-y-1">
+                      {activityToDelete.activity_profiles?.map(profile => (
+                        <div key={profile.id} className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {profile.profile_intervenant.name}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            {formatTemps(profile.temps_intervenant)} h
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera également tous les taux horaires associés à cette activité.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setDeleteDialogOpen(false);
+                setActivityToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleDelete(activityToDelete!)}
+            >
+              Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

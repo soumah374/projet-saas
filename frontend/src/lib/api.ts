@@ -548,6 +548,7 @@ export const devisAPI = {
     accepterDevis: (id: number) => api.post(`/devis/devis/${id}/accepter/`),
     refuserDevis: (id: number) => api.post(`/devis/devis/${id}/refuser/`),
     calculerMontants: (id: number) => api.post(`/devis/devis/${id}/calculer_montants/`),
+    createDevisAvecLignes: (data: any) => api.post('/devis/devis/creer_avec_lignes/', data),
 };
 
 // Lignes de devis
@@ -565,7 +566,7 @@ export const lignesDevisAPI = {
     getLigne: (id: number) => api.get(`/devis/lignes/${id}/`),
     
     createLigne: (data: {
-        devis: number;
+        devis_id: number;
         service_id: number;
         activity_id: number;
         description: string;
@@ -593,7 +594,7 @@ export const lignesDevisAPI = {
 // Intervenants de ligne de devis
 export const intervenantsDevisAPI = {
     getIntervenants: (params?: {
-        ligne_devis?: number;
+        devis_id?: number;
         profile_intervenant?: number;
         ordering?: string;
         page?: number;
@@ -603,7 +604,7 @@ export const intervenantsDevisAPI = {
     getIntervenant: (id: number) => api.get(`/devis/intervenants/${id}/`),
     
     createIntervenant: (data: {
-        ligne_devis: number;
+        devis_id: number;
         profile_intervenant_id: number;
         temps_intervenant: number;
         taux_horaire: number;

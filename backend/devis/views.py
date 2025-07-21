@@ -30,6 +30,53 @@ class DevisViewSet(viewsets.ModelViewSet):
             return DevisCreateSerializer
         return DevisSerializer
     
+    @action(detail=False, methods=['post'])
+    def creer_avec_lignes(self, request):
+        """Créer un devis avec ses lignes en une seule requête"""
+        try:
+            # Créer le devis
+            devis_data = {
+                'client_id': request.data.get('client_id'),
+                'date_validite': request.data.get('date_validite'),
+                'notes': request.data.get('notes', ''),
+                'conditions': request.data.get('conditions', '')
+            }
+            
+            devis_serializer = DevisCreateSerializer(data=devis_data)
+            devis_serializer.is_valid(raise_exception=True)
+            devis = devis_serializer.save()
+            
+            # Créer les lignes
+            lignes_data = request.data.get('lignes', [])
+            for ligne_data in lignes_data:
+                ligne = devis.ajouter_ligne(
+                    service_id=ligne_data['service_id'],
+                    activity_id=ligne_data['activity_id'],
+                    description=ligne_data.get('description', ''),
+                    quantite=ligne_data['quantite'],
+                    unite_id=ligne_data['unite_id']
+                )
+                
+                # Créer les intervenants pour cette ligne
+                for intervenant_data in ligne_data.get('intervenants', []):
+                    ligne.intervenants.create(
+                        profile_intervenant_id=intervenant_data['profile_intervenant_id'],
+                        temps_intervenant=intervenant_data['temps_intervenant'],
+                        taux_horaire=intervenant_data['taux_horaire']
+                    )
+                
+                # Recalculer le prix unitaire de la ligne après avoir ajouté tous les intervenants
+                if ligne.intervenants.exists():
+                    total_intervenants = sum(interv.montant_intervenant for interv in ligne.intervenants.all())
+                    ligne.prix_unitaire_ht = total_intervenants
+                    ligne.save()
+            
+            # Retourner le devis complet
+            return Response(DevisSerializer(devis).data, status=201)
+            
+        except Exception as e:
+            return Response({'error': str(e)}, status=400)
+    
     @action(detail=True, methods=['post'])
     def envoyer(self, request, pk=None):
         """Envoyer un devis (changer le statut en 'envoye')"""
@@ -78,6 +125,15 @@ class LigneDevisViewSet(viewsets.ModelViewSet):
             return LigneDevisCreateSerializer
         return LigneDevisSerializer
     
+    def perform_create(self, serializer):
+        """Automatically set the devis ID from the request data"""
+        devis_id = self.request.data.get('devis_id')
+        if devis_id:
+            devis = Devis.objects.get(id=devis_id)
+            serializer.save(devis=devis)
+        else:
+            serializer.save()
+    
     @action(detail=False, methods=['get'])
     def activites_par_service(self, request):
         """Récupérer les activités d'un service"""
@@ -112,22 +168,19 @@ class LigneDevisViewSet(viewsets.ModelViewSet):
                     except TauxHoraire.DoesNotExist:
                         taux_horaire = 0
                     
-                    # Récupérer le temps standard pour cette activité et ce profil
-                    try:
-                        temps_standard = activity.activity_profiles.get(
-                            profile_intervenant=profile
-                        ).temps_intervenant
-                    except:
-                        temps_standard = 0
+                    temps_intervenant = activity.activityprofile_set.get(
+                        profile_intervenant=profile
+                    ).temps_intervenant
+                    
                     
                     intervenants.append({
                         'id': profile.id,
                         'intitule': profile.name,
                         'description': '',
                         'taux_horaire': taux_horaire,
-                        'temps_standard': temps_standard
+                        'temps_intervenant': temps_intervenant
                     })
-                
+                    
                 return Response({'intervenants': intervenants})
             except Activity.DoesNotExist:
                 return Response({'intervenants': []})
@@ -147,3 +200,7 @@ class LigneDevisIntervenantViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return LigneDevisIntervenantCreateSerializer
         return LigneDevisIntervenantSerializer
+    
+    def perform_create(self, serializer):
+        """The serializer now handles devis_id automatically"""
+        serializer.save()
