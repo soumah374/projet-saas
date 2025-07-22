@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UserProfile, ClientProfile
+from .models import UserProfile, OTPCode, ClientProfile, ClientCategory
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
@@ -31,4 +31,9 @@ class ClientProfileAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+@admin.register(ClientCategory)
+class ClientCategoryAdmin(admin.ModelAdmin):
+    list_display = ('name', 'description')
+    search_fields = ('name',)
     

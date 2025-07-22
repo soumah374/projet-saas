@@ -63,7 +63,7 @@ export function DevisCreatePage() {
   });
 
   // Hooks
-  const createDevisAvecLignesMutation = useCreateDevisAvecLignes();
+  const createDevisWithLignesMutation = useCreateDevisAvecLignes();
   
   const { data: clientsData } = useClients({ page_size: 1000 });
   const { data: servicesData } = useServices({ page_size: 1000 });
@@ -242,7 +242,7 @@ export function DevisCreatePage() {
       }));
 
       // Créer le devis avec toutes ses lignes en une seule requête
-      await createDevisAvecLignesMutation.mutateAsync({
+      await createDevisWithLignesMutation.mutateAsync({
         client_id: parseInt(form.client_id),
         date_validite: form.date_validite.toISOString().split('T')[0],
         taux_tva: form.taux_tva,
@@ -273,8 +273,8 @@ export function DevisCreatePage() {
             <h1 className="text-2xl font-bold">Créer un devis</h1>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={createDevisAvecLignesMutation.isPending}>
-          {createDevisAvecLignesMutation.isPending ? (
+        <Button onClick={handleSave} disabled={createDevisWithLignesMutation.isPending}>
+          {createDevisWithLignesMutation.isPending ? (
             <Loader2 className="animate-spin" size={16} />
           ) : (
             <Save size={16} />

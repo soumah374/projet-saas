@@ -9,11 +9,12 @@ from django.contrib.auth.models import User
 from django.contrib.auth import update_session_auth_hash
 from django.db.models import Count
 
-from .models import UserProfile, OTPCode, ClientProfile
+from .models import UserProfile, OTPCode, ClientProfile, ClientCategory
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     UserListSerializer, ChangePasswordSerializer, CustomTokenObtainPairSerializer,
-    LoginRequestSerializer, OTPVerificationSerializer, ClientProfileSerializer
+    LoginRequestSerializer, OTPVerificationSerializer, ClientProfileSerializer,
+    ClientCategorySerializer
 )
 
 
@@ -213,5 +214,11 @@ class ClientProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAdminUser]
     filterset_fields = ['is_active', 'pays', 'ville', 'type_client', 'statut_commercial']
     search_fields = ['nom', 'prenom', 'email', 'telephone', 'contact', 'raison_sociale', 'rccm_nif']
+
+
+class ClientCategoryViewSet(viewsets.ModelViewSet):
+    queryset = ClientCategory.objects.all()
+    serializer_class = ClientCategorySerializer
+    permission_classes = []  # À adapter selon la politique de sécurité
 
     

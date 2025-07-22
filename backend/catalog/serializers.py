@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, ActivityProfile, UniteStandard
+from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, ActivityProfile, UniteStandard, FraisCategory, LigneFrais
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -127,4 +127,29 @@ class TauxHoraireSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = TauxHoraire
-        fields = '__all__' 
+        fields = '__all__'
+
+
+class FraisCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FraisCategory
+        fields = ['id', 'name', 'description', 'is_active', 'created_at', 'updated_at']
+
+
+
+
+
+class LigneFraisSerializer(serializers.ModelSerializer):
+    category = FraisCategorySerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=FraisCategory.objects.all(), 
+        source='category', 
+        write_only=True
+    )
+
+    class Meta:
+        model = LigneFrais
+        fields = [
+            'id', 'type_frais', 'category', 'category_id', 'description',
+            'is_active', 'created_at', 'updated_at'
+        ] 

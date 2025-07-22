@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, ActivityProfile, UniteStandard
+from .models import (
+    Service, Category, Activity, IntervenantProfile, TauxHoraire, 
+    ActivityProfile, UniteStandard, FraisCategory, LigneFrais
+)
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -53,4 +56,23 @@ class TauxHoraireAdmin(admin.ModelAdmin):
     list_display = ("activity", "profile_intervenant", "niveau_intervenant", "taux_heure", "is_active", "created_at")
     search_fields = ("activity__name", "profile_intervenant__name")
     list_filter = ("niveau_intervenant", "is_active", "activity", "profile_intervenant")
+    ordering = ("-created_at",)
+
+
+@admin.register(FraisCategory)
+class FraisCategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "is_active", "created_at")
+    search_fields = ("name", "description")
+    list_filter = ("is_active", "created_at")
+    ordering = ("name",)
+
+
+
+
+
+@admin.register(LigneFrais)
+class LigneFraisAdmin(admin.ModelAdmin):
+    list_display = ("type_frais", "category", "description", "is_active", "created_at")
+    search_fields = ("description", "category__name")
+    list_filter = ("type_frais", "is_active", "category", "created_at")
     ordering = ("-created_at",)

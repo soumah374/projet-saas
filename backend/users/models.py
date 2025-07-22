@@ -6,6 +6,18 @@ import pyotp
 import secrets
 
 
+class ClientCategory(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = 'Catégorie de client'
+        verbose_name_plural = 'Catégories de clients'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name 
+    
 class UserProfile(models.Model):
     """Profil étendu pour les utilisateurs"""
     
@@ -139,6 +151,9 @@ class ClientProfile(models.Model):
     type_client = models.CharField(max_length=20, choices=TYPE_CLIENT_CHOICES, default='personne_physique')
     statut_commercial = models.CharField(max_length=20, choices=STATUT_COMMERCIAL_CHOICES, default='prospect')
     
+    # Catégorie de client (pour personne physique uniquement)
+    category = models.ForeignKey(ClientCategory, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Catégorie')
+    
     # Champs pour personne morale uniquement
     raison_sociale = models.CharField(max_length=255, blank=True, null=True)
     rccm_nif = models.CharField(max_length=50, blank=True, null=True)
@@ -179,4 +194,8 @@ class ClientProfile(models.Model):
             if self.raison_sociale:
                 raise ValidationError("La raison sociale ne peut pas être définie pour une personne physique")
             if self.rccm_nif:
-                raise ValidationError("Le RCCM/NIF ne peut pas être défini pour une personne physique") 
+                raise ValidationError("Le RCCM/NIF ne peut pas être défini pour une personne physique")
+        # Validation : si type_client est personne_physique, category doit être vide
+        if self.type_client == 'personne_physique':
+            if self.category:
+                raise ValidationError("La catégorie ne peut pas être définie pour une personne physique") 

@@ -24,6 +24,8 @@ export interface ClientProfile {
   date_inscription: string;
   is_active: boolean;
   nom_complet: string;
+  category?: number | null;
+  category_name?: string | null;
 }
 
 export interface PaginatedResponse {
@@ -49,6 +51,7 @@ export interface ClientCreateData {
   pays: string;
   statut_commercial: 'prospect' | 'actif' | 'inactif' | 'bloque';
   is_active: boolean;
+  category?: number | null;
 }
 
 export interface ClientUpdateData {
@@ -67,6 +70,7 @@ export interface ClientUpdateData {
   pays?: string;
   statut_commercial?: 'prospect' | 'actif' | 'inactif' | 'bloque';
   is_active?: boolean;
+  category?: number | null;
 }
 
 // Hook pour récupérer la liste des clients

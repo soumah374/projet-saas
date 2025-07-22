@@ -6,7 +6,8 @@ import type {
     ProjectStatus, 
     ProjectPriority,
     TeamMember,
-    ProjectPhase
+    ProjectPhase,
+    ClientCategory
 } from './types';
 
 export const api = axios.create({
@@ -398,6 +399,15 @@ export const clientsAPI = {
     deleteClient: (id: number) => api.delete(`/auth/clients/${id}/`),
 };
 
+export const clientCategoriesAPI = {
+    getCategories: (params?: { search?: string; ordering?: string; page?: number; }) =>
+        api.get<PaginatedResponse<ClientCategory>>('/auth/categories/', { params }),
+    getCategory: (id: number) => api.get<ClientCategory>(`/auth/categories/${id}/`),
+    createCategory: (data: { name: string; description?: string }) => api.post<ClientCategory>('/auth/categories/', data),
+    updateCategory: (id: number, data: { name?: string; description?: string }) => api.patch<ClientCategory>(`/auth/categories/${id}/`, data),
+    deleteCategory: (id: number) => api.delete(`/auth/categories/${id}/`),
+};
+
 export const documentsAPI = {
     getDocuments: (params?: {
         search?: string;
@@ -589,10 +599,10 @@ export const lignesDevisAPI = {
     deleteLigne: (id: number) => api.delete(`/devis/lignes/${id}/`),
     
     getActivitesParService: (service_id: number) => 
-        api.get(`/devis/lignes/activites_par_service/?service_id=${service_id}`),
+        api.get(`/devis/lignes/activites_by_service/?service_id=${service_id}`),
     
     getIntervenantsParActivite: (activity_id: number) => 
-        api.get(`/devis/lignes/intervenants_par_activite/?activity_id=${activity_id}`),
+        api.get(`/devis/lignes/intervenants_with_activite/?activity_id=${activity_id}`),
 };
 
 // Intervenants de ligne de devis

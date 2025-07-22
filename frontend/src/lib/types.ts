@@ -477,3 +477,67 @@ export interface ClientCreateData {
   pays: string;
   is_active: boolean;
 }
+
+export interface ClientCategory {
+  id: number;
+  name: string;
+  description: string;
+}
+
+export interface FraisCategory {
+  id: number;
+  name: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LigneFrais {
+  id: number;
+  type_frais: 'rh' | 'technique' | 'sous_traitance' | 'deplacement' | 'administratif' | 'marge' | 'taxes';
+  category_id: number;
+  category_name?: string;
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+export interface LigneFraisList {
+  id: number;
+  type_frais: 'rh' | 'technique' | 'sous_traitance' | 'deplacement' | 'administratif' | 'marge' | 'taxes';
+  category: {
+    id: number;
+    name: string;
+  };
+  description: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FraisCategoryCreateData {
+  name: string;
+  description: string;
+  is_active?: boolean;
+}
+
+export interface FraisCategoryUpdateData {
+  name?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface LigneFraisCreateData {
+  type_frais: 'rh' | 'technique' | 'sous_traitance' | 'deplacement' | 'administratif' | 'marge' | 'taxes';
+  category_id: number;
+  description: string;
+  is_active?: boolean;
+}
+
+export interface LigneFraisUpdateData {
+  type_frais?: 'rh' | 'technique' | 'sous_traitance' | 'deplacement' | 'administratif' | 'marge' | 'taxes';
+  category_id?: number;
+  description?: string;
+  is_active?: boolean;
+}

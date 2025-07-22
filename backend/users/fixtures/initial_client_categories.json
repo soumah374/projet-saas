@@ -1,0 +1,58 @@
+[
+  {
+    "model": "users.clientcategory",
+    "pk": 1,
+    "fields": {
+      "name": "Client corporate",
+      "description": "Société privée, entreprise locale ou multinationale, groupe industriel, institution financière, marque commerciale. Exemples : Banque, télécom, compagnie minière, entreprise agro-industrie."
+    }
+  },
+  {
+    "model": "users.clientcategory",
+    "pk": 2,
+    "fields": {
+      "name": "Client institutionnel",
+      "description": "Administration publique, ministère, collectivité territoriale, agence gouvernementale ou organisation paraétatique. Exemples : Ministère de la Culture, Commune de Conakry, Agence nationale."
+    }
+  },
+  {
+    "model": "users.clientcategory",
+    "pk": 3,
+    "fields": {
+      "name": "Client ONG / association",
+      "description": "Organisation non gouvernementale, association à but non lucratif, fondation. Exemples : ONG humanitaire, fondation caritative, association citoyenne."
+    }
+  },
+  {
+    "model": "users.clientcategory",
+    "pk": 4,
+    "fields": {
+      "name": "Client organisation internationale",
+      "description": "Organisation intergouvernementale ou partenaire technique et financier. Exemples : Union européenne, Banque mondiale, PNUD."
+    }
+  },
+  {
+    "model": "users.clientcategory",
+    "pk": 5,
+    "fields": {
+      "name": "Client média",
+      "description": "Groupe de presse, radio, TV, plateforme numérique média. Exemples : Chaîne TV nationale, radio privée, média en ligne."
+    }
+  },
+  {
+    "model": "users.clientcategory",
+    "pk": 6,
+    "fields": {
+      "name": "Client particulier / VIP",
+      "description": "Personne physique, célébrité, leader d'opinion, personnalité commanditaire. Exemples : Porte-parole officiel, conférencier privé, leader d'opinion."
+    }
+  },
+  {
+    "model": "users.clientcategory",
+    "pk": 7,
+    "fields": {
+      "name": "Partenaire commercial",
+      "description": "Entreprise ou freelance agissant comme intermédiaire ou partenaire B2B pour une prestation conjointe ou sous-traitance. Exemples : Agence événementielle, régie pub, studio de production tiers."
+    }
+  }
+] 

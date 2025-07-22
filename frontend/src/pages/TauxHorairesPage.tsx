@@ -355,7 +355,7 @@ export function TauxHorairesPage() {
                   <DialogTitle>{editTauxHoraire ? 'Modifier' : 'Ajouter'} un taux horaire</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <Input name="taux_heure" placeholder="Taux horaire (€)" type="number" step="0.01" value={form.taux_heure || ''} onChange={handleChange} />
+                  <Input name="taux_heure" placeholder="Taux horaire (GNF)" type="number" step="0.01" value={form.taux_heure || ''} onChange={handleChange} />
                   
                   <div>
                     <label className="block text-sm font-medium mb-1">Niveau intervenant</label>

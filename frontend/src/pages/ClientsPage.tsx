@@ -15,6 +15,9 @@ import {
   type ClientProfile,
   type ClientCreateData
 } from '@/hooks/use-clients';
+import { clientCategoriesAPI } from '@/lib/api';
+import { useQuery } from '@tanstack/react-query';
+import type { ClientCategory, PaginatedResponse } from '@/lib/types';
 import { Label } from '@/components/ui/label';
 
 export function ClientsPage() {
@@ -37,6 +40,7 @@ export function ClientsPage() {
     code_postal: '',
     pays: '',
     is_active: true,
+    category: null,
   });
   const pageSize = 10;
   const [search, setSearch] = useState('');
@@ -69,6 +73,16 @@ export function ClientsPage() {
 
   // Hook pour récupérer les clients
   const { data: clientsData, isLoading: loading } = useClients(queryParams);
+  
+  // Hook pour récupérer les catégories de clients
+  const { data: categoriesData } = useQuery({
+    queryKey: ['client-categories'],
+    queryFn: async () => {
+      const response = await clientCategoriesAPI.getCategories();
+      return response.data as PaginatedResponse<ClientCategory>;
+    },
+  });
+  const categories = categoriesData?.results || [];
 
   const clients = clientsData?.results || [];
   const totalPages = clientsData ? Math.ceil(clientsData.count / pageSize) : 1;
@@ -94,6 +108,7 @@ export function ClientsPage() {
         code_postal: client.code_postal,
         pays: client.pays,
         is_active: client.is_active,
+        category: client.category || null,
       });
     } else {
       setEditClient(null);
@@ -137,6 +152,7 @@ export function ClientsPage() {
       code_postal: '',
       pays: '',
       is_active: true,
+      category: null,
     });
   };
 
@@ -144,7 +160,7 @@ export function ClientsPage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (name: string, value: string | number | null) => {
     setForm({ ...form, [name]: value });
     // Si le type client change vers personne physique, vider les champs entreprise
     if (name === 'type_client' && value === 'personne_physique') {
@@ -153,6 +169,15 @@ export function ClientsPage() {
         [name]: value,
         raison_sociale: '',
         rccm_nif: '',
+        category: null,
+      }));
+    }
+    // Si le type client change vers personne morale, vider la catégorie
+    if (name === 'type_client' && value === 'personne_morale') {
+      setForm(prev => ({
+        ...prev,
+        [name]: value,
+        category: null,
       }));
     }
   };
@@ -179,6 +204,7 @@ export function ClientsPage() {
             code_postal: form.code_postal,
             pays: form.pays,
             is_active: form.is_active,
+            category: form.type_client === 'personne_morale' ? form.category : null,
           }
         });
         handleCloseDialog();
@@ -204,6 +230,7 @@ export function ClientsPage() {
           code_postal: form.code_postal,
           pays: form.pays,
           is_active: form.is_active,
+          category: form.type_client === 'personne_morale' ? form.category : null,
         };
         await createClientMutation.mutateAsync(payload);
         handleCloseDialog();
@@ -351,6 +378,29 @@ export function ClientsPage() {
                     </div>
                   </div>
 
+                  {/* Catégorie pour personne morale uniquement */}
+                  {form.type_client === 'personne_morale' && (
+                    <div>
+                      <Label className="text-sm font-medium">Catégorie de client</Label>
+                      <Select 
+                        value={form.category?.toString() || 'none'} 
+                        onValueChange={(value) => handleSelectChange('category', value === 'none' ? null : parseInt(value))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner une catégorie (optionnel)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Aucune catégorie</SelectItem>
+                          {categories.map(category => (
+                            <SelectItem key={category.id} value={category.id.toString()}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
                   {/* Champs pour personne morale */}
                   {form.type_client === 'personne_morale' && (
                     <div className="space-y-4 border-t pt-4">
@@ -461,6 +511,7 @@ export function ClientsPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Téléphone</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Catégorie</TableHead>
                     <TableHead>Statut commercial</TableHead>
                     <TableHead>Ville</TableHead>
                     <TableHead>Pays</TableHead>
@@ -470,13 +521,22 @@ export function ClientsPage() {
                 </TableHeader>
                 <TableBody>
                   {clients.length === 0 ? (
-                    <TableRow><TableCell colSpan={9} className="text-center">Aucun client</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={10} className="text-center">Aucun client</TableCell></TableRow>
                   ) : clients.map(client => (
                     <TableRow key={client.id}>
                       <TableCell>{client.nom_complet}</TableCell>
                       <TableCell>{client.email}</TableCell>
                       <TableCell>{client.telephone}</TableCell>
                       <TableCell>{client.type_client_display}</TableCell>
+                      <TableCell>
+                        {client.type_client === 'personne_morale' && client.category_name ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {client.category_name}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>{client.statut_commercial_display}</TableCell>
                       <TableCell>{client.ville}</TableCell>
                       <TableCell>{client.pays}</TableCell>

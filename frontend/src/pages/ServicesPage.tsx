@@ -246,7 +246,6 @@ export function ServicesPage() {
                   <DialogTitle>{editService ? 'Modifier' : 'Ajouter'} une prestation</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <Input name="name" placeholder="Nom" value={form.name || ''} onChange={handleChange} required />
                   {/* Sélecteur de catégorie */}
                   <div>
                     <label className="block text-sm font-medium mb-1">Catégorie</label>
@@ -274,7 +273,14 @@ export function ServicesPage() {
                       />
                     )}
                   </div>
-                  <textarea name="description" placeholder="Description" className="w-full border rounded p-2" value={form.description || ''} onChange={handleChange} />
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Nom</label>
+                    <Input name="name" placeholder="Nom" value={form.name || ''} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Description</label>
+                    <textarea name="description" placeholder="Description" className="w-full border rounded p-2" value={form.description || ''} onChange={handleChange} ></textarea>
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'}</Button>

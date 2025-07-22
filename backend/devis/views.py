@@ -135,7 +135,7 @@ class LigneDevisViewSet(viewsets.ModelViewSet):
             serializer.save()
     
     @action(detail=False, methods=['get'])
-    def activites_par_service(self, request):
+    def activites_by_service(self, request):
         """Récupérer les activités d'un service"""
         service_id = request.query_params.get('service_id')
         if service_id:
@@ -149,7 +149,7 @@ class LigneDevisViewSet(viewsets.ModelViewSet):
         return Response({'activites': []})
     
     @action(detail=False, methods=['get'])
-    def intervenants_par_activite(self, request):
+    def intervenants_with_activite(self, request):
         """Récupérer les intervenants d'une activité avec leurs taux horaires"""
         activity_id = request.query_params.get('activity_id')
         if activity_id:

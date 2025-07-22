@@ -135,3 +135,60 @@ class TauxHoraire(models.Model):
 
     def __str__(self):
         return f"{self.activity.name} - {self.profile_intervenant.name} - {self.get_niveau_intervenant_display()} ({self.taux_heure}GNF/h)"
+
+
+class FraisCategory(models.Model):
+    """Catégorie de frais pour le catalog"""
+    name = models.CharField(max_length=100, unique=True, verbose_name="Nom de la catégorie")
+    description = models.TextField(blank=True, verbose_name="Description")
+    is_active = models.BooleanField(default=True, verbose_name="Actif ?")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Catégorie de frais"
+        verbose_name_plural = "Catégories de frais"
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+class LigneFrais(models.Model):
+    """Ligne de frais pour les projets"""
+    TYPE_CHOICES = [
+        ('rh', 'Budget RH mobilisé'),
+        ('technique', 'Frais techniques et matériels'),
+        ('sous_traitance', 'Sous-traitance / prestataires externes'),
+        ('deplacement', 'Déplacements et logistique'),
+        ('administratif', 'Frais administratifs et annexes'),
+        ('marge', 'Marge commerciale et ajustements'),
+        ('taxes', 'Taxes et TVA'),
+    ]
+    
+
+    
+    type_frais = models.CharField(
+        max_length=20, 
+        choices=TYPE_CHOICES, 
+        verbose_name="Type de frais"
+    )
+    category = models.ForeignKey(
+        FraisCategory, 
+        on_delete=models.CASCADE, 
+        related_name="lignes_frais", 
+        verbose_name="Catégorie de frais"
+    )
+    description = models.TextField(verbose_name="Description")
+    
+    # Métadonnées
+    is_active = models.BooleanField(default=True, verbose_name="Actif ?")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Ligne de frais"
+        verbose_name_plural = "Lignes de frais"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.category.name} - {self.description}"

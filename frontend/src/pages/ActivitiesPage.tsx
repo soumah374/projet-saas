@@ -390,8 +390,6 @@ export function ActivitiesPage() {
                   <DialogTitle>{editActivity ? 'Modifier' : 'Ajouter'} une activité</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <Input name="name" placeholder="Nom de l'activité" value={form.name || ''} onChange={handleChange} required />
-                  
                   {/* Sélecteur de service */}
                   <div>
                     <label className="block text-sm font-medium mb-1">Prestation</label>
@@ -407,7 +405,8 @@ export function ActivitiesPage() {
                       ))}
                     </select>
                   </div>
-                  
+                  <Input name="name" placeholder="Nom de l'activité" value={form.name || ''} onChange={handleChange} required />
+                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-1">Durée standard (h)</label>

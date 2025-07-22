@@ -29,6 +29,9 @@ import { DevisCreatePage } from './pages/DevisCreatePage';
 import { useAuth } from './hooks/use-auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import DepartmentsPage from './pages/DepartmentsPage';
+import ClientCategoriesPage from './pages/ClientCategoriesPage';
+import FraisCategoriesPage from './pages/FraisCategoriesPage';
+import LignesFraisPage from './pages/LignesFraisPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -174,6 +177,22 @@ function App() {
                     <DevisDetailPage />
                   </ProtectedRoute>
                 } />
+                <Route path="/categories-clients" element={
+                  <ProtectedRoute>
+                    <ClientCategoriesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/frais-categories" element={
+                  <ProtectedRoute>
+                    <FraisCategoriesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/lignes-frais" element={
+                  <ProtectedRoute>
+                    <LignesFraisPage />
+                  </ProtectedRoute>
+                } />
+                
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>

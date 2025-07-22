@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, permissions, filters
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.response import Response
-from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, UniteStandard
+from .models import Service, Category, Activity, IntervenantProfile, TauxHoraire, UniteStandard, FraisCategory, LigneFrais
 from .serializers import (
     ServiceSerializer, 
     ServiceDetailSerializer,
@@ -10,7 +10,9 @@ from .serializers import (
     ActivitySerializer, 
     IntervenantProfileSerializer, 
     TauxHoraireSerializer,
-    UniteStandardSerializer
+    UniteStandardSerializer,
+    FraisCategorySerializer,
+    LigneFraisSerializer
 )
 from rest_framework.decorators import action
 
@@ -67,3 +69,20 @@ class ServiceViewSet(viewsets.ModelViewSet):
         services = Service.objects.filter(category=category_id)
         serializer = ServiceSerializer(services, many=True)
         return Response(serializer.data)
+
+
+class FraisCategoryViewSet(viewsets.ModelViewSet):
+    queryset = FraisCategory.objects.all().order_by('name')
+    serializer_class = FraisCategorySerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['is_active']
+    search_fields = ['name', 'description']
+
+class LigneFraisViewSet(viewsets.ModelViewSet):
+    queryset = LigneFrais.objects.all().order_by('-created_at')
+    serializer_class = LigneFraisSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['type_frais', 'category', 'is_active']
+    search_fields = ['description', 'category__name']

@@ -19,12 +19,14 @@ import {
   Building2,
   FileText,
   Plus,
-  Currency
+  Currency,
+  Trash2
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { formatMontant } from '@/lib/formatters';
 
+// Types
 interface Category {
   id: number;
   name: string;
@@ -70,6 +72,288 @@ interface Service {
   activities: Activity[];
 }
 
+// Interface pour le formulaire d'activité
+interface ActivityFormData {
+  name: string;
+  duree_standard: string;
+  profiles_data: Array<{
+    profile_intervenant_id: number;
+    temps_intervenant: string;
+  }>;
+  is_active: boolean;
+}
+
+// Composant pour la gestion des profils
+interface ProfileManagerProps {
+  profiles: IntervenantProfile[];
+  profilesData: ActivityFormData['profiles_data'];
+  onProfileAdd: (profileId: number) => void;
+  onProfileTimeChange: (profileId: number, temps: string) => void;
+  onProfileRemove: (profileId: number) => void;
+  newProfileName?: string;
+  onNewProfileNameChange?: (name: string) => void;
+  onAddNewProfile?: () => void;
+}
+
+const ProfileManager: React.FC<ProfileManagerProps> = ({
+  profiles,
+  profilesData,
+  onProfileAdd,
+  onProfileTimeChange,
+  onProfileRemove,
+  newProfileName = '',
+  onNewProfileNameChange,
+  onAddNewProfile
+}) => {
+  const handleProfileChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value === 'other' || !value) return;
+    
+    const profileId = parseInt(value);
+    if (isNaN(profileId)) return;
+    
+    // Vérifier si le profil est déjà ajouté
+    const existingProfile = profilesData.find(p => p.profile_intervenant_id === profileId);
+    if (existingProfile) {
+      toast.error('Ce profil est déjà ajouté');
+      return;
+    }
+    
+    onProfileAdd(profileId);
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Select pour ajouter un profil */}
+      <div className="flex gap-2">
+        <select 
+          className="flex-1 border rounded-md px-3 py-2 text-sm"
+          onChange={handleProfileChange}
+          value=""
+        >
+          <option value="">Sélectionner un profil</option>
+          {profiles.map(profile => (
+            <option key={profile.id} value={profile.id}>
+              {profile.name}
+            </option>
+          ))}
+          {onAddNewProfile && <option value="other">Autre (créer un nouveau profil)</option>}
+        </select>
+      </div>
+      
+      {/* Champ pour créer un nouveau profil */}
+      {onAddNewProfile && (
+        <div className="flex gap-2">
+          <Input
+            placeholder="Nouveau profil intervenant"
+            value={newProfileName}
+            onChange={(e) => onNewProfileNameChange?.(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && onAddNewProfile()}
+          />
+          <Button 
+            onClick={onAddNewProfile} 
+            size="sm" 
+            variant="outline"
+            disabled={!newProfileName.trim()}
+          >
+            Ajouter
+          </Button>
+        </div>
+      )}
+      
+      {/* Liste des profils sélectionnés avec temps */}
+      {profilesData.length > 0 && (
+        <div className="space-y-2">
+          <label className="block text-sm font-medium">Profils sélectionnés :</label>
+          <div className="space-y-2">
+            {profilesData.map(profileData => {
+              const profile = profiles.find(p => p.id === profileData.profile_intervenant_id);
+              return profile ? (
+                <div key={profileData.profile_intervenant_id} className="flex items-center gap-2 p-2 border rounded">
+                  <Badge variant="secondary" className="text-xs">
+                    {profile.name}
+                  </Badge>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    placeholder="Temps (h)"
+                    value={profileData.temps_intervenant}
+                    onChange={(e) => onProfileTimeChange(profileData.profile_intervenant_id, e.target.value)}
+                    className="w-24 text-xs"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onProfileRemove(profileData.profile_intervenant_id)}
+                    className="text-red-600 hover:text-red-800"
+                  >
+                    ×
+                  </button>
+                </div>
+              ) : null;
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Hook personnalisé pour la gestion des activités
+const useActivityForm = (profiles: IntervenantProfile[], setProfiles?: React.Dispatch<React.SetStateAction<IntervenantProfile[]>>) => {
+  const [form, setForm] = useState<ActivityFormData>({
+    name: '',
+    duree_standard: '',
+    profiles_data: [],
+    is_active: true
+  });
+  const [newProfileName, setNewProfileName] = useState('');
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value, type } = e.target;
+    if (type === 'number') {
+      // Pour les champs number, garder la valeur comme string pour éviter les problèmes de parsing
+      setForm({ ...form, [name]: value });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
+  };
+
+  const handleProfileAdd = (profileId: number) => {
+    setForm(prev => ({
+      ...prev,
+      profiles_data: [...prev.profiles_data, {
+        profile_intervenant_id: profileId,
+        temps_intervenant: ''
+      }]
+    }));
+  };
+
+  const handleProfileTimeChange = (profileId: number, temps: string) => {
+    setForm(prev => ({
+      ...prev,
+      profiles_data: prev.profiles_data.map(p => 
+        p.profile_intervenant_id === profileId 
+          ? { ...p, temps_intervenant: temps }
+          : p
+      )
+    }));
+  };
+
+  const handleProfileRemove = (profileId: number) => {
+    setForm(prev => ({
+      ...prev,
+      profiles_data: prev.profiles_data.filter(p => p.profile_intervenant_id !== profileId)
+    }));
+  };
+
+  const handleAddNewProfile = async () => {
+    if (!newProfileName.trim()) {
+      toast.error('Le nom du profil est requis');
+      return;
+    }
+
+    try {
+      const res = await api.post('/catalog/profiles/', { name: newProfileName.trim() });
+      const newProfile = res.data;
+      
+      // Mettre à jour la liste des profils dans le composant parent
+      if (setProfiles) {
+        setProfiles(prev => [...prev, newProfile]);
+      }
+      
+      setForm(prev => ({
+        ...prev,
+        profiles_data: [...prev.profiles_data, {
+          profile_intervenant_id: newProfile.id,
+          temps_intervenant: ''
+        }]
+      }));
+      
+      setNewProfileName('');
+      toast.success('Profil créé et ajouté');
+    } catch (err) {
+      toast.error('Erreur lors de la création du profil');
+    }
+  };
+
+  const resetForm = () => {
+    setForm({
+      name: '',
+      duree_standard: '',
+      profiles_data: [],
+      is_active: true
+    });
+    setNewProfileName('');
+  };
+
+  const populateForm = (activity: Activity) => {
+    setForm({
+      name: activity.name,
+      duree_standard: activity.duree_standard.toString(),
+      profiles_data: activity.activity_profiles?.map(profile => ({
+        profile_intervenant_id: profile.profile_intervenant.id,
+        temps_intervenant: profile.temps_intervenant.toString()
+      })) || [],
+      is_active: activity.is_active
+    });
+  };
+
+  const validateForm = (): boolean => {
+    if (!form.name.trim()) {
+      toast.error('Le nom de l\'activité est requis');
+      return false;
+    }
+
+    if (!form.duree_standard || isNaN(parseFloat(form.duree_standard)) || parseFloat(form.duree_standard) <= 0) {
+      toast.error('La durée standard doit être un nombre positif');
+      return false;
+    }
+
+    if (form.profiles_data.length === 0) {
+      toast.error('Au moins un profil intervenant est requis');
+      return false;
+    }
+
+    const incompleteProfiles = form.profiles_data.filter(p => !p.temps_intervenant);
+    if (incompleteProfiles.length > 0) {
+      toast.error('Tous les temps intervenant doivent être renseignés');
+      return false;
+    }
+
+    // Vérifier que tous les temps sont des nombres valides
+    const invalidTimes = form.profiles_data.filter(p => {
+      const time = parseFloat(p.temps_intervenant);
+      return isNaN(time) || time <= 0;
+    });
+    if (invalidTimes.length > 0) {
+      toast.error('Tous les temps intervenant doivent être des nombres positifs');
+      return false;
+    }
+
+    return true;
+  };
+
+  const updateForm = (newForm: ActivityFormData) => {
+    setForm(newForm);
+  };
+
+  return {
+    form,
+    newProfileName,
+    setNewProfileName,
+    handleChange,
+    handleProfileAdd,
+    handleProfileTimeChange,
+    handleProfileRemove,
+    handleAddNewProfile,
+    resetForm,
+    populateForm,
+    validateForm,
+    updateForm
+  };
+};
+
 export function ServiceDetailsPage() {
   const { serviceId } = useParams<{ serviceId: string }>();
   const [service, setService] = useState<Service | null>(null);
@@ -79,16 +363,11 @@ export function ServiceDetailsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [profiles, setProfiles] = useState<IntervenantProfile[]>([]);
-  const [form, setForm] = useState({
-    name: '',
-    duree_standard: '',
-    profiles_data: [] as Array<{
-      profile_intervenant_id: number;
-      temps_intervenant: string;
-    }>,
-    is_active: true
-  });
-  const [newProfileName, setNewProfileName] = useState('');
+  
+  // Hook personnalisé pour la gestion des formulaires d'activité
+  const createActivityForm = useActivityForm(profiles, setProfiles);
+  const editActivityForm = useActivityForm(profiles, setProfiles);
+  
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
@@ -98,6 +377,16 @@ export function ServiceDetailsPage() {
   });
   const [categories, setCategories] = useState<Category[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
+  
+  // États pour la modification d'activité
+  const [editActivityDialogOpen, setEditActivityDialogOpen] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [savingEditActivity, setSavingEditActivity] = useState(false);
+  
+  // États pour la suppression d'activité
+  const [deleteActivityDialogOpen, setDeleteActivityDialogOpen] = useState(false);
+  const [deletingActivity, setDeletingActivity] = useState<Activity | null>(null);
+  const [deletingActivityLoading, setDeletingActivityLoading] = useState(false);
 
   const fetchServiceDetails = async () => {
     if (!serviceId) return;
@@ -177,115 +466,16 @@ export function ServiceDetailsPage() {
     setEditDialogOpen(true);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type } = e.target;
-    if (type === 'number') {
-      setForm({ ...form, [name]: value ? parseFloat(value) : '' });
-    } else {
-      setForm({ ...form, [name]: value });
-    }
-  };
-
-  const handleProfileChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value;
-    if (value === 'other') {
-      return;
-    }
-    
-    const profileId = parseInt(value);
-    if (isNaN(profileId)) return;
-    
-    // Vérifier si le profil est déjà ajouté
-    const existingProfile = form.profiles_data.find(p => p.profile_intervenant_id === profileId);
-    if (existingProfile) {
-      toast.error('Ce profil est déjà ajouté');
-      return;
-    }
-    
-    setForm(prev => ({
-      ...prev,
-      profiles_data: [...prev.profiles_data, {
-        profile_intervenant_id: profileId,
-        temps_intervenant: ''
-      }]
-    }));
-  };
-
-  const handleProfileTimeChange = (profileId: number, temps: string) => {
-    setForm(prev => ({
-      ...prev,
-      profiles_data: prev.profiles_data.map(p => 
-        p.profile_intervenant_id === profileId 
-          ? { ...p, temps_intervenant: temps }
-          : p
-      )
-    }));
-  };
-
-  const handleRemoveProfile = (profileId: number) => {
-    setForm(prev => ({
-      ...prev,
-      profiles_data: prev.profiles_data.filter(p => p.profile_intervenant_id !== profileId)
-    }));
-  };
-
-  const handleAddProfile = async () => {
-    if (!newProfileName.trim()) {
-      toast.error('Le nom du profil est requis');
-      return;
-    }
-
-    try {
-      const res = await api.post('/catalog/profiles/', { name: newProfileName.trim() });
-      const newProfile = res.data;
-      
-      setProfiles(prev => [...prev, newProfile]);
-      
-      setForm(prev => ({
-        ...prev,
-        profiles_data: [...prev.profiles_data, {
-          profile_intervenant_id: newProfile.id,
-          temps_intervenant: ''
-        }]
-      }));
-      
-      setNewProfileName('');
-      toast.success('Profil créé et ajouté');
-    } catch (err) {
-      toast.error('Erreur lors de la création du profil');
-    }
-  };
-
   const handleSaveActivity = async () => {
-    if (!form.name.trim()) {
-      toast.error('Le nom de l\'activité est requis');
-      return;
-    }
-
-    if (!form.duree_standard) {
-      toast.error('La durée standard est requise');
-      return;
-    }
-
-    if (form.profiles_data.length === 0) {
-      toast.error('Au moins un profil intervenant est requis');
-      return;
-    }
-
-    // Vérifier que tous les temps intervenant sont remplis
-    const incompleteProfiles = form.profiles_data.filter(p => !p.temps_intervenant);
-    if (incompleteProfiles.length > 0) {
-      toast.error('Tous les temps intervenant doivent être renseignés');
-      return;
-    }
+    if (!createActivityForm.validateForm()) return;
 
     setSaving(true);
     try {
       const payload = {
-        ...form,
+        ...createActivityForm.form,
         service_id: serviceId,
-        duree_standard: parseFloat(form.duree_standard),
-        profiles_data: form.profiles_data.map(p => ({
+        duree_standard: parseFloat(createActivityForm.form.duree_standard),
+        profiles_data: createActivityForm.form.profiles_data.map(p => ({
           ...p,
           temps_intervenant: parseFloat(p.temps_intervenant)
         }))
@@ -296,6 +486,7 @@ export function ServiceDetailsPage() {
       handleCloseDialog();
       fetchServiceDetails();
     } catch (err) {
+      console.error('Erreur lors de l\'ajout de l\'activité:', err);
       toast.error('Erreur lors de l\'ajout de l\'activité');
     } finally {
       setSaving(false);
@@ -352,24 +543,81 @@ export function ServiceDetailsPage() {
   };
 
   const handleOpenDialog = () => {
-    setForm({
-      name: '',
-      duree_standard: '',
-      profiles_data: [],
-      is_active: true
-    });
+    createActivityForm.resetForm();
     setDialogOpen(true);
   };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
-    setForm({
-      name: '',
-      duree_standard: '',
-      profiles_data: [],
-      is_active: true
-    });
-    setNewProfileName('');
+    createActivityForm.resetForm();
+  };
+
+  // Fonctions pour la modification d'activité
+  const handleOpenEditActivityDialog = (activity: Activity) => {
+    setEditingActivity(activity);
+    editActivityForm.populateForm(activity);
+    setEditActivityDialogOpen(true);
+  };
+
+  const handleSaveEditActivity = async () => {
+    if (!editingActivity || !editActivityForm.validateForm()) return;
+
+    setSavingEditActivity(true);
+    try {
+      const payload = {
+        ...editActivityForm.form,
+        service_id: serviceId, // Ajouter le service_id requis
+        duree_standard: parseFloat(editActivityForm.form.duree_standard),
+        profiles_data: editActivityForm.form.profiles_data.map(p => ({
+          ...p,
+          temps_intervenant: parseFloat(p.temps_intervenant)
+        }))
+      };
+
+      await api.put(`/catalog/activities/${editingActivity.id}/`, payload);
+      toast.success('Activité modifiée avec succès');
+      setEditActivityDialogOpen(false);
+      setEditingActivity(null);
+      fetchServiceDetails();
+    } catch (err) {
+      toast.error('Erreur lors de la modification de l\'activité');
+    } finally {
+      setSavingEditActivity(false);
+    }
+  };
+
+  const handleCloseEditActivityDialog = () => {
+    setEditActivityDialogOpen(false);
+    setEditingActivity(null);
+    editActivityForm.resetForm();
+  };
+
+  // Fonctions pour la suppression d'activité
+  const handleOpenDeleteActivityDialog = (activity: Activity) => {
+    setDeletingActivity(activity);
+    setDeleteActivityDialogOpen(true);
+  };
+
+  const handleDeleteActivity = async () => {
+    if (!deletingActivity) return;
+
+    setDeletingActivityLoading(true);
+    try {
+      await api.delete(`/catalog/activities/${deletingActivity.id}/`);
+      toast.success('Activité supprimée avec succès');
+      setDeleteActivityDialogOpen(false);
+      setDeletingActivity(null);
+      fetchServiceDetails();
+    } catch (err) {
+      toast.error('Erreur lors de la suppression de l\'activité');
+    } finally {
+      setDeletingActivityLoading(false);
+    }
+  };
+
+  const handleCloseDeleteActivityDialog = () => {
+    setDeleteActivityDialogOpen(false);
+    setDeletingActivity(null);
   };
 
   if (loading) {
@@ -486,6 +734,7 @@ export function ServiceDetailsPage() {
                       <TableHead>Durée standard</TableHead>
                       <TableHead>Profils et temps</TableHead>
                       <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -511,6 +760,25 @@ export function ServiceDetailsPage() {
                           <Badge variant={activity.is_active ? "default" : "destructive"}>
                             {activity.is_active ? 'Active' : 'Inactive'}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEditActivityDialog(activity)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenDeleteActivityDialog(activity)}
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -618,7 +886,7 @@ export function ServiceDetailsPage() {
               </Link>
               <Link to={`/taux-horaires?activity_filter=${service.activities?.[0]?.id || ''}`}>
                 <Button variant="outline" className="w-full justify-start">
-                  <Euro className="h-4 w-4 mr-2" />
+                  <Currency className="h-4 w-4 mr-2" />
                   Gérer les taux horaires
                 </Button>
               </Link>
@@ -639,8 +907,8 @@ export function ServiceDetailsPage() {
               <Input
                 name="name"
                 placeholder="Nom de l'activité"
-                value={form.name}
-                onChange={handleChange}
+                value={createActivityForm.form.name}
+                onChange={createActivityForm.handleChange}
                 required
               />
             </div>
@@ -652,92 +920,34 @@ export function ServiceDetailsPage() {
                   type="number"
                   step="0.5"
                   placeholder="0.0"
-                  value={form.duree_standard}
-                  onChange={handleChange}
+                  value={createActivityForm.form.duree_standard}
+                  onChange={createActivityForm.handleChange}
                   required
                 />
               </div>
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Profils intervenant</label>
-              <div className="space-y-3">
-                {/* Select pour ajouter un profil */}
-                <div className="flex gap-2">
-                  <select 
-                    className="flex-1 border rounded-md px-3 py-2 text-sm"
-                    onChange={handleProfileChange}
-                    value=""
-                  >
-                    <option value="">Sélectionner un profil</option>
-                    {profiles.map(profile => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name}
-                      </option>
-                    ))}
-                    <option value="other">Autre (créer un nouveau profil)</option>
-                  </select>
-                </div>
-                
-                {/* Champ pour créer un nouveau profil */}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nouveau profil intervenant"
-                    value={newProfileName}
-                    onChange={(e) => setNewProfileName(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddProfile()}
-                  />
-                  <Button 
-                    onClick={handleAddProfile} 
-                    size="sm" 
-                    variant="outline"
-                    disabled={!newProfileName.trim()}
-                  >
-                    Ajouter
-                  </Button>
-                </div>
-                
-                {/* Liste des profils sélectionnés avec temps */}
-                {form.profiles_data.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="block text-sm font-medium">Profils sélectionnés :</label>
-                    <div className="space-y-2">
-                      {form.profiles_data.map(profileData => {
-                        const profile = profiles.find(p => p.id === profileData.profile_intervenant_id);
-                        return profile ? (
-                          <div key={profileData.profile_intervenant_id} className="flex items-center gap-2 p-2 border rounded">
-                            <Badge variant="secondary" className="text-xs">
-                              {profile.name}
-                            </Badge>
-                            <Input
-                              type="number"
-                              step="0.5"
-                              placeholder="Temps (h)"
-                              value={profileData.temps_intervenant}
-                              onChange={(e) => handleProfileTimeChange(profileData.profile_intervenant_id, e.target.value)}
-                              className="w-24 text-xs"
-                              required
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveProfile(profileData.profile_intervenant_id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ) : null;
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ProfileManager
+                profiles={profiles}
+                profilesData={createActivityForm.form.profiles_data}
+                onProfileAdd={createActivityForm.handleProfileAdd}
+                onProfileTimeChange={createActivityForm.handleProfileTimeChange}
+                onProfileRemove={createActivityForm.handleProfileRemove}
+                newProfileName={createActivityForm.newProfileName}
+                onNewProfileNameChange={createActivityForm.setNewProfileName}
+                onAddNewProfile={createActivityForm.handleAddNewProfile}
+              />
             </div>
             <div>
               <label className="flex items-center space-x-2">
                 <input
                   type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) => setForm({ ...form, is_active: e.target.checked })}
+                  checked={createActivityForm.form.is_active}
+                  onChange={(e) => {
+                    const newForm = { ...createActivityForm.form, is_active: e.target.checked };
+                    createActivityForm.updateForm(newForm);
+                  }}
                   className="rounded"
                 />
                 <span className="text-sm">Activité active</span>
@@ -813,6 +1023,112 @@ export function ServiceDetailsPage() {
             </Button>
             <Button onClick={handleSaveEdit} disabled={savingEdit}>
               {savingEdit ? <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modale de modification d'activité */}
+      <Dialog open={editActivityDialogOpen} onOpenChange={setEditActivityDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifier l'activité</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Nom de l'activité</label>
+              <Input
+                name="name"
+                placeholder="Nom de l'activité"
+                value={editActivityForm.form.name}
+                onChange={editActivityForm.handleChange}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
+                <Input
+                  name="duree_standard"
+                  type="number"
+                  step="0.5"
+                  placeholder="0.0"
+                  value={editActivityForm.form.duree_standard}
+                  onChange={editActivityForm.handleChange}
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Profils intervenant</label>
+              <ProfileManager
+                profiles={profiles}
+                profilesData={editActivityForm.form.profiles_data}
+                onProfileAdd={editActivityForm.handleProfileAdd}
+                onProfileTimeChange={editActivityForm.handleProfileTimeChange}
+                onProfileRemove={editActivityForm.handleProfileRemove}
+                newProfileName={editActivityForm.newProfileName}
+                onNewProfileNameChange={editActivityForm.setNewProfileName}
+                onAddNewProfile={editActivityForm.handleAddNewProfile}
+              />
+            </div>
+            <div>
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={editActivityForm.form.is_active}
+                  onChange={(e) => {
+                    const newForm = { ...editActivityForm.form, is_active: e.target.checked };
+                    editActivityForm.updateForm(newForm);
+                  }}
+                  className="rounded"
+                />
+                <span className="text-sm">Activité active</span>
+              </label>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseEditActivityDialog}>
+              Annuler
+            </Button>
+            <Button onClick={handleSaveEditActivity} disabled={savingEditActivity}>
+              {savingEditActivity ? <Loader2 className="animate-spin" size={16}/> : 'Modifier'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modale de confirmation de suppression d'activité */}
+      <Dialog open={deleteActivityDialogOpen} onOpenChange={setDeleteActivityDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer l'activité <strong>"{deletingActivity?.name}"</strong> ?
+            </p>
+            <p className="text-sm text-red-600">
+              Cette action est irréversible et supprimera définitivement l'activité et toutes ses données associées.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseDeleteActivityDialog}>
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteActivity}
+              disabled={deletingActivityLoading}
+            >
+              {deletingActivityLoading ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer'
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
