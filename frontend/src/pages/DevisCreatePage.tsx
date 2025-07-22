@@ -505,7 +505,7 @@ export function DevisCreatePage() {
                 </Button>
               </div>
               {currentLigne.intervenants.map((intervenant, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                   <div>
                     <Label className="text-sm font-medium">Profil *</Label>
                     <Select 
@@ -568,20 +568,20 @@ export function DevisCreatePage() {
                       title={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "Valeur pré-remplie automatiquement" : ""}
                     />
                   </div>
-                                        <div>
-                        <Label className="text-sm font-medium">Montant</Label>
-                        <div className="flex items-center gap-2">
-                          <Input 
-                            value={calculateIntervenantMontant(intervenant)}
-                            readOnly
-                            className="bg-gray-50 text-gray-700"
-                            placeholder="0,00 €"
-                          />
-                          <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
-                            <Trash2 size={16}/>
-                          </Button>
-                        </div>
-                      </div>
+                  <div>
+                    <Label className="text-sm font-medium">Montant</Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        value={calculateIntervenantMontant(intervenant)}
+                        readOnly
+                        className="bg-gray-50 text-gray-700"
+                        placeholder="0,00 €"
+                      />
+                      <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
+                        <Trash2 size={16}/>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

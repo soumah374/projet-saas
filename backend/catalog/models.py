@@ -109,7 +109,7 @@ class TauxHoraire(models.Model):
     taux_heure = models.DecimalField(
         max_digits=8, 
         decimal_places=2, 
-        verbose_name="Taux horaire (€)"
+        verbose_name="Taux horaire (GNF)"
     )
     activity = models.ForeignKey(
         Activity, 
