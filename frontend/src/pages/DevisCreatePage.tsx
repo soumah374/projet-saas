@@ -486,8 +486,8 @@ export function DevisCreatePage() {
           {/* Nouvelle ligne */}
           <div className="space-y-4 border rounded-lg p-4">
             <h3 className="text-lg font-medium">Nouvelle ligne</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-4">
                 <Label className="text-sm font-medium">Type de ligne *</Label>
                 <Select value={currentLigne.type_ligne} onValueChange={(value) => handleLigneChange('type_ligne', value)}>
                   <SelectTrigger>
@@ -506,7 +506,7 @@ export function DevisCreatePage() {
               </div>
               {currentLigne.type_ligne === 'prestation' && (
                 <>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Service *</Label>
                     <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
                       <SelectTrigger>
@@ -521,7 +521,7 @@ export function DevisCreatePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Activité *</Label>
                     <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
                       <SelectTrigger>
@@ -556,7 +556,7 @@ export function DevisCreatePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Unité *</Label>
                     <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
                       <SelectTrigger>
@@ -571,11 +571,21 @@ export function DevisCreatePage() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Quantité</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={currentLigne.quantite} 
+                      onChange={(e) => handleLigneChange('quantite', e.target.value)}
+                      placeholder="1"
+                    />
+                  </div>
                 </>
               )}
               {currentLigne.type_ligne === 'frais' && (
                 <>
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Type de frais *</Label>
                     <Select value={currentLigne.type_frais || ''} onValueChange={(value) => handleLigneChange('type_frais', value)}>
                       <SelectTrigger>
@@ -588,7 +598,7 @@ export function DevisCreatePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Catégorie de frais *</Label>
                     <Select value={currentLigne.frais_category_id} onValueChange={(value) => handleLigneChange('frais_category_id', value)}>
                       <SelectTrigger>
@@ -605,7 +615,7 @@ export function DevisCreatePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Ligne de frais *</Label>
                     <Select value={currentLigne.ligne_frais_id} onValueChange={(value) => handleLigneChange('ligne_frais_id', value)}>
                       <SelectTrigger>
@@ -622,7 +632,7 @@ export function DevisCreatePage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Prix unitaire *</Label>
                     <Input 
                       type="number"
@@ -632,7 +642,7 @@ export function DevisCreatePage() {
                       placeholder="0"
                     />
                   </div>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Quantité</Label>
                     <Input 
                       type="number"
@@ -642,7 +652,7 @@ export function DevisCreatePage() {
                       placeholder="1"
                     />
                   </div>
-                  <div>
+                  <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Unité</Label>
                     <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
                       <SelectTrigger>

@@ -202,7 +202,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
               {devis.titre || 'Prestation de services'}
             </div>
 
-            {/* Tableau des services */}
+            {/* Tableau des lignes */}
             <table style={{ 
               width: '100%', 
               borderCollapse: 'collapse',
@@ -229,7 +229,27 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     fontSize: '9px',
                     textTransform: 'uppercase'
                   }}>
+                    Type
+                  </th>
+                  <th style={{ 
+                    border: '1px solid #cbd5e0', 
+                    padding: '8px', 
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '9px',
+                    textTransform: 'uppercase'
+                  }}>
                     Qté
+                  </th>
+                  <th style={{ 
+                    border: '1px solid #cbd5e0', 
+                    padding: '8px', 
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '9px',
+                    textTransform: 'uppercase'
+                  }}>
+                    Unité
                   </th>
                   <th style={{ 
                     border: '1px solid #cbd5e0', 
@@ -254,87 +274,211 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                 </tr>
               </thead>
               <tbody>
-                {/* Grouper les lignes par service */}
                 {(() => {
-                  const groupedLines = devis.lignes.reduce((acc: any, ligne: any) => {
-                    const serviceName = ligne.service.intitule;
-                    if (!acc[serviceName]) {
-                      acc[serviceName] = [];
-                    }
-                    acc[serviceName].push(ligne);
-                    return acc;
-                  }, {});
+                  // Séparer les prestations et les frais
+                  const prestations = devis.lignes.filter((ligne: any) => ligne.type_ligne === 'prestation');
+                  const frais = devis.lignes.filter((ligne: any) => ligne.type_ligne === 'frais');
 
                   const rows: JSX.Element[] = [];
-                  
-                  Object.entries(groupedLines).forEach(([serviceName, lines]: [string, any]) => {
-                    // En-tête de section
-                    rows.push(
-                      <tr key={`header-${serviceName}`} style={{ backgroundColor: '#f7fafc' }}>
-                        <td 
-                          colSpan={4} 
-                          style={{ 
-                            border: '1px solid #cbd5e0', 
-                            padding: '6px 8px',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            fontSize: '9px',
-                            color: '#4a5568'
-                          }}
-                        >
-                          {serviceName}
-                        </td>
-                      </tr>
-                    );
 
-                    // Lignes de ce service
-                    lines.forEach((ligne: any, index: number) => {
-                      rows.push(
-                        <tr key={ligne.id}>
-                          <td style={{ 
-                            border: '1px solid #cbd5e0', 
-                            padding: '6px 8px',
-                            textAlign: 'left'
-                          }}>
-                            <div style={{ fontWeight: '500' }}>
-                              {ligne.activity.intitule}
-                            </div>
-                            {ligne.description && (
-                              <div style={{ 
-                                fontSize: '8px', 
-                                color: '#718096',
-                                marginTop: '2px'
-                              }}>
-                                {ligne.description}
-                              </div>
-                            )}
-                          </td>
-                          <td style={{ 
-                            border: '1px solid #cbd5e0', 
-                            padding: '6px 8px',
-                            textAlign: 'center'
-                          }}>
-                            {ligne.quantite}
-                          </td>
-                          <td style={{ 
-                            border: '1px solid #cbd5e0', 
-                            padding: '6px 8px',
-                            textAlign: 'right'
-                          }}>
-                            {formatMontant(ligne.prix_unitaire_ht)}
-                          </td>
-                          <td style={{ 
-                            border: '1px solid #cbd5e0', 
-                            padding: '6px 8px',
-                            textAlign: 'right',
-                            fontWeight: 'bold'
-                          }}>
-                            {formatMontant(ligne.montant_ht)}
-                          </td>
-                        </tr>
-                      );
+                  // Grouper les prestations par service
+                  if (prestations.length > 0) {
+                    const groupedPrestations = prestations.reduce((acc: any, ligne: any) => {
+                      const serviceName = ligne.service?.intitule || 'Service non défini';
+                      if (!acc[serviceName]) {
+                        acc[serviceName] = [];
+                      }
+                      acc[serviceName].push(ligne);
+                      return acc;
+                    }, {});
+
+                    Object.entries(groupedPrestations).forEach(([serviceName, lines]: [string, any]) => {
+                                             // En-tête de section pour les prestations
+                       rows.push(
+                         <tr key={`header-prestation-${serviceName}`} style={{ backgroundColor: '#f7fafc' }}>
+                           <td 
+                             colSpan={6} 
+                             style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               fontWeight: 'bold',
+                               textAlign: 'center',
+                               fontSize: '9px',
+                               color: '#4a5568'
+                             }}
+                           >
+                             {serviceName} - Prestations
+                           </td>
+                         </tr>
+                       );
+
+                                             // Lignes de prestations
+                       lines.forEach((ligne: any) => {
+                         rows.push(
+                           <tr key={ligne.id}>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'left'
+                             }}>
+                               <div style={{ fontWeight: '500' }}>
+                                 {ligne.activity?.intitule || 'Activité non définie'}
+                               </div>
+                               {ligne.description && (
+                                 <div style={{ 
+                                   fontSize: '8px', 
+                                   color: '#718096',
+                                   marginTop: '2px'
+                                 }}>
+                                   {ligne.description}
+                                 </div>
+                               )}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'center',
+                               fontSize: '8px',
+                               color: '#4a5568'
+                             }}>
+                               Prestation
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'center'
+                             }}>
+                               {ligne.quantite}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'center',
+                               fontSize: '9px'
+                             }}>
+                               {ligne.unite?.code || '-'}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'right'
+                             }}>
+                               {formatMontant(ligne.prix_unitaire_ht)}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'right',
+                               fontWeight: 'bold'
+                             }}>
+                               {formatMontant(ligne.montant_ht)}
+                             </td>
+                           </tr>
+                         );
+                       });
                     });
-                  });
+                  }
+
+                  // Grouper les frais par catégorie
+                  if (frais.length > 0) {
+                    const groupedFrais = frais.reduce((acc: any, ligne: any) => {
+                      const categoryName = ligne.frais_category?.name || 'Catégorie non définie';
+                      if (!acc[categoryName]) {
+                        acc[categoryName] = [];
+                      }
+                      acc[categoryName].push(ligne);
+                      return acc;
+                    }, {});
+
+                    Object.entries(groupedFrais).forEach(([categoryName, lines]: [string, any]) => {
+                                             // En-tête de section pour les frais
+                       rows.push(
+                         <tr key={`header-frais-${categoryName}`} style={{ backgroundColor: '#fef3c7' }}>
+                           <td 
+                             colSpan={6} 
+                             style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               fontWeight: 'bold',
+                               textAlign: 'center',
+                               fontSize: '9px',
+                               color: '#92400e'
+                             }}
+                           >
+                             {categoryName} - Frais
+                           </td>
+                         </tr>
+                       );
+
+                                             // Lignes de frais
+                       lines.forEach((ligne: any) => {
+                         const typeFraisLabel = ligne.type_frais === 'forfait' ? 'Forfait' : 
+                                               ligne.type_frais === 'offert' ? 'Offert' : 'Standard';
+                         
+                         rows.push(
+                           <tr key={ligne.id}>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'left'
+                             }}>
+                               <div style={{ fontWeight: '500' }}>
+                                 {ligne.ligne_frais?.description || 'Frais non défini'}
+                               </div>
+                               {ligne.description && (
+                                 <div style={{ 
+                                   fontSize: '8px', 
+                                   color: '#718096',
+                                   marginTop: '2px'
+                                 }}>
+                                   {ligne.description}
+                                 </div>
+                               )}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'center',
+                               fontSize: '8px',
+                               color: '#92400e'
+                             }}>
+                               {typeFraisLabel}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'center'
+                             }}>
+                               {ligne.quantite}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'center',
+                               fontSize: '9px'
+                             }}>
+                               {ligne.unite?.code || '-'}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'right'
+                             }}>
+                               {formatMontant(ligne.prix_unitaire_ht)}
+                             </td>
+                             <td style={{ 
+                               border: '1px solid #cbd5e0', 
+                               padding: '6px 8px',
+                               textAlign: 'right',
+                               fontWeight: 'bold'
+                             }}>
+                               {formatMontant(ligne.montant_ht)}
+                             </td>
+                           </tr>
+                         );
+                       });
+                    });
+                  }
 
                   return rows;
                 })()}

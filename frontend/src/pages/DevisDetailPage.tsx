@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ import {
   useIntervenantsParActivite,
   type Devis
 } from '@/hooks/use-devis';
+import { lignesDevisAPI } from '@/lib/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,13 +35,21 @@ import { useServices } from '@/hooks/use-services';
 import { useUnitesStandards } from '@/hooks/use-unites';
 import { formatDate, formatMontant, formatMontantPDF } from '@/lib/formatters';
 import { PDFExport } from '@/components/PDFExport';
+import { useFraisCategories } from '@/hooks/use-frais-categories';
+import { useLignesFraisByCategory } from '@/hooks/use-lignes-frais';
+import type { LigneFrais } from '@/lib/types';
 
 interface LigneForm {
-  service_id: string;
-  activity_id: string;
+  type_ligne: 'prestation' | 'frais' | '';
+  type_frais?: 'standard' | 'forfait' | 'offert';
+  service_id?: string;
+  activity_id?: string;
+  frais_category_id?: string;
+  ligne_frais_id?: string;
   description: string;
   quantite: string;
   unite_id: string;
+  prix_unitaire?: string;
   intervenants: IntervenantForm[];
 }
 
@@ -47,11 +57,13 @@ interface IntervenantForm {
   profile_intervenant_id: string;
   temps_intervenant: string;
   taux_horaire: string;
+  intitule: string;
 }
 
 export function DevisDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [addLigneDialogOpen, setAddLigneDialogOpen] = useState(false);
   const [deleteLigneDialogOpen, setDeleteLigneDialogOpen] = useState(false);
@@ -60,11 +72,16 @@ export function DevisDetailPage() {
   const [dateValidite, setDateValidite] = useState<Date | undefined>(undefined);
   const [pdfExportOpen, setPdfExportOpen] = useState(false);
   const [currentLigne, setCurrentLigne] = useState<LigneForm>({
+    type_ligne: '',
+    type_frais: 'standard',
     service_id: '',
     activity_id: '',
+    frais_category_id: '',
+    ligne_frais_id: '',
     description: '',
     quantite: '1',
     unite_id: '',
+    prix_unitaire: '',
     intervenants: []
   });
 
@@ -88,6 +105,13 @@ export function DevisDetailPage() {
   const { data: intervenantsData, refetch: refetchIntervenants, isLoading: isLoadingIntervenants } = useIntervenantsParActivite(
     parseInt(currentLigne.activity_id) || 0
   );
+  const { data: fraisCategories = [] } = useFraisCategories();
+  const { data: lignesFraisRaw } = useLignesFraisByCategory(parseInt(currentLigne.frais_category_id || '0'));
+  const lignesFrais: LigneFrais[] = Array.isArray(lignesFraisRaw)
+    ? lignesFraisRaw
+    : Array.isArray((lignesFraisRaw as any)?.results)
+      ? (lignesFraisRaw as any).results
+      : [];
 
   const services = servicesData?.results || [];
   const unites = unitesData?.results || [];
@@ -109,7 +133,7 @@ export function DevisDetailPage() {
 
   // Réinitialiser l'activité et les intervenants quand le service change
   useEffect(() => {
-    if (currentLigne.service_id) {
+    if (currentLigne.type_ligne === 'prestation' && currentLigne.service_id) {
       setCurrentLigne(prev => ({
         ...prev,
         activity_id: '',
@@ -117,18 +141,18 @@ export function DevisDetailPage() {
       }));
       refetchActivites();
     }
-  }, [currentLigne.service_id, refetchActivites]);
+  }, [currentLigne.type_ligne, currentLigne.service_id, refetchActivites]);
 
   // Réinitialiser les intervenants quand l'activité change
   useEffect(() => {
-    if (currentLigne.activity_id) {
+    if (currentLigne.type_ligne === 'prestation' && currentLigne.activity_id) {
       setCurrentLigne(prev => ({
         ...prev,
         intervenants: []
       }));
       refetchIntervenants();
     }
-  }, [currentLigne.activity_id, refetchIntervenants]);
+  }, [currentLigne.type_ligne, currentLigne.activity_id, refetchIntervenants]);
 
   const handleSave = async () => {
     try {
@@ -180,14 +204,15 @@ export function DevisDetailPage() {
     const newIntervenants = [...currentLigne.intervenants];
     newIntervenants[index] = { ...newIntervenants[index], [field]: value };
     
-    // Si on change le profil intervenant, remplir automatiquement le temps et le taux
+    // Si on change le profil intervenant, remplir automatiquement le temps, le taux et l'intitule
     if (field === 'profile_intervenant_id' && value) {
       const selectedIntervenant = intervenants.find(interv => interv.id.toString() === value);
       if (selectedIntervenant) {
         newIntervenants[index] = {
           ...newIntervenants[index],
           temps_intervenant: selectedIntervenant.temps_intervenant.toString(),
-          taux_horaire: selectedIntervenant.taux_horaire.toString()
+          taux_horaire: selectedIntervenant.taux_horaire.toString(),
+          intitule: selectedIntervenant.intitule,
         };
       }
     }
@@ -200,7 +225,7 @@ export function DevisDetailPage() {
       ...currentLigne,
       intervenants: [
         ...currentLigne.intervenants,
-        { profile_intervenant_id: '', temps_intervenant: '', taux_horaire: '' }
+        { profile_intervenant_id: '', temps_intervenant: '', taux_horaire: '', intitule: '' }
       ]
     });
   };
@@ -219,49 +244,82 @@ export function DevisDetailPage() {
   };
 
   const handleAddLigne = async () => {
-    if (!currentLigne.service_id || !currentLigne.activity_id || !currentLigne.unite_id) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
-      return;
-    }
-
-    if (currentLigne.intervenants.length === 0) {
-      toast.error('Veuillez ajouter au moins un intervenant');
+    if (currentLigne.type_ligne === 'prestation') {
+      if (!currentLigne.service_id || !currentLigne.activity_id || !currentLigne.unite_id) {
+        toast.error('Veuillez remplir tous les champs obligatoires');
+        return;
+      }
+      if (currentLigne.intervenants.length === 0) {
+        toast.error('Veuillez ajouter au moins un intervenant');
+        return;
+      }
+    } else if (currentLigne.type_ligne === 'frais') {
+      if (!currentLigne.frais_category_id || !currentLigne.ligne_frais_id || !currentLigne.unite_id || !currentLigne.prix_unitaire) {
+        toast.error('Veuillez remplir tous les champs obligatoires pour la ligne de frais');
+        return;
+      }
+    } else {
+      toast.error('Veuillez sélectionner un type de ligne');
       return;
     }
 
     try {
-      // Créer la ligne
-      await createLigneMutation.mutateAsync({
-        devis_id:  devis.id,
-        service_id: parseInt(currentLigne.service_id),
-        activity_id: parseInt(currentLigne.activity_id),
-        description: currentLigne.description,
-        quantite: parseFloat(currentLigne.quantite),
-        unite_id: parseInt(currentLigne.unite_id),
-      });
-
-      // Créer les intervenants
-      for (const intervenant of currentLigne.intervenants) {
-        await createIntervenantMutation.mutateAsync({
+      // Créer la ligne selon le type
+      if (currentLigne.type_ligne === 'prestation') {
+        await createLigneMutation.mutateAsync({
           devis_id: devis.id,
-          profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
-          temps_intervenant: parseFloat(intervenant.temps_intervenant),
-          taux_horaire: parseFloat(intervenant.taux_horaire),
+          type_ligne: 'prestation',
+          service_id: parseInt(currentLigne.service_id!),
+          activity_id: parseInt(currentLigne.activity_id!),
+          description: currentLigne.description,
+          quantite: parseFloat(currentLigne.quantite),
+          unite_id: parseInt(currentLigne.unite_id),
+        });
+
+        // Créer les intervenants
+        for (const intervenant of currentLigne.intervenants) {
+          await createIntervenantMutation.mutateAsync({
+            devis_id: devis.id,
+            profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
+            temps_intervenant: parseFloat(intervenant.temps_intervenant),
+            taux_horaire: parseFloat(intervenant.taux_horaire),
+          });
+        }
+      } else if (currentLigne.type_ligne === 'frais') {
+        // Pour les frais, utiliser l'API directe car useCreateLigneDevis ne supporte que les prestations
+        await lignesDevisAPI.createLigne({
+          devis_id: devis.id,
+          type_ligne: 'frais',
+          frais_category_id: parseInt(currentLigne.frais_category_id!),
+          ligne_frais_id: parseInt(currentLigne.ligne_frais_id!),
+          description: currentLigne.description,
+          quantite: parseFloat(currentLigne.quantite),
+          unite_id: parseInt(currentLigne.unite_id),
+          prix_unitaire_ht: parseFloat(currentLigne.prix_unitaire || '0'),
+          type_frais: currentLigne.type_frais || 'standard',
         });
       }
 
       // Réinitialiser le formulaire
       setCurrentLigne({
+        type_ligne: '',
+        type_frais: 'standard',
         service_id: '',
         activity_id: '',
+        frais_category_id: '',
+        ligne_frais_id: '',
         description: '',
         quantite: '1',
         unite_id: '',
+        prix_unitaire: '',
         intervenants: []
       });
 
       setAddLigneDialogOpen(false);
       toast.success('Ligne ajoutée avec succès');
+      
+      // Actualiser les données du devis
+      queryClient.invalidateQueries({ queryKey: ['devis', devisId] });
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la ligne:', error);
       toast.error('Erreur lors de l\'ajout de la ligne');
@@ -290,6 +348,9 @@ export function DevisDetailPage() {
       setDeleteLigneDialogOpen(false);
       setLigneToDelete(null);
       toast.success('Ligne supprimée avec succès');
+      
+      // Actualiser les données du devis
+      queryClient.invalidateQueries({ queryKey: ['devis', devisId] });
     } catch (error) {
       console.error('Erreur lors de la suppression de la ligne:', error);
       toast.error('Erreur lors de la suppression de la ligne');
@@ -597,184 +658,279 @@ export function DevisDetailPage() {
           </DialogHeader>
           <div className="space-y-6">
             {/* Informations de la ligne */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Service *</Label>
-                <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-4">
+                <Label className="text-sm font-medium">Type de ligne *</Label>
+                <Select value={currentLigne.type_ligne} onValueChange={(value) => handleLigneChange('type_ligne', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un service" />
+                    <SelectValue placeholder="Sélectionner un type de ligne" />
                   </SelectTrigger>
                   <SelectContent>
-                    {services.map(service => (
-                      <SelectItem key={service.id} value={service.id.toString()}>
-                        {service.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="prestation">Prestation</SelectItem>
+                    <SelectItem value="frais">Frais</SelectItem>
                   </SelectContent>
                 </Select>
+                {!currentLigne.type_ligne && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    💡 Choisissez le type de ligne pour afficher les champs correspondants
+                  </p>
+                )}
               </div>
-              <div>
-                <Label className="text-sm font-medium">Activité *</Label>
-                <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={
-                      !currentLigne.service_id 
-                        ? "Sélectionnez d'abord un service" 
-                        : isLoadingActivites 
-                          ? "Chargement des activités..." 
-                          : "Sélectionner une activité"
-                    } />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {!currentLigne.service_id ? (
-                      <SelectItem value="no-service" disabled>
-                        Sélectionnez d'abord un service
-                      </SelectItem>
-                    ) : isLoadingActivites ? (
-                      <SelectItem value="loading" disabled>
-                        Chargement...
-                      </SelectItem>
-                    ) : activites.length === 0 ? (
-                      <SelectItem value="no-activities" disabled>
-                        Aucune activité trouvée pour ce service
-                      </SelectItem>
-                    ) : (
-                      activites.map(activite => (
-                        <SelectItem key={activite.id} value={activite.id.toString()}>
-                          {activite.intitule}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Unité *</Label>
-                <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner une unité" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unites.map(unite => (
-                      <SelectItem key={unite.id} value={unite.id.toString()}>
-                        {unite.intitule} ({unite.code})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Description</Label>
-                <Input 
-                  value={currentLigne.description} 
-                  onChange={(e) => handleLigneChange('description', e.target.value)}
-                  placeholder="Description de la ligne"
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium">Quantité</Label>
-                <Input 
-                  type="number"
-                  step="0.01"
-                  value={currentLigne.quantite} 
-                  onChange={(e) => handleLigneChange('quantite', e.target.value)}
-                  placeholder="1"
-                />
-              </div>
-            </div>
-
-            {/* Intervenants */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">Intervenants</Label>
-                <Button size="sm" onClick={addIntervenant}>
-                  <Plus size={16} className="mr-2" />
-                  Ajouter intervenant
-                </Button>
-              </div>
-              {currentLigne.intervenants.map((intervenant, index) => (
-                <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                  <div>
-                    <Label className="text-sm font-medium">Profil *</Label>
-                    <Select 
-                      value={intervenant.profile_intervenant_id} 
-                      onValueChange={(value) => handleIntervenantChange(index, 'profile_intervenant_id', value)}
-                    >
+              {currentLigne.type_ligne === 'prestation' && (
+                <>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Service *</Label>
+                    <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {services.map(service => (
+                          <SelectItem key={service.id} value={service.id.toString()}>
+                            {service.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Activité *</Label>
+                    <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
                       <SelectTrigger>
                         <SelectValue placeholder={
-                          !currentLigne.activity_id 
-                            ? "Sélectionnez d'abord une activité" 
-                            : isLoadingIntervenants 
-                              ? "Chargement des intervenants..." 
-                              : "Sélectionner un profil"
+                          !currentLigne.service_id 
+                            ? "Sélectionnez d'abord un service" 
+                            : isLoadingActivites 
+                              ? "Chargement des activités..." 
+                              : "Sélectionner une activité"
                         } />
                       </SelectTrigger>
                       <SelectContent>
-                        {!currentLigne.activity_id ? (
-                          <SelectItem value="no-activity" disabled>
-                            Sélectionnez d'abord une activité
+                        {!currentLigne.service_id ? (
+                          <SelectItem value="no-service" disabled>
+                            Sélectionnez d'abord un service
                           </SelectItem>
-                        ) : isLoadingIntervenants ? (
-                          <SelectItem value="loading-intervenants" disabled>
+                        ) : isLoadingActivites ? (
+                          <SelectItem value="loading" disabled>
                             Chargement...
                           </SelectItem>
-                        ) : intervenants.length === 0 ? (
-                          <SelectItem value="no-intervenants" disabled>
-                            Aucun intervenant trouvé pour cette activité
+                        ) : activites.length === 0 ? (
+                          <SelectItem value="no-activities" disabled>
+                            Aucune activité trouvée pour ce service
                           </SelectItem>
                         ) : (
-                          intervenants.map(interv => (
-                            <SelectItem key={interv.id} value={interv.id.toString()}>
-                              {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire} GNF/h)
+                          activites.map(activite => (
+                            <SelectItem key={activite.id} value={activite.id.toString()}>
+                              {activite.intitule}
                             </SelectItem>
                           ))
                         )}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium">Temps (h) *</Label>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Unité *</Label>
+                    <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une unité" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unites.map(unite => (
+                          <SelectItem key={unite.id} value={unite.id.toString()}>
+                            {unite.intitule} ({unite.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Quantité</Label>
                     <Input 
                       type="number"
                       step="0.01"
-                      value={intervenant.temps_intervenant} 
-                      onChange={(e) => handleIntervenantChange(index, 'temps_intervenant', e.target.value)}
-                      placeholder="0"
-                      className={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "border-green-200 bg-green-50" : ""}
-                      title={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "Valeur pré-remplie automatiquement" : ""}
+                      value={currentLigne.quantite} 
+                      onChange={(e) => handleLigneChange('quantite', e.target.value)}
+                      placeholder="1"
                     />
                   </div>
-                  <div>
-                    <Label className="text-sm font-medium">Taux horaire (€) *</Label>
+                </>
+              )}
+              {currentLigne.type_ligne === 'frais' && (
+                <>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Type de frais *</Label>
+                    <Select value={currentLigne.type_frais || ''} onValueChange={(value) => handleLigneChange('type_frais', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner un type de frais" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="forfait">Forfait</SelectItem>
+                        <SelectItem value="offert">Offert</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Catégorie de frais *</Label>
+                    <Select value={currentLigne.frais_category_id} onValueChange={(value) => handleLigneChange('frais_category_id', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une catégorie de frais" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fraisCategories.map(category => (
+                          <SelectItem key={category.id} value={category.id.toString()}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Ligne de frais *</Label>
+                    <Select value={currentLigne.ligne_frais_id} onValueChange={(value) => handleLigneChange('ligne_frais_id', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une ligne de frais" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {lignesFrais.map(ligneFrais => (
+                          <SelectItem key={ligneFrais.id} value={ligneFrais.id.toString()}>
+                            {ligneFrais.description}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Prix unitaire *</Label>
                     <Input 
                       type="number"
                       step="0.01"
-                      value={intervenant.taux_horaire} 
-                      onChange={(e) => handleIntervenantChange(index, 'taux_horaire', e.target.value)}
+                      value={currentLigne.prix_unitaire}
+                      onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
                       placeholder="0"
-                      className={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "border-green-200 bg-green-50" : ""}
-                      title={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "Valeur pré-remplie automatiquement" : ""}
                     />
                   </div>
-                                        <div>
-                        <Label className="text-sm font-medium">Montant</Label>
-                        <div className="flex items-center gap-2">
-                          <Input 
-                            value={calculateIntervenantMontant(intervenant)}
-                            readOnly
-                            className="bg-gray-50 text-gray-700"
-                            placeholder="0,00 €"
-                          />
-                          <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
-                            <Trash2 size={16}/>
-                          </Button>
-                        </div>
-                      </div>
-                </div>
-              ))}
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Quantité</Label>
+                    <Input 
+                      type="number"
+                      step="0.01"
+                      value={currentLigne.quantite} 
+                      onChange={(e) => handleLigneChange('quantite', e.target.value)}
+                      placeholder="1"
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Unité</Label>
+                    <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionner une unité" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unites.map(unite => (
+                          <SelectItem key={unite.id} value={unite.id.toString()}>
+                            {unite.intitule} ({unite.code})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Intervenants - seulement pour les prestations */}
+            {currentLigne.type_ligne === 'prestation' && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">Intervenants</Label>
+                  <Button size="sm" onClick={addIntervenant}>
+                    <Plus size={16} className="mr-2" />
+                    Ajouter intervenant
+                  </Button>
+                </div>
+                {currentLigne.intervenants.map((intervenant, index) => (
+                  <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                    <div>
+                      <Label className="text-sm font-medium">Profil *</Label>
+                      <Select 
+                        value={intervenant.profile_intervenant_id} 
+                        onValueChange={(value) => handleIntervenantChange(index, 'profile_intervenant_id', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={
+                            !currentLigne.activity_id 
+                              ? "Sélectionnez d'abord une activité" 
+                              : isLoadingIntervenants 
+                                ? "Chargement des intervenants..." 
+                                : "Sélectionner un profil"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {!currentLigne.activity_id ? (
+                            <SelectItem value="no-activity" disabled>
+                              Sélectionnez d'abord une activité
+                            </SelectItem>
+                          ) : isLoadingIntervenants ? (
+                            <SelectItem value="loading-intervenants" disabled>
+                              Chargement...
+                            </SelectItem>
+                          ) : intervenants.length === 0 ? (
+                            <SelectItem value="no-intervenants" disabled>
+                              Aucun intervenant trouvé pour cette activité
+                            </SelectItem>
+                          ) : (
+                            intervenants.map(interv => (
+                              <SelectItem key={interv.id} value={interv.id.toString()}>
+                                {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire} GNF/h)
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Temps (h) *</Label>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        value={intervenant.temps_intervenant} 
+                        onChange={(e) => handleIntervenantChange(index, 'temps_intervenant', e.target.value)}
+                        placeholder="0"
+                        className={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "border-green-200 bg-green-50" : ""}
+                        title={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "Valeur pré-remplie automatiquement" : ""}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Taux horaire (GNF) *</Label>
+                      <Input 
+                        type="number"
+                        step="0.01"
+                        value={intervenant.taux_horaire} 
+                        onChange={(e) => handleIntervenantChange(index, 'taux_horaire', e.target.value)}
+                        placeholder="0"
+                        className={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "border-green-200 bg-green-50" : ""}
+                        title={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "Valeur pré-remplie automatiquement" : ""}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-sm font-medium">Montant</Label>
+                      <div className="flex items-center gap-2">
+                        <Input 
+                          value={calculateIntervenantMontant(intervenant)}
+                          readOnly
+                          className="bg-gray-50 text-gray-700"
+                          placeholder="0,00 €"
+                        />
+                        <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
+                          <Trash2 size={16}/>
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button 

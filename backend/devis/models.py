@@ -141,7 +141,7 @@ class LigneDevis(models.Model):
     frais_category = models.ForeignKey('catalog.FraisCategory', on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
     ligne_frais = models.ForeignKey('catalog.LigneFrais', on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
     # Informations de la ligne
-    description = models.TextField()
+    description = models.TextField(blank=True, default='')
     quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(0)])
     unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_devis')
     prix_unitaire_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)

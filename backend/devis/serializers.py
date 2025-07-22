@@ -110,6 +110,7 @@ class DevisCreateSerializer(serializers.ModelSerializer):
 
 
 class LigneDevisCreateSerializer(serializers.ModelSerializer):
+    devis_id = serializers.PrimaryKeyRelatedField(queryset=Devis.objects.all(), source='devis', write_only=True)
     service_id = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), source='service', required=False, allow_null=True)
     activity_id = serializers.PrimaryKeyRelatedField(queryset=Activity.objects.all(), source='activity', required=False, allow_null=True)
     frais_category_id = serializers.PrimaryKeyRelatedField(queryset=FraisCategory.objects.all(), source='frais_category', required=False, allow_null=True)
@@ -118,7 +119,7 @@ class LigneDevisCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = LigneDevis
         fields = [
-            'devis', 'type_ligne', 'service_id', 'activity_id', 'frais_category_id', 'ligne_frais_id',
+            'devis_id', 'type_ligne', 'type_frais', 'service_id', 'activity_id', 'frais_category_id', 'ligne_frais_id',
             'description', 'quantite', 'unite_id', 'prix_unitaire_ht'
         ]
     def validate(self, data):
@@ -130,11 +131,16 @@ class LigneDevisCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Activity est requis pour une ligne de prestation")
             if data.get('frais_category') or data.get('frais_category_id') or data.get('ligne_frais') or data.get('ligne_frais_id'):
                 raise serializers.ValidationError("Aucun champ de frais ne doit être défini pour une ligne de prestation")
+            # Pour les prestations, type_frais doit être None
+            data['type_frais'] = None
         elif type_ligne == 'frais':
             if not data.get('ligne_frais') and not data.get('ligne_frais_id'):
                 raise serializers.ValidationError("LigneFrais est requis pour une ligne de frais")
             if data.get('service') or data.get('service_id') or data.get('activity') or data.get('activity_id'):
                 raise serializers.ValidationError("Aucun champ de prestation ne doit être défini pour une ligne de frais")
+            # Pour les frais, type_frais est requis
+            if not data.get('type_frais'):
+                raise serializers.ValidationError("Type de frais est requis pour une ligne de frais")
         else:
             raise serializers.ValidationError("type_ligne doit être 'prestation' ou 'frais'")
         return data

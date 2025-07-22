@@ -315,6 +315,7 @@ export const useCreateLigneDevis = () => {
   return useMutation({
     mutationFn: (data: {
       devis_id: number;
+      type_ligne: 'prestation';
       service_id: number;
       activity_id: number;
       description: string;
