@@ -10,7 +10,8 @@ from .serializers import (
     LigneDevisSerializer, LigneDevisCreateSerializer,
     LigneDevisIntervenantSerializer, LigneDevisIntervenantCreateSerializer
 )
-from catalog.models import Activity, IntervenantProfile, TauxHoraire
+from catalog.models import Activity, TauxHoraire, LigneFrais
+from .models import LigneDevis
 
 
 class DevisViewSet(viewsets.ModelViewSet):
@@ -41,39 +42,53 @@ class DevisViewSet(viewsets.ModelViewSet):
                 'notes': request.data.get('notes', ''),
                 'conditions': request.data.get('conditions', '')
             }
-            
             devis_serializer = DevisCreateSerializer(data=devis_data)
             devis_serializer.is_valid(raise_exception=True)
             devis = devis_serializer.save()
-            
+
             # Créer les lignes
             lignes_data = request.data.get('lignes', [])
             for ligne_data in lignes_data:
-                ligne = devis.ajouter_ligne(
-                    service_id=ligne_data['service_id'],
-                    activity_id=ligne_data['activity_id'],
-                    description=ligne_data.get('description', ''),
-                    quantite=ligne_data['quantite'],
-                    unite_id=ligne_data['unite_id']
-                )
                 
-                # Créer les intervenants pour cette ligne
-                for intervenant_data in ligne_data.get('intervenants', []):
-                    ligne.intervenants.create(
-                        profile_intervenant_id=intervenant_data['profile_intervenant_id'],
-                        temps_intervenant=intervenant_data['temps_intervenant'],
-                        taux_horaire=intervenant_data['taux_horaire']
+                if ligne_data['type_ligne'] == 'prestation':
+                    ligne = devis.ajouter_ligne(
+                        service_id=ligne_data['service_id'],
+                        activity_id=ligne_data['activity_id'],
+                        description=ligne_data.get('description', ''),
+                        quantite=ligne_data['quantite'],
+                        unite_id=ligne_data['unite_id'],
+                        type_ligne='prestation'
                     )
-                
-                # Recalculer le prix unitaire de la ligne après avoir ajouté tous les intervenants
-                if ligne.intervenants.exists():
-                    total_intervenants = sum(interv.montant_intervenant for interv in ligne.intervenants.all())
-                    ligne.prix_unitaire_ht = total_intervenants
-                    ligne.save()
-            
+                    # Créer les intervenants pour cette ligne
+                    for intervenant_data in ligne_data.get('intervenants', []):
+                        ligne.intervenants.create(
+                            profile_intervenant_id=intervenant_data['profile_intervenant_id'],
+                            temps_intervenant=intervenant_data['temps_intervenant'],
+                            taux_horaire=intervenant_data['taux_horaire']
+                        )
+                    # Recalculer le prix unitaire de la ligne après avoir ajouté tous les intervenants
+                    if ligne.intervenants.exists():
+                        total_intervenants = sum(interv.montant_intervenant for interv in ligne.intervenants.all())
+                        ligne.prix_unitaire_ht = total_intervenants
+                        ligne.save()
+                elif ligne_data['type_ligne'] == 'frais':
+                    ligne = LigneDevis.objects.create(
+                        devis=devis,
+                        type_ligne='frais',
+                        frais_category_id=ligne_data['frais_category_id'],
+                        ligne_frais_id=ligne_data['ligne_frais_id'],
+                        description=ligne_data.get('description', ''),
+                        quantite=ligne_data['quantite'],
+                        unite_id=ligne_data['unite_id'],
+                        prix_unitaire_ht=ligne_data['prix_unitaire_ht'],
+                        type_frais=ligne_data['type_frais']
+                    )
+                    # Le montant_ht sera calculé automatiquement dans save()
+                else:
+                    raise Exception('Type de ligne inconnu')
+
             # Retourner le devis complet
             return Response(DevisSerializer(devis).data, status=201)
-            
         except Exception as e:
             return Response({'error': str(e)}, status=400)
     
@@ -112,67 +127,69 @@ class DevisViewSet(viewsets.ModelViewSet):
 class LigneDevisViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des lignes de devis"""
     
-    queryset = LigneDevis.objects.select_related('service', 'activity', 'unite').prefetch_related('intervenants').all()
+    queryset = LigneDevis.objects.select_related('service', 'activity', 'frais_category', 'ligne_frais', 'unite').all()
     serializer_class = LigneDevisSerializer
     permission_classes = [permissions.IsAdminUser]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ['devis', 'service', 'activity', 'unite']
+    filterset_fields = ['devis', 'type_ligne', 'service', 'activity', 'frais_category', 'ligne_frais', 'unite']
     ordering_fields = ['created_at']
     ordering = ['created_at']
     
     def get_serializer_class(self):
         if self.action == 'create':
+            from .serializers import LigneDevisCreateSerializer
             return LigneDevisCreateSerializer
         return LigneDevisSerializer
     
     def perform_create(self, serializer):
-        """Automatically set the devis ID from the request data"""
-        devis_id = self.request.data.get('devis_id')
-        if devis_id:
-            devis = Devis.objects.get(id=devis_id)
-            serializer.save(devis=devis)
-        else:
-            serializer.save()
+        serializer.save()
     
     @action(detail=False, methods=['get'])
     def activites_by_service(self, request):
-        """Récupérer les activités d'un service"""
         service_id = request.query_params.get('service_id')
         if service_id:
             activites = Activity.objects.filter(service_id=service_id, is_active=True)
             return Response({
                 'activites': [
-                    {'id': a.id, 'intitule': a.name, 'description': ''}
+                    {'id': a.id, 'intitule': a.name}
                     for a in activites
                 ]
             })
         return Response({'activites': []})
     
     @action(detail=False, methods=['get'])
+    def frais_by_category(self, request):
+        category_id = request.query_params.get('category_id')
+        if category_id:
+            frais = LigneFrais.objects.filter(category_id=category_id, is_active=True)
+            return Response({
+                'frais': [
+                    {
+                        'id': f.id, 
+                        'intitule': f.description, 
+                        'description': f.description,
+                        'type_frais': f.type_frais,
+                        'category_name': f.category.name
+                    }
+                    for f in frais
+                ]
+            })
+        return Response({'frais': []})
+
+    @action(detail=False, methods=['get'])
     def intervenants_with_activite(self, request):
-        """Récupérer les intervenants d'une activité avec leurs taux horaires"""
         activity_id = request.query_params.get('activity_id')
         if activity_id:
             try:
                 activity = Activity.objects.get(id=activity_id)
                 intervenants = []
-                
                 for profile in activity.profiles_intervenant.all():
-                    # Récupérer le taux horaire pour cette activité et ce profil
                     try:
-                        taux = TauxHoraire.objects.get(
-                            activity=activity,
-                            profile_intervenant=profile
-                        )
+                        taux = TauxHoraire.objects.get(activity=activity, profile_intervenant=profile)
                         taux_horaire = taux.taux_heure
                     except TauxHoraire.DoesNotExist:
                         taux_horaire = 0
-                    
-                    temps_intervenant = activity.activityprofile_set.get(
-                        profile_intervenant=profile
-                    ).temps_intervenant
-                    
-                    
+                    temps_intervenant = activity.activityprofile_set.get(profile_intervenant=profile).temps_intervenant
                     intervenants.append({
                         'id': profile.id,
                         'intitule': profile.name,
@@ -180,7 +197,6 @@ class LigneDevisViewSet(viewsets.ModelViewSet):
                         'taux_horaire': taux_horaire,
                         'temps_intervenant': temps_intervenant
                     })
-                    
                 return Response({'intervenants': intervenants})
             except Activity.DoesNotExist:
                 return Response({'intervenants': []})

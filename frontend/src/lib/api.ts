@@ -571,7 +571,10 @@ export const lignesDevisAPI = {
         devis?: number;
         service?: number;
         activity?: number;
+        frais_category?: number;
+        ligne_frais?: number;
         unite?: number;
+        type_ligne?: string;
         ordering?: string;
         page?: number;
         page_size?: number;
@@ -579,29 +582,19 @@ export const lignesDevisAPI = {
     
     getLigne: (id: number) => api.get(`/devis/lignes/${id}/`),
     
-    createLigne: (data: {
-        devis_id: number;
-        service_id: number;
-        activity_id: number;
-        description: string;
-        quantite: number;
-        unite_id: number;
-    }) => api.post('/devis/lignes/', data),
+    createLigne: (data: any) => api.post('/devis/lignes/', data),
     
-    updateLigne: (id: number, data: {
-        service_id?: number;
-        activity_id?: number;
-        description?: string;
-        quantite?: number;
-        unite_id?: number;
-    }) => api.patch(`/devis/lignes/${id}/`, data),
+    updateLigne: (id: number, data: any) => api.patch(`/devis/lignes/${id}/`, data),
     
     deleteLigne: (id: number) => api.delete(`/devis/lignes/${id}/`),
     
     getActivitesParService: (service_id: number) => 
         api.get(`/devis/lignes/activites_by_service/?service_id=${service_id}`),
     
-    getIntervenantsParActivite: (activity_id: number) => 
+    getFraisParCategory: (category_id: number) =>
+        api.get(`/devis/lignes/frais_by_category/?category_id=${category_id}`),
+
+    getIntervenantsParActivite: (activity_id: number) =>
         api.get(`/devis/lignes/intervenants_with_activite/?activity_id=${activity_id}`),
 };
 

@@ -30,16 +30,28 @@ export interface Devis {
 
 export interface LigneDevis {
   id: number;
-  service: {
+  type_ligne: 'prestation' | 'frais';
+  service?: {
     id: number;
     intitule: string;
     description: string;
-  };
-  activity: {
+  } | null;
+  activity?: {
     id: number;
     intitule: string;
     description: string;
-  };
+  } | null;
+  frais_category?: {
+    id: number;
+    name: string;
+  } | null;
+  ligne_frais?: {
+    id: number;
+    description: string;
+    type_frais: string;
+    category_id: number;
+    is_active: boolean;
+  } | null;
   description: string;
   quantite: number;
   unite: {
@@ -49,7 +61,8 @@ export interface LigneDevis {
   };
   prix_unitaire_ht: number;
   montant_ht: number;
-  intervenants: LigneDevisIntervenant[];
+  intitule?: string;
+  intervenants?: LigneDevisIntervenant[];
   created_at: string;
   updated_at: string;
 }
@@ -152,18 +165,29 @@ export const useCreateDevisAvecLignes = () => {
       appliquer_tva?: boolean;
       notes?: string;
       conditions?: string;
-      lignes: Array<{
-        service_id: number;
-        activity_id: number;
-        description: string;
-        quantite: number;
-        unite_id: number;
-        intervenants: Array<{
-          profile_intervenant_id: number;
-          temps_intervenant: number;
-          taux_horaire: number;
-        }>;
-      }>;
+      lignes: Array<
+        | {
+            type_ligne: 'prestation';
+            service_id: number;
+            activity_id: number;
+            description: string;
+            quantite: number;
+            unite_id: number;
+            intervenants: Array<{
+              profile_intervenant_id: number;
+              temps_intervenant: number;
+              taux_horaire: number;
+            }>;
+          }
+        | {
+            type_ligne: 'frais';
+            frais_category_id: number;
+            ligne_frais_id: number;
+            description: string;
+            quantite: number;
+            unite_id: number;
+          }
+      >;
     }) => devisAPI.createDevisAvecLignes(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devis'] });

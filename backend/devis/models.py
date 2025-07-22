@@ -96,7 +96,7 @@ class Devis(models.Model):
         self.montant_ttc = self.montant_ht + self.montant_tva
         self.save()
     
-    def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id):
+    def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id, type_ligne):
         """Ajouter une ligne au devis"""
         from catalog.models import Service, Activity, UniteStandard
         
@@ -111,48 +111,75 @@ class Devis(models.Model):
             description=description,
             quantite=quantite,
             unite=unite,
-            prix_unitaire_ht=0  # Sera recalculé quand les intervenants seront ajoutés
+            prix_unitaire_ht=0,
+            type_ligne=type_ligne
+            # Sera recalculé quand les intervenants seront ajoutés
         )
         
         return ligne
 
 
 class LigneDevis(models.Model):
-    """Modèle pour les lignes de devis"""
+    """Modèle polymorphique pour les lignes de devis (prestations et frais)"""
+    TYPE_CHOICES = [
+        ('prestation', 'Prestation'),
+        ('frais', 'Frais'),
+    ]
     
+    TYPE_CHOICES_FRAIS = [
+        ('standard', 'Standard'),
+        ('forfait', 'Forfait'),
+        ('offert', 'Offert'),
+    ]
     devis = models.ForeignKey(Devis, on_delete=models.CASCADE, related_name='lignes')
-    
-    # Relations avec le catalogue
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='lignes_devis')
-    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='lignes_devis')
-    
+    type_ligne = models.CharField(max_length=200, choices=TYPE_CHOICES)
+    type_frais = models.CharField(max_length=200, choices=TYPE_CHOICES_FRAIS, blank=True, null=True)
+    # Relations pour prestations
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
+    # Relations pour frais
+    frais_category = models.ForeignKey('catalog.FraisCategory', on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
+    ligne_frais = models.ForeignKey('catalog.LigneFrais', on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
     # Informations de la ligne
     description = models.TextField()
     quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(0)])
     unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_devis')
-    
-    # Montants
     prix_unitaire_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
-    # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
     class Meta:
         verbose_name = 'Ligne de devis'
         verbose_name_plural = 'Lignes de devis'
         ordering = ['created_at']
-    
     def __str__(self):
-        return f"Ligne {self.id} - {self.activity.intitule}"
-    
+        if self.type_ligne == 'prestation' and self.activity:
+            return f"Prestation {self.id} - {self.activity.intitule}"
+        elif self.type_ligne == 'frais' and self.ligne_frais:
+            return f"Frais {self.id} - {self.ligne_frais.description}"
+        return f"Ligne {self.id}"
     def save(self, *args, **kwargs):
-        # Calculer le montant HT
+        # Validation selon le type
+        if self.type_ligne == 'prestation':
+            if not self.service or not self.activity:
+                raise ValueError("Service et Activity requis pour prestation")
+            self.frais_category = None
+            self.ligne_frais = None
+        elif self.type_ligne == 'frais':
+            if not self.ligne_frais:
+                raise ValueError("LigneFrais requis pour frais")
+            self.service = None
+            self.activity = None
         self.montant_ht = self.quantite * self.prix_unitaire_ht
         super().save(*args, **kwargs)
-        # Recalculer les montants du devis
         self.devis.calculer_montants()
+    @property
+    def intitule(self):
+        if self.type_ligne == 'prestation' and self.activity:
+            return self.activity.intitule
+        elif self.type_ligne == 'frais' and self.ligne_frais:
+            return self.ligne_frais.description
+        return self.description
 
 
 class LigneDevisIntervenant(models.Model):

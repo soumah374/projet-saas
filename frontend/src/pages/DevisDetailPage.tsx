@@ -428,11 +428,9 @@ export function DevisDetailPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Activité</TableHead>
-                  <TableHead>Description</TableHead>
+                  <TableHead>Désignation</TableHead>
+                  <TableHead>Type ligne</TableHead>
                   <TableHead>Quantité</TableHead>
-                  <TableHead>Unité</TableHead>
                   <TableHead>Prix unitaire HT</TableHead>
                   <TableHead>Montant HT</TableHead>
                   {devis.statut === 'brouillon' && <TableHead>Actions</TableHead>}
@@ -441,11 +439,13 @@ export function DevisDetailPage() {
               <TableBody>
                 {devis.lignes.map((ligne) => (
                   <TableRow key={ligne.id}>
-                    <TableCell className="font-medium">{ligne.service.intitule}</TableCell>
-                    <TableCell>{ligne.activity.intitule}</TableCell>
-                    <TableCell>{ligne.description}</TableCell>
+                    <TableCell className="font-medium">
+                      {ligne.type_ligne === 'prestation'
+                        ? ligne.activity?.intitule || '—'
+                        : ligne.ligne_frais?.description || '—'}
+                    </TableCell>
+                    <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
-                    <TableCell>{ligne.unite.intitule}</TableCell>
                     <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
                     <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
                     {devis.statut === 'brouillon' && (

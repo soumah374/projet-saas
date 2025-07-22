@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from .models import Devis, LigneDevis, LigneDevisIntervenant
 from users.serializers import ClientProfileSerializer
-from catalog.serializers import ServiceSerializer, ActivitySerializer, IntervenantProfileSerializer, UniteStandardSerializer
-from catalog.models import Service, Activity, IntervenantProfile, UniteStandard
+from catalog.serializers import ServiceSerializer, ActivitySerializer, IntervenantProfileSerializer, UniteStandardSerializer, FraisCategorySerializer, LigneFraisSerializer
+from catalog.models import Service, Activity, IntervenantProfile, UniteStandard, FraisCategory, LigneFrais
 from users.models import ClientProfile
 
 
@@ -27,40 +27,44 @@ class LigneDevisIntervenantSerializer(serializers.ModelSerializer):
 
 
 class LigneDevisSerializer(serializers.ModelSerializer):
-    """Serializer pour les lignes de devis"""
-    
     service = ServiceSerializer(read_only=True)
-    service_id = serializers.PrimaryKeyRelatedField(
-        queryset=Service.objects.all(),
-        source='service',
-        write_only=True
-    )
-    
+    service_id = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), source='service', write_only=True, required=False, allow_null=True)
     activity = ActivitySerializer(read_only=True)
-    activity_id = serializers.PrimaryKeyRelatedField(
-        queryset=Activity.objects.all(),
-        source='activity',
-        write_only=True
-    )
-    
+    activity_id = serializers.PrimaryKeyRelatedField(queryset=Activity.objects.all(), source='activity', write_only=True, required=False, allow_null=True)
+    frais_category = FraisCategorySerializer(read_only=True)
+    frais_category_id = serializers.PrimaryKeyRelatedField(queryset=FraisCategory.objects.all(), source='frais_category', write_only=True, required=False, allow_null=True)
+    ligne_frais = LigneFraisSerializer(read_only=True)
+    ligne_frais_id = serializers.PrimaryKeyRelatedField(queryset=LigneFrais.objects.all(), source='ligne_frais', write_only=True, required=False, allow_null=True)
     unite = UniteStandardSerializer(read_only=True)
-    unite_id = serializers.PrimaryKeyRelatedField(
-        queryset=UniteStandard.objects.all(),
-        source='unite',
-        write_only=True
-    )
-    
-    intervenants = LigneDevisIntervenantSerializer(many=True, read_only=True)
-    
+    unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite', write_only=True)
+    intitule = serializers.CharField(read_only=True)
     class Meta:
         model = LigneDevis
         fields = [
-            'id', 'service', 'service_id', 'activity', 'activity_id',
+            'id', 'type_ligne', 'service', 'service_id', 'activity', 'activity_id',
+            'frais_category', 'frais_category_id', 'ligne_frais', 'ligne_frais_id',
             'description', 'quantite', 'unite', 'unite_id',
-            'prix_unitaire_ht', 'montant_ht', 'intervenants',
-            'created_at', 'updated_at'
+            'prix_unitaire_ht', 'montant_ht', 'intitule',
+            'created_at', 'updated_at', 'type_frais'
         ]
-        read_only_fields = ['id', 'prix_unitaire_ht', 'montant_ht', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'montant_ht', 'created_at', 'updated_at', 'intitule']
+    def validate(self, data):
+        type_ligne = data.get('type_ligne')
+        if type_ligne == 'prestation':
+            if not data.get('service') and not data.get('service_id'):
+                raise serializers.ValidationError("Service est requis pour une ligne de prestation")
+            if not data.get('activity') and not data.get('activity_id'):
+                raise serializers.ValidationError("Activity est requis pour une ligne de prestation")
+            if data.get('frais_category') or data.get('frais_category_id') or data.get('ligne_frais') or data.get('ligne_frais_id'):
+                raise serializers.ValidationError("Aucun champ de frais ne doit être défini pour une ligne de prestation")
+        elif type_ligne == 'frais':
+            if not data.get('ligne_frais') and not data.get('ligne_frais_id'):
+                raise serializers.ValidationError("LigneFrais est requis pour une ligne de frais")
+            if data.get('service') or data.get('service_id') or data.get('activity') or data.get('activity_id'):
+                raise serializers.ValidationError("Aucun champ de prestation ne doit être défini pour une ligne de frais")
+        else:
+            raise serializers.ValidationError("type_ligne doit être 'prestation' ou 'frais'")
+        return data
 
 
 class DevisSerializer(serializers.ModelSerializer):
@@ -106,30 +110,34 @@ class DevisCreateSerializer(serializers.ModelSerializer):
 
 
 class LigneDevisCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour la création de lignes de devis"""
-    
-    devis_id = serializers.IntegerField(write_only=True, required=False)
-    
-    service_id = serializers.PrimaryKeyRelatedField(
-        queryset=Service.objects.all(),
-        source='service'
-    )
-    
-    activity_id = serializers.PrimaryKeyRelatedField(
-        queryset=Activity.objects.all(),
-        source='activity'
-    )
-    
-    unite_id = serializers.PrimaryKeyRelatedField(
-        queryset=UniteStandard.objects.all(),
-        source='unite'
-    )
-    
+    service_id = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), source='service', required=False, allow_null=True)
+    activity_id = serializers.PrimaryKeyRelatedField(queryset=Activity.objects.all(), source='activity', required=False, allow_null=True)
+    frais_category_id = serializers.PrimaryKeyRelatedField(queryset=FraisCategory.objects.all(), source='frais_category', required=False, allow_null=True)
+    ligne_frais_id = serializers.PrimaryKeyRelatedField(queryset=LigneFrais.objects.all(), source='ligne_frais', required=False, allow_null=True)
+    unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite')
     class Meta:
         model = LigneDevis
         fields = [
-            'devis_id', 'service_id', 'activity_id', 'description', 'quantite', 'unite_id'
+            'devis', 'type_ligne', 'service_id', 'activity_id', 'frais_category_id', 'ligne_frais_id',
+            'description', 'quantite', 'unite_id', 'prix_unitaire_ht'
         ]
+    def validate(self, data):
+        type_ligne = data.get('type_ligne')
+        if type_ligne == 'prestation':
+            if not data.get('service') and not data.get('service_id'):
+                raise serializers.ValidationError("Service est requis pour une ligne de prestation")
+            if not data.get('activity') and not data.get('activity_id'):
+                raise serializers.ValidationError("Activity est requis pour une ligne de prestation")
+            if data.get('frais_category') or data.get('frais_category_id') or data.get('ligne_frais') or data.get('ligne_frais_id'):
+                raise serializers.ValidationError("Aucun champ de frais ne doit être défini pour une ligne de prestation")
+        elif type_ligne == 'frais':
+            if not data.get('ligne_frais') and not data.get('ligne_frais_id'):
+                raise serializers.ValidationError("LigneFrais est requis pour une ligne de frais")
+            if data.get('service') or data.get('service_id') or data.get('activity') or data.get('activity_id'):
+                raise serializers.ValidationError("Aucun champ de prestation ne doit être défini pour une ligne de frais")
+        else:
+            raise serializers.ValidationError("type_ligne doit être 'prestation' ou 'frais'")
+        return data
 
 
 class LigneDevisIntervenantCreateSerializer(serializers.ModelSerializer):
