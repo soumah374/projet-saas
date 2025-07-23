@@ -293,7 +293,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     }, {});
 
                     Object.entries(groupedPrestations).forEach(([serviceName, lines]: [string, any]) => {
-                                             // En-tête de section pour les prestations
+                      // En-tête de section pour les prestations
                        rows.push(
                          <tr key={`header-prestation-${serviceName}`} style={{ backgroundColor: '#f7fafc' }}>
                            <td 
@@ -311,8 +311,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                            </td>
                          </tr>
                        );
-
-                                             // Lignes de prestations
+                       // Lignes de prestations
                        lines.forEach((ligne: any) => {
                          rows.push(
                            <tr key={ligne.id}>

@@ -142,9 +142,9 @@ class ClientProfile(models.Model):
     ]
     
     # Informations de base
-    nom = models.CharField(max_length=100)
-    prenom = models.CharField(max_length=100)
-    email = models.EmailField(unique=True)
+    nom = models.CharField(max_length=100, blank=True)
+    prenom = models.CharField(max_length=100, blank=True)
+    email = models.EmailField(unique=True, blank=True)
     telephone = models.CharField(max_length=20, blank=True)
     
     # Type et statut

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { clientCategoriesAPI } from '@/lib/api';
+import { toast } from 'sonner';
 import type { ClientProfile, ClientCreateData } from '@/hooks/use-clients';
 import type { ClientCategory, PaginatedResponse } from '@/lib/types';
 
@@ -125,6 +126,18 @@ export function CreateEditClientModal({
   };
 
   const handleSave = async () => {
+    // Validation pour les personnes physiques
+    if (form.type_client === 'personne_physique') {
+      if (!form.prenom?.trim()) {
+        toast.error('Le prénom est obligatoire pour une personne physique');
+        return;
+      }
+      if (!form.nom?.trim()) {
+        toast.error('Le nom est obligatoire pour une personne physique');
+        return;
+      }
+    }
+
     const payload: ClientCreateData = {
       nom: form.nom,
       prenom: form.prenom,
@@ -158,56 +171,61 @@ export function CreateEditClientModal({
           <DialogTitle>{client ? 'Modifier' : 'Ajouter'} un client</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Informations de base */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium">Prénom</Label>
-              <Input name="prenom" placeholder="Prénom" value={form.prenom} onChange={handleChange} required />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Nom</Label>
-              <Input name="nom" placeholder="Nom" value={form.nom} onChange={handleChange} required />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium">Email</Label>
-              <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} required />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Téléphone</Label>
-              <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label className="text-sm font-medium">Type client</Label>
-              <Select value={form.type_client} onValueChange={(value) => handleSelectChange('type_client', value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="personne_physique">Personne physique</SelectItem>
-                  <SelectItem value="personne_morale">Personne morale</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Statut commercial</Label>
-              <Select value={form.statut_commercial} onValueChange={(value) => handleSelectChange('statut_commercial', value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="prospect">Prospect</SelectItem>
-                  <SelectItem value="actif">Actif</SelectItem>
-                  <SelectItem value="inactif">Inactif</SelectItem>
-                  <SelectItem value="bloque">Bloqué</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label className="text-sm font-medium">Type client</Label>
+            <Select value={form.type_client} onValueChange={(value) => handleSelectChange('type_client', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="personne_physique">Personne physique</SelectItem>
+                <SelectItem value="personne_morale">Personne morale</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Statut commercial</Label>
+            <Select value={form.statut_commercial} onValueChange={(value) => handleSelectChange('statut_commercial', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="prospect">Prospect</SelectItem>
+                <SelectItem value="actif">Actif</SelectItem>
+                <SelectItem value="inactif">Inactif</SelectItem>
+                <SelectItem value="bloque">Bloqué</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+          {/* Informations de base */}
+          {form.type_client === 'personne_physique' && (
+            <> 
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Prénom *</Label>
+                  <Input name="prenom" placeholder="Prénom" value={form.prenom} onChange={handleChange} required />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Nom *</Label>
+                  <Input name="nom" placeholder="Nom" value={form.nom} onChange={handleChange} required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium">Email</Label>
+                  <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Téléphone</Label>
+                  <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
+                </div>
+              </div>
+            </>
+          )}
           {/* Catégorie pour personne morale uniquement */}
           {form.type_client === 'personne_morale' && (
             <div>
