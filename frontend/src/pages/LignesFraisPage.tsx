@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -25,8 +25,8 @@ import {
   useDeleteLigneFrais 
 } from '../hooks/use-lignes-frais';
 import { useFraisCategories } from '../hooks/use-frais-categories';
-import { LigneFrais, LigneFraisCreateData, LigneFraisUpdateData, LigneFraisList } from '../lib/types';
-import { Search, Plus, Edit, Trash2, X, Filter, RotateCcw } from 'lucide-react';
+import { LigneFraisCreateData, LigneFraisList } from '../lib/types';
+import { Search, Plus, Edit, Trash2, X, RotateCcw } from 'lucide-react';
 
 const TYPE_FRAIS_OPTIONS = [
   { value: 'rh', label: 'Budget RH mobilisé' },
@@ -44,7 +44,7 @@ const LignesFraisPage: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(20);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingLigne, setEditingLigne] = useState<LigneFraisList | null>(null);
   const [deletingLigne, setDeletingLigne] = useState<LigneFraisList | null>(null);

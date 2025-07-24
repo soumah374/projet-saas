@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { DateInput } from '@/components/ui/DateInput';
+import { ClientAutocomplete } from '@/components/ui/ClientAutocomplete';
 import { 
   useCreateDevisAvecLignes,
   useActivitesParService,
@@ -17,7 +18,6 @@ import {
   type LigneDevis,
   type LigneDevisIntervenant
 } from '@/hooks/use-devis';
-import { useClients } from '@/hooks/use-clients';
 import { useServices } from '@/hooks/use-services';
 import { useUnitesStandards } from '@/hooks/use-unites';
 import { useFraisCategories } from '@/hooks/use-frais-categories';
@@ -80,7 +80,6 @@ export function DevisCreatePage() {
   // Hooks
   const createDevisWithLignesMutation = useCreateDevisAvecLignes();
   
-  const { data: clientsData } = useClients({ page_size: 1000 });
   const { data: servicesData } = useServices({ page_size: 1000 });
   const { data: unitesData } = useUnitesStandards({ page_size: 1000, is_active: true });
   const { data: activitesData, refetch: refetchActivites, isLoading: isLoadingActivites } = useActivitesParService(
@@ -97,7 +96,6 @@ export function DevisCreatePage() {
       ? (lignesFraisRaw as any).results
       : [];
 
-  const clients = clientsData?.results || [];
   const services = servicesData?.results || [];
   const unites = unitesData?.results || [];
   const activites = activitesData || [];
@@ -130,29 +128,6 @@ export function DevisCreatePage() {
   const handleLigneChange = (field: keyof LigneForm, value: string) => {
     setCurrentLigne({ ...currentLigne, [field]: value });
   };
-
-  // Réinitialiser l'activité et les intervenants quand le service change
-  useEffect(() => {
-    if (currentLigne.type_ligne === 'prestation' && currentLigne.service_id) {
-      setCurrentLigne(prev => ({
-        ...prev,
-        activity_id: '',
-        intervenants: []
-      }));
-      refetchActivites();
-    }
-  }, [currentLigne.type_ligne, currentLigne.service_id, refetchActivites]);
-
-  // Réinitialiser les intervenants quand l'activité change
-  useEffect(() => {
-    if (currentLigne.type_ligne === 'prestation' && currentLigne.activity_id) {
-      setCurrentLigne(prev => ({
-        ...prev,
-        intervenants: []
-      }));
-      refetchIntervenants();
-    }
-  }, [currentLigne.type_ligne, currentLigne.activity_id, refetchIntervenants]);
 
   const handleIntervenantChange = (index: number, field: keyof IntervenantForm, value: string) => {
     const newIntervenants = [...currentLigne.intervenants];
@@ -266,7 +241,11 @@ export function DevisCreatePage() {
   };
 
   const handleSave = async () => {
-    if (!form.client_id || !form.date_validite) {
+    if (!form.client_id) {
+      toast.error('Veuillez sélectionner un client');
+      return;
+    }
+    if (!form.date_validite) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -356,18 +335,11 @@ export function DevisCreatePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label className="text-sm font-medium">Client *</Label>
-              <Select value={form.client_id} onValueChange={(value) => handleSelectChange('client_id', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clients.map(client => (
-                    <SelectItem key={client.id} value={client.id.toString()}>
-                      {client.nom_complet}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <ClientAutocomplete
+                value={form.client_id}
+                onValueChange={(value) => setForm({ ...form, client_id: value })}
+                placeholder="Rechercher un client..."
+              />
             </div>
             <div>
               <Label className="text-sm font-medium">Date de validité *</Label>
@@ -375,19 +347,6 @@ export function DevisCreatePage() {
                 value={form.date_validite}
                 onChange={handleDateChange}
                 required
-              />
-            </div>
-            <div>
-              <Label className="text-sm font-medium">Taux de TVA (%)</Label>
-              <Input 
-                type="number"
-                name="taux_tva"
-                value={form.taux_tva}
-                onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
-                min="0"
-                max="100"
-                step="0.01"
-                placeholder="18.00"
               />
             </div>
             <div>
@@ -405,6 +364,20 @@ export function DevisCreatePage() {
                 </Label>
               </div>
             </div>
+            <div>
+              <Label className="text-sm font-medium">Taux de TVA (%)</Label>
+              <Input 
+                type="number"
+                name="taux_tva"
+                value={form.taux_tva}
+                onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
+                min="0"
+                max="100"
+                step="0.01"
+                placeholder="18.00"
+              />
+            </div>
+            
             <div className="md:col-span-2">
               <Label className="text-sm font-medium">Notes</Label>
               <Textarea 
@@ -733,7 +706,7 @@ export function DevisCreatePage() {
                       />
                     </div>
                     <div>
-                      <Label className="text-sm font-medium">Taux horaire (€) *</Label>
+                      <Label className="text-sm font-medium">Taux horaire (GNF) *</Label>
                       <Input 
                         type="number"
                         step="0.01"
@@ -751,7 +724,7 @@ export function DevisCreatePage() {
                           value={calculateIntervenantMontant(intervenant)}
                           readOnly
                           className="bg-gray-50 text-gray-700"
-                          placeholder="0,00 €"
+                          placeholder="0,00 GNF"
                         />
                         <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
                           <Trash2 size={16}/>

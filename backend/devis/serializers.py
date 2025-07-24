@@ -38,6 +38,7 @@ class LigneDevisSerializer(serializers.ModelSerializer):
     unite = UniteStandardSerializer(read_only=True)
     unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite', write_only=True)
     intitule = serializers.CharField(read_only=True)
+    profile_intervenant = LigneDevisIntervenantSerializer(many=True, read_only=True)
     class Meta:
         model = LigneDevis
         fields = [
@@ -45,9 +46,9 @@ class LigneDevisSerializer(serializers.ModelSerializer):
             'frais_category', 'frais_category_id', 'ligne_frais', 'ligne_frais_id',
             'description', 'quantite', 'unite', 'unite_id',
             'prix_unitaire_ht', 'montant_ht', 'intitule',
-            'created_at', 'updated_at', 'type_frais'
+            'created_at', 'updated_at', 'type_frais', 'profile_intervenant'
         ]
-        read_only_fields = ['id', 'montant_ht', 'created_at', 'updated_at', 'intitule']
+        read_only_fields = ['id', 'montant_ht', 'created_at', 'updated_at', 'intitule', 'profile_intervenant']
     def validate(self, data):
         type_ligne = data.get('type_ligne')
         if type_ligne == 'prestation':

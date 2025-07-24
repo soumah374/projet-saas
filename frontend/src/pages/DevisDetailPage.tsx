@@ -504,6 +504,11 @@ export function DevisDetailPage() {
                       {ligne.type_ligne === 'prestation'
                         ? ligne.activity?.intitule || '—'
                         : ligne.ligne_frais?.description || '—'}
+                        {ligne.type_ligne === 'prestation' && (
+                          <div className="text-sm text-muted-foreground">
+                            Intervenants
+                          </div>
+                        )}
                     </TableCell>
                     <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
@@ -970,10 +975,10 @@ export function DevisDetailPage() {
                     <span className="font-medium">Description :</span>
                     <p className="text-gray-600">{ligneToDelete.description || 'Aucune'}</p>
                   </div>
-                                        <div>
-                        <span className="font-medium">Montant HT :</span>
-                        <p className="text-gray-600">{formatMontant(ligneToDelete.montant_ht)}</p>
-                      </div>
+                  <div>
+                    <span className="font-medium">Montant HT :</span>
+                    <p className="text-gray-600">{formatMontant(ligneToDelete.montant_ht)}</p>
+                  </div>
                 </div>
               </div>
             )}

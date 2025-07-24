@@ -21,7 +21,9 @@ import {
   Euro,
   Ruler,
   Receipt,
-  Currency
+  Currency,
+  DollarSign,
+  Wrench
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -48,7 +50,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
   const location = useLocation();
   const navigate = useNavigate();
   const [openMenus, setOpenMenus] = useState<{[key: string]: boolean}>({ 
-    projets: true, 
+    projets: false, 
     planning: false,
     rapports: false,
     documents: false,
@@ -110,7 +112,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
-                <FolderOpen className="h-5 w-5" /> Prestations
+                <Wrench className="h-5 w-5" /> Prestations
                 <span className="ml-auto">
                   {openMenus.prestations ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </span>
@@ -142,7 +144,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
-                <FolderOpen className="h-5 w-5" /> Frais
+                <DollarSign className="h-5 w-5" /> Frais
                 <span className="ml-auto">
                   {openMenus.frais ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </span>
@@ -194,9 +196,9 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               >
                 <FolderOpen className="h-5 w-5" /> Projets
                 <span className="ml-auto flex items-center gap-2">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                    {/* {statistics?.total_projects || 0} */}
-                  </Badge>
+                  {/* <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    {statistics?.total_projects || 0}
+                  </Badge> */}
                   {openMenus.projets ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </span>
               </button>
@@ -207,9 +209,9 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   </Link>
                   <Link to="/projects?status=en_cours" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">
                     <Clock className="h-4 w-4" /> Mes projets
-                    <Badge variant="secondary" className={getStatusColor("En cours")}>
-                      {/* {statistics?.active_projects || 0} */}
-                    </Badge>
+                    {/* <Badge variant="secondary" className={getStatusColor("En cours")}>
+                      {statistics?.active_projects || 0}
+                    </Badge> */}
                   </Link>
                   {/* <Link to="/projects?status=termine" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">
                     <CheckCircle2 className="h-4 w-4" /> Terminés

@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { LigneFrais, LigneFraisCreateData, LigneFraisList, LigneFraisUpdateData, PaginatedResponse } from '../lib/types';
 
 // Récupérer toutes les lignes de frais avec pagination
-export const useLignesFrais = (page: number = 1, pageSize: number = 10, search?: string, type?: string, category?: string) => {
+export const useLignesFrais = (page: number = 1, pageSize: number = 20, search?: string, type?: string, category?: string) => {
   return useQuery({
     queryKey: ['lignes-frais', page, pageSize, search, type, category],
     queryFn: async (): Promise<PaginatedResponse<LigneFraisList>> => {
@@ -24,7 +24,6 @@ export const useLignesFrais = (page: number = 1, pageSize: number = 10, search?:
         params.category = category;
       }
       
-      console.log('Requesting with params:', params);
       const response = await api.get('/catalog/lignes-frais/', { params });
       return response.data;
     },

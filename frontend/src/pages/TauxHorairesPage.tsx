@@ -301,10 +301,10 @@ export function TauxHorairesPage() {
     <div className="max-w-10xl mx-auto space-y-6">
       {/* Header avec bouton retour */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate(-1)}>
+        {/* <Button variant="ghost" onClick={() => navigate(-1)}>
           <ArrowLeft size={16} className="mr-2" />
           Retour
-        </Button>
+        </Button> */}
         <div>
           <h1 className="text-2xl font-bold">Gestion des Taux Horaires</h1>
         </div>
