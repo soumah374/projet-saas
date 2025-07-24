@@ -44,7 +44,7 @@ const LignesFraisPage: React.FC = () => {
   const [selectedType, setSelectedType] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingLigne, setEditingLigne] = useState<LigneFraisList | null>(null);
   const [deletingLigne, setDeletingLigne] = useState<LigneFraisList | null>(null);
@@ -71,6 +71,11 @@ const LignesFraisPage: React.FC = () => {
   const lignes = lignesData?.results || [];
   const totalCount = lignesData?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Reset to first page when page size changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [pageSize]);
 
   // Debounce pour la recherche
   React.useEffect(() => {
@@ -327,8 +332,45 @@ const LignesFraisPage: React.FC = () => {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="mt-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-4">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>Affichage de</span>
+                  <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(parseInt(value))}>
+                    <SelectTrigger className="w-20 h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="20">20</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                      <SelectItem value="100">100</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span>éléments par page</span>
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {((currentPage - 1) * pageSize) + 1} - {Math.min(currentPage * pageSize, totalCount)} sur {totalCount} lignes
+                </div>
+              </div>
+              
               <Pagination>
                 <PaginationContent>
+                  {/* Première page */}
+                  <PaginationItem>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(1);
+                      }}
+                      className={currentPage <= 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      aria-label="Aller à la première page"
+                    >
+                      <span className="text-sm">«</span>
+                    </PaginationLink>
+                  </PaginationItem>
+                  
+                  {/* Page précédente */}
                   <PaginationItem>
                     <PaginationPrevious 
                       href="#"
@@ -342,6 +384,7 @@ const LignesFraisPage: React.FC = () => {
                     />
                   </PaginationItem>
                   
+                  {/* Numéros de pages */}
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                     let pageNum;
                     if (totalPages <= 5) {
@@ -371,6 +414,7 @@ const LignesFraisPage: React.FC = () => {
                     );
                   })}
                   
+                  {/* Page suivante */}
                   <PaginationItem>
                     <PaginationNext 
                       href="#"
@@ -383,12 +427,23 @@ const LignesFraisPage: React.FC = () => {
                       className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                     />
                   </PaginationItem>
+                  
+                  {/* Dernière page */}
+                  <PaginationItem>
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(totalPages);
+                      }}
+                      className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                      aria-label="Aller à la dernière page"
+                    >
+                      <span className="text-sm">»</span>
+                    </PaginationLink>
+                  </PaginationItem>
                 </PaginationContent>
               </Pagination>
-              
-              <div className="text-center text-sm text-muted-foreground mt-2">
-                Page {currentPage} sur {totalPages} • {totalCount} lignes au total
-              </div>
             </div>
           )}
         </CardContent>

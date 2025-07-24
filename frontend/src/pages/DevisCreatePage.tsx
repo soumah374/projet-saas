@@ -38,7 +38,6 @@ interface LigneForm {
   prix_unitaire?: string;
   montant?: string;
   description?: string;
-  // Pour l'affichage
   service_name?: string;
   activity_intitule?: string;
   unite_intitule?: string;
@@ -76,7 +75,6 @@ export function DevisCreatePage() {
     type_frais: 'standard',
   });
 
-  // États pour la validation
   const [errors, setErrors] = useState<{
     client_id?: string;
     date_validite?: string;
