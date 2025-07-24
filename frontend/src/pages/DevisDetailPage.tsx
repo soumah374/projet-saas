@@ -37,6 +37,7 @@ import { formatDate, formatMontant, formatMontantPDF } from '@/lib/formatters';
 import { PDFExport } from '@/components/PDFExport';
 import { useFraisCategories } from '@/hooks/use-frais-categories';
 import { useLignesFraisByCategory } from '@/hooks/use-lignes-frais';
+import { DevisDetailModals } from '@/components/devis/DevisDetailModals';
 import type { LigneFrais } from '@/lib/types';
 
 interface LigneForm {
@@ -71,6 +72,9 @@ export function DevisDetailPage() {
   const [form, setForm] = useState<any>({});
   const [dateValidite, setDateValidite] = useState<Date | undefined>(undefined);
   const [pdfExportOpen, setPdfExportOpen] = useState(false);
+  const [envoyerDialogOpen, setEnvoyerDialogOpen] = useState(false);
+  const [accepterDialogOpen, setAccepterDialogOpen] = useState(false);
+  const [refuserDialogOpen, setRefuserDialogOpen] = useState(false);
   const [currentLigne, setCurrentLigne] = useState<LigneForm>({
     type_ligne: '',
     type_frais: 'standard',
@@ -173,24 +177,39 @@ export function DevisDetailPage() {
   };
 
   const handleEnvoyer = async () => {
+    setEnvoyerDialogOpen(true);
+  };
+
+  const handleAccepter = async () => {
+    setAccepterDialogOpen(true);
+  };
+
+  const handleConfirmEnvoyer = async () => {
     try {
       await envoyerDevisMutation.mutateAsync(devisId);
+      setEnvoyerDialogOpen(false);
     } catch (err) {
       // Error handled by hook
     }
   };
 
-  const handleAccepter = async () => {
+  const handleConfirmAccepter = async () => {
     try {
       await accepterDevisMutation.mutateAsync(devisId);
+      setAccepterDialogOpen(false);
     } catch (err) {
       // Error handled by hook
     }
   };
 
   const handleRefuser = async () => {
+    setRefuserDialogOpen(true);
+  };
+
+  const handleConfirmRefuser = async () => {
     try {
       await refuserDevisMutation.mutateAsync(devisId);
+      setRefuserDialogOpen(false);
     } catch (err) {
       // Error handled by hook
     }
@@ -1014,6 +1033,30 @@ export function DevisDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modals de confirmation */}
+      <DevisDetailModals
+        // Modal d'envoi
+        envoyerDialogOpen={envoyerDialogOpen}
+        setEnvoyerDialogOpen={setEnvoyerDialogOpen}
+        onEnvoyer={handleConfirmEnvoyer}
+        isEnvoyerPending={envoyerDevisMutation.isPending}
+        
+        // Modal d'acceptation
+        accepterDialogOpen={accepterDialogOpen}
+        setAccepterDialogOpen={setAccepterDialogOpen}
+        onAccepter={handleConfirmAccepter}
+        isAccepterPending={accepterDevisMutation.isPending}
+        
+        // Modal de refus
+        refuserDialogOpen={refuserDialogOpen}
+        setRefuserDialogOpen={setRefuserDialogOpen}
+        onRefuser={handleConfirmRefuser}
+        isRefuserPending={refuserDevisMutation.isPending}
+        
+        // Données du devis
+        devis={devis}
+      />
 
       {/* Composant d'export PDF */}
       {pdfExportOpen && devis && (

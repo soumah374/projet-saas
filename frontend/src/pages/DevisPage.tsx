@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Plus, Edit, Trash2, Download, Eye, Send, Check, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { ClientFilter } from '@/components/ui/ClientFilter';
+import { DevisModals } from '@/components/devis/DevisModals';
 import { 
   useDevis, 
   useCreateDevis, 
@@ -36,6 +36,10 @@ export function DevisPage() {
   const [clientFilter, setClientFilter] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [devisToDelete, setDevisToDelete] = useState<Devis | null>(null);
+  const [envoyerDialogOpen, setEnvoyerDialogOpen] = useState(false);
+  const [devisToEnvoyer, setDevisToEnvoyer] = useState<Devis | null>(null);
+  const [accepterDialogOpen, setAccepterDialogOpen] = useState(false);
+  const [devisToAccepter, setDevisToAccepter] = useState<Devis | null>(null);
 
   // Hooks pour les opérations CRUD
   const createDevisMutation = useCreateDevis();
@@ -184,17 +188,35 @@ export function DevisPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleEnvoyer = async (devis: Devis) => {
+  const openEnvoyerDialog = (devis: Devis) => {
+    setDevisToEnvoyer(devis);
+    setEnvoyerDialogOpen(true);
+  };
+
+  const openAccepterDialog = (devis: Devis) => {
+    setDevisToAccepter(devis);
+    setAccepterDialogOpen(true);
+  };
+
+  const handleEnvoyer = async () => {
+    if (!devisToEnvoyer) return;
+    
     try {
-      await envoyerDevisMutation.mutateAsync(devis.id);
+      await envoyerDevisMutation.mutateAsync(devisToEnvoyer.id);
+      setEnvoyerDialogOpen(false);
+      setDevisToEnvoyer(null);
     } catch (err) {
       // Les erreurs sont gérées par les hooks
     }
   };
 
-  const handleAccepter = async (devis: Devis) => {
+  const handleAccepter = async () => {
+    if (!devisToAccepter) return;
+    
     try {
-      await accepterDevisMutation.mutateAsync(devis.id);
+      await accepterDevisMutation.mutateAsync(devisToAccepter.id);
+      setAccepterDialogOpen(false);
+      setDevisToAccepter(null);
     } catch (err) {
       // Les erreurs sont gérées par les hooks
     }
@@ -412,17 +434,14 @@ export function DevisPage() {
                           </Button>
                           {devis.statut === 'brouillon' && (
                             <>
-                              <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(devis)}>
-                                <Edit size={16}/>
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => handleEnvoyer(devis)}>
+                              <Button size="icon" variant="ghost" onClick={() => openEnvoyerDialog(devis)}>
                                 <Send size={16}/>
                               </Button>
                             </>
                           )}
                           {devis.statut === 'envoye' && (
                             <>
-                              <Button size="icon" variant="ghost" onClick={() => handleAccepter(devis)}>
+                              <Button size="icon" variant="ghost" onClick={() => openAccepterDialog(devis)}>
                                 <Check size={16}/>
                               </Button>
                               <Button size="icon" variant="ghost" onClick={() => handleRefuser(devis)}>
@@ -536,75 +555,29 @@ export function DevisPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog de suppression de devis */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Supprimer le devis</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Êtes-vous sûr de vouloir supprimer ce devis ?
-            </p>
-            {devisToDelete && (
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="grid grid-cols-1 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium">Numéro :</span>
-                    <p className="text-gray-600">{devisToDelete.numero}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Client :</span>
-                    <p className="text-gray-600">{devisToDelete.client.nom_complet}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Date de création :</span>
-                    <p className="text-gray-600">{new Date(devisToDelete.date_creation).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Date de validité :</span>
-                    <p className="text-gray-600">{new Date(devisToDelete.date_validite).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Statut :</span>
-                    <div className="mt-1">
-                      {getStatutBadge(devisToDelete.statut)}
-                    </div>
-                  </div>
-                  <div>
-                    <span className="font-medium">Montants :</span>
-                    <div className="mt-1 space-y-1 text-xs">
-                      <div>HT : {formatMontant(devisToDelete.montant_ht)}</div>
-                      <div>TVA : {formatMontant(devisToDelete.montant_tva)}</div>
-                      <div>TTC : {formatMontant(devisToDelete.montant_ttc)}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <p className="text-sm text-red-600">
-              Cette action est irréversible et supprimera également toutes les lignes de devis et intervenants associés.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setDeleteDialogOpen(false);
-                setDevisToDelete(null);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => handleDelete(devisToDelete!)}
-            >
-              Supprimer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modals de confirmation */}
+      <DevisModals
+        // Modal de suppression
+        deleteDialogOpen={deleteDialogOpen}
+        setDeleteDialogOpen={setDeleteDialogOpen}
+        devisToDelete={devisToDelete}
+        setDevisToDelete={setDevisToDelete}
+        onDelete={() => handleDelete(devisToDelete!)}
+        
+        // Modal d'envoi
+        envoyerDialogOpen={envoyerDialogOpen}
+        setEnvoyerDialogOpen={setEnvoyerDialogOpen}
+        devisToEnvoyer={devisToEnvoyer}
+        setDevisToEnvoyer={setDevisToEnvoyer}
+        onEnvoyer={handleEnvoyer}
+        
+        // Modal d'acceptation
+        accepterDialogOpen={accepterDialogOpen}
+        setAccepterDialogOpen={setAccepterDialogOpen}
+        devisToAccepter={devisToAccepter}
+        setDevisToAccepter={setDevisToAccepter}
+        onAccepter={handleAccepter}
+      />
     </div>
   );
 } 
