@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { DateInput } from '@/components/ui/DateInput';
 import { ClientAutocomplete } from '@/components/ui/ClientAutocomplete';
@@ -76,6 +75,25 @@ export function DevisCreatePage() {
     prix_unitaire: '',
     type_frais: 'standard',
   });
+
+  // États pour la validation
+  const [errors, setErrors] = useState<{
+    client_id?: string;
+    date_validite?: string;
+    lignes?: string;
+  }>({});
+
+  const [ligneErrors, setLigneErrors] = useState<{
+    type_ligne?: string;
+    service_id?: string;
+    activity_id?: string;
+    frais_category_id?: string;
+    ligne_frais_id?: string;
+    unite_id?: string;
+    prix_unitaire?: string;
+    intervenants?: string;
+    type_frais?: string;
+  }>({});
 
   // Hooks
   const createDevisWithLignesMutation = useCreateDevisAvecLignes();
@@ -174,20 +192,11 @@ export function DevisCreatePage() {
   };
 
   const addLigne = () => {
-    if (currentLigne.type_ligne === 'prestation') {
-      if (!currentLigne.service_id || !currentLigne.activity_id || !currentLigne.unite_id) {
-        toast.error('Veuillez remplir tous les champs obligatoires');
-        return;
-      }
-      if (currentLigne.intervenants.length === 0) {
-        toast.error('Veuillez ajouter au moins un intervenant');
-        return;
-      }
-    } else if (currentLigne.type_ligne === 'frais') {
-      if (!currentLigne.frais_category_id || !currentLigne.ligne_frais_id || !currentLigne.unite_id || !currentLigne.prix_unitaire) {
-        toast.error('Veuillez remplir tous les champs obligatoires pour la ligne de frais');
-        return;
-      }
+    clearErrors();
+    
+    if (!validateCurrentLigne()) {
+      toast.error('Veuillez corriger les erreurs avant d\'ajouter la ligne');
+      return;
     }
 
     // Calcul du prix unitaire et du montant
@@ -240,19 +249,83 @@ export function DevisCreatePage() {
     setLignes(lignes.filter((_, i) => i !== index));
   };
 
-  const handleSave = async () => {
+  // Fonctions de validation
+  const validateForm = () => {
+    const newErrors: typeof errors = {};
+    
     if (!form.client_id) {
-      toast.error('Veuillez sélectionner un client');
-      return;
+      newErrors.client_id = 'Le client est obligatoire';
     }
+    
     if (!form.date_validite) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
-      return;
+      newErrors.date_validite = 'La date de validité est obligatoire';
     }
+    
     if (lignes.length === 0) {
-      toast.error('Veuillez ajouter au moins une ligne');
+      newErrors.lignes = 'Au moins une ligne est obligatoire';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateCurrentLigne = () => {
+    const newLigneErrors: typeof ligneErrors = {};
+    
+    if (!currentLigne.type_ligne) {
+      newLigneErrors.type_ligne = 'Le type de ligne est obligatoire';
+    }
+    
+    if (currentLigne.type_ligne === 'prestation') {
+      if (!currentLigne.service_id) {
+        newLigneErrors.service_id = 'Le service est obligatoire';
+      }
+      if (!currentLigne.activity_id) {
+        newLigneErrors.activity_id = "L'activité est obligatoire";
+      }
+      if (!currentLigne.unite_id) {
+        newLigneErrors.unite_id = "L'unité est obligatoire";
+      }
+      if (currentLigne.intervenants.length === 0) {
+        newLigneErrors.intervenants = 'Au moins un intervenant est obligatoire';
+      }
+    }
+    
+    if (currentLigne.type_ligne === 'frais') {
+      if (!currentLigne.type_frais) {
+        newLigneErrors.type_frais = 'Le type de frais est obligatoire';
+      }
+      if (!currentLigne.frais_category_id) {
+        newLigneErrors.frais_category_id = 'La catégorie de frais est obligatoire';
+      }
+      if (!currentLigne.ligne_frais_id) {
+        newLigneErrors.ligne_frais_id = 'La ligne de frais est obligatoire';
+      }
+      if (!currentLigne.unite_id) {
+        newLigneErrors.unite_id = "L'unité est obligatoire";
+      }
+      if (!currentLigne.prix_unitaire) {
+        newLigneErrors.prix_unitaire = 'Le prix unitaire est obligatoire';
+      }
+    }
+    
+    setLigneErrors(newLigneErrors);
+    return Object.keys(newLigneErrors).length === 0;
+  };
+
+  const clearErrors = () => {
+    setErrors({});
+    setLigneErrors({});
+  };
+
+  const handleSave = async () => {
+    clearErrors();
+    
+    if (!validateForm()) {
+      toast.error('Veuillez corriger les erreurs avant de continuer');
       return;
     }
+    
     try {
       // Préparer les données des lignes avec leurs intervenants
       const lignesData = lignes.map(ligne => {
@@ -334,20 +407,32 @@ export function DevisCreatePage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm font-medium">Client *</Label>
+              <Label className={`text-sm font-medium ${errors.client_id ? 'text-red-600' : ''}`}>
+                Client *
+              </Label>
               <ClientAutocomplete
                 value={form.client_id}
                 onValueChange={(value) => setForm({ ...form, client_id: value })}
                 placeholder="Rechercher un client..."
+                className={errors.client_id ? 'border-red-500 focus:border-red-500 w-full' : form.client_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
               />
+              {errors.client_id && (
+                <p className="text-sm text-red-600 mt-1">{errors.client_id}</p>
+              )}
             </div>
             <div>
-              <Label className="text-sm font-medium">Date de validité *</Label>
+              <Label className={`text-sm font-medium ${errors.date_validite ? 'text-red-600' : ''}`}>
+                Date de validité *
+              </Label>
               <DateInput 
                 value={form.date_validite}
                 onChange={handleDateChange}
                 required
+                className={errors.date_validite ? 'border-red-500 focus:border-red-500' : form.date_validite ? 'border-green-500 bg-green-50' : ''}
               />
+              {errors.date_validite && (
+                <p className="text-sm text-red-600 mt-1">{errors.date_validite}</p>
+              )}
             </div>
             <div>
               <Label className="text-sm font-medium">Appliquer la TVA</Label>
@@ -406,6 +491,13 @@ export function DevisCreatePage() {
           <CardTitle>Lignes de devis</CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Affichage de l'erreur pour les lignes */}
+          {errors.lignes && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{errors.lignes}</p>
+            </div>
+          )}
+
           {/* Lignes existantes */}
           {lignes.length > 0 && (
             <div className="mb-6">
@@ -461,9 +553,11 @@ export function DevisCreatePage() {
             <h3 className="text-lg font-medium">Nouvelle ligne</h3>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-4">
-                <Label className="text-sm font-medium">Type de ligne *</Label>
+                <Label className={`text-sm font-medium ${ligneErrors.type_ligne ? 'text-red-600' : ''}`}>
+                  Type de ligne *
+                </Label>
                 <Select value={currentLigne.type_ligne} onValueChange={(value) => handleLigneChange('type_ligne', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className={ligneErrors.type_ligne ? 'border-red-500 focus:border-red-500' : currentLigne.type_ligne ? 'border-green-500 bg-green-50' : ''}>
                     <SelectValue placeholder="Sélectionner un type de ligne" />
                   </SelectTrigger>
                   <SelectContent>
@@ -471,7 +565,10 @@ export function DevisCreatePage() {
                     <SelectItem value="frais">Frais</SelectItem>
                   </SelectContent>
                 </Select>
-                {!currentLigne.type_ligne && (
+                {ligneErrors.type_ligne && (
+                  <p className="text-sm text-red-600 mt-1">{ligneErrors.type_ligne}</p>
+                )}
+                {!currentLigne.type_ligne && !ligneErrors.type_ligne && (
                   <p className="text-sm text-muted-foreground mt-1">
                     💡 Choisissez le type de ligne pour afficher les champs correspondants
                   </p>
@@ -480,9 +577,11 @@ export function DevisCreatePage() {
               {currentLigne.type_ligne === 'prestation' && (
                 <>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Service *</Label>
+                    <Label className={`text-sm font-medium ${ligneErrors.service_id ? 'text-red-600' : ''}`}>
+                      Service *
+                    </Label>
                     <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={ligneErrors.service_id ? 'border-red-500 focus:border-red-500' : currentLigne.service_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner un service" />
                       </SelectTrigger>
                       <SelectContent>
@@ -493,11 +592,16 @@ export function DevisCreatePage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {ligneErrors.service_id && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.service_id}</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Activité *</Label>
+                    <Label className={`text-sm font-medium ${ligneErrors.activity_id ? 'text-red-600' : ''}`}>
+                      Activité *
+                    </Label>
                     <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={ligneErrors.activity_id ? 'border-red-500 focus:border-red-500' : currentLigne.activity_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder={
                           !currentLigne.service_id 
                             ? "Sélectionnez d'abord un service" 
@@ -530,9 +634,11 @@ export function DevisCreatePage() {
                     </Select>
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Unité *</Label>
+                    <Label className={`text-sm font-medium ${ligneErrors.unite_id ? 'text-red-600' : ''}`}>
+                      Unité *
+                    </Label>
                     <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={ligneErrors.unite_id ? 'border-red-500 focus:border-red-500' : currentLigne.unite_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner une unité" />
                       </SelectTrigger>
                       <SelectContent>
@@ -543,6 +649,9 @@ export function DevisCreatePage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {ligneErrors.unite_id && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.unite_id}</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Quantité</Label>
@@ -552,16 +661,19 @@ export function DevisCreatePage() {
                       value={currentLigne.quantite} 
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
+                      className={currentLigne.quantite && parseFloat(currentLigne.quantite) > 0 ? 'border-green-500 bg-green-50' : ''}
                     />
                   </div>
                 </>
               )}
               {currentLigne.type_ligne === 'frais' && (
                 <>
-                  <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Type de frais *</Label>
+                  <div className="md:col-span-1/2">
+                    <Label className={`text-sm font-medium ${ligneErrors.type_frais ? 'text-red-600' : ''}`}>
+                      Type de frais *
+                    </Label>
                     <Select value={currentLigne.type_frais || ''} onValueChange={(value) => handleLigneChange('type_frais', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={ligneErrors.type_frais ? 'border-red-500 focus:border-red-500' : currentLigne.type_frais ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner un type de frais" />
                       </SelectTrigger>
                       <SelectContent>
@@ -570,11 +682,16 @@ export function DevisCreatePage() {
                         <SelectItem value="offert">Offert</SelectItem>
                       </SelectContent>
                     </Select>
+                    {ligneErrors.type_frais && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.type_frais}</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Catégorie de frais *</Label>
+                    <Label className={`text-sm font-medium ${ligneErrors.frais_category_id ? 'text-red-600' : ''}`}>
+                      Catégorie de frais *
+                    </Label>
                     <Select value={currentLigne.frais_category_id} onValueChange={(value) => handleLigneChange('frais_category_id', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={ligneErrors.frais_category_id ? 'border-red-500 focus:border-red-500' : currentLigne.frais_category_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner une catégorie de frais" />
                       </SelectTrigger>
                       <SelectContent>
@@ -587,11 +704,16 @@ export function DevisCreatePage() {
                         )}
                       </SelectContent>
                     </Select>
+                    {ligneErrors.frais_category_id && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.frais_category_id}</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Ligne de frais *</Label>
+                    <Label className={`text-sm font-medium ${ligneErrors.ligne_frais_id ? 'text-red-600' : ''}`}>
+                      Ligne de frais *
+                    </Label>
                     <Select value={currentLigne.ligne_frais_id} onValueChange={(value) => handleLigneChange('ligne_frais_id', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={ligneErrors.ligne_frais_id ? 'border-red-500 focus:border-red-500' : currentLigne.ligne_frais_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner une ligne de frais" />
                       </SelectTrigger>
                       <SelectContent>
@@ -604,16 +726,25 @@ export function DevisCreatePage() {
                         )}
                       </SelectContent>
                     </Select>
+                    {ligneErrors.ligne_frais_id && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.ligne_frais_id}</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Prix unitaire *</Label>
+                    <Label className={`text-sm font-medium ${ligneErrors.prix_unitaire ? 'text-red-600' : ''}`}>
+                      Prix unitaire *
+                    </Label>
                     <Input 
                       type="number"
                       step="0.01"
                       value={currentLigne.prix_unitaire}
                       onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
                       placeholder="0"
+                      className={ligneErrors.prix_unitaire ? 'border-red-500 focus:border-red-500' : currentLigne.prix_unitaire ? 'border-green-500 bg-green-50' : ''}
                     />
+                    {ligneErrors.prix_unitaire && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.prix_unitaire}</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Quantité</Label>
@@ -623,12 +754,15 @@ export function DevisCreatePage() {
                       value={currentLigne.quantite} 
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
+                      className={currentLigne.quantite && parseFloat(currentLigne.quantite) > 0 ? 'border-green-500 bg-green-50' : ''}
                     />
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Unité</Label>
+                    <Label className={`text-sm font-medium ${ligneErrors.unite_id ? 'text-red-600' : ''}`}>
+                      Unité *
+                    </Label>
                     <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={ligneErrors.unite_id ? 'border-red-500 focus:border-red-500' : currentLigne.unite_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner une unité" />
                       </SelectTrigger>
                       <SelectContent>
@@ -639,6 +773,9 @@ export function DevisCreatePage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {ligneErrors.unite_id && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.unite_id}</p>
+                    )}
                   </div>
                 </>
               )}
@@ -647,12 +784,17 @@ export function DevisCreatePage() {
             {currentLigne.type_ligne === 'prestation' && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Intervenants</Label>
+                  <Label className={`text-sm font-medium ${ligneErrors.intervenants ? 'text-red-600' : ''}`}>
+                    Intervenants *
+                  </Label>
                   <Button size="sm" onClick={addIntervenant}>
                     <Plus size={16} className="mr-2" />
                     Ajouter intervenant
                   </Button>
                 </div>
+                {ligneErrors.intervenants && (
+                  <p className="text-sm text-red-600">{ligneErrors.intervenants}</p>
+                )}
                 {currentLigne.intervenants.map((intervenant, index) => (
                   <div key={index} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div>
@@ -661,7 +803,7 @@ export function DevisCreatePage() {
                         value={intervenant.profile_intervenant_id} 
                         onValueChange={(value) => handleIntervenantChange(index, 'profile_intervenant_id', value)}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className={intervenant.profile_intervenant_id ? 'border-green-500 bg-green-50' : ''}>
                           <SelectValue placeholder={
                             !currentLigne.activity_id 
                               ? "Sélectionnez d'abord une activité" 
@@ -701,7 +843,7 @@ export function DevisCreatePage() {
                         value={intervenant.temps_intervenant} 
                         onChange={(e) => handleIntervenantChange(index, 'temps_intervenant', e.target.value)}
                         placeholder="0"
-                        className={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "border-green-200 bg-green-50" : ""}
+                        className={intervenant.temps_intervenant && parseFloat(intervenant.temps_intervenant) > 0 ? 'border-green-500 bg-green-50' : ''}
                         title={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "Valeur pré-remplie automatiquement" : ""}
                       />
                     </div>
@@ -713,7 +855,7 @@ export function DevisCreatePage() {
                         value={intervenant.taux_horaire} 
                         onChange={(e) => handleIntervenantChange(index, 'taux_horaire', e.target.value)}
                         placeholder="0"
-                        className={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "border-green-200 bg-green-50" : ""}
+                        className={intervenant.taux_horaire && parseFloat(intervenant.taux_horaire) > 0 ? 'border-green-500 bg-green-50' : ''}
                         title={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "Valeur pré-remplie automatiquement" : ""}
                       />
                     </div>

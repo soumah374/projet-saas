@@ -20,7 +20,12 @@ import {
   FileText,
   Plus,
   Currency,
-  Trash2
+  Trash2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
@@ -388,6 +393,78 @@ export function ServiceDetailsPage() {
   const [deletingActivity, setDeletingActivity] = useState<Activity | null>(null);
   const [deletingActivityLoading, setDeletingActivityLoading] = useState(false);
 
+  // État pour la recherche d'activités
+  const [activitySearchTerm, setActivitySearchTerm] = useState('');
+
+  // États de pagination pour les activités
+  const [currentActivityPage, setCurrentActivityPage] = useState(1);
+  const [activityPageSize] = useState(10); // 10 activités par page
+
+  // Fonction pour filtrer les activités
+  const filteredActivities = service?.activities?.filter(activity => {
+    if (!activitySearchTerm.trim()) return true;
+    
+    const searchLower = activitySearchTerm.toLowerCase();
+    return (
+      activity.name.toLowerCase().includes(searchLower) ||
+      activity.duree_standard.toString().includes(searchLower) ||
+      activity.activity_profiles?.some(profile => 
+        profile.profile_intervenant.name.toLowerCase().includes(searchLower)
+      ) ||
+      (activity.is_active ? 'active' : 'inactive').includes(searchLower)
+    );
+  }) || [];
+
+  // Calculs de pagination pour les activités
+  const totalActivityPages = Math.ceil(filteredActivities.length / activityPageSize);
+  const startActivityIndex = (currentActivityPage - 1) * activityPageSize;
+  const endActivityIndex = startActivityIndex + activityPageSize;
+  const paginatedActivities = filteredActivities.slice(startActivityIndex, endActivityIndex);
+  const hasActivityPrev = currentActivityPage > 1;
+  const hasActivityNext = currentActivityPage < totalActivityPages;
+
+  // Fonctions de pagination pour les activités
+  const resetActivityPage = () => setCurrentActivityPage(1);
+  
+  const setActivityPageSafely = (page: number) => {
+    const safePage = Math.max(1, page);
+    if (totalActivityPages > 0) {
+      const maxPage = Math.max(1, totalActivityPages);
+      setCurrentActivityPage(Math.min(safePage, maxPage));
+    } else {
+      setCurrentActivityPage(safePage);
+    }
+  };
+
+  const getActivityPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalActivityPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalActivityPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      let start = Math.max(1, currentActivityPage - Math.floor(maxVisiblePages / 2));
+      let end = Math.min(totalActivityPages, start + maxVisiblePages - 1);
+      
+      if (end === totalActivityPages) {
+        start = Math.max(1, end - maxVisiblePages + 1);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
+  };
+
+  // Reset à la première page quand la recherche change
+  useEffect(() => {
+    resetActivityPage();
+  }, [activitySearchTerm]);
+
   const fetchServiceDetails = async () => {
     if (!serviceId) return;
     
@@ -542,6 +619,29 @@ export function ServiceDetailsPage() {
     }
   };
 
+  // Fonction utilitaire pour formater les durées
+  const formatDuration = (hours: number): string => {
+    if (hours === 0) return '0 h';
+    if (Number.isInteger(hours)) return `${hours} h`;
+    return `${hours.toFixed(1)} h`;
+  };
+
+  // Fonction pour calculer la durée totale des activités
+  const calculateTotalDuration = (): string => {
+    if (!service?.activities || service.activities.length === 0) {
+      return '0 h';
+    }
+    
+    const totalDuration = service.activities.reduce((sum, activity) => {
+      const duration = typeof activity.duree_standard === 'number' 
+        ? activity.duree_standard 
+        : parseFloat(activity.duree_standard) || 0;
+      return sum + duration;
+    }, 0);
+    
+    return formatDuration(totalDuration);
+  };
+
   const handleOpenDialog = () => {
     createActivityForm.resetForm();
     setDialogOpen(true);
@@ -644,7 +744,7 @@ export function ServiceDetailsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-8xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -718,7 +818,7 @@ export function ServiceDetailsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Activity className="h-5 w-5" />
-                Activités associées ({service.activities?.length || 0})
+                Activités associées ({filteredActivities.length}/{service.activities?.length || 0})
               </CardTitle>
               <Button onClick={handleOpenDialog} size="sm" className="gap-2">
                 <Plus size={16} />
@@ -726,64 +826,189 @@ export function ServiceDetailsPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              {service.activities && service.activities.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nom</TableHead>
-                      <TableHead>Durée standard</TableHead>
-                      <TableHead>Profils et temps</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {service.activities.map(activity => (
-                      <TableRow key={activity.id}>
-                        <TableCell className="font-medium">{activity.name}</TableCell>
-                        <TableCell>{activity.duree_standard} h</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {activity.activity_profiles?.map(profile => (
-                              <div key={profile.id} className="flex items-center gap-2">
-                                <Badge variant="secondary" className="text-xs">
-                                  {profile.profile_intervenant.name}
-                                </Badge>
-                                <span className="text-xs text-gray-500">
-                                  {profile.temps_intervenant} h
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={activity.is_active ? "default" : "destructive"}>
-                            {activity.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenEditActivityDialog(activity)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenDeleteActivityDialog(activity)}
-                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+              {/* Barre de recherche */}
+              <div className="mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Rechercher une activité..."
+                    value={activitySearchTerm}
+                    onChange={(e) => setActivitySearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                  {activitySearchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActivitySearchTerm('')}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                    >
+                      ×
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {paginatedActivities.length > 0 ? (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nom</TableHead>
+                        <TableHead>Durée standard</TableHead>
+                        <TableHead>Profils et temps</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedActivities.map(activity => (
+                        <TableRow key={activity.id}>
+                          <TableCell className="font-medium">{activity.name}</TableCell>
+                          <TableCell>{activity.duree_standard} h</TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {activity.activity_profiles?.map(profile => (
+                                <div key={profile.id} className="flex items-center gap-2">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {profile.profile_intervenant.name}
+                                  </Badge>
+                                  <span className="text-xs text-gray-500">
+                                    {profile.temps_intervenant} h
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={activity.is_active ? "default" : "destructive"}>
+                              {activity.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenEditActivityDialog(activity)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleOpenDeleteActivityDialog(activity)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+
+                  {/* Pagination */}
+                  {totalActivityPages > 1 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+                      {/* Informations de pagination */}
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>
+                          Page {currentActivityPage} sur {totalActivityPages}
+                        </span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="hidden sm:inline">
+                          {filteredActivities.length} activités au total
+                        </span>
+                      </div>
+
+                      {/* Contrôles de pagination */}
+                      <div className="flex items-center gap-2">
+                        {/* Boutons de navigation rapide */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActivityPageSafely(1)}
+                          disabled={currentActivityPage === 1}
+                          className="hidden sm:flex"
+                        >
+                          <ChevronsLeft size={16} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActivityPageSafely(currentActivityPage - 1)}
+                          disabled={!hasActivityPrev || currentActivityPage === 1}
+                        >
+                          <ChevronLeft size={16} />
+                        </Button>
+
+                        {/* Numéros de page */}
+                        <div className="flex items-center gap-1">
+                          {getActivityPageNumbers().map(pageNum => (
+                            <Button
+                              key={pageNum}
+                              variant={currentActivityPage === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setActivityPageSafely(pageNum)}
+                              className="w-8 h-8 text-xs hidden sm:flex"
+                            >
+                              {pageNum}
+                            </Button>
+                          ))}
+                          {/* Version mobile avec sélecteur */}
+                          <div className="sm:hidden flex items-center gap-2">
+                            <span className="text-sm text-gray-600">Page</span>
+                            <select
+                              value={currentActivityPage}
+                              onChange={(e) => setActivityPageSafely(parseInt(e.target.value))}
+                              className="border rounded px-2 py-1 text-sm"
+                            >
+                              {Array.from({ length: totalActivityPages }, (_, i) => i + 1).map(pageNum => (
+                                <option key={pageNum} value={pageNum}>
+                                  {pageNum}
+                                </option>
+                              ))}
+                            </select>
+                            <span className="text-sm text-gray-600">sur {totalActivityPages}</span>
+                          </div>
+                        </div>
+
+                        {/* Boutons de navigation rapide */}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActivityPageSafely(currentActivityPage + 1)}
+                          disabled={!hasActivityNext || currentActivityPage === totalActivityPages}
+                        >
+                          <ChevronRight size={16} />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setActivityPageSafely(totalActivityPages)}
+                          disabled={currentActivityPage === totalActivityPages}
+                          className="hidden sm:flex"
+                        >
+                          <ChevronsRight size={16} />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : activitySearchTerm ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Search className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>Aucune activité trouvée pour "{activitySearchTerm}"</p>
+                  <Button 
+                    onClick={() => setActivitySearchTerm('')} 
+                    className="mt-4" 
+                    variant="outline"
+                  >
+                    Effacer la recherche
+                  </Button>
+                </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
                   <Activity className="h-12 w-12 mx-auto mb-4 text-gray-300" />
@@ -828,7 +1053,7 @@ export function ServiceDetailsPage() {
                   <span className="text-sm text-gray-600">Durée totale</span>
                 </div>
                 <span className="font-semibold">
-                  {service.activities?.reduce((sum, a) => sum + a.duree_standard, 0) || 0} h
+                  {calculateTotalDuration()}
                 </span>
               </div>
             </CardContent>
@@ -845,7 +1070,7 @@ export function ServiceDetailsPage() {
             </CardHeader>
             <CardContent>
               {tauxHoraires.length > 0 ? (
-                <div className="space-y-3">
+                <div className="max-h-64 overflow-y-auto space-y-3 pr-2">
                   {tauxHoraires.map(taux => (
                     <div key={taux.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
@@ -855,7 +1080,7 @@ export function ServiceDetailsPage() {
                         </Badge>
                       </div>
                       <div className="text-right">
-                        <p className="font-semibold">{taux.taux_heure} GNF/h</p>
+                        <p className="font-semibold">{formatMontant(taux.taux_heure)}/h</p>
                         <Badge variant={taux.is_active ? "default" : "destructive"} className="text-xs">
                           {taux.is_active ? 'Actif' : 'Inactif'}
                         </Badge>

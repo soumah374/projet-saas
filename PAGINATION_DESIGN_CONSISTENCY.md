@@ -11,13 +11,17 @@ La pagination a été standardisée dans toutes les pages de l'application pour 
 1. **`DevisPage.tsx`** - Page de référence
 2. **`LignesFraisPage.tsx`** - Lignes de frais
 3. **`ClientsPage.tsx`** - Clients (récemment mise à jour)
+4. **`TauxHorairesPage.tsx`** - Taux horaires (récemment mise à jour)
+5. **`ServiceDetailsPage.tsx`** - Activités associées (pagination côté client)
+6. **`CategoryDetailsPage.tsx`** - Services associés (pagination côté client)
+7. **`ServicesPage.tsx`** - Services (récemment mise à jour)
+8. **`CategoriesPage.tsx`** - Catégories (récemment mise à jour)
 
 ### 🔄 **Pages à implémenter**
 
 - `ProjectsPage.tsx` - Projets
 - `TeamsPage.tsx` - Équipes
 - `UsersPage.tsx` - Utilisateurs
-- `ServicesPage.tsx` - Services
 - Autres pages avec listes paginées
 
 ## Design standardisé

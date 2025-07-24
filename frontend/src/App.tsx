@@ -33,6 +33,7 @@ import ClientCategoriesPage from './pages/ClientCategoriesPage';
 import FraisCategoriesPage from './pages/FraisCategoriesPage';
 import LignesFraisPage from './pages/LignesFraisPage';
 import { CategoriesPage } from './pages/CategoriesPage';
+import { CategoryDetailsPage } from './pages/CategoryDetailsPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -131,6 +132,11 @@ function App() {
                 <Route path="/categories-services" element={
                   <ProtectedRoute>
                     <CategoriesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/categories-services/:categoryId" element={
+                  <ProtectedRoute>
+                    <CategoryDetailsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/services" element={

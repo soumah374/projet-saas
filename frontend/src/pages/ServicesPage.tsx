@@ -6,10 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { formatMontant } from '@/lib/formatters';
 
 interface Category {
   id: number;
@@ -51,12 +50,13 @@ export function ServicesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
-  const pageSize = 10;
+  const pageSize = 20;
   const [categoryId, setCategoryId] = useState<number | 'other' | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [togglingServices, setTogglingServices] = useState<Set<number>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
+  const [totalItems, setTotalItems] = useState(0);
 
   // Charger toutes les catégories depuis l'API
   useEffect(() => {
@@ -84,6 +84,7 @@ export function ServicesPage() {
       setTotalPages(Math.ceil(data.count / pageSize));
       setHasNext(!!data.next);
       setHasPrev(!!data.previous);
+      setTotalItems(data.count);
     } catch (err) {
       toast.error('Erreur lors du chargement des prestations');
     } finally {
@@ -209,6 +210,41 @@ export function ServicesPage() {
         return newSet;
       });
     }
+  };
+
+  // Fonctions de pagination améliorées
+  const setPageSafely = (page: number) => {
+    const safePage = Math.max(1, page);
+    if (totalPages > 0) {
+      const maxPage = Math.max(1, totalPages);
+      setCurrentPage(Math.min(safePage, maxPage));
+    } else {
+      setCurrentPage(safePage);
+    }
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      let start = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let end = Math.min(totalPages, start + maxVisiblePages - 1);
+      
+      if (end === totalPages) {
+        start = Math.max(1, end - maxVisiblePages + 1);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
   };
 
   return (
@@ -353,11 +389,96 @@ export function ServicesPage() {
                 </TableBody>
               </Table>
               {/* Pagination */}
-              <div className="flex justify-center items-center gap-2 mt-4">
-                <Button size="icon" variant="ghost" disabled={!hasPrev || currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}><ChevronLeft size={18}/></Button>
-                <span>Page {currentPage} / {totalPages}</span>
-                <Button size="icon" variant="ghost" disabled={!hasNext || currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}><ChevronRight size={18}/></Button>
-              </div>
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+                  {/* Informations de pagination */}
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span>
+                      Page {currentPage} sur {totalPages}
+                    </span>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="hidden sm:inline">
+                      {totalItems} prestations au total
+                    </span>
+                  </div>
+
+                  {/* Contrôles de pagination */}
+                  <div className="flex items-center gap-2">
+                    {/* Boutons de navigation rapide */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(1)}
+                      disabled={currentPage === 1}
+                      className="hidden sm:flex"
+                    >
+                      <ChevronsLeft size={16} />
+                      <span className="ml-1 hidden lg:inline">Première</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(currentPage - 1)}
+                      disabled={!hasPrev || currentPage === 1}
+                    >
+                      <ChevronLeft size={16} />
+                      <span className="ml-1 hidden lg:inline">Précédent</span>
+                    </Button>
+
+                    {/* Numéros de page */}
+                    <div className="flex items-center gap-1">
+                      {getPageNumbers().map(pageNum => (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPageSafely(pageNum)}
+                          className="w-8 h-8 text-xs hidden sm:flex"
+                        >
+                          {pageNum}
+                        </Button>
+                      ))}
+                      {/* Version mobile avec sélecteur */}
+                      <div className="sm:hidden flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Page</span>
+                        <select
+                          value={currentPage}
+                          onChange={(e) => setPageSafely(parseInt(e.target.value))}
+                          className="border rounded px-2 py-1 text-sm"
+                        >
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                            <option key={pageNum} value={pageNum}>
+                              {pageNum}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-sm text-gray-600">sur {totalPages}</span>
+                      </div>
+                    </div>
+
+                    {/* Boutons de navigation rapide */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(currentPage + 1)}
+                      disabled={!hasNext || currentPage === totalPages}
+                    >
+                      <span className="mr-1 hidden lg:inline">Suivant</span>
+                      <ChevronRight size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="hidden sm:flex"
+                    >
+                      <span className="mr-1 hidden lg:inline">Dernière</span>
+                      <ChevronsRight size={16} />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
