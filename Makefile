@@ -166,6 +166,10 @@ dump-fixtures:
 	docker compose exec backend python manage.py dumpdata catalog.fraiscategory --indent 2 --natural-foreign > backend/catalog/fixtures/initial_frais_categories.json
 	docker compose exec backend python manage.py dumpdata catalog.lignefrais --indent 2 --natural-foreign > backend/catalog/fixtures/initial_lignes_frais.json
 
+generate-fake-data:
+	@echo "Generating fake data..."
+	docker compose exec backend python manage.py python manage.py generate_fake_clients --count 100
+
 create-fixtures:
 	@echo "Creating fixtures from current data..."
 	make dump-fixtures

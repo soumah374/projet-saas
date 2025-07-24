@@ -4,7 +4,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Edit, Trash2, Download, Eye } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Download, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { 
   useClients, 
   useCreateClient, 
@@ -16,12 +16,13 @@ import {
 import { CreateEditClientModal } from '@/components/clients/CreateEditClientModal';
 import { ClientDetailModal } from '@/components/clients/ClientDetailModal';
 import { DeleteClientModal } from '@/components/clients/DeleteClientModal';
+import React from 'react';
 
 export function ClientsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editClient, setEditClient] = useState<ClientProfile | null>(null);
-  const pageSize = 10;
+  const pageSize = 20;
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
@@ -40,8 +41,8 @@ export function ClientsPage() {
 
   // Paramètres pour la requête des clients
   const queryParams = {
-    page: currentPage,
-    page_size: pageSize,
+    page: Math.max(1, currentPage), // Ensure page is never less than 1
+    page_size: pageSize, // Use default PAGE_SIZE from Django settings
     search: search || undefined,
     is_active: statusFilter === 'actif' ? true : statusFilter === 'inactif' ? false : undefined,
     type_client: typeFilter || undefined,
@@ -51,12 +52,74 @@ export function ClientsPage() {
   };
 
   // Hook pour récupérer les clients
-  const { data: clientsData, isLoading: loading } = useClients(queryParams);
+  const { data: clientsData, isLoading: loading, error } = useClients(queryParams);
 
   const clients = clientsData?.results || [];
-  const totalPages = clientsData ? Math.ceil(clientsData.count / pageSize) : 1;
+  // Use the default PAGE_SIZE from Django settings (20)
+  const defaultPageSize = pageSize;
+  const totalPages = clientsData ? Math.ceil(clientsData.count / defaultPageSize) : 1;
   const hasNext = !!clientsData?.next;
   const hasPrev = !!clientsData?.previous;
+  const totalItems = clientsData?.count || 0;
+  const startItem = (currentPage - 1) * defaultPageSize + 1;
+  const endItem = Math.min(currentPage * defaultPageSize, totalItems);
+
+  // Reset to first page when filters change
+  const resetToFirstPage = () => setCurrentPage(1);
+
+  // Handle pagination errors
+  React.useEffect(() => {
+    if (error && currentPage > 1) {
+      // If there's an error and we're not on the first page, go back to page 1
+      setCurrentPage(1);
+    }
+  }, [error, currentPage]);
+
+  // Validate current page
+  React.useEffect(() => {
+    if (totalPages > 0 && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  // Safe page navigation function
+  const setPageSafely = (page: number) => {
+    const safePage = Math.max(1, page);
+    if (totalPages > 0) {
+      const maxPage = Math.max(1, totalPages);
+      setCurrentPage(Math.min(safePage, maxPage));
+    } else {
+      setCurrentPage(safePage);
+    }
+  };
+
+  // Get page numbers to display
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total is small
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Show pages around current page
+      let start = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+      let end = Math.min(totalPages, start + maxVisiblePages - 1);
+      
+      // Adjust start if we're near the end
+      if (end === totalPages) {
+        start = Math.max(1, end - maxVisiblePages + 1);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+    }
+    
+    return pages;
+  };
 
   const handleOpenDialog = (client?: ClientProfile) => {
     setEditClient(client || null);
@@ -170,31 +233,31 @@ export function ClientsPage() {
                 <Input
                   placeholder="Recherche (nom, prénom, email, téléphone, raison sociale, RCCM/NIF)"
                   value={search}
-                  onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                  onChange={e => { setSearch(e.target.value); resetToFirstPage(); }}
                   className="w-64"
                 />
-                <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
+                <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
                   <option value="">Tous statuts</option>
                   <option value="actif">Actifs</option>
                   <option value="inactif">Inactifs</option>
                 </select>
-                <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
+                <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
                   <option value="">Tous types</option>
                   <option value="personne_physique">Personne physique</option>
                   <option value="personne_morale">Personne morale</option>
                 </select>
-                <select value={statutCommercialFilter} onChange={e => { setStatutCommercialFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
+                <select value={statutCommercialFilter} onChange={e => { setStatutCommercialFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
                   <option value="">Tous statuts commerciaux</option>
                   <option value="prospect">Prospect</option>
                   <option value="actif">Actif</option>
                   <option value="inactif">Inactif</option>
                   <option value="bloque">Bloqué</option>
                 </select>
-                <select value={villeFilter} onChange={e => { setVilleFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
+                <select value={villeFilter} onChange={e => { setVilleFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
                   <option value="">Toutes villes</option>
                   {villes.map(v => <option key={v} value={v}>{v}</option>)}
                 </select>
-                <select value={paysFilter} onChange={e => { setPaysFilter(e.target.value); setCurrentPage(1); }} className="border rounded px-2 py-1">
+                <select value={paysFilter} onChange={e => { setPaysFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
                   <option value="">Tous pays</option>
                   {paysList.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
@@ -216,7 +279,41 @@ export function ClientsPage() {
                 </TableHeader>
                 <TableBody>
                   {clients.length === 0 ? (
-                    <TableRow><TableCell colSpan={10} className="text-center">Aucun client</TableCell></TableRow>
+                    <TableRow>
+                      <TableCell colSpan={10} className="text-center py-8">
+                        <div className="space-y-2">
+                          <p className="text-gray-600">
+                            {search || statusFilter || typeFilter || statutCommercialFilter || villeFilter || paysFilter 
+                              ? 'Aucun client trouvé' 
+                              : 'Aucun client'
+                            }
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {search || statusFilter || typeFilter || statutCommercialFilter || villeFilter || paysFilter 
+                              ? 'Essayez de modifier vos critères de recherche' 
+                              : 'Commencez par créer votre premier client'
+                            }
+                          </p>
+                          {(search || statusFilter || typeFilter || statutCommercialFilter || villeFilter || paysFilter) && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                setSearch('');
+                                setStatusFilter('');
+                                setTypeFilter('');
+                                setStatutCommercialFilter('');
+                                setVilleFilter('');
+                                setPaysFilter('');
+                                resetToFirstPage();
+                              }}
+                            >
+                              Effacer les filtres
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ) : clients.map(client => (
                     <TableRow key={client.id}>
                       <TableCell>{client.nom_complet}</TableCell>
@@ -263,12 +360,93 @@ export function ClientsPage() {
                   ))}
                 </TableBody>
               </Table>
-              {/* Pagination */}
-              <div className="flex justify-center items-center gap-2 mt-4">
-                <Button size="icon" variant="ghost" disabled={!hasPrev || currentPage === 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>{'<'}</Button>
-                <span>Page {currentPage} / {totalPages}</span>
-                <Button size="icon" variant="ghost" disabled={!hasNext || currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>{'>'}</Button>
-              </div>
+              {/* Enhanced Pagination */}
+              {totalPages > 1 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
+                  {/* Informations de pagination */}
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <span>
+                      Page {currentPage} sur {totalPages}
+                    </span>
+                    <span className="hidden sm:inline">•</span>
+                    <span className="hidden sm:inline">
+                      {totalItems} clients au total
+                    </span>
+                  </div>
+
+                  {/* Contrôles de pagination */}
+                  <div className="flex items-center gap-2">
+                    {/* Boutons de navigation rapide */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(1)}
+                      disabled={currentPage === 1}
+                      className="hidden sm:flex"
+                    >
+                      <ChevronsLeft size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(currentPage - 1)}
+                      disabled={!hasPrev || currentPage === 1}
+                    >
+                      <ChevronLeft size={16} />
+                    </Button>
+
+                    {/* Numéros de page */}
+                    <div className="flex items-center gap-1">
+                      {getPageNumbers().map(pageNum => (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPageSafely(pageNum)}
+                          className="w-8 h-8 text-xs hidden sm:flex"
+                        >
+                          {pageNum}
+                        </Button>
+                      ))}
+                      {/* Version mobile avec sélecteur */}
+                      <div className="sm:hidden flex items-center gap-2">
+                        <span className="text-sm text-gray-600">Page</span>
+                        <select
+                          value={currentPage}
+                          onChange={(e) => setPageSafely(parseInt(e.target.value))}
+                          className="border rounded px-2 py-1 text-sm"
+                        >
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                            <option key={pageNum} value={pageNum}>
+                              {pageNum}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-sm text-gray-600">sur {totalPages}</span>
+                      </div>
+                    </div>
+
+                    {/* Boutons de navigation rapide */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(currentPage + 1)}
+                      disabled={!hasNext || currentPage === totalPages}
+                    >
+                      <ChevronRight size={16} />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageSafely(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="hidden sm:flex"
+                    >
+                      <ChevronsRight size={16} />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </CardContent>
