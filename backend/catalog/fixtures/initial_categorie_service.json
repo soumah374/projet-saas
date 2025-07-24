@@ -1,0 +1,26 @@
+[
+    {
+        "model": "catalog.category",
+        "pk": 1,
+        "fields": {
+            "name": "SERVICE D'EXÉCUTION",
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.category",
+        "pk": 2,
+        "fields": {
+            "name": "SERVICE D'APPUI ET DE CONSEIL",
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.category",
+        "pk": 3,
+        "fields": {
+            "name": "EXPERTISE ÉDITORIALE ET IMAGE",
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+    }
+] 

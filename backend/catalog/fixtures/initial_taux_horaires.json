@@ -1,0 +1,496 @@
+[
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 1,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "200000.00",
+            "activity": 26,
+            "profile_intervenant": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 2,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "200000.00",
+            "activity": 20,
+            "profile_intervenant": 4,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 3,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 21,
+            "profile_intervenant": 8,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 4,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 22,
+            "profile_intervenant": 14,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 5,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "250000.00",
+            "activity": 25,
+            "profile_intervenant": 17,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 6,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "200000.00",
+            "activity": 23,
+            "profile_intervenant": 33,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 7,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "200000.00",
+            "activity": 18,
+            "profile_intervenant": 12,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 8,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 17,
+            "profile_intervenant": 23,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 9,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "200000.00",
+            "activity": 19,
+            "profile_intervenant": 26,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 10,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "400000.00",
+            "activity": 18,
+            "profile_intervenant": 32,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 11,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 8,
+            "profile_intervenant": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 12,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "200000.00",
+            "activity": 4,
+            "profile_intervenant": 6,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 13,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "400000.00",
+            "activity": 2,
+            "profile_intervenant": 9,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 14,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "450000.00",
+            "activity": 11,
+            "profile_intervenant": 16,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 15,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "200000.00",
+            "activity": 24,
+            "profile_intervenant": 27,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 16,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "450000.00",
+            "activity": 1,
+            "profile_intervenant": 7,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 17,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "300000.00",
+            "activity": 3,
+            "profile_intervenant": 10,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 18,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "500000.00",
+            "activity": 1,
+            "profile_intervenant": 15,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 19,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "450000.00",
+            "activity": 6,
+            "profile_intervenant": 18,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 20,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "450000.00",
+            "activity": 5,
+            "profile_intervenant": 19,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 21,
+        "fields": {
+            "niveau_intervenant": "senior",
+            "taux_heure": "400000.00",
+            "activity": 7,
+            "profile_intervenant": 28,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 22,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "120000.00",
+            "activity": 5,
+            "profile_intervenant": 22,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 23,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 10,
+            "profile_intervenant": 11,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 24,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "100000.00",
+            "activity": 7,
+            "profile_intervenant": 13,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 25,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 9,
+            "profile_intervenant": 34,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 26,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 14,
+            "profile_intervenant": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 27,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "250000.00",
+            "activity": 14,
+            "profile_intervenant": 5,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 28,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "200000.00",
+            "activity": 17,
+            "profile_intervenant": 24,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 29,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "250000.00",
+            "activity": 15,
+            "profile_intervenant": 25,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 30,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 16,
+            "profile_intervenant": 29,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 31,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 15,
+            "profile_intervenant": 30,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 32,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "300000.00",
+            "activity": 13,
+            "profile_intervenant": 31,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 33,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "300000.00",
+            "activity": 9,
+            "profile_intervenant": 35,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 34,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "250000.00",
+            "activity": 12,
+            "profile_intervenant": 36,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 35,
+        "fields": {
+            "niveau_intervenant": "operationnel",
+            "taux_heure": "180000.00",
+            "activity": 10,
+            "profile_intervenant": 38,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 36,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "250000.00",
+            "activity": 20,
+            "profile_intervenant": 20,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 37,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "300000.00",
+            "activity": 22,
+            "profile_intervenant": 22,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.tauxhoraire",
+        "pk": 38,
+        "fields": {
+            "niveau_intervenant": "intermediaire",
+            "taux_heure": "250000.00",
+            "activity": 6,
+            "profile_intervenant": 37,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    }
+] 

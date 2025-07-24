@@ -1,0 +1,254 @@
+[
+    {
+        "model": "catalog.unitestandard",
+        "pk": 1,
+        "fields": {
+            "intitule": "Heure",
+            "code": "H",
+            "description": "Temps d'intervention en heures",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 2,
+        "fields": {
+            "intitule": "Jour",
+            "code": "J",
+            "description": "Temps d'intervention ou d'utilisation en jours",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 3,
+        "fields": {
+            "intitule": "Homme-Jour",
+            "code": "HJ",
+            "description": "Temps d'intervention combiné par profil et par jour",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 4,
+        "fields": {
+            "intitule": "Mois",
+            "code": "MOIS",
+            "description": "Temps d'intervention ou durée mission longue",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 5,
+        "fields": {
+            "intitule": "Unité",
+            "code": "U",
+            "description": "Unité générique (1 pièce, 1 item)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 6,
+        "fields": {
+            "intitule": "Exemplaire",
+            "code": "EX",
+            "description": "Unité pour impression ou tirage (ex. flyers, brochures)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 7,
+        "fields": {
+            "intitule": "Mètre linéaire",
+            "code": "ML",
+            "description": "Signalétique, impression bâches, PLV",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 8,
+        "fields": {
+            "intitule": "Mètre carré",
+            "code": "M²",
+            "description": "Surface imprimée, stand, décors",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 9,
+        "fields": {
+            "intitule": "Pack",
+            "code": "PACK",
+            "description": "Forfait packagé (ex. kit média, bundle)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 10,
+        "fields": {
+            "intitule": "Lot",
+            "code": "LOT",
+            "description": "Lot de prestations ou matériel",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 11,
+        "fields": {
+            "intitule": "Forfait",
+            "code": "FORF",
+            "description": "Prestation globale sans détail unitaire",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 12,
+        "fields": {
+            "intitule": "Pourcentage",
+            "code": "%",
+            "description": "Taux appliqué (marge, contingence)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 13,
+        "fields": {
+            "intitule": "Kilomètre",
+            "code": "KM",
+            "description": "Déplacements, frais logistiques calculés au km",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 14,
+        "fields": {
+            "intitule": "Personne",
+            "code": "PAX",
+            "description": "Dépense par personne (hébergement, catering, per diem)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 15,
+        "fields": {
+            "intitule": "Vol",
+            "code": "VOL",
+            "description": "Unité pour billet d'avion (aller/retour)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 16,
+        "fields": {
+            "intitule": "Nuitée",
+            "code": "NUIT",
+            "description": "Unité hébergement (hôtel, résidence)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 17,
+        "fields": {
+            "intitule": "Véhicule",
+            "code": "VEH",
+            "description": "Location véhicule par unité ou par jour",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 18,
+        "fields": {
+            "intitule": "Licence",
+            "code": "LIC",
+            "description": "Droits logiciels, plugins",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 19,
+        "fields": {
+            "intitule": "Session",
+            "code": "SESSION",
+            "description": "Prestation formation ou coaching",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 20,
+        "fields": {
+            "intitule": "Page",
+            "code": "PAGE",
+            "description": "Relecture, rewriting, traduction au forfait page",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.unitestandard",
+        "pk": 21,
+        "fields": {
+            "intitule": "Mot",
+            "code": "MOT",
+            "description": "Traduction au mot (si besoin)",
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    }
+] 
