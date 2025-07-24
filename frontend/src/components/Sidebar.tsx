@@ -55,7 +55,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
     rapports: false,
     documents: false,
     prestations: false,
-    frais: false
+    clients: false
   });
 
   const toggleMenu = (key: string) => setOpenMenus(m => ({ ...m, [key]: !m[key] }));
@@ -109,7 +109,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 onClick={() => toggleMenu('prestations')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' || location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' || location.pathname === '/categories-services' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <Wrench className="h-5 w-5" /> Prestations
@@ -119,6 +119,9 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.prestations && (
                 <div className="ml-8 space-y-1">
+                  <Link to="/categories-services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <List className="h-4 w-4" /> Catégories des prestations
+                  </Link>
                   <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
                     <List className="h-4 w-4" /> Catalogue des prestations
                   </Link>
@@ -131,51 +134,50 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   <Link to="/unites-standards" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
                     <Ruler className="h-4 w-4" /> Unités standards
                   </Link>
+                  
+                  {/* Sous-menu Frais */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-sm h-8 text-gray-600">
+                      <DollarSign className="h-4 w-4" /> Frais
+                    </div>
+                    <div className="ml-4 space-y-1">
+                      <Link to="/frais-categories" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                        <List className="h-4 w-4" /> Catégories de frais
+                      </Link>
+                      <Link to="/lignes-frais" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                        <Receipt className="h-4 w-4" /> Lignes de frais
+                      </Link>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Frais accordéon */}
+            {/* Clients accordéon */}
             <div className="space-y-2">
               <button 
-                onClick={() => toggleMenu('frais')} 
+                onClick={() => toggleMenu('clients')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname.startsWith('/clients') || location.pathname.startsWith('/categories-clients') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
-                <DollarSign className="h-5 w-5" /> Frais
+                <Users className="h-5 w-5" /> Clients
                 <span className="ml-auto">
-                  {openMenus.frais ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  {openMenus.clients ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </span>
-              </button> 
-              {openMenus.frais && (
+              </button>
+              {openMenus.clients && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/frais-categories" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    <List className="h-4 w-4" /> Catégories de frais
+                  <Link to="/categories-clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <List className="h-4 w-4" /> Catégories clients
                   </Link>
-                  <Link to="/lignes-frais" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
-                    <Receipt className="h-4 w-4" /> Lignes de frais
+                  <Link to="/clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                    <Users className="h-4 w-4" /> Liste clients
                   </Link>
                 </div>
               )}
             </div>
-
-            {/* Clients */}
-              <Link to="/clients" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/clients') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <Users className="h-5 w-5" />
-                <span>Clients</span>
-              </Link>
-              <Link to="/categories-clients" className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                location.pathname.startsWith('/categories-clients') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <List className="h-5 w-5" />
-                <span>Catégories clients</span>
-              </Link>
             {/* Devis */}
             <Link to="/devis" className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",

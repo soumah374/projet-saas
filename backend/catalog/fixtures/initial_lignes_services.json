@@ -1,0 +1,230 @@
+[
+    {
+        "model": "catalog.service",
+        "pk": 1,
+        "fields": {
+            "name": "Événementiel",
+            "description": "Organisation et gestion d'événements",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 2,
+        "fields": {
+            "name": "Production audiovisuelle",
+            "description": "Production de contenus audiovisuels",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 3,
+        "fields": {
+            "name": "Communication digitale",
+            "description": "Stratégies et outils de communication digitale",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 4,
+        "fields": {
+            "name": "Relations médias / relations publiques",
+            "description": "Gestion des relations avec les médias et relations publiques",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 5,
+        "fields": {
+            "name": "Production technique électronique",
+            "description": "Production de supports techniques électroniques",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 6,
+        "fields": {
+            "name": "Production de supports publicitaires physiques",
+            "description": "Création et production de supports publicitaires physiques",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 7,
+        "fields": {
+            "name": "Assistance technique lors d'événements (mission hors site)",
+            "description": "Support technique lors d'événements en mission hors site",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 8,
+        "fields": {
+            "name": "Missions terrain pour représentation client",
+            "description": "Représentation client lors de missions terrain",
+            "category": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 9,
+        "fields": {
+            "name": "Conseil stratégique en communication et image de marque",
+            "description": "Conseil et accompagnement stratégique en communication et image de marque",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 10,
+        "fields": {
+            "name": "Audit de communication globale",
+            "description": "Analyse et évaluation de la communication globale",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 11,
+        "fields": {
+            "name": "Élaboration de stratégie de communication",
+            "description": "Développement de stratégies de communication sur mesure",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 12,
+        "fields": {
+            "name": "Élaboration de plan de mise en œuvre de la stratégie de communication",
+            "description": "Planification détaillée de la mise en œuvre des stratégies de communication",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 13,
+        "fields": {
+            "name": "Élaboration de plan médias",
+            "description": "Création de plans médias personnalisés",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 14,
+        "fields": {
+            "name": "Coaching et formation des équipes internes du client",
+            "description": "Formation et accompagnement des équipes internes",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 15,
+        "fields": {
+            "name": "Media training personnalisé pour dirigeants / porte-parole",
+            "description": "Formation personnalisée aux médias pour dirigeants et porte-parole",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 16,
+        "fields": {
+            "name": "Veille stratégique sur l'image de marque et réputation digitale",
+            "description": "Surveillance et analyse de l'image de marque et réputation en ligne",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 17,
+        "fields": {
+            "name": "Support à la gestion de crise médiatique",
+            "description": "Accompagnement dans la gestion des crises médiatiques",
+            "category": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 18,
+        "fields": {
+            "name": "Relecture et rewriting de documents stratégiques",
+            "description": "Relecture et réécriture de documents stratégiques",
+            "category": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.service",
+        "pk": 19,
+        "fields": {
+            "name": "Conception de kits médias et supports corporate",
+            "description": "Création de kits médias et supports d'entreprise",
+            "category": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    }
+] 

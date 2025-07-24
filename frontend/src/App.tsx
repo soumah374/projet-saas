@@ -32,6 +32,7 @@ import DepartmentsPage from './pages/DepartmentsPage';
 import ClientCategoriesPage from './pages/ClientCategoriesPage';
 import FraisCategoriesPage from './pages/FraisCategoriesPage';
 import LignesFraisPage from './pages/LignesFraisPage';
+import { CategoriesPage } from './pages/CategoriesPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -125,6 +126,11 @@ function App() {
                 <Route path="/settings" element={
                   <ProtectedRoute>
                     <SettingsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/categories-services" element={
+                  <ProtectedRoute>
+                    <CategoriesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/services" element={
