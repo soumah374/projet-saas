@@ -388,7 +388,7 @@ export function DevisDetailPage() {
     return <Badge variant={variants[statut as keyof typeof variants]}>{statut}</Badge>;
   };
 
-    const handleExportPDF = () => {
+  const handleExportPDF = () => {
     setPdfExportOpen(true);
   };
 

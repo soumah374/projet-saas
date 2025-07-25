@@ -11,9 +11,7 @@ export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('fr-FR');
 };
 
-export function formatMontant(montant: number | null | undefined): string {
-  if (montant === null || montant === undefined) return '0 GNF';
-  
+export function formatMontant(montant: number): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'GNF',
@@ -40,7 +38,14 @@ export const formatTemps = (temps: number | string) => {
  * @param montant - Montant à formater
  * @returns Montant formaté pour PDF
  */
-export const formatMontantPDF = formatMontant;
+export function formatMontantPDF(montant: number): string {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'GNF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(montant);
+}
 
 /**
  * Formate un pourcentage en français

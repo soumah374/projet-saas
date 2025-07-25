@@ -27,7 +27,6 @@ import {
   type Contrat
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
-import { ContratsModals } from '@/components/contrats/ContratsModals';
 
 export function ContratsPage() {
   const navigate = useNavigate();
@@ -281,7 +280,7 @@ export function ContratsPage() {
   };
 
   return (
-    <div className="max-w-8xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -425,41 +424,243 @@ export function ContratsPage() {
         </CardContent>
       </Card>
 
-      {/* Modals */}
-      <ContratsModals
-        // Modal de création
-        createDialogOpen={createDialogOpen}
-        setCreateDialogOpen={setCreateDialogOpen}
-        createForm={createForm}
-        setCreateForm={setCreateForm}
-        dateDebut={dateDebut}
-        setDateDebut={setDateDebut}
-        dateFin={dateFin}
-        setDateFin={setDateFin}
-        devisDisponibles={devisDisponibles}
-        onCreateContrat={handleCreateContrat}
-        isCreatePending={createContratMutation.isPending}
-        
-        // Modal d'édition
-        editDialogOpen={editDialogOpen}
-        setEditDialogOpen={setEditDialogOpen}
-        editForm={editForm}
-        setEditForm={setEditForm}
-        editDateDebut={editDateDebut}
-        setEditDateDebut={setEditDateDebut}
-        editDateFin={editDateFin}
-        setEditDateFin={setEditDateFin}
-        contratToEdit={contratToEdit}
-        onUpdateContrat={handleUpdateContrat}
-        isUpdatePending={updateContratMutation.isPending}
-        
-        // Modal de suppression
-        deleteDialogOpen={deleteDialogOpen}
-        setDeleteDialogOpen={setDeleteDialogOpen}
-        contratToDelete={contratToDelete}
-        onDeleteContrat={handleDeleteContrat}
-        isDeletePending={deleteContratMutation.isPending}
-      />
+      {/* Modal de création */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Créer un contrat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="devis">Devis *</Label>
+              <Select value={createForm.devis_id} onValueChange={(value) => setCreateForm({ ...createForm, devis_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner un devis accepté" />
+                </SelectTrigger>
+                <SelectContent>
+                  {devisDisponibles
+                    .filter(devis => devis.id && devis.numero) // Filtrer les devis valides
+                    .map((devis) => (
+                      <SelectItem key={devis.id} value={devis.id.toString()}>
+                        {devis.numero} - {devis.client || 'Client inconnu'} ({formatMontant(devis.montant_ttc || 0)})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Date de début *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateDebut ? format(dateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-auto p-0 z-50" 
+                    align="start"
+                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={dateDebut}
+                      onSelect={(date) => {
+                        setDateDebut(date);
+                        setCreateForm({ ...createForm, date_debut: date ? date.toISOString().split('T')[0] : '' });
+                      }}
+                      initialFocus
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Date de fin *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFin ? format(dateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent 
+                    className="w-auto p-0" 
+                    align="start"  
+                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={dateFin}
+                      onSelect={(date) => {
+                        setDateFin(date);
+                        setCreateForm({ ...createForm, date_fin: date ? date.toISOString().split('T')[0] : '' });
+                      }}
+                      initialFocus
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="conditions">Conditions</Label>
+              <textarea
+                id="conditions"
+                value={createForm.conditions}
+                onChange={(e) => setCreateForm({ ...createForm, conditions: e.target.value })}
+                className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md"
+                placeholder="Conditions du contrat..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <textarea
+                id="notes"
+                value={createForm.notes}
+                onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+                className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md"
+                placeholder="Notes du contrat..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleCreateContrat}
+              disabled={createContratMutation.isPending}
+            >
+              {createContratMutation.isPending ? 'Création...' : 'Créer le contrat'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal d'édition */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Modifier le contrat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Date de début *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editDateDebut ? format(editDateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editDateDebut}
+                      onSelect={(date) => {
+                        setEditDateDebut(date);
+                        setEditForm({ ...editForm, date_debut: date ? date.toISOString().split('T')[0] : '' });
+                      }}
+                      initialFocus
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Date de fin *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editDateFin ? format(editDateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={editDateFin}
+                      onSelect={(date) => {
+                        setEditDateFin(date);
+                        setEditForm({ ...editForm, date_fin: date ? date.toISOString().split('T')[0] : '' });
+                      }}
+                      initialFocus
+                      locale={fr}
+
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="edit-conditions">Conditions</Label>
+              <textarea
+                id="edit-conditions"
+                value={editForm.conditions}
+                onChange={(e) => setEditForm({ ...editForm, conditions: e.target.value })}
+                className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md"
+                placeholder="Conditions du contrat..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-notes">Notes</Label>
+              <textarea
+                id="edit-notes"
+                value={editForm.notes}
+                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md"
+                placeholder="Notes du contrat..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleUpdateContrat}
+              disabled={updateContratMutation.isPending}
+            >
+              {updateContratMutation.isPending ? 'Mise à jour...' : 'Mettre à jour'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de suppression */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le contrat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir supprimer ce contrat ? Cette action est irréversible.
+            </p>
+            {contratToDelete && (
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="font-medium">{contratToDelete.numero}</p>
+                <p className="text-gray-600">{contratToDelete.client.nom_complet}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteContrat}
+              disabled={deleteContratMutation.isPending}
+            >
+              {deleteContratMutation.isPending ? 'Suppression...' : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

@@ -196,14 +196,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 <FileCheck className="h-5 w-5" />
                 <span>Contrats</span>
             </Link>
-            {/* Templates de contrat */}
-            <Link to="/templates-contrat" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/templates-contrat') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <FileText className="h-5 w-5" />
-                <span>Templates de contrat</span>
-            </Link>
             {/* Projets accordéon */}
             <div className="space-y-2">
               <button 

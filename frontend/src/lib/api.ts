@@ -676,17 +676,9 @@ export const contratsAPI = {
     deleteContrat: (id: number) => api.delete(`/contrats/contrats/${id}/`),
     
     activerContrat: (id: number) => api.post(`/contrats/contrats/${id}/activer/`),
-    
     terminerContrat: (id: number) => api.post(`/contrats/contrats/${id}/terminer/`),
-    
     annulerContrat: (id: number) => api.post(`/contrats/contrats/${id}/annuler/`),
-    
     suspendreContrat: (id: number) => api.post(`/contrats/contrats/${id}/suspendre/`),
-    
-    envoyerContratPDF: (id: number, pdfData: string) => api.post(`/contrats/contrats/${id}/envoyer_email_pdf/`, {
-        pdf_data: pdfData
-    }),
-    
     calculerMontants: (id: number) => api.post(`/contrats/contrats/${id}/calculer_montants/`),
     
     getDevisDisponibles: () => api.get('/contrats/contrats/devis_disponibles/'),
@@ -702,43 +694,6 @@ export const contratsAPI = {
     createIntervenantLigneContrat: (data: any) => api.post('/contrats/intervenants/', data),
     updateIntervenantLigneContrat: (id: number, data: any) => api.patch(`/contrats/intervenants/${id}/`, data),
     deleteIntervenantLigneContrat: (id: number) => api.delete(`/contrats/intervenants/${id}/`),
-    
-    // Templates de contrat
-    getTemplatesContrat: (params?: {
-        type_template?: string;
-        est_actif?: boolean;
-        est_public?: boolean;
-        search?: string;
-        ordering?: string;
-        page?: number;
-        page_size?: number;
-    }) => api.get('/contrats/templates/', { params }),
-    
-    getTemplateContratById: (id: number) => api.get(`/contrats/templates/${id}/`),
-    
-    createTemplateContrat: (data: {
-        nom: string;
-        type_template: string;
-        description?: string;
-        contenu: string;
-        variables_defaut?: any;
-        est_actif?: boolean;
-        est_public?: boolean;
-    }) => api.post('/contrats/templates/', data),
-    
-    updateTemplateContrat: (id: number, data: any) => api.patch(`/contrats/templates/${id}/`, data),
-    
-    deleteTemplateContrat: (id: number) => api.delete(`/contrats/templates/${id}/`),
-    
-    genererContratFromTemplate: (data: {
-        template_id: number;
-        variables: any;
-        contrat_id: number;
-    }) => api.post('/contrats/templates/generer_contrat/', data),
-    
-    getTemplatesActifs: () => api.get('/contrats/templates/actifs/'),
-    
-    getTypesTemplates: () => api.get('/contrats/templates/types_disponibles/'),
 }; 
 
 // PATCHs

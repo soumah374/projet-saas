@@ -523,7 +523,7 @@ export function DevisCreatePage() {
                           <div className="text-sm text-muted-foreground">
                             {ligne.intervenants
                               .map(intervenant => {
-                                return `${intervenant.intitule} (${intervenant.temps_intervenant}h @ ${ formatMontant(intervenant.taux_horaire)})`
+                                return `${intervenant.intitule} (${intervenant.temps_intervenant}h @ ${ formatMontant(parseFloat(intervenant.taux_horaire))})`
                               })
                               .join(', ')
                             }

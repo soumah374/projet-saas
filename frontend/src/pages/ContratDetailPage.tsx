@@ -1,21 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  ArrowLeft, Edit, Trash2, Download, Send, FileText, 
-  Calendar as CalendarIcon,
-  Play, Pause, Check, X
+  ArrowLeft, 
+  Edit, 
+  Trash2, 
+  Play, 
+  Check, 
+  X, 
+  Pause, 
+  FileCheck, 
+  CalendarIcon,
+  Plus,
+  Eye,
+  Download,
+  FileText
 } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { toast } from 'sonner';
 import { 
   useContratById,
   useUpdateContrat,
@@ -24,22 +36,15 @@ import {
   useTerminerContrat,
   useAnnulerContrat,
   useSuspendreContrat,
-  useCalculerMontantsContrat,
-  useEnvoyerContratPDF,
-  type Contrat,
-  type LigneContrat
+  type Contrat
 } from '@/hooks/use-contrats';
-import { ContractEditor } from '@/components/contrats/ContractEditor';
-import { generateContratPDFFromTemplate, generateContratPDFfromElement } from '@/lib/pdfUtils';
 import { formatDate, formatMontant } from '@/lib/formatters';
-import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { generateMinimalContratPDF, generateMinimalDevisPDF } from '@/lib/pdfUtils';
+import { ContractEditor } from '@/components/ContractEditor';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const contratId = parseInt(id || '0');
   
   // États pour les modals
@@ -51,10 +56,9 @@ export function ContratDetailPage() {
     conditions: '',
     notes: ''
   });
-  
-  // Dates pour les calendriers
   const [editDateDebut, setEditDateDebut] = useState<Date | undefined>(undefined);
   const [editDateFin, setEditDateFin] = useState<Date | undefined>(undefined);
+  const [showContractEditor, setShowContractEditor] = useState(false);
 
   // Hooks
   const { data: contrat, isLoading, error } = useContratById(contratId);
@@ -64,22 +68,6 @@ export function ContratDetailPage() {
   const terminerContratMutation = useTerminerContrat();
   const annulerContratMutation = useAnnulerContrat();
   const suspendreContratMutation = useSuspendreContrat();
-  const calculerMontantsMutation = useCalculerMontantsContrat();
-  const envoyerContratPDF = useEnvoyerContratPDF();
-
-  // Initialiser le formulaire d'édition
-  useEffect(() => {
-    if (contrat) {
-      setEditForm({
-        date_debut: contrat.date_debut,
-        date_fin: contrat.date_fin,
-        conditions: contrat.conditions || '',
-        notes: contrat.notes || '',
-      });
-      setEditDateDebut(new Date(contrat.date_debut));
-      setEditDateFin(new Date(contrat.date_fin));
-    }
-  }, [contrat]);
 
   // Gestionnaires d'événements
   const handleUpdateContrat = async () => {
@@ -130,13 +118,28 @@ export function ContratDetailPage() {
         case 'suspendre':
           await suspendreContratMutation.mutateAsync(contrat.id);
           break;
-        case 'calculer':
-          await calculerMontantsMutation.mutateAsync(contrat.id);
-          break;
       }
     } catch (err) {
       // Error handled by hook
     }
+  };
+
+  const openEditDialog = () => {
+    if (!contrat) return;
+    
+    setEditForm({
+      date_debut: contrat.date_debut,
+      date_fin: contrat.date_fin,
+      conditions: contrat.conditions || '',
+      notes: contrat.notes || '',
+    });
+    setEditDateDebut(new Date(contrat.date_debut));
+    setEditDateFin(new Date(contrat.date_fin));
+    setEditDialogOpen(true);
+  };
+
+  const openDeleteDialog = () => {
+    setDeleteDialogOpen(true);
   };
 
   const getStatutBadge = (statut: string) => {
@@ -222,89 +225,43 @@ export function ContratDetailPage() {
     return buttons;
   };
 
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const handleExportPDF = () => {
+    if (!contrat) return;
+    
+    try {
+      const pdfData = generateMinimalContratPDF(contrat, contrat.contenu);
+      if (pdfData) {
+        const link = document.createElement('a');
+        link.href = pdfData;
+        link.download = `contrat-${contrat.numero}.pdf`;
+        link.click();
+      }
+    } catch (error) {
+      toast.error('Erreur lors de la génération du PDF');
+    }
+  };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64">Chargement...</div>;
+    return (
+      <div className="flex justify-center py-10">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   if (error || !contrat) {
-    return <div className="flex items-center justify-center h-64">Erreur lors du chargement du contrat</div>;
+    return (
+      <div className="text-center py-10">
+        <p className="text-red-600">Erreur lors du chargement du contrat</p>
+        <Button onClick={() => navigate('/contrats')} className="mt-4">
+          Retour aux contrats
+        </Button>
+      </div>
+    );
   }
 
-  const handleAction = async (action: string) => {
-    try {
-      switch (action) {
-        case 'activer':
-          await activerContratMutation.mutateAsync(contrat.id);
-          break;
-        case 'terminer':
-          await terminerContratMutation.mutateAsync(contrat.id);
-          break;
-        case 'annuler':
-          await annulerContratMutation.mutateAsync(contrat.id);
-          break;
-        case 'suspendre':
-          await suspendreContratMutation.mutateAsync(contrat.id);
-          break;
-        case 'delete':
-          if (window.confirm('Êtes-vous sûr de vouloir supprimer ce contrat ?')) {
-            await deleteContratMutation.mutateAsync(contrat.id);
-            navigate('/contrats');
-          }
-          break;
-      }
-    } catch (error) {
-      console.error(`Erreur lors de l'action ${action}:`, error);
-    }
-  };
-
-  const handleGeneratePDF = async () => {
-    setIsGeneratingPDF(true);
-    try {
-      const pdfData = generateContratPDFFromTemplate(contrat, { contenu: '' }, {});
-      
-      if (pdfData) {
-        const link = document.createElement('a');
-        link.href = `data:application/pdf;base64,${pdfData}`;
-        link.download = `contrat_${contrat.numero}.pdf`;
-        link.click();
-        toast.success('PDF généré avec succès');
-      } else {
-        toast.error('Erreur lors de la génération du PDF');
-      }
-    } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
-      toast.error('Erreur lors de la génération du PDF');
-    } finally {
-      setIsGeneratingPDF(false);
-    }
-  };
-
-  const handleSendEmail = async () => {
-    setIsSendingEmail(true);
-    try {
-      const pdfData = generateContratPDFFromTemplate(contrat, { contenu: '' }, {});
-      
-      if (pdfData) {
-        await envoyerContratPDF.mutateAsync({
-          id: contrat.id,
-          pdfData: pdfData
-        });
-      } else {
-        toast.error('Erreur lors de la génération du PDF');
-      }
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi:', error);
-      toast.error('Erreur lors de l\'envoi du contrat');
-    } finally {
-      setIsSendingEmail(false);
-    }
-  };
-
   return (
-    <div className="max-w-8xl mx-auto space-y-8">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -318,228 +275,200 @@ export function ContratDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={() => setEditDialogOpen(true)} variant="outline">
+          <Button onClick={openEditDialog} variant="outline">
             <Edit size={16} className="mr-2" />
             Modifier
           </Button>
-          <Button 
-            onClick={() => handleActionContrat('calculer')} 
-            variant="outline"
-            disabled={calculerMontantsMutation.isPending}
-          >
+          <Button onClick={() => setShowContractEditor(true)} variant="outline">
             <FileText size={16} className="mr-2" />
-            Recalculer montants
+            Éditer contrat
           </Button>
-          <Button
-            onClick={handleGeneratePDF}
-            disabled={isGeneratingPDF}
-            variant="outline"
-          >
-            {isGeneratingPDF ? (
-              <>Génération...</>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Générer PDF
-              </>
-            )}
+          <Button onClick={handleExportPDF} variant="outline">
+            <Download size={16} className="mr-2" />
+            Exporter PDF
           </Button>
-          <Button
-            onClick={handleSendEmail}
-            disabled={isSendingEmail}
-            variant="outline"
-          >
-            {isSendingEmail ? (
-              <>Envoi...</>
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-2" />
-                Envoyer par email
-              </>
-            )}
-          </Button>
-          {getActionButtons()}
-          <Button 
-            onClick={() => setDeleteDialogOpen(true)} 
-            variant="destructive"
-          >
+          <Button onClick={openDeleteDialog} variant="destructive">
             <Trash2 size={16} className="mr-2" />
             Supprimer
           </Button>
+          {getActionButtons()}
         </div>
       </div>
 
-      {/* Contenu principal avec onglets */}
-      <Tabs defaultValue="details" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="details">Détails</TabsTrigger>
-          <TabsTrigger value="lignes">Lignes</TabsTrigger>
-          <TabsTrigger value="editeur">Éditeur</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="details" className="space-y-8">
-          {/* Informations générales */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Informations générales</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Numéro</Label>
-                  <p className="font-medium">{contrat.numero}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Client</Label>
-                  <p className="font-medium">{contrat.client.nom_complet}</p>
-                  <p className="text-sm text-gray-600">{contrat.client.email}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Devis associé</Label>
-                  <p className="font-medium">{contrat.devis.numero}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Statut</Label>
-                  <div className="mt-1">
-                    {getStatutBadge(contrat.statut)}
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Date de création</Label>
-                  <p className="font-medium">{formatDate(contrat.date_creation)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Date de début</Label>
-                  <p className="font-medium">{formatDate(contrat.date_debut)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">Date de fin</Label>
-                  <p className="font-medium">{formatDate(contrat.date_fin)}</p>
-                </div>
-                <div>
-                  <Label className="text-sm font-medium text-gray-600">TVA</Label>
-                  <p className="font-medium">
-                    {contrat.appliquer_tva ? `${contrat.taux_tva}%` : 'Non appliquée'}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Montants */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Montants</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
-                  <p className="text-2xl font-bold text-gray-900">{formatMontant(contrat.montant_ht)}</p>
-                </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <Label className="text-sm font-medium text-gray-600">TVA</Label>
-                  <p className="text-2xl font-bold text-gray-900">{formatMontant(contrat.montant_tva)}</p>
-                </div>
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
-                  <p className="text-2xl font-bold text-blue-900">{formatMontant(contrat.montant_ttc)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Conditions et notes */}
-          {(contrat.conditions || contrat.notes) && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {contrat.conditions && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Conditions</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap">{contrat.conditions}</p>
-                  </CardContent>
-                </Card>
-              )}
-              {contrat.notes && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="whitespace-pre-wrap">{contrat.notes}</p>
-                  </CardContent>
-                </Card>
-              )}
+      {/* Informations générales */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Informations générales</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Numéro</Label>
+              <p className="font-medium">{contrat.numero}</p>
             </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Client</Label>
+              <p className="font-medium">{contrat.client.nom_complet}</p>
+              <p className="text-sm text-gray-600">{contrat.client.email}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Devis associé</Label>
+              <p className="font-medium">{contrat.devis.numero}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Statut</Label>
+              <div className="mt-1">
+                {getStatutBadge(contrat.statut)}
+              </div>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Date de création</Label>
+              <p className="font-medium">{formatDate(contrat.date_creation)}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Date de début</Label>
+              <p className="font-medium">{formatDate(contrat.date_debut)}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Date de fin</Label>
+              <p className="font-medium">{formatDate(contrat.date_fin)}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Dernière modification</Label>
+              <p className="font-medium">{formatDate(contrat.updated_at)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Configuration TVA */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Configuration TVA</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Taux TVA</Label>
+              <p className="font-medium">{contrat.taux_tva}%</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Appliquer TVA</Label>
+              <p className="font-medium">{contrat.appliquer_tva ? 'Oui' : 'Non'}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Montants */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Montants</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
+              <p className="text-lg font-bold">{formatMontant(contrat.montant_ht)}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Montant TVA</Label>
+              <p className="text-lg font-bold">{formatMontant(contrat.montant_tva)}</p>
+            </div>
+            <div>
+              <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
+              <p className="text-lg font-bold text-blue-600">{formatMontant(contrat.montant_ttc)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lignes du contrat */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Lignes du contrat</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {contrat.lignes.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-600">Aucune ligne dans ce contrat</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Quantité</TableHead>
+                  <TableHead>Unité</TableHead>
+                  <TableHead>Prix unitaire HT</TableHead>
+                  <TableHead>Montant HT</TableHead>
+                  <TableHead>Intervenants</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contrat.lignes.map((ligne) => (
+                  <TableRow key={ligne.id}>
+                    <TableCell>
+                      <Badge variant={ligne.type_ligne === 'prestation' ? 'default' : 'secondary'}>
+                        {ligne.type_ligne}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{ligne.description || ligne.intitule}</TableCell>
+                    <TableCell>{ligne.quantite}</TableCell>
+                    <TableCell>{ligne.unite.intitule}</TableCell>
+                    <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
+                    <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
+                    <TableCell>
+                      {ligne.intervenants.length > 0 ? (
+                        <div className="space-y-1">
+                          {ligne.intervenants.map((intervenant) => (
+                            <div key={intervenant.id} className="text-sm">
+                              <span className="font-medium">{intervenant.profile_intervenant.intitule}</span>
+                              <br />
+                              <span className="text-gray-600">
+                                {intervenant.temps_intervenant}h × {formatMontant(intervenant.taux_horaire)}/h
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
-        </TabsContent>
-        
-        <TabsContent value="lignes" className="space-y-8">
-          {/* Lignes du contrat */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Lignes du contrat</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {contrat.lignes.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-600">Aucune ligne dans ce contrat</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Quantité</TableHead>
-                      <TableHead>Unité</TableHead>
-                      <TableHead>Prix unitaire HT</TableHead>
-                      <TableHead>Montant HT</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contrat.lignes.map((ligne) => (
-                      <TableRow key={ligne.id}>
-                        <TableCell>
-                          <Badge variant={ligne.type_ligne === 'prestation' ? 'default' : 'secondary'}>
-                            {ligne.type_ligne}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{ligne.description || ligne.intitule}</p>
-                            {ligne.type_ligne === 'prestation' && ligne.activity && (
-                              <p className="text-sm text-gray-600">{ligne.activity.intitule}</p>
-                            )}
-                            {ligne.type_ligne === 'frais' && ligne.ligne_frais && (
-                              <p className="text-sm text-gray-600">{ligne.ligne_frais.description}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{ligne.quantite}</TableCell>
-                        <TableCell>{ligne.unite.intitule}</TableCell>
-                        <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
-                        <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="editeur" className="space-y-8">
-          <ContractEditor 
-            contrat={contrat}
-            onSave={(content, variables) => {
-              toast.success('Contrat sauvegardé');
-            }}
-          />
-        </TabsContent>
-      </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Conditions et notes */}
+      {(contrat.conditions || contrat.notes) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {contrat.conditions && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Conditions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap">{contrat.conditions}</p>
+              </CardContent>
+            </Card>
+          )}
+          {contrat.notes && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Notes</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap">{contrat.notes}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Modal d'édition */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -558,10 +487,7 @@ export function ContratDetailPage() {
                       {editDateDebut ? format(editDateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-auto p-0 z-50" 
-                    align="start"
-                  >
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
                     <Calendar
                       mode="single"
                       selected={editDateDebut}
@@ -584,10 +510,7 @@ export function ContratDetailPage() {
                       {editDateFin ? format(editDateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-auto p-0 z-50" 
-                    align="start"
-                  >
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
                     <Calendar
                       mode="single"
                       selected={editDateFin}
@@ -609,7 +532,7 @@ export function ContratDetailPage() {
                 value={editForm.conditions}
                 onChange={(e) => setEditForm({ ...editForm, conditions: e.target.value })}
                 placeholder="Conditions du contrat..."
-                className="min-h-[100px]"
+                rows={4}
               />
             </div>
             <div>
@@ -619,7 +542,7 @@ export function ContratDetailPage() {
                 value={editForm.notes}
                 onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                 placeholder="Notes du contrat..."
-                className="min-h-[100px]"
+                rows={4}
               />
             </div>
           </div>
@@ -666,6 +589,31 @@ export function ContratDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Éditeur de contrat */}
+      {showContractEditor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-7xl max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b">
+              <h2 className="text-xl font-bold">Éditeur de contrat - {contrat.numero}</h2>
+              <Button variant="outline" onClick={() => setShowContractEditor(false)}>
+                Fermer
+              </Button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <ContractEditor
+                contrat={contrat}
+                devis={contrat.devis}
+                onGeneratePDF={(contractText) => {
+                  // Ici on peut implémenter la génération PDF du contrat personnalisé
+                  console.log('Générer PDF du contrat:', contractText);
+                  toast.success('PDF du contrat généré');
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

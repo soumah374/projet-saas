@@ -114,7 +114,7 @@ export const DevisDetailModals: React.FC<DevisDetailModalsProps> = ({
             </p>
             {devis && <DevisInfoCard devis={devis} />}
             <p className="text-sm text-blue-600">
-              Permet d'envoyer une copie du devis par email au client.
+              Une fois envoyé, le devis ne pourra plus être modifié.
             </p>
           </div>
           <DialogFooter>
