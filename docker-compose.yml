@@ -52,21 +52,21 @@ services:
       - sakom_network
 
   # Frontend React
-  frontend:
-    build: ./frontend
-    command: npm run dev
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    ports:
-      - "8080:8080"
-    environment:
-      - VITE_API_URL=http://localhost:8000/api/v1
-      - VITE_APP_NAME=SAKOM
-    depends_on:
-      - backend
-    networks:
-      - sakom_network
+  # frontend:
+  #   build: ./frontend
+  #   command: npm run dev
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - VITE_API_URL=http://localhost:8000/api/v1
+  #     - VITE_APP_NAME=SAKOM
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - sakom_network
 
   # Nginx (optionnel pour la production)
   nginx:
@@ -82,7 +82,21 @@ services:
       - sakom_network
     profiles:
       - production
-
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    volumes:
+      - ./data-mailpit:/data
+    ports:
+      - 8025:8025
+      - 1025:1025
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - sakom_network
 volumes:
   postgres_data:
   redis_data:

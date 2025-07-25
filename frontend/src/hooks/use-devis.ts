@@ -251,6 +251,31 @@ export const useEnvoyerDevis = () => {
   });
 };
 
+export const useEnvoyerEmailPDF = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, data }: { 
+      id: number; 
+      data: { 
+        email_destinataire: string; 
+        sujet: string; 
+        message: string; 
+        pdf_data: string; 
+      } 
+    }) => devisAPI.envoyerEmailPDF(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['devis'] });
+      queryClient.invalidateQueries({ queryKey: ['devis', id] });
+      toast.success('Email envoyé avec succès');
+    },
+    onError: (error) => {
+      console.error('Erreur lors de l\'envoi de l\'email:', error);
+      toast.error('Erreur lors de l\'envoi de l\'email');
+    },
+  });
+};
+
 export const useAccepterDevis = () => {
   const queryClient = useQueryClient();
   

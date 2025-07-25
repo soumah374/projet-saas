@@ -26,6 +26,7 @@ import { UnitesStandardsPage } from './pages/UnitesStandardsPage';
 import { DevisPage } from './pages/DevisPage';
 import { DevisDetailPage } from './pages/DevisDetailPage';
 import { DevisCreatePage } from './pages/DevisCreatePage';
+import { ContratsPage } from './pages/ContratsPage';
 import { useAuth } from './hooks/use-auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import DepartmentsPage from './pages/DepartmentsPage';
@@ -34,6 +35,8 @@ import FraisCategoriesPage from './pages/FraisCategoriesPage';
 import LignesFraisPage from './pages/LignesFraisPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { CategoryDetailsPage } from './pages/CategoryDetailsPage';
+import { ContratDetailPage } from './pages/ContratDetailPage';
+import { TemplatesContratPage } from '@/pages/TemplatesContratPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -189,6 +192,11 @@ function App() {
                     <DevisDetailPage />
                   </ProtectedRoute>
                 } />
+                <Route path="/templates-contrats" element={
+                  <ProtectedRoute>
+                    <TemplatesContratPage />
+                  </ProtectedRoute>
+                } />
                 <Route path="/categories-clients" element={
                   <ProtectedRoute>
                     <ClientCategoriesPage />
@@ -202,6 +210,16 @@ function App() {
                 <Route path="/lignes-frais" element={
                   <ProtectedRoute>
                     <LignesFraisPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/contrats" element={
+                  <ProtectedRoute>
+                    <ContratsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/contrats/:id" element={
+                  <ProtectedRoute>
+                    <ContratDetailPage />
                   </ProtectedRoute>
                 } />
                 

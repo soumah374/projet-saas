@@ -114,7 +114,7 @@ export const DevisDetailModals: React.FC<DevisDetailModalsProps> = ({
             </p>
             {devis && <DevisInfoCard devis={devis} />}
             <p className="text-sm text-blue-600">
-              Une fois envoyé, le devis ne pourra plus être modifié.
+              Permet d'envoyer une copie du devis par email au client.
             </p>
           </div>
           <DialogFooter>
@@ -154,9 +154,14 @@ export const DevisDetailModals: React.FC<DevisDetailModalsProps> = ({
               Êtes-vous sûr de vouloir accepter ce devis ?
             </p>
             {devis && <DevisInfoCard devis={devis} />}
-            <p className="text-sm text-green-600">
-              Une fois accepté, le devis deviendra définitif.
-            </p>
+            <div className="space-y-2">
+              <p className="text-sm text-green-600">
+                Une fois accepté, le devis deviendra définitif.
+              </p>
+              <p className="text-sm text-blue-600">
+                <strong>Note :</strong> Un contrat sera automatiquement créé à partir de ce devis accepté.
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button 

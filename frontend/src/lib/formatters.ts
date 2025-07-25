@@ -11,23 +11,16 @@ export const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('fr-FR');
 };
 
-/**
- * Formate un montant en euros français
- * @param montant - Montant à formater (number ou string)
- * @returns Montant formaté en euros français (ex: 1 234,56 €)
- */
-export const formatMontant = (montant: number | string) => {
-  const num = typeof montant === 'string' ? parseFloat(montant) : montant;
+export function formatMontant(montant: number | null | undefined): string {
+  if (montant === null || montant === undefined) return '0 GNF';
+  
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'GNF',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  })
-    .format(num || 0)
-    .replace('GNF', '') // On retire le code devise pour le remplacer par le suffixe
-    .trim() + ' GNF';
-};
+    maximumFractionDigits: 0,
+  }).format(montant);
+}
 
 /**
  * Formate un temps en heures avec format français

@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, Edit, Download, Send, Check, X, Plus, Trash2 } from 'lucide-react';
+import { Loader2, ArrowLeft, Edit, Download, Send, Check, X, Plus, Trash2, FileCheck } from 'lucide-react';
 import { 
   useDevisById,
   useUpdateDevis,
@@ -19,6 +19,7 @@ import {
   useIntervenantsParActivite,
   type Devis
 } from '@/hooks/use-devis';
+import { useCreateContratFromDevis } from '@/hooks/use-contrats';
 import { lignesDevisAPI } from '@/lib/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,8 @@ import { useFraisCategories } from '@/hooks/use-frais-categories';
 import { useLignesFraisByCategory } from '@/hooks/use-lignes-frais';
 import { DevisDetailModals } from '@/components/devis/DevisDetailModals';
 import type { LigneFrais } from '@/lib/types';
+import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
+import { generateMinimalDevisPDF } from '@/lib/pdfUtils';
 
 interface LigneForm {
   type_ligne: 'prestation' | 'frais' | '';
@@ -99,6 +102,7 @@ export function DevisDetailPage() {
   const createLigneMutation = useCreateLigneDevis();
   const createIntervenantMutation = useCreateIntervenantLigne();
   const deleteLigneMutation = useDeleteLigneDevis();
+  const createContratMutation = useCreateContratFromDevis();
 
   // Hooks pour les données de référence
   const { data: servicesData } = useServices({ page_size: 1000 });
@@ -184,9 +188,20 @@ export function DevisDetailPage() {
     setAccepterDialogOpen(true);
   };
 
+  const envoyerEmailPDFMutation = useEnvoyerEmailPDF();
   const handleConfirmEnvoyer = async () => {
     try {
-      await envoyerDevisMutation.mutateAsync(devisId);
+      // await envoyerDevisMutation.mutateAsync(devisId);
+      const pdfData = generateMinimalDevisPDF(devis);
+      await envoyerEmailPDFMutation.mutateAsync({
+        id: devis.id,
+        data: {
+          email_destinataire: devis.client.email,
+          sujet: `Devis ${devis.numero} - ${devis.client.nom_complet}`,
+          message: 'Merci de bien vouloir signer le devis et de nous le retourner.',
+          pdf_data: pdfData
+        }
+      });
       setEnvoyerDialogOpen(false);
     } catch (err) {
       // Error handled by hook
@@ -195,8 +210,24 @@ export function DevisDetailPage() {
 
   const handleConfirmAccepter = async () => {
     try {
+      // Accepter le devis
       await accepterDevisMutation.mutateAsync(devisId);
+      
+      // Créer automatiquement un contrat à partir du devis accepté
+      const dateDebut = new Date();
+      const dateFin = new Date();
+      dateFin.setFullYear(dateFin.getFullYear() + 1); // Contrat d'un an par défaut
+      
+      await createContratMutation.mutateAsync({
+        devis_id: devisId,
+        date_debut: dateDebut.toISOString().split('T')[0],
+        date_fin: dateFin.toISOString().split('T')[0],
+        conditions: devis?.conditions || '',
+        notes: `Contrat créé automatiquement lors de l'acceptation du devis ${devis?.numero}`,
+      });
+      
       setAccepterDialogOpen(false);
+      toast.success('Devis accepté et contrat créé avec succès !');
     } catch (err) {
       // Error handled by hook
     }
@@ -431,6 +462,7 @@ export function DevisDetailPage() {
               </Button>
             </>
           )}
+          
           {devis.statut === 'envoye' && (
             <>
               <Button onClick={handleAccepter} variant="outline">
@@ -442,6 +474,12 @@ export function DevisDetailPage() {
                 Refuser
               </Button>
             </>
+          )}
+          {devis.statut === 'accepte' && devis.contrat && (
+            <Button onClick={() => navigate(`/contrats/${devis.contrat.id}`)} variant="outline">
+              <FileCheck size={16} className="mr-2" />
+              Voir le contrat
+            </Button>
           )}
           <Button onClick={handleExportPDF} variant="outline">
             <Download size={16} className="mr-2" />

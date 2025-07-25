@@ -563,6 +563,14 @@ export const devisAPI = {
     refuserDevis: (id: number) => api.post(`/devis/devis/${id}/refuser/`),
     calculerMontants: (id: number) => api.post(`/devis/devis/${id}/calculer_montants/`),
     createDevisAvecLignes: (data: any) => api.post('/devis/devis/creer_avec_lignes/', data),
+    
+    // Endpoint pour envoyer le PDF par email
+    envoyerEmailPDF: (id: number, data: {
+        email_destinataire: string;
+        sujet: string;
+        message: string;
+        pdf_data: string;
+    }) => api.post(`/devis/devis/${id}/envoyer_email_pdf/`, data),
 };
 
 // Lignes de devis
@@ -624,6 +632,113 @@ export const intervenantsDevisAPI = {
     }) => api.patch(`/devis/intervenants/${id}/`, data),
     
     deleteIntervenant: (id: number) => api.delete(`/devis/intervenants/${id}/`),
+}; 
+
+// Contrats
+export const contratsAPI = {
+    getContrats: (params?: {
+        search?: string;
+        statut?: string;
+        client?: number;
+        date_debut?: string;
+        date_fin?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/contrats/contrats/', { params }),
+    
+    getContratById: (id: number) => api.get(`/contrats/contrats/${id}/`),
+    
+    createContrat: (data: {
+        devis_id: number;
+        date_debut: string;
+        date_fin: string;
+        conditions?: string;
+        notes?: string;
+    }) => api.post('/contrats/contrats/', data),
+    
+    createContratFromDevis: (data: {
+        devis_id: number;
+        date_debut: string;
+        date_fin: string;
+        conditions?: string;
+        notes?: string;
+    }) => api.post('/contrats/contrats/create_from_devis/', data),
+    
+    updateContrat: (id: number, data: {
+        date_debut?: string;
+        date_fin?: string;
+        statut?: string;
+        conditions?: string;
+        notes?: string;
+    }) => api.patch(`/contrats/contrats/${id}/`, data),
+    
+    deleteContrat: (id: number) => api.delete(`/contrats/contrats/${id}/`),
+    
+    activerContrat: (id: number) => api.post(`/contrats/contrats/${id}/activer/`),
+    
+    terminerContrat: (id: number) => api.post(`/contrats/contrats/${id}/terminer/`),
+    
+    annulerContrat: (id: number) => api.post(`/contrats/contrats/${id}/annuler/`),
+    
+    suspendreContrat: (id: number) => api.post(`/contrats/contrats/${id}/suspendre/`),
+    
+    envoyerContratPDF: (id: number, pdfData: string) => api.post(`/contrats/contrats/${id}/envoyer_email_pdf/`, {
+        pdf_data: pdfData
+    }),
+    
+    calculerMontants: (id: number) => api.post(`/contrats/contrats/${id}/calculer_montants/`),
+    
+    getDevisDisponibles: () => api.get('/contrats/contrats/devis_disponibles/'),
+    
+    // Lignes de contrat
+    getLignesContrat: (contratId: number) => api.get(`/contrats/lignes/?contrat=${contratId}`),
+    createLigneContrat: (data: any) => api.post('/contrats/lignes/', data),
+    updateLigneContrat: (id: number, data: any) => api.patch(`/contrats/lignes/${id}/`, data),
+    deleteLigneContrat: (id: number) => api.delete(`/contrats/lignes/${id}/`),
+    
+    // Intervenants de ligne de contrat
+    getIntervenantsLigneContrat: (ligneId: number) => api.get(`/contrats/intervenants/?ligne_contrat=${ligneId}`),
+    createIntervenantLigneContrat: (data: any) => api.post('/contrats/intervenants/', data),
+    updateIntervenantLigneContrat: (id: number, data: any) => api.patch(`/contrats/intervenants/${id}/`, data),
+    deleteIntervenantLigneContrat: (id: number) => api.delete(`/contrats/intervenants/${id}/`),
+    
+    // Templates de contrat
+    getTemplatesContrat: (params?: {
+        type_template?: string;
+        est_actif?: boolean;
+        est_public?: boolean;
+        search?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/contrats/templates/', { params }),
+    
+    getTemplateContratById: (id: number) => api.get(`/contrats/templates/${id}/`),
+    
+    createTemplateContrat: (data: {
+        nom: string;
+        type_template: string;
+        description?: string;
+        contenu: string;
+        variables_defaut?: any;
+        est_actif?: boolean;
+        est_public?: boolean;
+    }) => api.post('/contrats/templates/', data),
+    
+    updateTemplateContrat: (id: number, data: any) => api.patch(`/contrats/templates/${id}/`, data),
+    
+    deleteTemplateContrat: (id: number) => api.delete(`/contrats/templates/${id}/`),
+    
+    genererContratFromTemplate: (data: {
+        template_id: number;
+        variables: any;
+        contrat_id: number;
+    }) => api.post('/contrats/templates/generer_contrat/', data),
+    
+    getTemplatesActifs: () => api.get('/contrats/templates/actifs/'),
+    
+    getTypesTemplates: () => api.get('/contrats/templates/types_disponibles/'),
 }; 
 
 // PATCHs

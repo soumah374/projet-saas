@@ -4,6 +4,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from django.core.mail import EmailMessage
+from django.conf import settings
+from django.template.loader import render_to_string
+import base64
+import tempfile
+import os
 from .models import Devis, LigneDevis, LigneDevisIntervenant
 from .serializers import (
     DevisSerializer, DevisCreateSerializer,
@@ -51,26 +57,26 @@ class DevisViewSet(viewsets.ModelViewSet):
             for ligne_data in lignes_data:
                 
                 if ligne_data['type_ligne'] == 'prestation':
-                    ligne = devis.ajouter_ligne(
+                    ligne = LigneDevis.objects.create(
+                        devis=devis,
+                        type_ligne='prestation',
                         service_id=ligne_data['service_id'],
                         activity_id=ligne_data['activity_id'],
                         description=ligne_data.get('description', ''),
                         quantite=ligne_data['quantite'],
                         unite_id=ligne_data['unite_id'],
-                        type_ligne='prestation'
+                        prix_unitaire_ht=ligne_data['prix_unitaire_ht']
                     )
-                    # Créer les intervenants pour cette ligne
+                    
+                    # Créer les intervenants
                     for intervenant_data in ligne_data.get('intervenants', []):
-                        ligne.intervenants.create(
+                        LigneDevisIntervenant.objects.create(
+                            ligne_devis=ligne,
                             profile_intervenant_id=intervenant_data['profile_intervenant_id'],
                             temps_intervenant=intervenant_data['temps_intervenant'],
                             taux_horaire=intervenant_data['taux_horaire']
                         )
-                    # Recalculer le prix unitaire de la ligne après avoir ajouté tous les intervenants
-                    if ligne.intervenants.exists():
-                        total_intervenants = sum(interv.montant_intervenant for interv in ligne.intervenants.all())
-                        ligne.prix_unitaire_ht = total_intervenants
-                        ligne.save()
+                    
                 elif ligne_data['type_ligne'] == 'frais':
                     ligne = LigneDevis.objects.create(
                         devis=devis,
@@ -99,6 +105,107 @@ class DevisViewSet(viewsets.ModelViewSet):
         devis.statut = 'envoye'
         devis.save()
         return Response({'status': 'Devis envoyé'})
+    
+    @action(detail=True, methods=['post'])
+    def envoyer_email_pdf(self, request, pk=None):
+        """Envoyer un devis par email avec le PDF généré par jsPDF"""
+        devis = self.get_object()
+        
+        # Récupérer les données de l'email
+        email_destinataire = request.data.get('email_destinataire')
+        sujet = request.data.get('sujet', f'Devis {devis.numero} - {devis.client.nom_complet}')
+        message = request.data.get('message', '')
+        pdf_data = request.data.get('pdf_data')
+        
+        if not email_destinataire:
+            return Response({'error': 'Email destinataire requis'}, status=400)
+        
+        if not pdf_data:
+            return Response({'error': 'Données PDF requises'}, status=400)
+        
+        # try:
+        # Décoder les données PDF base64
+        if pdf_data.startswith('data:application/pdf;base64,'):
+            pdf_base64 = pdf_data.split(',')[1]
+        else:
+            pdf_base64 = pdf_data
+        
+        pdf_content = base64.b64decode(pdf_base64)
+        
+        # Créer un fichier temporaire pour le PDF
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+            temp_file.write(pdf_content)
+            temp_file_path = temp_file.name
+        
+        # Préparer le message email
+        message_complet = self.prepare_email_message(devis, message)
+        
+        # Créer l'email avec pièce jointe
+        email = EmailMessage(
+            subject=sujet,
+            body=message_complet,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=[email_destinataire]
+        )
+        
+        print("Email created", email)
+        # Attacher le PDF
+        with open(temp_file_path, 'rb') as pdf_file:
+            email.attach(
+                f'devis-{devis.numero}.pdf',
+                pdf_file.read(),
+                'application/pdf'
+            )
+        
+        # Envoyer l'email
+        email.send()
+        print("Email sent", email)
+        
+        # Nettoyer le fichier temporaire
+        os.unlink(temp_file_path)
+        
+        # Changer le statut du devis si ce n'est pas déjà fait
+        if devis.statut == 'brouillon':
+            devis.statut = 'envoye'
+            devis.save()
+        
+        return Response({
+            'status': 'Email envoyé avec succès',
+            'message': 'Le devis a été envoyé par email avec le PDF en pièce jointe'
+        })
+            
+        # except Exception as e:
+        #     # Nettoyer le fichier temporaire en cas d'erreur
+        #     if 'temp_file_path' in locals():
+        #         try:
+        #             os.unlink(temp_file_path)
+        #         except:
+        #             pass
+            
+            # return Response({'error': str(e)}, status=400)
+    
+    def prepare_email_message(self, devis, message_personnalise=''):
+        """Préparer le message email complet"""
+        # Message de base
+        message_base = f"""
+            Bonjour {devis.client.nom_complet},
+
+            Veuillez trouver ci-joint notre devis {devis.numero} pour un montant de {devis.montant_ttc} GNF.
+
+            Détails du devis :
+            - Numéro : {devis.numero}
+            - Date de validité : {devis.date_validite}
+            - Montant HT : {devis.montant_ht} GNF
+            - TVA ({devis.taux_tva}%) : {devis.montant_tva} GNF
+            - Montant TTC : {devis.montant_ttc} GNF
+
+            {message_personnalise}
+
+            Cordialement,
+            L'équipe SAKOM
+        """
+        
+        return message_base.strip()
     
     @action(detail=True, methods=['post'])
     def accepter(self, request, pk=None):

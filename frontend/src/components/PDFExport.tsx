@@ -1,7 +1,15 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { formatDate, formatMontant, formatTemps } from '@/lib/formatters';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Mail, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
 
 interface PDFExportProps {
   devis: any;
@@ -10,13 +18,21 @@ interface PDFExportProps {
 
 export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
   const pdfRef = useRef<HTMLDivElement>(null);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [emailForm, setEmailForm] = useState({
+    email_destinataire: devis?.client?.email || '',
+    sujet: `Devis ${devis?.numero} - ${devis?.client?.nom_complet}`,
+    message: ''
+  });
+
+  const envoyerEmailPDFMutation = useEnvoyerEmailPDF();
 
   const handlePrint = () => {
     window.print();
   };
 
-  const generatePDF = async () => {
-    if (!pdfRef.current) return;
+  const generatePDF = async (): Promise<string | null> => {
+    if (!pdfRef.current) return null;
 
     try {
       const canvas = await html2canvas(pdfRef.current, {
@@ -47,14 +63,52 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`devis-${devis.numero}.pdf`);
+      // Retourner le PDF en base64
+      return pdf.output('datauristring');
     } catch (error) {
       console.error('Erreur lors de la génération du PDF:', error);
+      return null;
     }
   };
 
-  const handleDownload = () => {
-    generatePDF();
+  const handleDownload = async () => {
+    const pdfData = await generatePDF();
+    if (pdfData) {
+      // Créer un lien de téléchargement
+      const link = document.createElement('a');
+      link.href = pdfData;
+      link.download = `devis-${devis.numero}.pdf`;
+      link.click();
+    }
+  };
+
+  const handleSendEmail = async () => {
+    try {
+      const pdfData = await generatePDF();
+      if (!pdfData) {
+        toast.error('Erreur lors de la génération du PDF');
+        return;
+      }
+
+      await envoyerEmailPDFMutation.mutateAsync({
+        id: devis.id,
+        data: {
+          email_destinataire: emailForm.email_destinataire,
+          sujet: emailForm.sujet,
+          message: emailForm.message,
+          pdf_data: pdfData
+        }
+      });
+
+      setEmailDialogOpen(false);
+      setEmailForm({
+        email_destinataire: devis?.client?.email || '',
+        sujet: `Devis ${devis?.numero} - ${devis?.client?.nom_complet}`,
+        message: ''
+      });
+    } catch (error) {
+      // L'erreur est gérée par le hook
+    }
   };
 
   return (
@@ -75,6 +129,13 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
             >
               Télécharger PDF
+            </button>
+            <button
+              onClick={() => setEmailDialogOpen(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 flex items-center gap-2"
+            >
+              <Mail size={16} />
+              Envoyer par email
             </button>
             <button
               onClick={onClose}
@@ -614,6 +675,73 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
           </div>
         </div>
       </div>
+
+      {/* Modal d'envoi d'email */}
+      <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Envoyer le devis par email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium">Destinataire *</Label>
+              <Input
+                type="email"
+                value={emailForm.email_destinataire}
+                onChange={(e) => setEmailForm({ ...emailForm, email_destinataire: e.target.value })}
+                placeholder="email@exemple.com"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Sujet *</Label>
+              <Input
+                value={emailForm.sujet}
+                onChange={(e) => setEmailForm({ ...emailForm, sujet: e.target.value })}
+                placeholder="Sujet de l'email"
+              />
+            </div>
+            <div>
+              <Label className="text-sm font-medium">Message personnalisé</Label>
+              <Textarea
+                value={emailForm.message}
+                onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
+                placeholder="Message optionnel à ajouter à l'email..."
+                rows={4}
+              />
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Note :</strong> Le devis sera automatiquement généré en PDF et joint à l'email.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setEmailDialogOpen(false)}
+              disabled={envoyerEmailPDFMutation.isPending}
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleSendEmail}
+              disabled={!emailForm.email_destinataire || !emailForm.sujet || envoyerEmailPDFMutation.isPending}
+            >
+              {envoyerEmailPDFMutation.isPending ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16}/>
+                  Envoi en cours...
+                </>
+              ) : (
+                <>
+                  <Mail size={16} className="mr-2" />
+                  Envoyer l'email
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }; 

@@ -19,6 +19,8 @@ import {
   type Devis
 } from '@/hooks/use-devis';
 import { formatMontant } from '@/lib/formatters';
+import { generateMinimalDevisPDF } from '@/lib/pdfUtils';
+import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
 
 export function DevisPage() {
   const navigate = useNavigate();
@@ -198,11 +200,23 @@ export function DevisPage() {
     setAccepterDialogOpen(true);
   };
 
+  const envoyerEmailPDFMutation = useEnvoyerEmailPDF();
   const handleEnvoyer = async () => {
     if (!devisToEnvoyer) return;
     
     try {
-      await envoyerDevisMutation.mutateAsync(devisToEnvoyer.id);
+      // await envoyerDevisMutation.mutateAsync(devisToEnvoyer.id);
+      const pdfData = generateMinimalDevisPDF(devisToEnvoyer);
+      console.log(pdfData);
+      await envoyerEmailPDFMutation.mutateAsync({
+        id: devisToEnvoyer.id,
+        data: {
+          email_destinataire: devisToEnvoyer.client.email,
+          sujet: `Devis ${devisToEnvoyer.numero} - ${devisToEnvoyer.client.nom_complet}`,
+          message: 'Merci de bien vouloir signer le devis et de nous le retourner.',
+          pdf_data: pdfData
+        }
+      });
       setEnvoyerDialogOpen(false);
       setDevisToEnvoyer(null);
     } catch (err) {

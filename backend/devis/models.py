@@ -221,3 +221,41 @@ class LigneDevisIntervenant(models.Model):
         total_intervenants = sum(interv.montant_intervenant for interv in self.ligne_devis.intervenants.all())
         self.ligne_devis.prix_unitaire_ht = total_intervenants
         self.ligne_devis.save()
+        
+class DevisEmail(models.Model):
+    """Modèle pour tracker les envois d'emails de devis avec versionnement"""
+    
+    devis = models.ForeignKey('Devis', on_delete=models.CASCADE, related_name='emails_envoyes')
+    version = models.PositiveIntegerField(default=1)
+    email_destinataire = models.EmailField()
+    sujet = models.CharField(max_length=255)
+    message = models.TextField()
+    date_envoi = models.DateTimeField(auto_now_add=True)
+    statut_envoi = models.CharField(
+        max_length=20,
+        choices=[
+            ('envoye', 'Envoyé'),
+            ('erreur', 'Erreur'),
+            ('en_cours', 'En cours'),
+        ],
+        default='en_cours'
+    )
+    erreur_message = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        verbose_name = 'Email de devis'
+        verbose_name_plural = 'Emails de devis'
+        ordering = ['-date_envoi']
+        unique_together = ['devis', 'version']
+    
+    def __str__(self):
+        return f"Email v{self.version} - Devis {self.devis.numero} - {self.email_destinataire}"
+    
+    def save(self, *args, **kwargs):
+        if not self.version:
+            # Déterminer la prochaine version pour ce devis
+            derniere_version = DevisEmail.objects.filter(devis=self.devis).aggregate(
+                max_version=models.Max('version')
+            )['max_version']
+            self.version = (derniere_version or 0) + 1
+        super().save(*args, **kwargs)
