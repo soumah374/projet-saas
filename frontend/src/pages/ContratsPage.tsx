@@ -368,6 +368,9 @@ export function ContratsPage() {
                   <TableHead>Date début</TableHead>
                   <TableHead>Date fin</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Montant HT</TableHead>
+                  <TableHead>TVA</TableHead>
+                  <TableHead>Frais Agence</TableHead>
                   <TableHead>Montant TTC</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -389,6 +392,13 @@ export function ContratsPage() {
                     <TableCell>{formatDate(contrat.date_debut)}</TableCell>
                     <TableCell>{formatDate(contrat.date_fin)}</TableCell>
                     <TableCell>{getStatutBadge(contrat.statut)}</TableCell>
+                    <TableCell className="font-medium">{formatMontant(contrat.montant_ht)}</TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
+                    </TableCell>
                     <TableCell className="font-medium">{formatMontant(contrat.montant_ttc)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">

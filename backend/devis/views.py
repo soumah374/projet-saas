@@ -10,6 +10,7 @@ from django.template.loader import render_to_string
 import base64
 import tempfile
 import os
+import logging
 from decimal import Decimal
 from .models import Devis, LigneDevis, LigneDevisIntervenant
 from .serializers import (
@@ -19,7 +20,8 @@ from .serializers import (
     DevisAvecLignesSerializer, LigneDevisAvecIntervenantsSerializer
 )
 from catalog.models import Activity, TauxHoraire, LigneFrais
-from .models import LigneDevis
+
+logger = logging.getLogger(__name__)
 
 
 class DevisViewSet(viewsets.ModelViewSet):
@@ -43,10 +45,16 @@ class DevisViewSet(viewsets.ModelViewSet):
     def creer_avec_lignes(self, request):
         """Créer un devis avec ses lignes en une seule requête"""
         try:
+            logger.info(f"Données reçues: {request.data}")
+            
             # Valider les données du devis
             devis_serializer = DevisAvecLignesSerializer(data=request.data)
-            devis_serializer.is_valid(raise_exception=True)
+            if not devis_serializer.is_valid():
+                logger.error(f"Erreur validation devis: {devis_serializer.errors}")
+                return Response({'error': 'Erreur de validation du devis', 'details': devis_serializer.errors}, status=400)
+            
             devis_data = devis_serializer.validated_data
+            logger.info(f"Données devis validées: {devis_data}")
             
             # Créer le devis
             devis = Devis.objects.create(
@@ -59,56 +67,105 @@ class DevisViewSet(viewsets.ModelViewSet):
                 notes=devis_data.get('notes', ''),
                 conditions=devis_data.get('conditions', '')
             )
+            logger.info(f"Devis créé avec ID: {devis.id}")
 
             # Valider et créer les lignes
             lignes_data = request.data.get('lignes', [])
-            for ligne_data in lignes_data:
-                # Valider la ligne avec le nouveau sérialiseur
-                ligne_serializer = LigneDevisAvecIntervenantsSerializer(data=ligne_data)
-                ligne_serializer.is_valid(raise_exception=True)
-                validated_ligne_data = ligne_serializer.validated_data
+            logger.info(f"Nombre de lignes à traiter: {len(lignes_data)}")
+            
+            for i, ligne_data in enumerate(lignes_data):
+                logger.info(f"Traitement ligne {i+1}: {ligne_data}")
                 
-                if ligne_data['type_ligne'] == 'prestation':
-                    ligne = LigneDevis.objects.create(
-                        devis=devis,
-                        type_ligne='prestation',
-                        service_id=ligne_data['service_id'],
-                        activity_id=ligne_data['activity_id'],
-                        description=ligne_data.get('description', ''),
-                        quantite=ligne_data['quantite'],
-                        unite_id=ligne_data['unite_id'],
-                        prix_unitaire_ht=ligne_data['prix_unitaire_ht']
-                    )
+                try:
+                    # Valider la ligne avec le sérialiseur approprié
+                    ligne_serializer = LigneDevisAvecIntervenantsSerializer(data=ligne_data)
+                    if not ligne_serializer.is_valid():
+                        logger.error(f"Erreur validation ligne {i+1}: {ligne_serializer.errors}")
+                        return Response({'error': f'Erreur de validation de la ligne {i+1}', 'details': ligne_serializer.errors}, status=400)
                     
-                    # Créer les intervenants
-                    for intervenant_data in ligne_data.get('intervenants', []):
-                        LigneDevisIntervenant.objects.create(
-                            ligne_devis=ligne,
-                            profile_intervenant_id=intervenant_data['profile_intervenant_id'],
-                            temps_intervenant=temps_intervenant,
-                            taux_horaire=taux_horaire
+                    validated_ligne_data = ligne_serializer.validated_data
+                    logger.info(f"Ligne {i+1} validée: {validated_ligne_data}")
+                    
+                    if validated_ligne_data['type_ligne'] == 'prestation':
+                        ligne = devis.ajouter_ligne(
+                            service_id=validated_ligne_data['service_id'].id,
+                            activity_id=validated_ligne_data['activity_id'].id,
+                            description=validated_ligne_data.get('description', ''),
+                            quantite=validated_ligne_data['quantite'],
+                            unite_id=validated_ligne_data['unite_id'].id,
+                            type_ligne='prestation'
                         )
-                    
-                elif ligne_data['type_ligne'] == 'frais':
-                    ligne = LigneDevis.objects.create(
-                        devis=devis,
-                        type_ligne='frais',
-                        frais_category=validated_ligne_data.get('frais_category_id'),
-                        ligne_frais=validated_ligne_data['ligne_frais_id'],
-                        description=validated_ligne_data.get('description', ''),
-                        quantite=validated_ligne_data['quantite'],
-                        unite=validated_ligne_data['unite_id'],
-                        prix_unitaire_ht=validated_ligne_data.get('prix_unitaire_ht', Decimal('0')),
-                        type_frais=validated_ligne_data.get('type_frais', 'standard')
-                    )
-                    # Le montant_ht sera calculé automatiquement dans save()
-                else:
-                    raise Exception('Type de ligne inconnu')
+                        logger.info(f"Ligne prestation créée avec ID: {ligne.id}")
+                        
+                        # Créer les intervenants pour cette ligne
+                        for j, intervenant_data in enumerate(ligne_data.get('intervenants', [])):
+                            logger.info(f"Traitement intervenant {j+1} de la ligne {i+1}: {intervenant_data}")
+                            
+                            # Valider les données de l'intervenant
+                            temps_intervenant = Decimal(str(intervenant_data['temps_intervenant'])) if intervenant_data['temps_intervenant'] else Decimal('0')
+                            taux_horaire = Decimal(str(intervenant_data['taux_horaire'])) if intervenant_data['taux_horaire'] else Decimal('0')
+                            
+                            ligne.intervenants.create(
+                                profile_intervenant_id=intervenant_data['profile_intervenant_id'],
+                                temps_intervenant=temps_intervenant,
+                                taux_horaire=taux_horaire
+                            )
+                            logger.info(f"Intervenant {j+1} créé pour la ligne {ligne.id}")
+                        
+                        # Recalculer le prix unitaire de la ligne après avoir ajouté tous les intervenants
+                        if ligne.intervenants.exists():
+                            # Calculer la somme des montants par intervenant
+                            total_intervenants = sum(interv.montant_intervenant for interv in ligne.intervenants.all())
+                            
+                            # Si plusieurs intervenants et unité spéciale, calculer le prix unitaire selon la règle métier
+                            if ligne.intervenants.count() > 1:
+                                unite_intitule = ligne.unite.intitule.lower()
+                                is_unite_jour = any(unite in unite_intitule for unite in ['heure', 'homme-jour', 'jour'])
+                                
+                                if is_unite_jour:
+                                    # Le prix unitaire est égal à la somme des montants divisée par la quantité
+                                    ligne.prix_unitaire_ht = total_intervenants / ligne.quantite if ligne.quantite > 0 else 0
+                                else:
+                                    # Logique normale pour les autres unités
+                                    ligne.prix_unitaire_ht = total_intervenants
+                            else:
+                                # Logique normale pour un seul intervenant
+                                ligne.prix_unitaire_ht = total_intervenants
+                            
+                            ligne.save()
+                            logger.info(f"Prix unitaire recalculé pour la ligne {ligne.id}: {ligne.prix_unitaire_ht}")
+                            
+                    elif validated_ligne_data['type_ligne'] == 'frais':
+                        ligne = LigneDevis.objects.create(
+                            devis=devis,
+                            type_ligne='frais',
+                            frais_category=validated_ligne_data.get('frais_category_id'),
+                            ligne_frais=validated_ligne_data['ligne_frais_id'],
+                            description=validated_ligne_data.get('description', ''),
+                            quantite=validated_ligne_data['quantite'],
+                            unite=validated_ligne_data['unite_id'],
+                            prix_unitaire_ht=validated_ligne_data.get('prix_unitaire_ht', Decimal('0')),
+                            type_frais=validated_ligne_data.get('type_frais', 'standard')
+                        )
+                        logger.info(f"Ligne frais créée avec ID: {ligne.id}")
+                        # Le montant_ht sera calculé automatiquement dans save()
+                    else:
+                        raise Exception('Type de ligne inconnu')
+                        
+                except Exception as e:
+                    logger.error(f"Erreur lors du traitement de la ligne {i+1}: {str(e)}")
+                    return Response({'error': f'Erreur lors du traitement de la ligne {i+1}', 'details': str(e)}, status=400)
+
+            # Calculer les montants finaux du devis
+            devis.calculer_montants()
+            logger.info(f"Montants calculés pour le devis {devis.id}")
 
             # Retourner le devis complet
             return Response(DevisSerializer(devis).data, status=201)
+            
         except Exception as e:
-            return Response({'error': str(e)}, status=400)
+            logger.error(f"Erreur générale lors de la création du devis: {str(e)}")
+            return Response({'error': 'Erreur lors de la création du devis', 'details': str(e)}, status=400)
     
     @action(detail=True, methods=['post'])
     def envoyer(self, request, pk=None):

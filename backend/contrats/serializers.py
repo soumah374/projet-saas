@@ -76,12 +76,13 @@ class ContratSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'numero', 'devis', 'client', 'date_creation', 'date_debut', 'date_fin',
             'statut', 'statut_display', 'taux_tva', 'appliquer_tva',
-            'montant_ht', 'montant_tva', 'montant_ttc',
+            'taux_frais_agence', 'appliquer_frais_agence',
+            'montant_ht', 'montant_tva', 'montant_frais_agence', 'montant_ttc',
             'conditions', 'notes', 'lignes', 'created_at', 'updated_at', 'contenu_personnalise', 'variables_personnalisees'
         ]
         read_only_fields = [
             'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 
-            'montant_ttc', 'created_at', 'updated_at', 'statut_display'
+            'montant_frais_agence', 'montant_ttc', 'created_at', 'updated_at', 'statut_display'
         ]
 
 
@@ -98,6 +99,7 @@ class ContratCreateSerializer(serializers.ModelSerializer):
         model = Contrat
         fields = [
             'devis_id', 'date_debut', 'date_fin', 'taux_tva', 'appliquer_tva',
+            'taux_frais_agence', 'appliquer_frais_agence',
             'conditions', 'notes'
         ]
 

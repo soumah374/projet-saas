@@ -38,9 +38,14 @@ class Contrat(models.Model):
     taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(0)])
     appliquer_tva = models.BooleanField(default=True, verbose_name="Appliquer la TVA")
     
+    # Configuration Frais d'Agence (héritée du devis)
+    taux_frais_agence = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, validators=[MinValueValidator(0)])
+    appliquer_frais_agence = models.BooleanField(default=False, verbose_name="Appliquer les frais d'agence")
+    
     # Informations commerciales
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    montant_frais_agence = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Conditions et clauses
@@ -86,9 +91,12 @@ class Contrat(models.Model):
         if self.devis:
             self.montant_ht = self.devis.montant_ht
             self.montant_tva = self.devis.montant_tva
+            self.montant_frais_agence = self.devis.montant_frais_agence
             self.montant_ttc = self.devis.montant_ttc
             self.taux_tva = self.devis.taux_tva
             self.appliquer_tva = self.devis.appliquer_tva
+            self.taux_frais_agence = self.devis.taux_frais_agence
+            self.appliquer_frais_agence = self.devis.appliquer_frais_agence
     
     def generate_numero(self):
         """Générer un numéro de contrat unique"""
@@ -108,7 +116,7 @@ class Contrat(models.Model):
         return f"CON{year}{new_number:04d}"
     
     def calculer_montants(self):
-        """Calculer les montants HT, TVA et TTC"""
+        """Calculer les montants HT, TVA, Frais d'Agence et TTC"""
         from decimal import Decimal
         
         total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
@@ -123,7 +131,16 @@ class Contrat(models.Model):
         else:
             self.montant_tva = Decimal('0')
         
-        self.montant_ttc = self.montant_ht + self.montant_tva
+        # Calculer les frais d'agence selon la configuration
+        if self.appliquer_frais_agence:
+            taux_frais = self.taux_frais_agence / 100
+            if isinstance(taux_frais, float):
+                taux_frais = Decimal(str(taux_frais))
+            self.montant_frais_agence = self.montant_ht * taux_frais
+        else:
+            self.montant_frais_agence = Decimal('0')
+        
+        self.montant_ttc = self.montant_ht + self.montant_tva + self.montant_frais_agence
         self.save()
     
     def get_contenu_final(self):
@@ -162,8 +179,10 @@ class Contrat(models.Model):
             'DATE_FIN_PRESTATION': self.date_fin.strftime('%d/%m/%Y') if self.date_fin else '',
             'MONTANT_HT': f"{self.montant_ht:,.0f}",
             'MONTANT_TVA': f"{self.montant_tva:,.0f}",
+            'MONTANT_FRAIS_AGENCE': f"{self.montant_frais_agence:,.0f}",
             'MONTANT_TTC': f"{self.montant_ttc:,.0f}",
             'TAUX_TVA': f"{self.taux_tva}",
+            'TAUX_FRAIS_AGENCE': f"{self.taux_frais_agence}",
             'DATE_SIGNATURE': self.date_creation.strftime('%d/%m/%Y') if self.date_creation else '',
             'VILLE_SIGNATURE': 'Conakry',
             'CONDITIONS_SPECIFIQUES': self.conditions,
