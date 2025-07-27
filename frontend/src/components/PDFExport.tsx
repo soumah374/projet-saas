@@ -282,7 +282,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                   }}>
                     Désignation
                   </th>
-                  <th style={{ 
+                  {/* <th style={{ 
                     border: '1px solid #cbd5e0', 
                     padding: '8px', 
                     textAlign: 'center',
@@ -291,7 +291,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     textTransform: 'uppercase'
                   }}>
                     Type
-                  </th>
+                  </th> */}
                   <th style={{ 
                     border: '1px solid #cbd5e0', 
                     padding: '8px', 
@@ -394,7 +394,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                                  </div>
                                )}
                              </td>
-                             <td style={{ 
+                             {/* <td style={{ 
                                border: '1px solid #cbd5e0', 
                                padding: '6px 8px',
                                textAlign: 'center',
@@ -402,7 +402,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                                color: '#4a5568'
                              }}>
                                Prestation
-                             </td>
+                             </td> */}
                              <td style={{ 
                                border: '1px solid #cbd5e0', 
                                padding: '6px 8px',
@@ -495,7 +495,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                                  </div>
                                )}
                              </td>
-                             <td style={{ 
+                             {/* <td style={{ 
                                border: '1px solid #cbd5e0', 
                                padding: '6px 8px',
                                textAlign: 'center',
@@ -503,7 +503,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                                color: '#92400e'
                              }}>
                                {typeFraisLabel}
-                             </td>
+                             </td> */}
                              <td style={{ 
                                border: '1px solid #cbd5e0', 
                                padding: '6px 8px',

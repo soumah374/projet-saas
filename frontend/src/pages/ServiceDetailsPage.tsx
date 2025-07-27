@@ -855,7 +855,7 @@ export function ServiceDetailsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Nom</TableHead>
-                        <TableHead>Durée standard</TableHead>
+                        <TableHead>Temps standard</TableHead>
                         <TableHead>Profils et temps</TableHead>
                         <TableHead>Statut</TableHead>
                         <TableHead>Actions</TableHead>
