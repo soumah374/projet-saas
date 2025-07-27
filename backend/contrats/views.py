@@ -4,13 +4,12 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-from .models import Contrat, LigneContrat, LigneContratIntervenant, TemplateContrat
+from django.http import HttpResponse
+from .models import Contrat, LigneContrat, LigneContratIntervenant
 from .serializers import (
     ContratSerializer, ContratCreateSerializer, ContratFromDevisSerializer,
     LigneContratSerializer, LigneContratCreateSerializer,
-    LigneContratIntervenantSerializer, LigneContratIntervenantCreateSerializer,
-    TemplateContratSerializer, TemplateContratCreateSerializer, TemplateContratUpdateSerializer,
-    GenererContratSerializer
+    LigneContratIntervenantSerializer, LigneContratIntervenantCreateSerializer
 )
 from devis.models import Devis
 
@@ -178,6 +177,27 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None):
+        """Télécharger le contrat en PDF"""
+        contrat = self.get_object()
+        
+        try:
+            # Générer le PDF en utilisant la méthode du modèle
+            pdf_content = contrat.generer_pdf()
+            
+            # Créer la réponse HTTP avec le PDF
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="contrat_{contrat.numero}.pdf"'
+            response['Content-Length'] = len(pdf_content)
+            return response
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class LigneContratViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des lignes de contrat"""
@@ -221,61 +241,3 @@ class LigneContratIntervenantViewSet(viewsets.ModelViewSet):
         intervenant.recalculer_prix_ligne()
         # Recalculer les montants du contrat
         intervenant.ligne_contrat.contrat.calculer_montants()
-
-
-class TemplateContratViewSet(viewsets.ModelViewSet):
-    """ViewSet pour la gestion des templates de contrat"""
-    
-    queryset = TemplateContrat.objects.all()
-    serializer_class = TemplateContratSerializer
-    permission_classes = [permissions.IsAdminUser]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ['type_template', 'est_actif', 'est_public']
-    search_fields = ['nom', 'description']
-    ordering_fields = ['nom', 'type_template', 'created_at']
-    ordering = ['nom']
-    
-    def get_serializer_class(self):
-        if self.action == 'create':
-            return TemplateContratCreateSerializer
-        elif self.action in ['update', 'partial_update']:
-            return TemplateContratUpdateSerializer
-        return TemplateContratSerializer
-    
-    def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
-    
-    @action(detail=True, methods=['post'])
-    def generer_contrat(self, request, pk=None):
-        """Générer un contrat à partir du template"""
-        template = self.get_object()
-        serializer = GenererContratSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            try:
-                contenu_generer = serializer.generate_contrat_content(serializer.validated_data)
-                return Response({
-                    'contenu': contenu_generer,
-                    'template': TemplateContratSerializer(template).data
-                })
-            except Exception as e:
-                return Response(
-                    {'error': f'Erreur lors de la génération: {str(e)}'}, 
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @action(detail=False, methods=['get'])
-    def types_disponibles(self, request):
-        """Récupérer les types de templates disponibles"""
-        return Response({
-            'types': TemplateContrat.TYPE_CHOICES
-        })
-    
-    @action(detail=False, methods=['get'])
-    def actifs(self, request):
-        """Récupérer seulement les templates actifs"""
-        templates_actifs = TemplateContrat.objects.filter(est_actif=True)
-        serializer = self.get_serializer(templates_actifs, many=True)
-        return Response(serializer.data)

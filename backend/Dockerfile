@@ -12,9 +12,13 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        gcc \
-        postgresql-client \
-        libpq-dev \
+    gcc \
+    postgresql-client \
+    libpq-dev \
+    # Fonts for ReportLab
+    fonts-liberation \
+    fonts-dejavu-core \
+    fonts-dejavu-extra \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies

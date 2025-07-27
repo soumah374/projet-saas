@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Contrat, LigneContrat, LigneContratIntervenant, TemplateContrat
+from .models import Contrat, LigneContrat, LigneContratIntervenant
 from users.serializers import ClientProfileSerializer
 from devis.serializers import DevisSerializer
 from catalog.serializers import (
@@ -77,7 +77,7 @@ class ContratSerializer(serializers.ModelSerializer):
             'id', 'numero', 'devis', 'client', 'date_creation', 'date_debut', 'date_fin',
             'statut', 'statut_display', 'taux_tva', 'appliquer_tva',
             'montant_ht', 'montant_tva', 'montant_ttc',
-            'conditions', 'notes', 'lignes', 'created_at', 'updated_at'
+            'conditions', 'notes', 'lignes', 'created_at', 'updated_at', 'contenu_personnalise', 'variables_personnalisees'
         ]
         read_only_fields = [
             'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 
@@ -163,71 +163,3 @@ class ContratFromDevisSerializer(serializers.ModelSerializer):
         contrat.calculer_montants()
         
         return contrat 
-
-# Templates de contrat
-class TemplateContratSerializer(serializers.ModelSerializer):
-    """Serializer pour les templates de contrat"""
-    
-    type_template_display = serializers.CharField(source='get_type_template_display', read_only=True)
-    variables_disponibles = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = TemplateContrat
-        fields = [
-            'id', 'nom', 'type_template', 'type_template_display', 'description',
-            'contenu', 'variables_defaut', 'est_actif', 'est_public',
-            'variables_disponibles', 'created_at', 'updated_at', 'created_by'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'variables_disponibles']
-    
-    def get_variables_disponibles(self, obj):
-        """Retourne la liste des variables disponibles dans le template"""
-        return obj.get_variables_disponibles()
-
-
-class TemplateContratCreateSerializer(serializers.ModelSerializer):
-    """Serializer pour la création de templates de contrat"""
-    
-    class Meta:
-        model = TemplateContrat
-        fields = [
-            'nom', 'type_template', 'description', 'contenu', 
-            'variables_defaut', 'est_actif', 'est_public'
-        ]
-
-
-class TemplateContratUpdateSerializer(serializers.ModelSerializer):
-    """Serializer pour la mise à jour de templates de contrat"""
-    
-    class Meta:
-        model = TemplateContrat
-        fields = [
-            'nom', 'type_template', 'description', 'contenu', 
-            'variables_defaut', 'est_actif', 'est_public'
-        ]
-
-
-class GenererContratSerializer(serializers.Serializer):
-    """Serializer pour la génération de contrat à partir d'un template"""
-    
-    template_id = serializers.PrimaryKeyRelatedField(
-        queryset=TemplateContrat.objects.filter(est_actif=True),
-        source='template'
-    )
-    variables = serializers.JSONField()
-    contrat_id = serializers.PrimaryKeyRelatedField(
-        queryset=Contrat.objects.all(),
-        source='contrat'
-    )
-    
-    def generate_contrat_content(self, validated_data):
-        """Génère le contenu du contrat avec les variables remplacées"""
-        template = validated_data['template']
-        variables = validated_data['variables']
-        contrat = validated_data['contrat']
-        
-        # Fusionner les variables par défaut avec les variables fournies
-        final_variables = {**template.variables_defaut, **variables}
-        
-        # Remplacer les variables dans le contenu
-        return template.remplacer_variables(final_variables) 

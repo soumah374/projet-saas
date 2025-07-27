@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Contrat, LigneContrat, LigneContratIntervenant, TemplateContrat
+from .models import Contrat, LigneContrat, LigneContratIntervenant
 
 
 class LigneContratIntervenantInline(admin.TabularInline):
@@ -58,33 +58,3 @@ class LigneContratIntervenantAdmin(admin.ModelAdmin):
     list_filter = ['ligne_contrat__type_ligne']
     search_fields = ['ligne_contrat__contrat__numero', 'profile_intervenant__intitule']
     readonly_fields = ['montant_intervenant']
-
-
-@admin.register(TemplateContrat)
-class TemplateContratAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'type_template', 'est_actif', 'est_public', 'created_by', 'created_at']
-    list_filter = ['type_template', 'est_actif', 'est_public', 'created_at']
-    search_fields = ['nom', 'description', 'contenu']
-    readonly_fields = ['created_at', 'updated_at', 'created_by']
-    
-    fieldsets = (
-        ('Informations générales', {
-            'fields': ('nom', 'type_template', 'description')
-        }),
-        ('Contenu', {
-            'fields': ('contenu',),
-            'classes': ('collapse',)
-        }),
-        ('Configuration', {
-            'fields': ('variables_defaut', 'est_actif', 'est_public')
-        }),
-        ('Métadonnées', {
-            'fields': ('created_by', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
-        }),
-    )
-    
-    def save_model(self, request, obj, form, change):
-        if not change:  # Si c'est une création
-            obj.created_by = request.user
-        super().save_model(request, obj, form, change)
