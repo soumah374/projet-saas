@@ -39,7 +39,6 @@ import {
   type Contrat
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
-import { generateMinimalContratPDF, generateMinimalDevisPDF } from '@/lib/pdfUtils';
 import { ContractEditor } from '@/components/ContractEditor';
 
 export function ContratDetailPage() {
@@ -73,20 +72,58 @@ export function ContratDetailPage() {
   const handleUpdateContrat = async () => {
     if (!contrat) return;
 
+    // Validation des données
+    if (!editForm.date_debut || !editForm.date_fin) {
+      toast.error('Les dates de début et de fin sont obligatoires');
+      return;
+    }
+
+    if (new Date(editForm.date_debut) >= new Date(editForm.date_fin)) {
+      toast.error('La date de fin doit être postérieure à la date de début');
+      return;
+    }
+
+    console.log('Début de la mise à jour du contrat:', contrat.id);
+    console.log('Données à envoyer:', {
+      date_debut: editForm.date_debut,
+      date_fin: editForm.date_fin,
+      conditions: editForm.conditions,
+      notes: editForm.notes,
+    });
+
     try {
-      await updateContratMutation.mutateAsync({
+      const result = await updateContratMutation.mutateAsync({
         id: contrat.id,
         data: {
           date_debut: editForm.date_debut,
           date_fin: editForm.date_fin,
-          conditions: editForm.conditions,
-          notes: editForm.notes,
+          conditions: editForm.conditions || '',
+          notes: editForm.notes || '',
         }
       });
       
+      console.log('Résultat de la mise à jour:', result);
       setEditDialogOpen(false);
     } catch (err) {
+      console.error('Erreur détaillée lors de la mise à jour:', err);
       // Error handled by hook
+    }
+  };
+
+  const handleSaveContractContent = async (contenuPersonnalise: string) => {
+    if (!contrat) return;
+
+    try {
+      await updateContratMutation.mutateAsync({
+        id: contrat.id,
+        data: {
+          contenu_personnalise: contenuPersonnalise
+        }
+      });
+      toast.success('Contenu du contrat sauvegardé');
+    } catch (err) {
+      console.error('Erreur lors de la sauvegarde du contenu:', err);
+      toast.error('Erreur lors de la sauvegarde');
     }
   };
 
@@ -225,22 +262,6 @@ export function ContratDetailPage() {
     return buttons;
   };
 
-  const handleExportPDF = () => {
-    if (!contrat) return;
-    
-    try {
-      const pdfData = generateMinimalContratPDF(contrat, contrat.contenu);
-      if (pdfData) {
-        const link = document.createElement('a');
-        link.href = pdfData;
-        link.download = `contrat-${contrat.numero}.pdf`;
-        link.click();
-      }
-    } catch (error) {
-      toast.error('Erreur lors de la génération du PDF');
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="flex justify-center py-10">
@@ -282,10 +303,6 @@ export function ContratDetailPage() {
           <Button onClick={() => setShowContractEditor(true)} variant="outline">
             <FileText size={16} className="mr-2" />
             Éditer contrat
-          </Button>
-          <Button onClick={handleExportPDF} variant="outline">
-            <Download size={16} className="mr-2" />
-            Exporter PDF
           </Button>
           <Button onClick={openDeleteDialog} variant="destructive">
             <Trash2 size={16} className="mr-2" />
@@ -398,7 +415,7 @@ export function ContratDetailPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Type</TableHead>
-                  <TableHead>Description</TableHead>
+                  <TableHead>Désignation</TableHead>
                   <TableHead>Quantité</TableHead>
                   <TableHead>Unité</TableHead>
                   <TableHead>Prix unitaire HT</TableHead>
@@ -604,6 +621,7 @@ export function ContratDetailPage() {
               <ContractEditor
                 contrat={contrat}
                 devis={contrat.devis}
+                onSave={handleSaveContractContent}
                 onGeneratePDF={(contractText) => {
                   // Ici on peut implémenter la génération PDF du contrat personnalisé
                   console.log('Générer PDF du contrat:', contractText);

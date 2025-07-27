@@ -1,416 +1,237 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { 
-  Edit, 
   Eye, 
   Download, 
   Save, 
-  FileText, 
-  Settings,
   Copy,
-  Check
+  Check,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { 
-  ContractTemplateData, 
-  DEFAULT_CONTRACT_TEMPLATE, 
-  generateContractFromTemplate,
-  generateDefaultContractData 
-} from '@/lib/contractTemplate';
+import Editor, { 
+  createButton,
+} from 'react-simple-wysiwyg';
+import { api } from '@/lib/api';
+
 
 interface ContractEditorProps {
   contrat: any;
   devis: any;
-  onSave?: (template: string, data: ContractTemplateData) => void;
-  onGeneratePDF?: (contractText: string) => void;
+  onSave?: (contenuPersonnalise: string) => void;
 }
 
-export function ContractEditor({ contrat, devis, onSave, onGeneratePDF }: ContractEditorProps) {
-  const [template, setTemplate] = useState(DEFAULT_CONTRACT_TEMPLATE);
-  const [templateData, setTemplateData] = useState<ContractTemplateData>({} as ContractTemplateData);
+export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) {
   const [previewMode, setPreviewMode] = useState(false);
-  const [editDataDialogOpen, setEditDataDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const [editedContract, setEditedContract] = useState('');
+  const [isEditingContract, setIsEditingContract] = useState(false);
+  const BtnAlignCenter = createButton('Align center', '≡', 'justifyCenter');
 
-  // Générer les données par défaut au chargement
+
+  // Utiliser le contenu du contrat depuis la base de données
+  const contractContent = contrat.contenu_personnalise || '';
+
+  // Synchroniser le contrat édité avec le contenu de la base de données
   useEffect(() => {
-    if (contrat && devis) {
-      const defaultData = generateDefaultContractData(contrat, devis);
-      setTemplateData(defaultData);
+    if (!isEditingContract) {
+      setEditedContract(contractContent);
     }
-  }, [contrat, devis]);
+  }, [contractContent, isEditingContract]);
 
-  const generatedContract = generateContractFromTemplate(template, templateData);
-
-  const handleSaveTemplate = () => {
+  const handleSaveEditedContract = () => {
     if (onSave) {
-      onSave(template, templateData);
-      toast.success('Template sauvegardé');
+      onSave(editedContract);
+    }
+    setIsEditingContract(false);
+    toast.success('Contrat sauvegardé');
+  };
+
+  const handleEditorChange = (e: any) => {
+    setEditedContract(e.target.value);
+    if (!isEditingContract) {
+      setIsEditingContract(true);
     }
   };
 
-  const handleGeneratePDF = () => {
-    if (onGeneratePDF) {
-      onGeneratePDF(generatedContract);
+  const handleGeneratePDF = async () => {
+    setIsGeneratingPDF(true);
+    
+    try {
+      // Sauvegarder d'abord le contrat édité s'il y a des modifications
+      if (isEditingContract && onSave) {
+        await onSave(editedContract);
+      }
+      
+      // Télécharger le PDF depuis l'endpoint backend
+      const response = await api.get(`/contrats/contrats/${contrat.id}/download_pdf/`, {
+        responseType: 'blob'
+      });
+      
+      // Vérifier que la réponse contient bien des données
+      if (!response.data || response.data.size === 0) {
+        throw new Error('Réponse vide du serveur');
+      }
+      
+      // Créer un lien de téléchargement
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `contrat-${contrat.numero}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('PDF téléchargé avec succès');
+      
+    } catch (error: any) {
+      console.error('Erreur lors du téléchargement PDF:', error);
+      
+      // Afficher un message d'erreur plus détaillé
+      let errorMessage = 'Erreur lors du téléchargement du PDF';
+      
+      if (error.response) {
+        // Erreur de réponse du serveur
+        if (error.response.status === 401) {
+          errorMessage = 'Authentification requise';
+        } else if (error.response.status === 404) {
+          errorMessage = 'Contrat introuvable';
+        } else if (error.response.status === 500) {
+          errorMessage = 'Erreur serveur lors de la génération du PDF';
+        } else {
+          errorMessage = `Erreur ${error.response.status}: ${error.response.data?.detail || error.response.data?.error || 'Erreur inconnue'}`;
+        }
+      } else if (error.request) {
+        // Erreur de réseau
+        errorMessage = 'Erreur de connexion au serveur';
+      } else {
+        // Autre erreur
+        errorMessage = error.message || 'Erreur inconnue';
+      }
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
   const handleCopyContract = async () => {
+    const contractToCopy = isEditingContract ? editedContract : contractContent;
+    
     try {
-      await navigator.clipboard.writeText(generatedContract);
+      await navigator.clipboard.writeText(contractToCopy);
       setCopied(true);
       toast.success('Contrat copié dans le presse-papiers');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch (error) {
+      console.error('Erreur lors de la copie:', error);
       toast.error('Erreur lors de la copie');
     }
   };
 
-  const updateTemplateData = (field: keyof ContractTemplateData, value: string) => {
-    setTemplateData(prev => ({ ...prev, [field]: value }));
-  };
+  // S'assurer que les valeurs sont des strings valides
+  const safeContractContent = typeof contractContent === 'string' ? contractContent : '';
+  const safeEditedContract = typeof editedContract === 'string' ? editedContract : '';
 
   return (
     <div className="space-y-6">
-      {/* Header avec actions */}
+      {/* Barre d'outils */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">Éditeur de contrat</h2>
-          <p className="text-gray-600">Personnalisez le template et générez le contrat final</p>
-        </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            onClick={() => setEditDataDialogOpen(true)}
-          >
-            <Settings size={16} className="mr-2" />
-            Données
-          </Button>
-          <Button
-            variant="outline"
+            variant={previewMode ? "default" : "outline"}
             onClick={() => setPreviewMode(!previewMode)}
           >
-            {previewMode ? <Edit size={16} className="mr-2" /> : <Eye size={16} className="mr-2" />}
-            {previewMode ? 'Éditer' : 'Aperçu'}
+            <Eye size={16} className="mr-2" />
+            {previewMode ? 'Mode édition' : 'Aperçu'}
           </Button>
           <Button
             variant="outline"
             onClick={handleCopyContract}
           >
-            {copied ? <Check size={16} className="mr-2" /> : <Copy size={16} className="mr-2" />}
-            {copied ? 'Copié' : 'Copier'}
+            {copied ? (
+              <>
+                <Check size={16} className="mr-2" />
+                Copié !
+              </>
+            ) : (
+              <>
+                <Copy size={16} className="mr-2" />
+                Copier
+              </>
+            )}
           </Button>
+        </div>
+        
+        <div className="flex items-center gap-2">
           <Button
-            variant="outline"
-            onClick={handleSaveTemplate}
+              variant="outline"
+              onClick={handleSaveEditedContract}
+            >
+              <Save size={16} className="mr-2" />
+              Sauvegarder
+            </Button>
+          <Button 
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF}
           >
-            <Save size={16} className="mr-2" />
-            Sauvegarder
-          </Button>
-          <Button onClick={handleGeneratePDF}>
-            <Download size={16} className="mr-2" />
-            Générer PDF
+            {isGeneratingPDF ? (
+              <>
+                <Loader2 size={16} className="mr-2 animate-spin" />
+                Génération...
+              </>
+            ) : (
+              <>
+                <Download size={16} className="mr-2" />
+                Générer PDF
+              </>
+            )}
           </Button>
         </div>
       </div>
 
       {/* Contenu principal */}
-      <Tabs defaultValue="template" className="w-full">
+      <Tabs defaultValue="edit" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="template">Template</TabsTrigger>
+          <TabsTrigger value="edit">Édition</TabsTrigger>
           <TabsTrigger value="preview">Aperçu</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="template" className="space-y-4">
+        <TabsContent value="edit" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Template du contrat</CardTitle>
-              <p className="text-sm text-gray-600">
-                {/* Utilisez les variables entre {{ }} pour insérer les données dynamiques */}
-              </p>
-            </CardHeader>
             <CardContent>
-              <Textarea
-                value={template}
-                onChange={(e) => setTemplate(e.target.value)}
-                className="min-h-[600px] font-mono text-sm"
-                placeholder="Entrez votre template de contrat..."
-              />
+              <Editor value={editedContract} onChange={handleEditorChange}>
+              </Editor>
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="preview" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Aperçu du contrat généré</CardTitle>
+              <CardTitle>Aperçu du contrat</CardTitle>
               <p className="text-sm text-gray-600">
-                Contrat généré avec les données actuelles
+                Aperçu du contrat tel qu'il sera généré
               </p>
             </CardHeader>
             <CardContent>
-              <div className="bg-white border rounded-lg p-6 min-h-[600px] overflow-auto">
-                <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">
-                  {generatedContract}
-                </pre>
+              <div className="border rounded-lg p-6 bg-white">
+                <div 
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ 
+                    __html: isEditingContract ? safeEditedContract : safeContractContent 
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* Modal d'édition des données */}
-      <Dialog open={editDataDialogOpen} onOpenChange={setEditDataDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Modifier les données du contrat</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            {/* Informations prestataire */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Informations prestataire</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Raison sociale</Label>
-                  <Input
-                    value={templateData.raison_sociale_prestataire || ''}
-                    onChange={(e) => updateTemplateData('raison_sociale_prestataire', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Forme juridique</Label>
-                  <Input
-                    value={templateData.forme_juridique || ''}
-                    onChange={(e) => updateTemplateData('forme_juridique', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Capital (GNF)</Label>
-                  <Input
-                    value={templateData.montant_capital || ''}
-                    onChange={(e) => updateTemplateData('montant_capital', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Ville RCS</Label>
-                  <Input
-                    value={templateData.ville_rcs || ''}
-                    onChange={(e) => updateTemplateData('ville_rcs', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>SIRET</Label>
-                  <Input
-                    value={templateData.siret || ''}
-                    onChange={(e) => updateTemplateData('siret', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Adresse</Label>
-                  <Input
-                    value={templateData.adresse_prestataire || ''}
-                    onChange={(e) => updateTemplateData('adresse_prestataire', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Nom représentant</Label>
-                  <Input
-                    value={templateData.nom_representant || ''}
-                    onChange={(e) => updateTemplateData('nom_representant', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Fonction représentant</Label>
-                  <Input
-                    value={templateData.fonction_representant || ''}
-                    onChange={(e) => updateTemplateData('fonction_representant', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Informations client */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Informations client</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Nom client</Label>
-                  <Input
-                    value={templateData.nom_client || ''}
-                    onChange={(e) => updateTemplateData('nom_client', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Type client</Label>
-                  <Select
-                    value={templateData.type_client || 'Particulier'}
-                    onValueChange={(value) => updateTemplateData('type_client', value as 'Société' | 'Particulier')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Particulier">Particulier</SelectItem>
-                      <SelectItem value="Société">Société</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Adresse client</Label>
-                  <Input
-                    value={templateData.adresse_client || ''}
-                    onChange={(e) => updateTemplateData('adresse_client', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Numéro d'identification</Label>
-                  <Input
-                    value={templateData.numero_identification || ''}
-                    onChange={(e) => updateTemplateData('numero_identification', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Nom représentant client</Label>
-                  <Input
-                    value={templateData.nom_representant_client || ''}
-                    onChange={(e) => updateTemplateData('nom_representant_client', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Fonction représentant client</Label>
-                  <Input
-                    value={templateData.fonction_representant_client || ''}
-                    onChange={(e) => updateTemplateData('fonction_representant_client', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Informations contrat */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Informations contrat</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label>Numéro devis</Label>
-                  <Input
-                    value={templateData.numero_devis || ''}
-                    onChange={(e) => updateTemplateData('numero_devis', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Date devis</Label>
-                  <Input
-                    value={templateData.date_devis || ''}
-                    onChange={(e) => updateTemplateData('date_devis', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Durée estimée</Label>
-                  <Input
-                    value={templateData.duree_estimee || ''}
-                    onChange={(e) => updateTemplateData('duree_estimee', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Date début prestation</Label>
-                  <Input
-                    value={templateData.date_debut_prestation || ''}
-                    onChange={(e) => updateTemplateData('date_debut_prestation', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Montant TTC (GNF)</Label>
-                  <Input
-                    value={templateData.montant_ttc || ''}
-                    onChange={(e) => updateTemplateData('montant_ttc', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Délai résiliation (jours)</Label>
-                  <Input
-                    value={templateData.delai_resiliation || ''}
-                    onChange={(e) => updateTemplateData('delai_resiliation', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Ville signature</Label>
-                  <Input
-                    value={templateData.ville_signature || ''}
-                    onChange={(e) => updateTemplateData('ville_signature', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Date signature</Label>
-                  <Input
-                    value={templateData.date_signature || ''}
-                    onChange={(e) => updateTemplateData('date_signature', e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Description et modalités */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Description et modalités</h3>
-              <div className="space-y-4">
-                <div>
-                  <Label>Description des prestations</Label>
-                  <Textarea
-                    value={templateData.description_prestation || ''}
-                    onChange={(e) => updateTemplateData('description_prestation', e.target.value)}
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <Label>Modalités de paiement</Label>
-                  <Textarea
-                    value={templateData.modalites_paiement || ''}
-                    onChange={(e) => updateTemplateData('modalites_paiement', e.target.value)}
-                    rows={4}
-                  />
-                </div>
-                <div>
-                  <Label>Conditions spécifiques</Label>
-                  <Textarea
-                    value={templateData.conditions_specifiques || ''}
-                    onChange={(e) => updateTemplateData('conditions_specifiques', e.target.value)}
-                    rows={3}
-                    placeholder="Conditions particulières du contrat..."
-                  />
-                </div>
-                <div>
-                  <Label>Notes additionnelles</Label>
-                  <Textarea
-                    value={templateData.notes_additionnelles || ''}
-                    onChange={(e) => updateTemplateData('notes_additionnelles', e.target.value)}
-                    rows={3}
-                    placeholder="Notes complémentaires..."
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDataDialogOpen(false)}>
-              Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 } 
