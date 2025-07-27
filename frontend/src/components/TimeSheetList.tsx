@@ -118,7 +118,7 @@ export const TimeSheetList = ({ projectId }: TimeSheetListProps) => {
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
-                <TableHead>Tâche</TableHead>
+                <TableHead>Activité</TableHead>
                 <TableHead>Heures</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Statut</TableHead>

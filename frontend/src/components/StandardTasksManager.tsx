@@ -75,10 +75,10 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
     return filteredServices;
   }, [selectedCategory, servicesByCategory?.results, filteredServices]);
 
-  // Générer les tâches quand les services filtrés changent
+  // Générer les activités quand les services filtrés changent
   useEffect(() => {
     if (effectiveServices.length > 0) {
-      // Convertir directement les services en tâches
+      // Convertir directement les services en activités
       const tasks: ServiceTaskTemplate[] = effectiveServices.map(service => ({
         id: service.id,
         name: service.name,
@@ -123,7 +123,7 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
 
   const handleCreateStandardTasks = async () => {
     if (selectedTasks.size === 0) {
-      toast.error('Veuillez sélectionner au moins une tâche');
+      toast.error('Veuillez sélectionner au moins une activité');
       return;
     }
 
@@ -151,14 +151,14 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
         });
       }
       
-      toast.success(`${tasksToCreate.length} tâche(s) créée(s) avec succès`);
+      toast.success(`${tasksToCreate.length} activité(s) créée(s) avec succès`);
       setSelectedCategory(null);
       setGeneratedTasks([]);
       setSelectedTasks(new Set());
       setGlobalDueDate(undefined);
       onTasksCreated?.();
     } catch (error) {
-      toast.error('Erreur lors de la création des tâches');
+      toast.error('Erreur lors de la création des activités');
       console.error('Error creating tasks:', error);
     } finally {
       setIsCreating(false);
@@ -174,7 +174,7 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Tâches standards basées sur le catalogue
+          Activités standards basées sur le catalogue
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -240,13 +240,13 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
           </div>
         </div>
 
-        {/* Tâches générées */}
+        {/* Activités générées */}
         {generatedTasks.length > 0 && (
           <>
             <Separator />
             <div>
               <div className="flex justify-between items-center mb-3">
-                <Label>Tâches générées ({generatedTasks.length})</Label>
+                <Label>Activités générées ({generatedTasks.length})</Label>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
@@ -316,16 +316,16 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
                   Résumé de la sélection
                 </h4>
                 <Badge variant="default" className="bg-blue-600">
-                  {selectedTasks.size} tâche(s)
+                  {selectedTasks.size} activité(s)
                 </Badge>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-blue-700">Temps total estimé:</span>
+                  <span className="text-blue-600">Temps total estimé:</span>
                   <p className="font-medium text-blue-900">{totalEstimatedHours} heures</p>
                 </div>
                 <div>
-                  <span className="text-blue-700">Catégorie sélectionnée:</span>
+                  <span className="text-blue-600">Catégorie sélectionnée:</span>
                   <p className="font-medium text-blue-900">{selectedCategory ? selectedCategory.name : 'Aucune'}</p>
                 </div>
               </div>
@@ -356,7 +356,7 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
                 ) : (
                   <>
                     <CheckSquare className="h-4 w-4 mr-2" />
-                    Créer {selectedTasks.size} tâche(s)
+                    Créer {selectedTasks.size} activité(s)
                   </>
                 )}
               </Button>

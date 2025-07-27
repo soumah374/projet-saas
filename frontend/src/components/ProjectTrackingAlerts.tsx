@@ -68,7 +68,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
       case 'resource_alert':
         return <Users className="h-5 w-5 text-orange-500" />;
       default:
-        return <Bell className="h-5 w-5 text-blue-500" />;
+        return <Bell className="h-5 w-5 text-blue-600" />;
     }
   };
   
@@ -115,7 +115,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les types</SelectItem>
-                <SelectItem value="task_overdue">Tâches en retard</SelectItem>
+                <SelectItem value="task_overdue">Activités en retard</SelectItem>
                 <SelectItem value="time_exceeded">Dépassement de temps</SelectItem>
                 <SelectItem value="slow_progress">Progression lente</SelectItem>
                 <SelectItem value="budget_alert">Alertes budget</SelectItem>
@@ -179,7 +179,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
                             <div className="mt-2 text-sm">
                               {alert.type === 'task_overdue' && alert.details?.tasks && (
                                 <div>
-                                  <p>Tâches en retard :</p>
+                                  <p>Activités en retard :</p>
                                   <ul className="list-disc list-inside mt-1">
                                     {alert.details.tasks.map((task: any) => (
                                       <li key={task.id}>
@@ -193,7 +193,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
                               
                               {alert.type === 'time_exceeded' && alert.details?.tasks && (
                                 <div>
-                                  <p>Tâches dépassant le temps estimé :</p>
+                                  <p>Activités dépassant le temps estimé :</p>
                                   <ul className="list-disc list-inside mt-1">
                                     {alert.details.tasks.map((task: any) => (
                                       <li key={task.id}>
@@ -207,7 +207,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
                               
                               {alert.type === 'slow_progress' && alert.details?.tasks && (
                                 <div>
-                                  <p>Tâches avec progression lente :</p>
+                                  <p>Activités avec progression lente :</p>
                                   <ul className="list-disc list-inside mt-1">
                                     {alert.details.tasks.map((task: any) => (
                                       <li key={task.id}>
@@ -271,7 +271,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
                       className="border-l-4 border-l-blue-500 bg-blue-50"
                     >
                       <div className="flex items-start gap-3">
-                        <Bell className="h-5 w-5 text-blue-500" />
+                        <Bell className="h-5 w-5 text-blue-600" />
                         <div className="flex-1">
                           <AlertTitle>{notification.title}</AlertTitle>
                           <AlertDescription>

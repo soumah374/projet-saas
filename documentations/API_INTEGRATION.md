@@ -51,13 +51,13 @@ Le schéma API est basé sur le fichier `SAKOM API.yaml` qui définit toutes les
 - `PUT /api/v1/projects/{project_pk}/members/{id}/` - Mettre à jour un membre
 - `DELETE /api/v1/projects/{project_pk}/members/{id}/` - Supprimer un membre
 
-#### ✅ Tâches de projet
+#### ✅ Activités de projet
 
-- `GET /api/v1/projects/{project_pk}/tasks/` - Liste des tâches
-- `POST /api/v1/projects/{project_pk}/tasks/` - Créer une tâche
-- `GET /api/v1/projects/{project_pk}/tasks/{id}/` - Détails d'une tâche
-- `PUT /api/v1/projects/{project_pk}/tasks/{id}/` - Mettre à jour une tâche
-- `DELETE /api/v1/projects/{project_pk}/tasks/{id}/` - Supprimer une tâche
+- `GET /api/v1/projects/{project_pk}/tasks/` - Liste des activités
+- `POST /api/v1/projects/{project_pk}/tasks/` - Créer une activité
+- `GET /api/v1/projects/{project_pk}/tasks/{id}/` - Détails d'une activité
+- `PUT /api/v1/projects/{project_pk}/tasks/{id}/` - Mettre à jour une activité
+- `DELETE /api/v1/projects/{project_pk}/tasks/{id}/` - Supprimer une activité
 - `POST /api/v1/projects/{project_pk}/tasks/{id}/update_status/` - Mettre à jour le statut
 
 #### 🏢 Équipes

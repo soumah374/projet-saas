@@ -19,7 +19,7 @@ export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardPro
     switch (status) {
       case 'Prospection': return 'bg-gray-100 text-gray-800';
       case 'Devis': return 'bg-yellow-100 text-yellow-800';
-      case 'Production': return 'bg-blue-100 text-blue-800';
+      case 'Production': return 'bg-blue-100 text-blue-600';
       case 'Livraison': return 'bg-purple-100 text-purple-800';
       case 'Terminé': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -28,7 +28,7 @@ export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardPro
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'Externe': return 'bg-blue-100 text-blue-800';
+      case 'Externe': return 'bg-blue-100 text-blue-600';
       case 'Interne': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -134,7 +134,7 @@ export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardPro
       <div className="flex gap-2 pt-4 border-t border-gray-100 mt-4">
         <Button 
           size="sm" 
-          className="flex-1 bg-blue-600 hover:bg-blue-700"
+          className="flex-1 bg-blue-600 hover:bg-blue-600"
           onClick={() => navigate(`/projects/${project.id}`)}
         >
           <Eye className="h-4 w-4 mr-2" />

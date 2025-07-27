@@ -68,7 +68,7 @@ export const CalendarStats = ({ stats }: CalendarStatsProps) => {
         <CardContent className="p-4">
           <div className="text-center">
             <div className="text-2xl font-bold text-yellow-600">{stats.tasks}</div>
-            <div className="text-xs text-gray-600">Tâches</div>
+            <div className="text-xs text-gray-600">Activités</div>
           </div>
         </CardContent>
       </Card>

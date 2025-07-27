@@ -140,7 +140,7 @@ export const UserSidebar = ({
           <select 
             value={currentRole}
             onChange={(e) => onRoleChange(e.target.value)}
-            className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full p-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 focus:border-transparent"
           >
             {roles.map(role => (
               <option key={role} value={role}>{role}</option>
@@ -175,7 +175,7 @@ export const UserSidebar = ({
                       variant="ghost"
                       onClick={item.onClick}
                       className={`w-full justify-between p-2 h-auto text-sm hover:bg-blue-50 ${
-                        item.active ? 'bg-blue-50 text-blue-700' : 'text-gray-600'
+                        item.active ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
                       } ${item.onClick ? 'cursor-pointer' : 'cursor-default'}`}
                     >
                       <span>{item.name}</span>

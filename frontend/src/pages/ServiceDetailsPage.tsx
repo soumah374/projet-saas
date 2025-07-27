@@ -612,7 +612,7 @@ export function ServiceDetailsPage() {
 
   const getNiveauColor = (niveau: string) => {
     switch (niveau) {
-      case 'intermediaire': return 'bg-blue-100 text-blue-800';
+      case 'intermediaire': return 'bg-blue-100 text-blue-600';
       case 'operationnel': return 'bg-green-100 text-green-800';
       case 'senior': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -1033,7 +1033,7 @@ export function ServiceDetailsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Activity className="h-5 w-5 text-blue-500" />
+                  <Activity className="h-5 w-5 text-blue-600" />
                   <span className="text-sm text-gray-600">Activités</span>
                 </div>
                 <span className="font-semibold">{service.activities?.length || 0}</span>

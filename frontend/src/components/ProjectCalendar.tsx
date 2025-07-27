@@ -232,7 +232,7 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
           {projectsError ? 
             "Une erreur est survenue lors du chargement des projets." :
             taskErrors.length > 0 ?
-            "Une erreur est survenue lors du chargement des tâches." :
+            "Une erreur est survenue lors du chargement des activités." :
             "Une erreur est survenue lors du chargement des événements."
           }
         </AlertDescription>

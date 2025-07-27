@@ -350,7 +350,7 @@ export function CategoryDetailsPage() {
                           <TableCell className="font-medium">
                             <Link 
                               to={`/services/${service.id}`}
-                              className="text-blue-600 hover:text-blue-800 hover:underline"
+                              className="text-blue-600 hover:text-blue-600 hover:underline"
                             >
                               {service.name}
                             </Link>
@@ -508,7 +508,7 @@ export function CategoryDetailsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-blue-500" />
+                  <FileText className="h-5 w-5 text-blue-600" />
                   <span className="text-sm text-gray-600">Services</span>
                 </div>
                 <span className="font-semibold">{totalItems}</span>

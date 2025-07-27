@@ -348,7 +348,7 @@ export function ServicesPage() {
                       <TableCell>
                         <Link 
                           to={`/services/${service.id}`}
-                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                          className="font-medium text-blue-600 hover:text-blue-600 hover:underline"
                         >
                           {service.name}
                         </Link>

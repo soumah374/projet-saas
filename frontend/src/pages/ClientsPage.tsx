@@ -322,7 +322,7 @@ export function ClientsPage() {
                       <TableCell>{client.type_client_display}</TableCell>
                       <TableCell>
                         {client.type_client === 'personne_morale' && client.category_name ? (
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
                             {client.category_name}
                           </span>
                         ) : (

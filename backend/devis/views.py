@@ -10,11 +10,13 @@ from django.template.loader import render_to_string
 import base64
 import tempfile
 import os
+from decimal import Decimal
 from .models import Devis, LigneDevis, LigneDevisIntervenant
 from .serializers import (
     DevisSerializer, DevisCreateSerializer,
     LigneDevisSerializer, LigneDevisCreateSerializer,
-    LigneDevisIntervenantSerializer, LigneDevisIntervenantCreateSerializer
+    LigneDevisIntervenantSerializer, LigneDevisIntervenantCreateSerializer,
+    DevisAvecLignesSerializer, LigneDevisAvecIntervenantsSerializer
 )
 from catalog.models import Activity, TauxHoraire, LigneFrais
 from .models import LigneDevis
@@ -41,20 +43,30 @@ class DevisViewSet(viewsets.ModelViewSet):
     def creer_avec_lignes(self, request):
         """Créer un devis avec ses lignes en une seule requête"""
         try:
-            # Créer le devis
-            devis_data = {
-                'client_id': request.data.get('client_id'),
-                'date_validite': request.data.get('date_validite'),
-                'notes': request.data.get('notes', ''),
-                'conditions': request.data.get('conditions', '')
-            }
-            devis_serializer = DevisCreateSerializer(data=devis_data)
+            # Valider les données du devis
+            devis_serializer = DevisAvecLignesSerializer(data=request.data)
             devis_serializer.is_valid(raise_exception=True)
-            devis = devis_serializer.save()
+            devis_data = devis_serializer.validated_data
+            
+            # Créer le devis
+            devis = Devis.objects.create(
+                client=devis_data['client'],
+                date_validite=devis_data['date_validite'],
+                taux_tva=devis_data.get('taux_tva', 18.00),
+                appliquer_tva=devis_data.get('appliquer_tva', True),
+                taux_frais_agence=devis_data.get('taux_frais_agence', 15.00),
+                appliquer_frais_agence=devis_data.get('appliquer_frais_agence', False),
+                notes=devis_data.get('notes', ''),
+                conditions=devis_data.get('conditions', '')
+            )
 
-            # Créer les lignes
+            # Valider et créer les lignes
             lignes_data = request.data.get('lignes', [])
             for ligne_data in lignes_data:
+                # Valider la ligne avec le nouveau sérialiseur
+                ligne_serializer = LigneDevisAvecIntervenantsSerializer(data=ligne_data)
+                ligne_serializer.is_valid(raise_exception=True)
+                validated_ligne_data = ligne_serializer.validated_data
                 
                 if ligne_data['type_ligne'] == 'prestation':
                     ligne = LigneDevis.objects.create(
@@ -73,21 +85,21 @@ class DevisViewSet(viewsets.ModelViewSet):
                         LigneDevisIntervenant.objects.create(
                             ligne_devis=ligne,
                             profile_intervenant_id=intervenant_data['profile_intervenant_id'],
-                            temps_intervenant=intervenant_data['temps_intervenant'],
-                            taux_horaire=intervenant_data['taux_horaire']
+                            temps_intervenant=temps_intervenant,
+                            taux_horaire=taux_horaire
                         )
                     
                 elif ligne_data['type_ligne'] == 'frais':
                     ligne = LigneDevis.objects.create(
                         devis=devis,
                         type_ligne='frais',
-                        frais_category_id=ligne_data['frais_category_id'],
-                        ligne_frais_id=ligne_data['ligne_frais_id'],
-                        description=ligne_data.get('description', ''),
-                        quantite=ligne_data['quantite'],
-                        unite_id=ligne_data['unite_id'],
-                        prix_unitaire_ht=ligne_data['prix_unitaire_ht'],
-                        type_frais=ligne_data['type_frais']
+                        frais_category=validated_ligne_data.get('frais_category_id'),
+                        ligne_frais=validated_ligne_data['ligne_frais_id'],
+                        description=validated_ligne_data.get('description', ''),
+                        quantite=validated_ligne_data['quantite'],
+                        unite=validated_ligne_data['unite_id'],
+                        prix_unitaire_ht=validated_ligne_data.get('prix_unitaire_ht', Decimal('0')),
+                        type_frais=validated_ligne_data.get('type_frais', 'standard')
                     )
                     # Le montant_ht sera calculé automatiquement dans save()
                 else:

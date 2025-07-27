@@ -92,7 +92,7 @@ export const ReportStats = ({ summary, isLoading }: ReportStatsProps) => {
             </div>
             <div className="flex justify-between text-xs">
               <span className="flex items-center gap-1">
-                <Activity className="w-3 h-3 text-blue-500" />
+                <Activity className="w-3 h-3 text-blue-600" />
                 Actifs
               </span>
               <span className="font-medium text-blue-600">
@@ -115,16 +115,16 @@ export const ReportStats = ({ summary, isLoading }: ReportStatsProps) => {
         </CardContent>
       </Card>
 
-      {/* Tâches */}
+      {/* Activités */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Tâches</CardTitle>
+          <CardTitle className="text-sm font-medium">Activités</CardTitle>
           <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{summary.tasks.total}</div>
           <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-2">
-            <Target className="w-3 h-3 text-blue-500" />
+            <Target className="w-3 h-3 text-blue-600" />
             <span>Complétion: {summary.tasks.completion_rate}%</span>
           </div>
           <div className="space-y-1">
@@ -264,7 +264,7 @@ export const ReportStats = ({ summary, isLoading }: ReportStatsProps) => {
                 {summary.tasks.completion_rate}%
               </div>
               <div className="text-sm text-muted-foreground">
-                Taux de complétion des tâches
+                Taux de complétion des activités
               </div>
               <Progress value={summary.tasks.completion_rate} className="mt-2 h-2" />
             </div>

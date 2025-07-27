@@ -35,7 +35,7 @@ export const UserDetailsModal = ({ open, onOpenChange, user }: UserDetailsModalP
   const getRoleBadge = (role: string) => {
     const roleColors: Record<string, string> = {
       'Managing Director': 'bg-purple-100 text-purple-800',
-      'Chef de projet': 'bg-blue-100 text-blue-800',
+      'Chef de projet': 'bg-blue-100 text-blue-600',
       'Designer': 'bg-pink-100 text-pink-800',
       'Développeur': 'bg-green-100 text-green-800',
       'Rédacteur': 'bg-yellow-100 text-yellow-800',
@@ -183,7 +183,7 @@ export const UserDetailsModal = ({ open, onOpenChange, user }: UserDetailsModalP
                 {user.profile.position && (
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                      <User className="w-5 h-5 text-indigo-600" />
+                      <User className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Poste</p>

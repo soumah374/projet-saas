@@ -18,13 +18,13 @@ export const TaskDeadlineAlert = ({ projectId }: TaskDeadlineAlertProps) => {
     if (upcomingTasks && Array.isArray(upcomingTasks) && upcomingTasks.length > 0) {
       upcomingTasks.forEach((task: TaskWithDeadline) => {
         if (task.days_remaining <= 2) {
-          // Notification urgente pour les tâches à moins de 2 jours
-          toast.error(`Urgent: La tâche "${task.title}" doit être terminée dans ${task.days_remaining} jour${task.days_remaining > 1 ? 's' : ''}!`, {
+          // Notification urgente pour les activités à moins de 2 jours
+          toast.error(`Urgent: La activité "${task.title}" doit être terminée dans ${task.days_remaining} jour${task.days_remaining > 1 ? 's' : ''}!`, {
             duration: 10000,
           });
         } else if (task.days_remaining <= 5) {
-          // Notification d'avertissement pour les tâches à moins de 5 jours
-          toast.warning(`La tâche "${task.title}" arrive à échéance dans ${task.days_remaining} jours`, {
+          // Notification d'avertissement pour les activités à moins de 5 jours
+          toast.warning(`La activité "${task.title}" arrive à échéance dans ${task.days_remaining} jours`, {
             duration: 8000,
           });
         }

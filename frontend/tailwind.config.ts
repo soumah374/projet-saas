@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
 	darkMode: ["class"],
@@ -61,6 +62,20 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Couleur bleue personnalisée basée sur #1e2d60
+				blue: {
+					50: '#f0f2f7',
+					100: '#e1e5ef',
+					200: '#c3cbe0',
+					300: '#a5b1d0',
+					400: '#8797c1',
+					500: '#697db1',
+					600: '#1e2d60', // Couleur principale demandée
+					700: '#1a264f',
+					800: '#161f3f',
+					900: '#12182f',
+					950: '#0e1120'
 				}
 			},
 			borderRadius: {
@@ -92,5 +107,5 @@ export default {
 			}
 		}
 	},
-	plugins: [require("tailwindcss-animate")],
+	plugins: [tailwindcssAnimate],
 } satisfies Config;

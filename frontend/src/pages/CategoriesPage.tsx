@@ -255,13 +255,13 @@ export function CategoriesPage() {
                       <TableCell className="">
                         <Link 
                           to={`/categories-services/${category.id}`}
-                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                          className="font-medium text-blue-600 hover:text-blue-600 hover:underline"
                         >
                           {category.name}
                         </Link>
                       </TableCell>
                       {/* <TableCell>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-600">
                           Voir prestations
                         </Badge>
                       </TableCell> */}

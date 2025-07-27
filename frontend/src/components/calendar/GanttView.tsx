@@ -157,7 +157,7 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
         <div className="grid grid-cols-[300px,1fr] gap-6">
           <div className="border rounded-lg">
             <div className="p-4 border-b bg-gray-50">
-              <h3 className="font-semibold">Tâches</h3>
+              <h3 className="font-semibold">Activités</h3>
             </div>
             <ScrollArea className="h-[500px]">
               <DragDropContext onDragEnd={() => {}}>
@@ -193,7 +193,7 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
                     >
                       {/* Task bar */}
                       <div
-                        className="absolute h-6 rounded bg-blue-500"
+                        className="absolute h-6 rounded bg-blue-600"
                         style={{
                           left: `${(differenceInDays(task.start, dateRange[0]) * 100) / visibleDays}%`,
                           width: `${(differenceInDays(task.end, task.start) * 100) / visibleDays}%`,

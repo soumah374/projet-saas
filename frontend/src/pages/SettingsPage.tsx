@@ -360,7 +360,7 @@ export function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="font-medium">Rappels d'échéance</h4>
-                  <p className="text-sm text-gray-500">Rappels pour les tâches en approche d'échéance</p>
+                  <p className="text-sm text-gray-500">Rappels pour les activités en approche d'échéance</p>
                 </div>
                 <Switch
                   checked={notifications?.deadline_reminders}
@@ -537,8 +537,8 @@ export function SettingsPage() {
             <div className="space-y-2">
               <Label>Thème</Label>
               <div className="grid grid-cols-3 gap-4">
-                <div className="border-2 border-blue-500 rounded-lg p-4 text-center cursor-pointer">
-                  <div className="w-8 h-8 bg-blue-500 rounded mx-auto mb-2"></div>
+                <div className="border-2 border-blue-600 rounded-lg p-4 text-center cursor-pointer">
+                  <div className="w-8 h-8 bg-blue-600 rounded mx-auto mb-2"></div>
                   <span className="text-sm font-medium">Clair</span>
                 </div>
                 <div className="border-2 border-gray-300 rounded-lg p-4 text-center cursor-pointer">
@@ -546,7 +546,7 @@ export function SettingsPage() {
                   <span className="text-sm font-medium">Sombre</span>
                 </div>
                 <div className="border-2 border-gray-300 rounded-lg p-4 text-center cursor-pointer">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded mx-auto mb-2"></div>
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-500 rounded mx-auto mb-2"></div>
                   <span className="text-sm font-medium">Auto</span>
                 </div>
               </div>

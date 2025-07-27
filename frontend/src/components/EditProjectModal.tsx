@@ -725,7 +725,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
 
                 {calculateTotalBudget() > 0 && (
                   <Card className="p-3 bg-blue-50">
-                    <p className="text-sm text-blue-700">
+                    <p className="text-sm text-blue-600">
                       <strong>Total calculé: {calculateTotalBudget().toLocaleString()} GNF</strong>
                     </p>
                   </Card>
@@ -974,12 +974,12 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                 Annuler
               </Button>
               {currentStep < 3 ? (
-                <Button type="button" onClick={nextStep} className="bg-blue-600 hover:bg-blue-700">
+                <Button type="button" onClick={nextStep} className="bg-blue-600 hover:bg-blue-600">
                   Suivant
                 </Button>
               ) : ''}
               {currentStep === 3 && (
-                <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
+                <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-600">
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />

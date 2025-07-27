@@ -128,7 +128,7 @@ export function TeamsPage() {
   const getRoleBadge = (role: TeamMemberRole) => {
     const roleColors = {
       leader: 'bg-yellow-100 text-yellow-800',
-      member: 'bg-blue-100 text-blue-800',
+      member: 'bg-blue-100 text-blue-600',
       consultant: 'bg-purple-100 text-purple-800'
     };
 
@@ -285,7 +285,7 @@ export function TeamsPage() {
         </div>
         <Button 
           onClick={() => setIsCreateTeamDialogOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-600"
         >
               <Plus className="w-4 h-4 mr-2" />
               Nouvelle équipe

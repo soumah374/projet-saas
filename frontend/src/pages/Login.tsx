@@ -153,7 +153,7 @@ const Login = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full mb-4">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">SAKOM</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">saKom</h1>
           <p className="text-gray-600">Plateforme de gestion de projets</p>
         </div>
 
@@ -262,7 +262,7 @@ const Login = () => {
                     size="sm"
                     onClick={handleResendOTP}
                     disabled={resendLoading || countdown > 0}
-                    className="text-blue-600 hover:text-blue-700"
+                    className="text-blue-600 hover:text-blue-600"
                   >
                     {resendLoading ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -280,7 +280,7 @@ const Login = () => {
         {/* Footer */}
         <div className="text-center mt-8">
           <p className="text-sm text-gray-500">
-            © 2024 SAKOM. Tous droits réservés.
+            © 2024 saKom. Tous droits réservés.
           </p>
         </div>
       </div>

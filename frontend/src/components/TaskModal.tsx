@@ -158,7 +158,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     // if (!onTaskSave) return;
     
     if (!formData.title.trim()) {
-      alert('Le titre de la tâche est requis');
+      alert('Le titre de la activité est requis');
       return;
     }
     
@@ -196,10 +196,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
         taskId: task.id, 
         data: taskData 
       });
-      toast.success('Tâche mise à jour avec succès');
+      toast.success('Activité mise à jour avec succès');
     } else {
       await createTaskMutation.mutateAsync({ projectId, data: taskData });
-      toast.success('Tâche créée avec succès');
+      toast.success('Activité créée avec succès');
     }
     
     setOpen(false);
@@ -231,7 +231,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     if (!task) return;
     try {
       await deleteTaskMutation.mutateAsync({ projectId, taskId: task.id });
-      toast.success('Tâche supprimée avec succès');
+      toast.success('Activité supprimée avec succès');
       setOpen(false);
     } catch (error) {
       toast.error('Une erreur est survenue');
@@ -242,7 +242,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     if (!task) return;
     try {
       await updateTaskMutation.mutateAsync({ projectId, taskId: task.id, data: { status: 'En cours' } });
-      toast.success('Tâche exécutée avec succès');
+      toast.success('Activité exécutée avec succès');
       setOpen(false);
     } catch (error) {
       toast.error('Une erreur est survenue');
@@ -256,7 +256,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       <div className="space-y-6">
         <div className="space-y-4">
           <div>
-            <Label>Titre de la tâche</Label>
+            <Label>Titre de la activité</Label>
             <p className="mt-1 text-lg font-medium">{task.title}</p>
           </div>
 
@@ -331,17 +331,17 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
             {mode === 'create' ? (
               <>
                 <Plus className="h-6 w-6" />
-                Nouvelle tâche
+                Nouvelle activité
               </>
             ) : mode === 'edit' ? (
               <>
                 <Edit className="h-6 w-6" />
-                Modifier la tâche
+                Modifier la activité
               </>
             ) : (
               <>
                 <Eye className="h-6 w-6" />
-                Détails de la tâche
+                Détails de la activité
               </>
             )}
           </DialogTitle>
@@ -353,7 +353,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
           <form key={formKey} onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="title">Titre de la tâche *</Label>
+                <Label htmlFor="title">Titre de la activité *</Label>
                 <Input
                   id="title"
                   value={formData.title}
@@ -369,7 +369,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Description détaillée de la tâche"
+                  placeholder="Description détaillée de la activité"
                   rows={3}
                 />
               </div>
@@ -497,7 +497,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                   {mode === 'create' ? (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
-                      Créer la tâche
+                      Créer la activité
                     </>
                   ) : (
                     <>
@@ -546,7 +546,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                   <AlertDialogHeader>
                     <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Cette action ne peut pas être annulée. La tâche sera définitivement supprimée.
+                      Cette action ne peut pas être annulée. La activité sera définitivement supprimée.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

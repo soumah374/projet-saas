@@ -120,7 +120,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
           <div className="flex gap-2">
             <button
               onClick={handlePrint}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-600"
             >
               Imprimer
             </button>
@@ -368,7 +368,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                                color: '#4a5568'
                              }}
                            >
-                             {serviceName} - Prestations
+                             {serviceName}
                            </td>
                          </tr>
                        );
@@ -465,7 +465,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                                color: '#92400e'
                              }}
                            >
-                             {categoryName} - Frais
+                             {categoryName}
                            </td>
                          </tr>
                        );
@@ -573,6 +573,18 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                   <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_tva)}</span>
                 </div>
               )}
+              {devis.appliquer_frais_agence && (
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between',
+                  marginBottom: '5px',
+                  fontSize: '11px',
+                  color: '#718096'
+                }}>
+                  <span style={{ fontWeight: 'bold', marginRight: '25px' }}>Frais d'agence ({devis.taux_frais_agence}%):</span>
+                  <span style={{ fontWeight: 'bold' }}>{formatMontant(devis.montant_frais_agence || 0)}</span>
+                </div>
+              )}
               <div style={{ 
                 display: 'flex', 
                 justifyContent: 'space-between',
@@ -657,6 +669,16 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
               <p style={{ margin: '3px 0' }}>
                 Ce devis est valable jusqu'au {formatDate(devis.date_validite)}
               </p>
+              {devis.appliquer_frais_agence && (
+                <p style={{ 
+                  margin: '3px 0', 
+                  fontSize: '8px', 
+                  color: '#a0aec0',
+                  fontStyle: 'italic'
+                }}>
+                  * Les frais d'agence incluent : Conseil, Accompagnement & Coordination générale de l'événement
+                </p>
+              )}
               <p style={{ margin: '3px 0' }}>
                 Pour toute question ou modification, n'hésitez pas à nous contacter
               </p>
@@ -666,7 +688,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                 fontSize: '10px',
                 margin: '3px 0'
               }}>
-                SAKOM - Votre partenaire de confiance
+                saKom - Votre partenaire de confiance
               </p>
               <p style={{ margin: '3px 0' }}>
                 Email: contact@sakom.com | Téléphone: +224 XXX XXX XXX

@@ -144,7 +144,7 @@ export const UpdateBudgetModal = ({ children, projectId, currentBudget, onBudget
 
             {calculateTotalBudget() > 0 && (
               <Card className="p-3 bg-blue-50">
-                <p className="text-sm text-blue-700">
+                <p className="text-sm text-blue-600">
                   <strong>Total calculé: {calculateTotalBudget().toLocaleString()} GNF</strong>
                 </p>
               </Card>
@@ -155,7 +155,7 @@ export const UpdateBudgetModal = ({ children, projectId, currentBudget, onBudget
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Annuler
             </Button>
-            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-600">
               Mettre à jour
             </Button>
           </div>

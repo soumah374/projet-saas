@@ -247,7 +247,7 @@ export function DevisPage() {
   const handleExportCSV = () => {
     const headers = [
       'Numéro', 'Client', 'Date création', 'Date validité', 'Statut', 
-      'Montant HT', 'Montant TVA', 'Montant TTC'
+      'Montant HT', 'Montant TVA', 'Montant Frais Agence', 'Montant TTC'
     ];
     const rows = devis.map(d => [
       d.numero,
@@ -257,6 +257,7 @@ export function DevisPage() {
       d.statut_display,
       d.montant_ht.toFixed(2),
       d.montant_tva.toFixed(2),
+      (d.montant_frais_agence || 0).toFixed(2),
       d.montant_ttc.toFixed(2),
     ]);
     const csvContent = [headers, ...rows].map(row => row.map(val => `"${val ?? ''}"`).join(',')).join('\n');

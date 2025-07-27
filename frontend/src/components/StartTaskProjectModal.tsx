@@ -32,7 +32,7 @@ export const StartTaskProjectModal = ({children, task, projectId}: StartTaskProj
     e.preventDefault();
     try {
       await updateTaskStatus(Number(task.id), formData.status as 'À faire' | 'En cours' | 'En pause' | 'Terminé');
-      toast.success('Tâche démarrée avec succès');
+      toast.success('Activité démarrée avec succès');
     } catch (error) {
       toast.error('Une erreur est survenue');
     }
@@ -46,14 +46,14 @@ export const StartTaskProjectModal = ({children, task, projectId}: StartTaskProj
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Démarrer la tâche</DialogTitle>
+          <DialogTitle>Démarrer la activité</DialogTitle>
         </DialogHeader>
 
         <form
           onSubmit={handlerSubmit}
         >
           <div className="space-y-4">
-            <p>Etes-vous sûr de vouloir démarrer la tâche ?</p>
+            <p>Etes-vous sûr de vouloir démarrer la activité ?</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="status">Statut</Label>
@@ -75,7 +75,7 @@ export const StartTaskProjectModal = ({children, task, projectId}: StartTaskProj
           <DialogFooter>
             <div className="flex justify-between w-full mt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Annuler</Button>
-              <Button type="submit">{formData.status === 'Terminé' ? 'Terminer la tâche' : 'Démarrer la tâche'}</Button>
+              <Button type="submit">{formData.status === 'Terminé' ? 'Terminer la activité' : 'Démarrer la activité'}</Button>
             </div>
           </DialogFooter>
         </form>
