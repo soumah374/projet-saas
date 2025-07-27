@@ -3,11 +3,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Eye, 
   Download, 
   Save, 
-  Copy,
-  Check,
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -141,33 +138,7 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
   return (
     <div className="space-y-6">
       {/* Barre d'outils */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={previewMode ? "default" : "outline"}
-            onClick={() => setPreviewMode(!previewMode)}
-          >
-            <Eye size={16} className="mr-2" />
-            {previewMode ? 'Mode édition' : 'Aperçu'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleCopyContract}
-          >
-            {copied ? (
-              <>
-                <Check size={16} className="mr-2" />
-                Copié !
-              </>
-            ) : (
-              <>
-                <Copy size={16} className="mr-2" />
-                Copier
-              </>
-            )}
-          </Button>
-        </div>
-        
+      <div className="flex items-center justify-end">    
         <div className="flex items-center gap-2">
           <Button
               variant="outline"
@@ -188,7 +159,7 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
             ) : (
               <>
                 <Download size={16} className="mr-2" />
-                Générer PDF
+                Télécharger le PDF
               </>
             )}
           </Button>

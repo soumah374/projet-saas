@@ -68,6 +68,10 @@ class Contrat(models.Model):
             # Générer un numéro unique
             self.numero = self.generate_numero()
         
+        # Si c'est un nouveau contrat, initialiser les montants depuis le devis
+        if not self.pk and self.devis:
+            self.initialiser_montants_depuis_devis()
+        
         # Si c'est un nouveau contrat et qu'il n'y a pas de contenu personnalisé
         if not self.pk and not self.contenu_personnalise:
             # Utiliser le template par défaut et remplacer les variables
@@ -76,6 +80,15 @@ class Contrat(models.Model):
             self.contenu_personnalise = self.remplacer_variables(contenu_template, variables)
                         
         super().save(*args, **kwargs)
+    
+    def initialiser_montants_depuis_devis(self):
+        """Initialise les montants du contrat à partir du devis"""
+        if self.devis:
+            self.montant_ht = self.devis.montant_ht
+            self.montant_tva = self.devis.montant_tva
+            self.montant_ttc = self.devis.montant_ttc
+            self.taux_tva = self.devis.taux_tva
+            self.appliquer_tva = self.devis.appliquer_tva
     
     def generate_numero(self):
         """Générer un numéro de contrat unique"""
@@ -143,7 +156,7 @@ class Contrat(models.Model):
         # Variables de base du contrat
         variables = {
             'NUMERO_DEVIS': self.devis.numero if self.devis else '',
-            'DATE_DEVIS': self.devis.date_creation.strftime('%d/%m/%Y') if self.devis else '',
+            'DATE_DEVIS': self.devis.date_creation.strftime('%d/%m/%Y') if self.devis and self.devis.date_creation else '',
             'NUMERO_CONTRAT': self.numero,
             'DATE_DEBUT_PRESTATION': self.date_debut.strftime('%d/%m/%Y') if self.date_debut else '',
             'DATE_FIN_PRESTATION': self.date_fin.strftime('%d/%m/%Y') if self.date_fin else '',
@@ -151,7 +164,7 @@ class Contrat(models.Model):
             'MONTANT_TVA': f"{self.montant_tva:,.0f}",
             'MONTANT_TTC': f"{self.montant_ttc:,.0f}",
             'TAUX_TVA': f"{self.taux_tva}",
-            'DATE_SIGNATURE': self.date_creation.strftime('%d/%m/%Y'),
+            'DATE_SIGNATURE': self.date_creation.strftime('%d/%m/%Y') if self.date_creation else '',
             'VILLE_SIGNATURE': 'Conakry',
             'CONDITIONS_SPECIFIQUES': self.conditions,
             'NOTES_ADDITIONNELLES': self.notes,
@@ -160,7 +173,7 @@ class Contrat(models.Model):
         
         # Variables du prestataire (SAKOM)
         variables.update({
-            'RAISON_SOCIALE_PRESTATAIRE': 'SAKOM SARL',
+            'RAISON_SOCIALE_PRESTATAIRE': 'saKom SARL',
             'FORME_JURIDIQUE': 'SARL',
             'MONTANT_CAPITAL': '100,000,000',
             'VILLE_RCS': 'Conakry',
@@ -172,11 +185,19 @@ class Contrat(models.Model):
         
         # Variables du client
         if self.client:
+            # Déterminer le type de client
+            if self.client.type_client == 'personne_morale':
+                type_client = 'Société'
+                numero_identification = self.client.rccm_nif or ''
+            else:
+                type_client = 'Particulier'
+                numero_identification = ''
+            
             variables.update({
                 'NOM_CLIENT': self.client.nom_complet,
-                'TYPE_CLIENT': 'Société' if self.client.raison_sociale else 'Particulier',
+                'TYPE_CLIENT': type_client,
                 'ADRESSE_CLIENT': self.client.adresse_complete or '',
-                'NUMERO_IDENTIFICATION': self.client.rccm_nif or '',
+                'NUMERO_IDENTIFICATION': numero_identification,
                 'NOM_REPRESENTANT_CLIENT': self.client.nom_complet,
                 'FONCTION_REPRESENTANT_CLIENT': 'Représentant',
             })
@@ -199,13 +220,14 @@ class Contrat(models.Model):
             else:
                 duree = "À définir"
             
-            # Description des prestations basée sur les lignes
+            # Description des prestations basée sur les lignes (seulement si le contrat a une clé primaire)
             descriptions = []
-            for ligne in self.lignes.all():
-                if ligne.description:
-                    descriptions.append(f"• {ligne.description}")
-                else:
-                    descriptions.append(f"• {ligne.type_ligne} ({ligne.quantite} {ligne.unite.intitule})")
+            if self.pk:  # Seulement si le contrat est déjà sauvegardé
+                for ligne in self.lignes.all():
+                    if ligne.description:
+                        descriptions.append(f"• {ligne.description}")
+                    else:
+                        descriptions.append(f"• {ligne.type_ligne} ({ligne.quantite} {ligne.unite.intitule})")
             
             variables.update({
                 'DUREE_ESTIMEE': duree,
@@ -223,11 +245,12 @@ class Contrat(models.Model):
     def _generer_pdf_fallback(self):
         """Génère le PDF du contrat en utilisant ReportLab comme fallback."""
         from reportlab.lib.pagesizes import A4
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.platypus import SimpleDocTemplate, Spacer
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_JUSTIFY
         from reportlab.lib.units import cm
         import io
+        import re
         
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4,
@@ -245,88 +268,97 @@ class Contrat(models.Model):
         styles.add(ParagraphStyle(name='CustomHeading3', fontName='Helvetica-Bold', fontSize=14, leading=18, spaceAfter=6))
         styles.add(ParagraphStyle(name='CustomHeading4', fontName='Helvetica-Bold', fontSize=12, leading=16, spaceAfter=4))
         
-        # Contenu du contrat (simplifié pour ReportLab)
-        # Note: ReportLab ne gère pas le HTML complexe directement comme WeasyPrint.
-        # Il faut reconstruire le contenu textuel.
+        # Utiliser le contenu personnalisé du contrat
+        contenu_html = self.contenu_personnalise
+        if not contenu_html:
+            # Fallback si pas de contenu personnalisé
+            contenu_html = self.get_contenu_final()
         
-        Story.append(Paragraph("<b>CONTRAT DE PRESTATION DE SERVICES</b>", styles['CustomHeading3']))
-        Story.append(Spacer(1, 0.5*cm))
+        # Remplacer les variables dans le contenu
+        contenu_html = self.remplacer_variables(contenu_html, variables)
         
-        Story.append(Paragraph("<b>Entre les soussignés :</b>", styles['CustomHeading4']))
-        Story.append(Paragraph(f"<b>{variables.get('RAISON_SOCIALE_PRESTATAIRE', 'SAKOM SARL')}</b>,<br/>"
-                               f"Société {variables.get('FORME_JURIDIQUE', 'SARL')} au capital de {variables.get('MONTANT_CAPITAL', '100,000,000')} GNF,<br/>"
-                               f"immatriculée au RCS de {variables.get('VILLE_RCS', 'Conakry')} sous le numéro {variables.get('SIRET', 'N/A')},<br/>"
-                               f"dont le siège social est situé à {variables.get('ADRESSE_PRESTATAIRE', 'N/A')},<br/>"
-                               f"représentée par {variables.get('NOM_REPRESENTANT', 'N/A')}, en sa qualité de {variables.get('FONCTION_REPRESENTANT', 'N/A')},<br/>"
-                               "ci-après dénommée \"le Prestataire\",", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
+        # Convertir le HTML en contenu ReportLab
+        # Diviser le contenu en paragraphes basés sur les balises HTML
+        paragraphs = self._convert_html_to_reportlab(contenu_html, styles)
         
-        Story.append(Paragraph("<b>Et :</b>", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph(f"<b>{variables.get('NOM_CLIENT', 'Client')}</b>,<br/>"
-                               f"{variables.get('TYPE_CLIENT', 'N/A')} domicilié(e) à {variables.get('ADRESSE_CLIENT', 'N/A')},<br/>"
-                               f"immatriculé(e) sous le numéro {variables.get('NUMERO_IDENTIFICATION', 'N/A')},<br/>"
-                               f"représenté(e) par {variables.get('NOM_REPRESENTANT_CLIENT', 'N/A')}, en sa qualité de {variables.get('FONCTION_REPRESENTANT_CLIENT', 'N/A')},<br/>"
-                               "ci-après dénommé \"le Client\",", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Il a été convenu ce qui suit :</b>", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 1 – Objet du contrat</b>", styles['CustomHeading4']))
-        Story.append(Paragraph(f"Le présent contrat a pour objet la réalisation des prestations définies dans le devis n° {variables.get('NUMERO_DEVIS', 'N/A')} daté du {variables.get('DATE_DEVIS', 'N/A')}, annexé au présent contrat et accepté par le Client.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 2 – Durée</b>", styles['CustomHeading4']))
-        Story.append(Paragraph(f"Le présent contrat prend effet à compter de sa date de signature pour une durée estimée de {variables.get('DUREE_ESTIMEE', 'À définir')} à compter du début des travaux fixé au {variables.get('DATE_DEBUT_PRESTATION', 'N/A')}.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 3 – Description des prestations</b>", styles['CustomHeading4']))
-        Story.append(Paragraph(f"Le Prestataire s'engage à réaliser les prestations suivantes :<br/><b>{variables.get('DESCRIPTION_PRESTATION', 'Prestations définies dans le devis')}</b><br/>Conformément au devis annexé.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 4 – Modalités d'exécution</b>", styles['CustomHeading4']))
-        Story.append(Paragraph("Le Prestataire exécutera les prestations selon les règles de l'art et s'engage à respecter les délais convenus. Le Client s'engage à fournir toutes les informations et moyens nécessaires à la bonne exécution de la mission.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 5 – Prix et modalités de paiement</b>", styles['CustomHeading4']))
-        Story.append(Paragraph(f"Le montant total de la prestation est fixé à <b>{variables.get('MONTANT_TTC', '0')} GNF TTC</b>, selon le devis accepté.<br/>Modalités de paiement :", styles['Justify']))
-        Story.append(Paragraph(f"• {variables.get('MODALITES_PAIEMENT', '30% à la commande, 70% à la livraison')}", styles['Justify']))
-        Story.append(Paragraph("• Paiement par virement bancaire aux coordonnées indiquées sur la facture.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 6 – Confidentialité</b>", styles['CustomHeading4']))
-        Story.append(Paragraph("Les parties s'engagent à garder confidentielles toutes les informations échangées dans le cadre du présent contrat.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 7 – Propriété intellectuelle</b>", styles['CustomHeading4']))
-        Story.append(Paragraph("Sauf stipulation contraire dans le devis, les livrables réalisés restent la propriété du Prestataire jusqu'au paiement intégral. Une fois le paiement effectué, le Client devient propriétaire des livrables, à l'exception des éléments tiers sous licence.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 8 – Résiliation</b>", styles['CustomHeading4']))
-        Story.append(Paragraph(f"En cas de manquement grave de l'une des parties à ses obligations contractuelles, le contrat pourra être résilié de plein droit après mise en demeure restée sans effet pendant {variables.get('DELAI_RESILIATION', '30')} jours.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph("<b>Article 9 – Litiges</b>", styles['CustomHeading4']))
-        Story.append(Paragraph("En cas de litige, les parties s'efforceront de trouver une solution amiable. À défaut, le litige sera porté devant le tribunal compétent du ressort du siège social du Prestataire.", styles['Justify']))
-        Story.append(Spacer(1, 0.5*cm))
-        
-        Story.append(Paragraph(f"Fait à {variables.get('VILLE_SIGNATURE', 'Conakry')}, le {variables.get('DATE_SIGNATURE', 'N/A')},<br/>En deux exemplaires originaux.", styles['Justify']))
-        Story.append(Spacer(1, 1.5*cm))
-        
-        # Signatures (simplifié pour ReportLab)
-        Story.append(Paragraph("<b>Le Prestataire</b>", styles['CustomHeading4']))
-        Story.append(Spacer(1, 1*cm))
-        Story.append(Paragraph("(signature)", styles['Justify']))
-        Story.append(Spacer(1, 1*cm))
-        Story.append(Paragraph("<b>Le Client</b>", styles['CustomHeading4']))
-        Story.append(Spacer(1, 1*cm))
-        Story.append(Paragraph("(signature)", styles['Justify']))
+        # Ajouter tous les paragraphes à l'histoire
+        for paragraph in paragraphs:
+            Story.append(paragraph)
+            Story.append(Spacer(1, 0.2*cm))
         
         doc.build(Story)
         buffer.seek(0)
         return buffer.getvalue()
+    
+    def _convert_html_to_reportlab(self, html_content, styles):
+        """Convertit le contenu HTML en paragraphes ReportLab"""
+        from reportlab.platypus import Paragraph
+        
+        paragraphs = []
+        
+        # Nettoyer le HTML et le diviser en sections
+        # Supprimer les balises HTML complexes et garder le texte
+        import re
+        
+        # Remplacer les balises HTML par du texte formaté pour ReportLab
+        content = html_content
+        
+        # Convertir les balises de titre
+        content = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', r'<b>\1</b>', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Convertir les balises de paragraphe
+        content = re.sub(r'<p[^>]*>(.*?)</p>', r'\1', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Convertir les balises de division
+        content = re.sub(r'<div[^>]*>(.*?)</div>', r'\1', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Convertir les sauts de ligne
+        content = re.sub(r'<br[^>]*>', r'<br/>', content, flags=re.IGNORECASE)
+        
+        # Diviser le contenu en lignes
+        lines = content.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if line:
+                # Déterminer le style selon le contenu
+                if line.startswith('<b>') and line.endswith('</b>'):
+                    # Titre principal
+                    paragraphs.append(Paragraph(line, styles['CustomHeading3']))
+                elif '<b>' in line and '</b>' in line:
+                    # Sous-titre
+                    paragraphs.append(Paragraph(line, styles['CustomHeading4']))
+                else:
+                    # Texte normal
+                    paragraphs.append(Paragraph(line, styles['Justify']))
+        
+        return paragraphs
+
+    def update_contenu_from_articles(self):
+        """Met à jour le contenu du contrat basé sur les articles modifiés"""
+        if not self.contenu_personnalise:
+            # Si pas de contenu personnalisé, utiliser le template par défaut
+            contenu_template = DEFAULT_TEMPLATE_HTML
+            variables = self.get_variables_contrat()
+            self.contenu_personnalise = self.remplacer_variables(contenu_template, variables)
+        else:
+            # Si contenu personnalisé existe, mettre à jour seulement les variables
+            variables = self.get_variables_contrat()
+            self.contenu_personnalise = self.remplacer_variables(self.contenu_personnalise, variables)
+        
+        self.save(update_fields=['contenu_personnalise'])
+    
+    def get_articles_content(self):
+        """Récupère le contenu des articles du contrat pour inclusion dans le PDF"""
+        articles_content = []
+        
+        for ligne in self.lignes.all():
+            if ligne.description:
+                articles_content.append(f"• {ligne.description}")
+            else:
+                articles_content.append(f"• {ligne.type_ligne}: {ligne.quantite} {ligne.unite.intitule}")
+        
+        return "\n".join(articles_content) if articles_content else "Prestations définies dans le devis"
 
 
 class LigneContrat(models.Model):
@@ -386,7 +418,13 @@ class LigneContrat(models.Model):
         # Calculer le montant HT
         self.montant_ht = self.quantite * self.prix_unitaire_ht
         
+        # Sauvegarder la ligne
         super().save(*args, **kwargs)
+        
+        # Mettre à jour les montants du contrat
+        if self.contrat:
+            self.contrat.calculer_montants()
+            self.contrat.update_contenu_from_articles()
     
     @property
     def intitule(self):

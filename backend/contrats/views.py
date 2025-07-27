@@ -198,6 +198,26 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['post'])
+    def update_content(self, request, pk=None):
+        """Mettre à jour le contenu du contrat basé sur les articles modifiés"""
+        contrat = self.get_object()
+        
+        try:
+            # Mettre à jour le contenu du contrat
+            contrat.update_contenu_from_articles()
+            
+            return Response({
+                'message': 'Contenu du contrat mis à jour avec succès',
+                'contenu_personnalise': contrat.contenu_personnalise
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la mise à jour du contenu: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class LigneContratViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des lignes de contrat"""
