@@ -72,6 +72,7 @@ class ContratViewSet(viewsets.ModelViewSet):
         date_fin_str = request.data.get('date_fin')
         conditions = request.data.get('conditions', '')
         notes = request.data.get('notes', '')
+        echeances_contrat = request.data.get('echeances', [])
         
         if not devis_id or not date_debut_str or not date_fin_str:
             return Response(
@@ -107,7 +108,7 @@ class ContratViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            # Créer le contrat
+            # Créer le contrat avec les échéances
             contrat = Contrat.objects.create(
                 devis=devis,
                 client=devis.client,
@@ -115,6 +116,7 @@ class ContratViewSet(viewsets.ModelViewSet):
                 date_fin=date_fin,
                 conditions=conditions,
                 notes=notes,
+                echeances_contrat=echeances_contrat,  # Utiliser le nouveau nom
                 montant_ht=devis.montant_ht,
                 montant_ttc=devis.montant_ttc,
                 taux_tva=devis.taux_tva,

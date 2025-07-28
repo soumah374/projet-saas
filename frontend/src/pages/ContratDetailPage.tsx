@@ -435,7 +435,7 @@ export function ContratDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-8xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -883,7 +883,7 @@ export function ContratDetailPage() {
                             {ligne.type_ligne}
                           </Badge>
                         </TableCell>
-                        <TableCell>{ligne.description || ligne.intitule}</TableCell>
+                        <TableCell>{ligne.activity.intitule || ligne.ligne_frais.type_frais}</TableCell>
                         <TableCell>{ligne.quantite}</TableCell>
                         <TableCell>{ligne.unite.intitule}</TableCell>
                         <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
@@ -1002,9 +1002,10 @@ export function ContratDetailPage() {
                       {editDateDebut ? format(editDateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50" 
-                    align="start" 
-                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  <PopoverContent className="w-auto p-0" 
+                    align="start"
+                    side="bottom"
+                    sideOffset={4}
                   >
                     <Calendar
                       mode="single"
@@ -1028,9 +1029,10 @@ export function ContratDetailPage() {
                       {editDateFin ? format(editDateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50" 
-                    align="start" 
-                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  <PopoverContent className="w-auto p-0" 
+                    align="start"
+                    side="bottom"
+                    sideOffset={4}
                   >
                     <Calendar
                       mode="single"

@@ -145,6 +145,15 @@ export const useCreateContratFromDevis = () => {
       date_fin: string;
       conditions?: string;
       notes?: string;
+      echeancier_type?: string;
+      nombre_echeances?: number;
+      echeances?: Array<{
+        numero: number;
+        type: 'acompte' | 'tranche' | 'solde';
+        pourcentage: number;
+        date_echeance: string;
+        commentaire: string;
+      }>;
     }) => contratsAPI.createContratFromDevis(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contrats'] });

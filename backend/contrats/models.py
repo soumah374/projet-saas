@@ -52,6 +52,9 @@ class Contrat(models.Model):
     conditions = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     
+    # Configuration des échéances de paiement
+    echeances_contrat = models.JSONField(default=list, verbose_name="Configuration des échéances de paiement")
+    
     # Template et contenu personnalisé
     contenu_personnalise = models.TextField(blank=True, verbose_name="Contenu personnalisé du contrat")
     variables_personnalisees = models.JSONField(default=dict, verbose_name="Variables personnalisées")
@@ -85,6 +88,10 @@ class Contrat(models.Model):
             self.contenu_personnalise = self.remplacer_variables(contenu_template, variables)
                         
         super().save(*args, **kwargs)
+        
+        # Créer les échéances si la configuration est fournie
+        if self.echeances_contrat and isinstance(self.echeances_contrat, list):
+            self.creer_echeances_depuis_configuration()
     
     def initialiser_montants_depuis_devis(self):
         """Initialise les montants du contrat à partir du devis"""
@@ -97,6 +104,39 @@ class Contrat(models.Model):
             self.appliquer_tva = self.devis.appliquer_tva
             self.taux_frais_agence = self.devis.taux_frais_agence
             self.appliquer_frais_agence = self.devis.appliquer_frais_agence
+    
+    def creer_echeances_depuis_configuration(self):
+        """Crée les échéances à partir de la configuration JSON"""
+        if not self.echeances_contrat or not isinstance(self.echeances_contrat, list):
+            return
+        
+        # Supprimer les échéances existantes
+        self.echeances.all().delete()
+        
+        # Créer les nouvelles échéances
+        for echeance_config in self.echeances_contrat:
+            try:
+                # Calculer les montants
+                pourcentage = float(echeance_config.get('pourcentage', 0))
+                montant_ht = (self.montant_ht * pourcentage) / 100
+                montant_tva = (self.montant_tva * pourcentage) / 100
+                montant_ttc = (self.montant_ttc * pourcentage) / 100
+                
+                # Créer l'échéance
+                EcheancierContrat.objects.create(
+                    contrat=self,
+                    type_echeance=echeance_config.get('type', 'tranche'),
+                    numero_echeance=echeance_config.get('numero', 1),
+                    montant_ht=montant_ht,
+                    montant_tva=montant_tva,
+                    montant_ttc=montant_ttc,
+                    pourcentage=pourcentage,
+                    date_echeance=echeance_config.get('date_echeance'),
+                    commentaire=echeance_config.get('commentaire', '')
+                )
+            except Exception as e:
+                print(f"Erreur lors de la création de l'échéance: {e}")
+                continue
     
     def generate_numero(self):
         """Générer un numéro de contrat unique"""

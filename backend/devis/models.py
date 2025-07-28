@@ -169,7 +169,7 @@ class LigneDevis(models.Model):
         ordering = ['created_at']
     def __str__(self):
         if self.type_ligne == 'prestation' and self.activity:
-            return f"Prestation {self.id} - {self.activity.intitule}"
+            return f"Prestation {self.id} - {self.activity.name}"
         elif self.type_ligne == 'frais' and self.ligne_frais:
             return f"Frais {self.id} - {self.ligne_frais.description}"
         return f"Ligne {self.id}"
@@ -191,11 +191,17 @@ class LigneDevis(models.Model):
     @property
     def intitule(self):
         if self.type_ligne == 'prestation' and self.activity:
-            return self.activity.intitule
+            return self.activity.name
         elif self.type_ligne == 'frais' and self.ligne_frais:
             return self.ligne_frais.description
         return self.description
 
+    def get_type_ligne_display(self):
+        if self.type_ligne == 'prestation':
+            return 'Prestation'
+        elif self.type_ligne == 'frais':
+            return 'Frais'
+        return 'Autre'
 
 class LigneDevisIntervenant(models.Model):
     """Modèle pour les intervenants d'une ligne de devis avec temps personnalisé"""
