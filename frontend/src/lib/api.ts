@@ -645,9 +645,9 @@ export const contratsAPI = {
         ordering?: string;
         page?: number;
         page_size?: number;
-    }) => api.get('/contrats/contrats/', { params }),
+    }) => api.get('/contrats/', { params }),
     
-    getContratById: (id: number) => api.get(`/contrats/contrats/${id}/`),
+    getContratById: (id: number) => api.get(`/contrats/${id}/`),
     
     createContrat: (data: {
         devis_id: number;
@@ -655,7 +655,7 @@ export const contratsAPI = {
         date_fin: string;
         conditions?: string;
         notes?: string;
-    }) => api.post('/contrats/contrats/', data),
+    }) => api.post('/contrats/', data),
     
     createContratFromDevis: (data: {
         devis_id: number;
@@ -663,7 +663,7 @@ export const contratsAPI = {
         date_fin: string;
         conditions?: string;
         notes?: string;
-    }) => api.post('/contrats/contrats/create_from_devis/', data),
+    }) => api.post('/contrats/create_from_devis/', data),
     
     updateContrat: (id: number, data: {
         date_debut?: string;
@@ -671,20 +671,20 @@ export const contratsAPI = {
         statut?: string;
         conditions?: string;
         notes?: string;
-    }) => api.patch(`/contrats/contrats/${id}/`, data),
+    }) => api.patch(`/contrats/${id}/`, data),
     
-    deleteContrat: (id: number) => api.delete(`/contrats/contrats/${id}/`),
+    deleteContrat: (id: number) => api.delete(`/contrats/${id}/`),
     
-    activerContrat: (id: number) => api.post(`/contrats/contrats/${id}/activer/`),
-    terminerContrat: (id: number) => api.post(`/contrats/contrats/${id}/terminer/`),
-    annulerContrat: (id: number) => api.post(`/contrats/contrats/${id}/annuler/`),
-    suspendreContrat: (id: number) => api.post(`/contrats/contrats/${id}/suspendre/`),
-    calculerMontants: (id: number) => api.post(`/contrats/contrats/${id}/calculer_montants/`),
+    activerContrat: (id: number) => api.post(`/contrats/${id}/activer/`),
+    terminerContrat: (id: number) => api.post(`/contrats/${id}/terminer/`),
+    annulerContrat: (id: number) => api.post(`/contrats/${id}/annuler/`),
+    suspendreContrat: (id: number) => api.post(`/contrats/${id}/suspendre/`),
+    calculerMontants: (id: number) => api.post(`/contrats/${id}/calculer_montants/`),
     
-    getDevisDisponibles: () => api.get('/contrats/contrats/devis_disponibles/'),
+    getDevisDisponibles: () => api.get('/contrats/devis_disponibles/'),
     
     // Lignes de contrat
-    getLignesContrat: (contratId: number) => api.get(`/contrats/lignes/?contrat=${contratId}`),
+    getLignesContrat: (contratId: number) => api.get(`/contrats/lignes/?contrat_id=${contratId}`),
     createLigneContrat: (data: any) => api.post('/contrats/lignes/', data),
     updateLigneContrat: (id: number, data: any) => api.patch(`/contrats/lignes/${id}/`, data),
     deleteLigneContrat: (id: number) => api.delete(`/contrats/lignes/${id}/`),

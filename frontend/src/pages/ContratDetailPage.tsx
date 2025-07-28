@@ -4,12 +4,12 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, 
   Edit, 
@@ -18,12 +18,14 @@ import {
   Check, 
   X, 
   Pause, 
-  FileCheck, 
   CalendarIcon,
   Plus,
-  Eye,
-  Download,
-  FileText
+  FileText,
+  Bell,
+  AlertTriangle,
+  Clock,
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -40,6 +42,9 @@ import {
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/ContractEditor';
+import { useEcheances } from '@/hooks/use-echeances';
+import { api } from '@/lib/api';
+import { type Echeance } from '@/lib/types';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -59,6 +64,10 @@ export function ContratDetailPage() {
   const [editDateFin, setEditDateFin] = useState<Date | undefined>(undefined);
   const [showContractEditor, setShowContractEditor] = useState(false);
 
+  // États pour les filtres d'échéances
+  const [filterStatut, setFilterStatut] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'numero' | 'date' | 'montant'>('numero');
+
   // Hooks
   const { data: contrat, isLoading, error } = useContratById(contratId);
   const updateContratMutation = useUpdateContrat();
@@ -67,6 +76,56 @@ export function ContratDetailPage() {
   const terminerContratMutation = useTerminerContrat();
   const annulerContratMutation = useAnnulerContrat();
   const suspendreContratMutation = useSuspendreContrat();
+
+  // Hook pour les échéances
+  const {
+    echeances,
+    isLoading: isLoadingEcheances,
+    genererEcheancier,
+    marquerPaye,
+    envoyerAlerte
+  } = useEcheances(contratId);
+
+  // Fonction pour filtrer et trier les échéances
+  const getFilteredAndSortedEcheances = () => {
+    if (!echeances || !Array.isArray(echeances)) return [];
+    
+    let filtered = echeances;
+    
+    // Filtrage par statut
+    if (filterStatut !== 'all') {
+      filtered = filtered.filter(echeance => {
+        switch (filterStatut) {
+          case 'paye':
+            return echeance.statut === 'paye';
+          case 'en_attente':
+            return echeance.statut === 'en_attente';
+          case 'alerte':
+            return echeance.doit_alerter;
+          case 'retard':
+            return echeance.est_en_retard;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    // Tri
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'numero':
+          return a.numero_echeance - b.numero_echeance;
+        case 'date':
+          return new Date(a.date_echeance).getTime() - new Date(b.date_echeance).getTime();
+        case 'montant':
+          return b.montant_ttc - a.montant_ttc;
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  };
 
   // Gestionnaires d'événements
   const handleUpdateContrat = async () => {
@@ -161,6 +220,30 @@ export function ContratDetailPage() {
     }
   };
 
+  const handleGenererEcheancier = async (type: string) => {
+    try {
+      await genererEcheancier(type);
+    } catch (err) {
+      console.error('Erreur lors de la génération de l\'échéancier:', err);
+    }
+  };
+
+  const handleMarquerPaye = async (echeanceId: number) => {
+    try {
+      await marquerPaye(echeanceId);
+    } catch (err) {
+      console.error('Erreur lors du marquage:', err);
+    }
+  };
+
+  const handleEnvoyerAlerte = async (echeanceId: number) => {
+    try {
+      await envoyerAlerte(echeanceId);
+    } catch (err) {
+      console.error('Erreur lors de l\'envoi de l\'alerte:', err);
+    }
+  };
+
   const openEditDialog = () => {
     if (!contrat) return;
     
@@ -189,6 +272,28 @@ export function ContratDetailPage() {
     } as const;
     
     return <Badge variant={variants[statut as keyof typeof variants]}>{statut}</Badge>;
+  };
+
+  const getEcheanceStatutBadge = (echeance: Echeance) => {
+    if (echeance.statut === 'paye') {
+      return <Badge variant="default" className="bg-green-500"><CheckCircle size={12} className="mr-1" />Payé</Badge>;
+    } else if (echeance.est_en_retard) {
+      return <Badge variant="destructive"><AlertTriangle size={12} className="mr-1" />En retard</Badge>;
+    } else if (echeance.doit_alerter) {
+      return <Badge variant="secondary" className="bg-yellow-500"><Clock size={12} className="mr-1" />Alerte</Badge>;
+    } else {
+      return <Badge variant="outline"><Clock size={12} className="mr-1" />En attente</Badge>;
+    }
+  };
+
+  const getTypeEcheanceLabel = (type: string) => {
+    const labels = {
+      'acompte': 'Acompte',
+      'tranche': 'Tranche',
+      'solde': 'Solde',
+      'retention': 'Retenue'
+    };
+    return labels[type as keyof typeof labels] || type;
   };
 
   const getActionButtons = () => {
@@ -312,180 +417,500 @@ export function ContratDetailPage() {
         </div>
       </div>
 
-      {/* Informations générales */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Informations générales</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Numéro</Label>
-              <p className="font-medium">{contrat.numero}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Client</Label>
-              <p className="font-medium">{contrat.client.nom_complet}</p>
-              <p className="text-sm text-gray-600">{contrat.client.email}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Devis associé</Label>
-              <p className="font-medium">{contrat.devis.numero}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Statut</Label>
-              <div className="mt-1">
-                {getStatutBadge(contrat.statut)}
+      {/* Onglets principaux */}
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="general">Général</TabsTrigger>
+          <TabsTrigger value="echeancier">Échéancier</TabsTrigger>
+          <TabsTrigger value="lignes">Lignes</TabsTrigger>
+          <TabsTrigger value="alertes">Alertes</TabsTrigger>
+        </TabsList>
+
+        {/* Onglet Général */}
+        <TabsContent value="general" className="space-y-6">
+          {/* Informations générales */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Informations générales</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Numéro</Label>
+                  <p className="font-medium">{contrat.numero}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Client</Label>
+                  <p className="font-medium">{contrat.client.nom_complet}</p>
+                  <p className="text-sm text-gray-600">{contrat.client.email}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Devis associé</Label>
+                  <p className="font-medium">{contrat.devis.numero}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Statut</Label>
+                  <div className="mt-1">
+                    {getStatutBadge(contrat.statut)}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Date de création</Label>
+                  <p className="font-medium">{formatDate(contrat.date_creation)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Date de début</Label>
+                  <p className="font-medium">{formatDate(contrat.date_debut)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Date de fin</Label>
+                  <p className="font-medium">{formatDate(contrat.date_fin)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Dernière modification</Label>
+                  <p className="font-medium">{formatDate(contrat.updated_at)}</p>
+                </div>
               </div>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Date de création</Label>
-              <p className="font-medium">{formatDate(contrat.date_creation)}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Date de début</Label>
-              <p className="font-medium">{formatDate(contrat.date_debut)}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Date de fin</Label>
-              <p className="font-medium">{formatDate(contrat.date_fin)}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Dernière modification</Label>
-              <p className="font-medium">{formatDate(contrat.updated_at)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      {/* Configuration TVA */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Configuration TVA</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Taux TVA</Label>
-              <p className="font-medium">{contrat.taux_tva}%</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Appliquer TVA</Label>
-              <p className="font-medium">{contrat.appliquer_tva ? 'Oui' : 'Non'}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Configuration TVA */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuration TVA</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Taux TVA</Label>
+                  <p className="font-medium">{contrat.taux_tva}%</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Appliquer TVA</Label>
+                  <p className="font-medium">{contrat.appliquer_tva ? 'Oui' : 'Non'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Montants */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Montants</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
-              <p className="text-lg font-bold">{formatMontant(contrat.montant_ht)}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Montant TVA</Label>
-              <p className="text-lg font-bold">{formatMontant(contrat.montant_tva)}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
-              <p className="text-lg font-bold text-blue-600">{formatMontant(contrat.montant_ttc)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Montants */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Montants</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
+                  <p className="text-lg font-bold">{formatMontant(contrat.montant_ht)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Montant TVA</Label>
+                  <p className="text-lg font-bold">{formatMontant(contrat.montant_tva)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
+                  <p className="text-lg font-bold text-blue-600">{formatMontant(contrat.montant_ttc)}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Lignes du contrat */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Lignes du contrat</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {contrat.lignes.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-600">Aucune ligne dans ce contrat</p>
+          {/* Conditions et notes */}
+          {(contrat.conditions || contrat.notes) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {contrat.conditions && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Conditions</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap">{contrat.conditions}</p>
+                  </CardContent>
+                </Card>
+              )}
+              {contrat.notes && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap">{contrat.notes}</p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Désignation</TableHead>
-                  <TableHead>Quantité</TableHead>
-                  <TableHead>Unité</TableHead>
-                  <TableHead>Prix unitaire HT</TableHead>
-                  <TableHead>Montant HT</TableHead>
-                  <TableHead>Intervenants</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {contrat.lignes.map((ligne) => (
-                  <TableRow key={ligne.id}>
-                    <TableCell>
-                      <Badge variant={ligne.type_ligne === 'prestation' ? 'default' : 'secondary'}>
-                        {ligne.type_ligne}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{ligne.description || ligne.intitule}</TableCell>
-                    <TableCell>{ligne.quantite}</TableCell>
-                    <TableCell>{ligne.unite.intitule}</TableCell>
-                    <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
-                    <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
-                    <TableCell>
-                      {ligne.intervenants.length > 0 ? (
-                        <div className="space-y-1">
-                          {ligne.intervenants.map((intervenant) => (
-                            <div key={intervenant.id} className="text-sm">
-                              <span className="font-medium">{intervenant.profile_intervenant.intitule}</span>
-                              <br />
-                              <span className="text-gray-600">
-                                {intervenant.temps_intervenant}h × {formatMontant(intervenant.taux_horaire)}/h
-                              </span>
-                            </div>
-                          ))}
+          )}
+        </TabsContent>
+
+        {/* Onglet Échéancier */}
+        <TabsContent value="echeancier" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon size={20} />
+                Échéancier de paiement
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                Gestion des échéances de paiement du contrat
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Statistiques des échéances */}
+                {echeances && Array.isArray(echeances) && echeances.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {echeances.length}
+                      </div>
+                      <div className="text-sm text-gray-600">Total échéances</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {echeances.filter(e => e.statut === 'paye').length}
+                      </div>
+                      <div className="text-sm text-gray-600">Payées</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-600">
+                        {echeances.filter(e => e.doit_alerter).length}
+                      </div>
+                      <div className="text-sm text-gray-600">Alertes</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600">
+                        {echeances.filter(e => e.est_en_retard).length}
+                      </div>
+                      <div className="text-sm text-gray-600">En retard</div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Boutons de génération d'échéancier */}
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleGenererEcheancier('standard')}
+                    disabled={isLoadingEcheances}
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Générer échéancier standard
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => handleGenererEcheancier('tranches')}
+                    disabled={isLoadingEcheances}
+                  >
+                    <Plus size={16} className="mr-2" />
+                    Générer échéancier en tranches
+                  </Button>
+                </div>
+
+                {/* Contrôles de filtres et tri */}
+                {echeances && Array.isArray(echeances) && echeances.length > 0 && (
+                  <div className="flex flex-col sm:flex-row gap-4 p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">Filtrer par :</span>
+                      <select 
+                        value={filterStatut} 
+                        onChange={(e) => setFilterStatut(e.target.value)}
+                        className="text-sm border border-gray-300 rounded px-2 py-1"
+                      >
+                        <option value="all">Toutes</option>
+                        <option value="en_attente">En attente</option>
+                        <option value="paye">Payées</option>
+                        <option value="alerte">Alertes</option>
+                        <option value="retard">En retard</option>
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-700">Trier par :</span>
+                      <select 
+                        value={sortBy} 
+                        onChange={(e) => setSortBy(e.target.value as 'numero' | 'date' | 'montant')}
+                        className="text-sm border border-gray-300 rounded px-2 py-1"
+                      >
+                        <option value="numero">Numéro</option>
+                        <option value="date">Date</option>
+                        <option value="montant">Montant</option>
+                      </select>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {getFilteredAndSortedEcheances().length} échéance(s) affichée(s)
+                    </div>
+                  </div>
+                )}
+
+                {/* Liste des échéances */}
+                {isLoadingEcheances ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw size={24} className="animate-spin" />
+                    <span className="ml-2">Chargement des échéances...</span>
+                  </div>
+                ) : echeances && Array.isArray(echeances) && echeances.length > 0 ? (
+                  <div className="space-y-3">
+                    {getFilteredAndSortedEcheances().map((echeance) => (
+                      <div key={echeance.id} className={`border rounded-lg p-4 transition-all duration-200 hover:shadow-md ${
+                        echeance.est_en_retard ? 'border-red-200 bg-red-50' :
+                        echeance.doit_alerter ? 'border-yellow-200 bg-yellow-50' :
+                        echeance.statut === 'paye' ? 'border-green-200 bg-green-50' :
+                        'border-gray-200 bg-white'
+                      }`}>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-3 h-3 rounded-full ${
+                              echeance.statut === 'paye' ? 'bg-green-500' :
+                              echeance.est_en_retard ? 'bg-red-500' :
+                              echeance.doit_alerter ? 'bg-yellow-500' :
+                              'bg-gray-400'
+                            }`} />
+                            <span className="font-semibold text-lg">
+                              Échéance {echeance.numero_echeance}
+                            </span>
+                            {getEcheanceStatutBadge(echeance)}
+                          </div>
+                          <div className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                            {getTypeEcheanceLabel(echeance.type_echeance)}
+                          </div>
                         </div>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-gray-500 text-xs uppercase tracking-wide">Montant TTC</span>
+                            <div className="font-bold text-lg text-blue-600">
+                              {echeance.montant_ttc.toLocaleString('fr-FR')} GNF
+                            </div>
+                          </div>
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-gray-500 text-xs uppercase tracking-wide">Pourcentage</span>
+                            <div className="font-bold text-lg">{echeance.pourcentage}%</div>
+                          </div>
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-gray-500 text-xs uppercase tracking-wide">Date échéance</span>
+                            <div className="font-bold text-lg">
+                              {format(new Date(echeance.date_echeance), 'dd/MM/yyyy', { locale: fr })}
+                            </div>
+                          </div>
+                          <div className="bg-white p-3 rounded border">
+                            <span className="text-gray-500 text-xs uppercase tracking-wide">Jours restants</span>
+                            <div className={`font-bold text-lg ${
+                              echeance.jours_restants < 0 ? 'text-red-500' : 
+                              echeance.jours_restants <= 3 ? 'text-yellow-500' : 
+                              'text-green-500'
+                            }`}>
+                              {echeance.jours_restants} jours
+                            </div>
+                          </div>
+                        </div>
 
-      {/* Conditions et notes */}
-      {(contrat.conditions || contrat.notes) && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {contrat.conditions && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Conditions</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap">{contrat.conditions}</p>
-              </CardContent>
-            </Card>
-          )}
-          {contrat.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Notes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="whitespace-pre-wrap">{contrat.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
+                        {echeance.commentaire && (
+                          <div className="mt-3 p-3 bg-gray-50 rounded border-l-4 border-blue-200">
+                            <span className="text-sm font-medium text-gray-700">Commentaire :</span>
+                            <div className="text-sm text-gray-600 mt-1">{echeance.commentaire}</div>
+                          </div>
+                        )}
+
+                        {echeance.statut === 'en_attente' && (
+                          <div className="mt-4 flex gap-2">
+                            <Button 
+                              size="sm"
+                              onClick={() => handleMarquerPaye(echeance.id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <CheckCircle size={14} className="mr-1" />
+                              Marquer comme payé
+                            </Button>
+                            {echeance.doit_alerter && (
+                              <Button 
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEnvoyerAlerte(echeance.id)}
+                                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                              >
+                                <Bell size={14} className="mr-1" />
+                                Envoyer alerte
+                              </Button>
+                            )}
+                          </div>
+                        )}
+
+                        {echeance.statut === 'paye' && echeance.date_paiement && (
+                          <div className="mt-3 p-2 bg-green-100 rounded text-sm">
+                            <span className="font-medium text-green-800">Payé le :</span>
+                            <span className="ml-2 text-green-700">
+                              {format(new Date(echeance.date_paiement), 'dd/MM/yyyy', { locale: fr })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <CalendarIcon size={48} className="mx-auto text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune échéance définie</h3>
+                    <p className="text-gray-600 mb-4">
+                      Générez un échéancier pour commencer à suivre les paiements de ce contrat.
+                    </p>
+                    <div className="flex gap-2 justify-center">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleGenererEcheancier('standard')}
+                        disabled={isLoadingEcheances}
+                      >
+                        <Plus size={16} className="mr-2" />
+                        Générer échéancier standard
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => handleGenererEcheancier('tranches')}
+                        disabled={isLoadingEcheances}
+                      >
+                        <Plus size={16} className="mr-2" />
+                        Générer échéancier en tranches
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Onglet Lignes */}
+        <TabsContent value="lignes" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lignes du contrat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {contrat.lignes.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">Aucune ligne dans ce contrat</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Désignation</TableHead>
+                      <TableHead>Quantité</TableHead>
+                      <TableHead>Unité</TableHead>
+                      <TableHead>Prix unitaire HT</TableHead>
+                      <TableHead>Montant HT</TableHead>
+                      <TableHead>Intervenants</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {contrat.lignes.map((ligne) => (
+                      <TableRow key={ligne.id}>
+                        <TableCell>
+                          <Badge variant={ligne.type_ligne === 'prestation' ? 'default' : 'secondary'}>
+                            {ligne.type_ligne}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{ligne.description || ligne.intitule}</TableCell>
+                        <TableCell>{ligne.quantite}</TableCell>
+                        <TableCell>{ligne.unite.intitule}</TableCell>
+                        <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
+                        <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
+                        <TableCell>
+                          {ligne.intervenants.length > 0 ? (
+                            <div className="space-y-1">
+                              {ligne.intervenants.map((intervenant) => (
+                                <div key={intervenant.id} className="text-sm">
+                                  <span className="font-medium">{intervenant.profile_intervenant.intitule}</span>
+                                  <br />
+                                  <span className="text-gray-600">
+                                    {intervenant.temps_intervenant}h × {formatMontant(intervenant.taux_horaire)}/h
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500">-</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Onglet Alertes */}
+        <TabsContent value="alertes" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell size={20} />
+                Alertes et notifications
+              </CardTitle>
+              <p className="text-sm text-gray-600">
+                Suivi des échéances nécessitant une attention
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Échéances nécessitant une alerte */}
+                <div>
+                  <h4 className="font-semibold mb-2">Échéances nécessitant une alerte</h4>
+                  {echeances && Array.isArray(echeances) && echeances.filter(e => e.doit_alerter).length > 0 ? (
+                    <div className="space-y-2">
+                      {echeances.filter(e => e.doit_alerter).map((echeance) => (
+                        <div key={echeance.id} className="border border-yellow-200 bg-yellow-50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-semibold">Échéance {echeance.numero_echeance}</span>
+                              <div className="text-sm text-gray-600">
+                                Échéance dans {echeance.jours_restants} jours
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="bg-yellow-500">
+                              Alerte
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Aucune échéance nécessitant une alerte</p>
+                  )}
+                </div>
+
+                {/* Échéances en retard */}
+                <div>
+                  <h4 className="font-semibold mb-2">Échéances en retard</h4>
+                  {echeances && Array.isArray(echeances) && echeances.filter(e => e.est_en_retard).length > 0 ? (
+                    <div className="space-y-2">
+                      {echeances.filter(e => e.est_en_retard).map((echeance) => (
+                        <div key={echeance.id} className="border border-red-200 bg-red-50 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-semibold">Échéance {echeance.numero_echeance}</span>
+                              <div className="text-sm text-gray-600">
+                                En retard de {Math.abs(echeance.jours_restants)} jours
+                              </div>
+                            </div>
+                            <Badge variant="destructive">
+                              En retard
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Aucune échéance en retard</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Modal d'édition */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
@@ -504,7 +929,10 @@ export function ContratDetailPage() {
                       {editDateDebut ? format(editDateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                  <PopoverContent className="w-auto p-0 z-50" 
+                    align="start" 
+                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  >
                     <Calendar
                       mode="single"
                       selected={editDateDebut}
@@ -527,7 +955,10 @@ export function ContratDetailPage() {
                       {editDateFin ? format(editDateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                  <PopoverContent className="w-auto p-0 z-50" 
+                    align="start" 
+                    style={{ zIndex: 9999, pointerEvents: 'auto' }}
+                  >
                     <Calendar
                       mode="single"
                       selected={editDateFin}
@@ -622,11 +1053,6 @@ export function ContratDetailPage() {
                 contrat={contrat}
                 devis={contrat.devis}
                 onSave={handleSaveContractContent}
-                onGeneratePDF={(contractText) => {
-                  // Ici on peut implémenter la génération PDF du contrat personnalisé
-                  console.log('Générer PDF du contrat:', contractText);
-                  toast.success('PDF du contrat généré');
-                }}
               />
             </div>
           </div>

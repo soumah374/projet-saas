@@ -21,8 +21,6 @@ interface ContractEditorProps {
 }
 
 export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) {
-  const [previewMode, setPreviewMode] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [editedContract, setEditedContract] = useState('');
   const [isEditingContract, setIsEditingContract] = useState(false);
@@ -64,7 +62,7 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
       }
       
       // Télécharger le PDF depuis l'endpoint backend
-      const response = await api.get(`/contrats/contrats/${contrat.id}/download_pdf/`, {
+      const response = await api.get(`/contrats/${contrat.id}/download_pdf/`, {
         responseType: 'blob'
       });
       
@@ -116,21 +114,7 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
       setIsGeneratingPDF(false);
     }
   };
-
-  const handleCopyContract = async () => {
-    const contractToCopy = isEditingContract ? editedContract : contractContent;
-    
-    try {
-      await navigator.clipboard.writeText(contractToCopy);
-      setCopied(true);
-      toast.success('Contrat copié dans le presse-papiers');
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Erreur lors de la copie:', error);
-      toast.error('Erreur lors de la copie');
-    }
-  };
-
+  
   // S'assurer que les valeurs sont des strings valides
   const safeContractContent = typeof contractContent === 'string' ? contractContent : '';
   const safeEditedContract = typeof editedContract === 'string' ? editedContract : '';

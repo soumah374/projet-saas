@@ -98,11 +98,11 @@ En deux exemplaires originaux.
 
 <table style="width: 100%; margin: 30px 0; border-collapse: collapse; font-family: Arial, Helvetica, sans-serif;">
 <tr>
-<td style="width: 50%; padding: 20px; text-align: center; border: 1px solid #000000;">
+<td style="width: 50%; padding: 20px; text-align: center;">
 <strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">Le Prestataire</strong><br>
 (signature)
 </td>
-<td style="width: 50%; padding: 20px; text-align: center; border: 1px solid #000000;">
+<td style="width: 50%; padding: 20px; text-align: center;">
 <strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">Le Client</strong><br>
 (signature)
 </td>

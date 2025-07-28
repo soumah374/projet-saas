@@ -173,7 +173,7 @@ class Contrat(models.Model):
         
         # Variables du prestataire (SAKOM)
         variables.update({
-            'RAISON_SOCIALE_PRESTATAIRE': 'saKom SARL',
+            'RAISON_SOCIALE_PRESTATAIRE': 'SAKOM SARL',
             'FORME_JURIDIQUE': 'SARL',
             'MONTANT_CAPITAL': '100,000,000',
             'VILLE_RCS': 'Conakry',
@@ -359,6 +359,97 @@ class Contrat(models.Model):
                 articles_content.append(f"• {ligne.type_ligne}: {ligne.quantite} {ligne.unite.intitule}")
         
         return "\n".join(articles_content) if articles_content else "Prestations définies dans le devis"
+
+
+class EcheancierContrat(models.Model):
+    """Modèle pour les échéances de paiement des contrats"""
+    
+    TYPE_ECHEANCE_CHOICES = [
+        ('acompte', 'Acompte'),
+        ('tranche', 'Tranche de paiement'),
+        ('solde', 'Solde'),
+        ('retention', 'Retenue de garantie'),
+    ]
+    
+    STATUT_CHOICES = [
+        ('en_attente', 'En attente'),
+        ('paye', 'Payé'),
+        ('en_retard', 'En retard'),
+        ('annule', 'Annulé'),
+    ]
+    
+    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='echeances')
+    type_echeance = models.CharField(max_length=20, choices=TYPE_ECHEANCE_CHOICES)
+    numero_echeance = models.PositiveIntegerField(help_text="Numéro de l'échéance (1, 2, 3, etc.)")
+    
+    # Informations de paiement
+    montant_ht = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    pourcentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], help_text="Pourcentage du montant total")
+    
+    # Dates
+    date_echeance = models.DateField()
+    date_paiement = models.DateField(null=True, blank=True)
+    
+    # Statut et suivi
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_attente')
+    commentaire = models.TextField(blank=True)
+    
+    # Alertes
+    alerte_envoyee = models.BooleanField(default=False, help_text="Alerte envoyée 3 jours avant l'échéance")
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Échéance de contrat'
+        verbose_name_plural = 'Échéances de contrat'
+        ordering = ['contrat', 'numero_echeance']
+        unique_together = ['contrat', 'numero_echeance']
+    
+    def __str__(self):
+        return f"Échéance {self.numero_echeance} - {self.contrat.numero} - {self.get_type_echeance_display()}"
+    
+    def save(self, *args, **kwargs):
+        # Calculer automatiquement les montants si pas définis
+        if not self.montant_ttc and self.contrat:
+            self.montant_ttc = (self.contrat.montant_ttc * self.pourcentage) / 100
+            self.montant_ht = (self.contrat.montant_ht * self.pourcentage) / 100
+            self.montant_tva = (self.contrat.montant_tva * self.pourcentage) / 100
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def jours_restants(self):
+        """Calcule le nombre de jours restants avant l'échéance"""
+        from datetime import date
+        today = date.today()
+        return (self.date_echeance - today).days
+    
+    @property
+    def est_en_retard(self):
+        """Vérifie si l'échéance est en retard"""
+        return self.jours_restants < 0 and self.statut == 'en_attente'
+    
+    @property
+    def doit_alerter(self):
+        """Vérifie si une alerte doit être envoyée (3 jours avant)"""
+        return self.jours_restants <= 3 and self.jours_restants >= 0 and not self.alerte_envoyee and self.statut == 'en_attente'
+    
+    def marquer_comme_paye(self, date_paiement=None):
+        """Marque l'échéance comme payée"""
+        from datetime import date
+        self.statut = 'paye'
+        self.date_paiement = date_paiement or date.today()
+        self.save()
+    
+    def envoyer_alerte(self):
+        """Envoie une alerte pour cette échéance"""
+        # Cette méthode sera implémentée avec le système de notifications
+        self.alerte_envoyee = True
+        self.save()
 
 
 class LigneContrat(models.Model):

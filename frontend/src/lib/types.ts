@@ -541,3 +541,37 @@ export interface LigneFraisUpdateData {
   description?: string;
   is_active?: boolean;
 }
+
+// Échéance types
+export interface Echeance {
+  id: number;
+  contrat: number;
+  type_echeance: string;
+  numero_echeance: number;
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+  pourcentage: number;
+  date_echeance: string;
+  date_paiement?: string;
+  statut: string;
+  commentaire: string;
+  alerte_envoyee: boolean;
+  jours_restants: number;
+  est_en_retard: boolean;
+  doit_alerter: boolean;
+  created_at: string;
+  updated_at: string;
+  contrat_details?: {
+    numero: string;
+    client: {
+      nom_complet: string;
+    };
+  };
+}
+
+export interface AlertesQuotidiennes {
+  echeances_3_jours: Echeance[];
+  echeances_retard: Echeance[];
+  total_alertes: number;
+}
