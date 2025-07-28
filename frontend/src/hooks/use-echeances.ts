@@ -17,18 +17,10 @@ export function useEcheances(contratId?: number) {
     setError(null);
 
     try {
-      // Essayer d'abord l'endpoint direct des échéances
-      try {
-        const response = await api.get(`/contrats/echeances/?contrat=${contratIdToLoad}`);
-        const echeancesData = Array.isArray(response.data) ? response.data : [];
-        setEcheances(echeancesData);
-      } catch (directError) {
-        // Si l'endpoint direct échoue, essayer via le contrat
-        console.log('Tentative via l\'endpoint direct échouée, essai via le contrat...');
-        const contratResponse = await api.get(`/contrats/${contratIdToLoad}/`);
-        const echeancesData = contratResponse.data.echeances || [];
-        setEcheances(echeancesData);
-      }
+      // Utiliser l'endpoint du contrat pour récupérer les échéances
+      const contratResponse = await api.get(`/contrats/${contratIdToLoad}/`);
+      const echeancesData = contratResponse.data.echeances || [];
+      setEcheances(echeancesData);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Erreur lors du chargement des échéances';
       setError(errorMessage);
@@ -51,8 +43,8 @@ export function useEcheances(contratId?: number) {
     setError(null);
 
     try {
-      await api.post('/contrats/echeances/generer_echeancier_standard/', {
-        contrat_id: contratId,
+      await api.post(`/contrats/echeances/generer_echeancier_standard/`, {
+        contrat: contratId,
         type: type
       });
       

@@ -101,9 +101,106 @@ class ContratViewSet(viewsets.ModelViewSet):
             date_echeance__lt=today,
             statut='en_attente'
         ).select_related('contrat', 'contrat__client')
-        
         serializer = EcheancierContratSerializer(echeances, many=True)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def activer(self, request, pk=None):
+        """Activer un contrat (changer le statut de brouillon à actif)"""
+        contrat = self.get_object()
+        
+        if contrat.statut != 'brouillon':
+            return Response(
+                {'error': 'Seuls les contrats en brouillon peuvent être activés'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        contrat.statut = 'actif'
+        contrat.save()
+        
+        return Response({
+            'message': 'Contrat activé avec succès',
+            'statut': contrat.statut
+        })
+
+    @action(detail=True, methods=['post'])
+    def terminer(self, request, pk=None):
+        """Terminer un contrat (changer le statut à terminé)"""
+        contrat = self.get_object()
+        
+        if contrat.statut not in ['actif', 'suspendu']:
+            return Response(
+                {'error': 'Seuls les contrats actifs ou suspendus peuvent être terminés'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        contrat.statut = 'termine'
+        contrat.save()
+        
+        return Response({
+            'message': 'Contrat terminé avec succès',
+            'statut': contrat.statut
+        })
+
+    @action(detail=True, methods=['post'])
+    def annuler(self, request, pk=None):
+        """Annuler un contrat (changer le statut à annulé)"""
+        contrat = self.get_object()
+        
+        if contrat.statut in ['termine', 'annule']:
+            return Response(
+                {'error': 'Les contrats terminés ou annulés ne peuvent pas être annulés'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        contrat.statut = 'annule'
+        contrat.save()
+        
+        return Response({
+            'message': 'Contrat annulé avec succès',
+            'statut': contrat.statut
+        })
+
+    @action(detail=True, methods=['post'])
+    def suspendre(self, request, pk=None):
+        """Suspendre un contrat (changer le statut à suspendu)"""
+        contrat = self.get_object()
+        
+        if contrat.statut != 'actif':
+            return Response(
+                {'error': 'Seuls les contrats actifs peuvent être suspendus'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        contrat.statut = 'suspendu'
+        contrat.save()
+        
+        return Response({
+            'message': 'Contrat suspendu avec succès',
+            'statut': contrat.statut
+        })
+
+    @action(detail=True, methods=['post'])
+    def calculer_montants(self, request, pk=None):
+        """Recalculer les montants du contrat"""
+        contrat = self.get_object()
+        
+        try:
+            contrat.calculer_montants()
+            contrat.save()
+            
+            return Response({
+                'message': 'Montants recalculés avec succès',
+                'montant_ht': float(contrat.montant_ht),
+                'montant_tva': float(contrat.montant_tva),
+                'montant_ttc': float(contrat.montant_ttc)
+            })
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors du calcul des montants: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
 
 
 class LigneContratViewSet(viewsets.ModelViewSet):

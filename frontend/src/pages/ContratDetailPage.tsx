@@ -54,6 +54,9 @@ export function ContratDetailPage() {
   // États pour les modals
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [echeancierDialogOpen, setEcheancierDialogOpen] = useState(false);
+  const [selectedEcheancierType, setSelectedEcheancierType] = useState<string>('');
   const [editForm, setEditForm] = useState({
     date_debut: '',
     date_fin: '',
@@ -200,6 +203,12 @@ export function ContratDetailPage() {
   const handleActionContrat = async (action: string) => {
     if (!contrat) return;
 
+    // Pour l'annulation, afficher le modal de confirmation
+    if (action === 'annuler') {
+      setCancelDialogOpen(true);
+      return;
+    }
+
     try {
       switch (action) {
         case 'activer':
@@ -207,9 +216,6 @@ export function ContratDetailPage() {
           break;
         case 'terminer':
           await terminerContratMutation.mutateAsync(contrat.id);
-          break;
-        case 'annuler':
-          await annulerContratMutation.mutateAsync(contrat.id);
           break;
         case 'suspendre':
           await suspendreContratMutation.mutateAsync(contrat.id);
@@ -220,9 +226,26 @@ export function ContratDetailPage() {
     }
   };
 
-  const handleGenererEcheancier = async (type: string) => {
+  const handleConfirmAnnuler = async () => {
+    if (!contrat) return;
+
     try {
-      await genererEcheancier(type);
+      await annulerContratMutation.mutateAsync(contrat.id);
+      setCancelDialogOpen(false);
+    } catch (err) {
+      // Error handled by hook
+    }
+  };
+
+  const handleGenererEcheancier = async (type: string) => {
+    setSelectedEcheancierType(type);
+    setEcheancierDialogOpen(true);
+  };
+
+  const handleConfirmGenererEcheancier = async () => {
+    try {
+      await genererEcheancier(selectedEcheancierType);
+      setEcheancierDialogOpen(false);
     } catch (err) {
       console.error('Erreur lors de la génération de l\'échéancier:', err);
     }
@@ -294,6 +317,31 @@ export function ContratDetailPage() {
       'retention': 'Retenue'
     };
     return labels[type as keyof typeof labels] || type;
+  };
+
+  const getEcheancierDetails = (type: string) => {
+    const details = {
+      'standard': {
+        title: 'Échéancier Standard',
+        description: 'Échéancier classique avec acompte, tranches et solde',
+        echeances: [
+          { numero: 1, type: 'acompte', pourcentage: 30, description: 'Acompte à la signature' },
+          { numero: 2, type: 'tranche', pourcentage: 40, description: 'Tranche intermédiaire' },
+          { numero: 3, type: 'solde', pourcentage: 30, description: 'Solde à la réception' }
+        ]
+      },
+      'tranches': {
+        title: 'Échéancier en Tranches',
+        description: 'Échéancier avec plusieurs tranches de paiement',
+        echeances: [
+          { numero: 1, type: 'acompte', pourcentage: 25, description: 'Acompte à la signature' },
+          { numero: 2, type: 'tranche', pourcentage: 25, description: '1ère tranche' },
+          { numero: 3, type: 'tranche', pourcentage: 25, description: '2ème tranche' },
+          { numero: 4, type: 'solde', pourcentage: 25, description: 'Solde à la réception' }
+        ]
+      }
+    };
+    return details[type as keyof typeof details];
   };
 
   const getActionButtons = () => {
@@ -409,10 +457,12 @@ export function ContratDetailPage() {
             <FileText size={16} className="mr-2" />
             Éditer contrat
           </Button>
-          <Button onClick={openDeleteDialog} variant="destructive">
-            <Trash2 size={16} className="mr-2" />
-            Supprimer
-          </Button>
+          {contrat.statut === 'brouillon' && (
+            <Button onClick={openDeleteDialog} variant="destructive">
+              <Trash2 size={16} className="mr-2" />
+              Supprimer
+            </Button>
+          )}
           {getActionButtons()}
         </div>
       </div>
@@ -649,7 +699,7 @@ export function ContratDetailPage() {
                     <span className="ml-2">Chargement des échéances...</span>
                   </div>
                 ) : echeances && Array.isArray(echeances) && echeances.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
                     {getFilteredAndSortedEcheances().map((echeance) => (
                       <div key={echeance.id} className={`border rounded-lg p-4 transition-all duration-200 hover:shadow-md ${
                         echeance.est_en_retard ? 'border-red-200 bg-red-50' :
@@ -679,7 +729,7 @@ export function ContratDetailPage() {
                           <div className="bg-white p-3 rounded border">
                             <span className="text-gray-500 text-xs uppercase tracking-wide">Montant TTC</span>
                             <div className="font-bold text-lg text-blue-600">
-                              {echeance.montant_ttc.toLocaleString('fr-FR')} GNF
+                              {formatMontant(echeance.montant_ttc)}
                             </div>
                           </div>
                           <div className="bg-white p-3 rounded border">
@@ -914,11 +964,11 @@ export function ContratDetailPage() {
 
       {/* Modal d'édition */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Modifier le contrat</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-140px)] pr-2">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Date de début *</Label>
@@ -994,7 +1044,7 @@ export function ContratDetailPage() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t pt-4">
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Annuler
             </Button>
@@ -1033,6 +1083,125 @@ export function ContratDetailPage() {
               disabled={deleteContratMutation.isPending}
             >
               {deleteContratMutation.isPending ? 'Suppression...' : 'Supprimer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal d'annulation */}
+      <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Annuler le contrat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Êtes-vous sûr de vouloir annuler ce contrat ? Cette action est irréversible.
+            </p>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="font-medium">{contrat.numero}</p>
+              <p className="text-gray-600">{contrat.client.nom_complet}</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmAnnuler}
+              disabled={annulerContratMutation.isPending}
+            >
+              {annulerContratMutation.isPending ? 'Annulation...' : 'Annuler le contrat'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de génération d'échéancier */}
+      <Dialog open={echeancierDialogOpen} onOpenChange={setEcheancierDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Générer l'échéancier</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 overflow-y-auto max-h-[calc(90vh-140px)] pr-2">
+            {selectedEcheancierType && getEcheancierDetails(selectedEcheancierType) && (
+              <>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-2">
+                    {getEcheancierDetails(selectedEcheancierType)?.title}
+                  </h3>
+                  <p className="text-blue-700 text-sm">
+                    {getEcheancierDetails(selectedEcheancierType)?.description}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Répartition des échéances :</h4>
+                  <div className="space-y-3">
+                    {getEcheancierDetails(selectedEcheancierType)?.echeances.map((echeance, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold text-sm">
+                            {echeance.numero}
+                          </div>
+                          <div>
+                            <div className="font-medium">{getTypeEcheanceLabel(echeance.type)}</div>
+                            <div className="text-sm text-gray-600">{echeance.description}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-blue-600">{echeance.pourcentage}%</div>
+                          <div className="text-sm text-gray-500">
+                            {formatMontant((contrat.montant_ttc * echeance.pourcentage) / 100)}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-green-900">Total</h4>
+                      <p className="text-green-700 text-sm">100% du montant TTC</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-bold text-green-600">
+                        {formatMontant(contrat.montant_ttc)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-yellow-900 mb-2">⚠️ Important</h4>
+                  <ul className="text-yellow-800 text-sm space-y-1">
+                    <li>• Les dates d'échéance seront calculées automatiquement</li>
+                    <li>• L'acompte sera exigible à la signature du contrat</li>
+                    <li>• Le solde sera exigible à la réception des travaux</li>
+                    <li>• Les échéances peuvent être modifiées après génération</li>
+                  </ul>
+                </div>
+              </>
+            )}
+
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="font-medium">Contrat {contrat.numero}</p>
+              <p className="text-gray-600">Client: {contrat.client.nom_complet}</p>
+              <p className="text-gray-600">Montant TTC: {formatMontant(contrat.montant_ttc)}</p>
+            </div>
+          </div>
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setEcheancierDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleConfirmGenererEcheancier}
+              disabled={isLoadingEcheances}
+            >
+              {isLoadingEcheances ? 'Génération...' : 'Générer l\'échéancier'}
             </Button>
           </DialogFooter>
         </DialogContent>
