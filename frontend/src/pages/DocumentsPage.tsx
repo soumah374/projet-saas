@@ -188,7 +188,7 @@ export function DocumentsPage() {
         return <FileText className="w-5 h-5 text-red-500" />;
       case 'docx':
       case 'doc':
-        return <FileText className="w-5 h-5 text-blue-500" />;
+        return <FileText className="w-5 h-5 text-blue-600" />;
       case 'pptx':
       case 'ppt':
         return <FileText className="w-5 h-5 text-orange-500" />;
@@ -320,7 +320,7 @@ export function DocumentsPage() {
               variant="ghost"
               size="sm"
               onClick={() => navigateToPath('/')}
-              className="text-blue-600 hover:text-blue-800"
+              className="text-blue-600 hover:text-blue-600"
             >
               Accueil
             </Button>
@@ -331,7 +331,7 @@ export function DocumentsPage() {
                   variant="ghost"
                   size="sm"
                   onClick={() => navigateToPath('/' + getBreadcrumbItems().slice(0, index + 1).join('/'))}
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-blue-600 hover:text-blue-600"
                 >
                   {item}
                 </Button>
@@ -443,7 +443,7 @@ export function DocumentsPage() {
               >
                 <div className="flex items-center space-x-3">
                   {document.type === 'folder' ? (
-                    <Folder className="w-5 h-5 text-blue-500" />
+                    <Folder className="w-5 h-5 text-blue-600" />
                   ) : (
                     getFileIcon(document.fileType)
                   )}

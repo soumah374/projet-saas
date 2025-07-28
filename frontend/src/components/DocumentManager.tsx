@@ -114,7 +114,7 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
       case 'png':
       case 'gif': return <Image className="h-8 w-8 text-green-500" />;
       case 'mp4':
-      case 'avi': return <Video className="h-8 w-8 text-blue-500" />;
+      case 'avi': return <Video className="h-8 w-8 text-blue-600" />;
       case 'doc':
       case 'docx':
       case 'xls':
@@ -130,9 +130,9 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Assets': return 'bg-blue-100 text-blue-800';
+      case 'Assets': return 'bg-blue-100 text-blue-600';
       case 'Planning': return 'bg-gray-100 text-gray-800';
-      case 'Contrats': return 'bg-blue-100 text-blue-800';
+      case 'Contrats': return 'bg-blue-100 text-blue-600';
       case 'Factures': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }

@@ -141,7 +141,7 @@ export const projectApi = {
     reorderPhase: (projectId: string, phaseId: number, order: number) =>
         api.post(`/projects/${projectId}/phases/${phaseId}/reorder/`, { order }),
     
-    // Tâches
+    // Activités
     getProjectTasks: (projectId: string) => api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
     getProjectTask: (projectId: string, taskId: number) => 
         api.get<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`),

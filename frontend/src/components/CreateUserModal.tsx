@@ -376,7 +376,7 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
             <Button 
               type="submit" 
               disabled={createUserMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-600"
             >
               {createUserMutation.isPending ? (
                 <>

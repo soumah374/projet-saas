@@ -98,7 +98,7 @@ export const ProjectTimesheets = ({ projectId }: ProjectTimesheetsProps) => {
               {/* By Task */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Répartition par tâche</CardTitle>
+                  <CardTitle>Répartition par activité</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">

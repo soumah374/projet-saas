@@ -58,6 +58,8 @@ export function DevisCreatePage() {
     date_validite: undefined as Date | undefined,
     taux_tva: 18.00,
     appliquer_tva: true,
+    taux_frais_agence: 15.00,
+    appliquer_frais_agence: true,
     notes: '',
     conditions: '',
   });
@@ -129,6 +131,53 @@ export function DevisCreatePage() {
     }
   }, [currentLigne.activity_id, refetchIntervenants]);
 
+  // Fonction utilitaire pour calculer la quantité et le prix unitaire selon les règles métier
+  const calculateQuantiteAndPrixUnitaire = (intervenants: IntervenantForm[], uniteId: string) => {
+    if (intervenants.length <= 1) {
+      // Logique normale pour un seul intervenant
+      const prixUnitaire = intervenants.reduce((sum, interv) => {
+        const temps = parseFloat(interv.temps_intervenant) || 0;
+        const taux = parseFloat(interv.taux_horaire) || 0;
+        return sum + (temps * taux);
+      }, 0);
+      return { quantite: 1, prixUnitaire };
+    }
+
+    const selectedUnite = unites.find(u => u.id.toString() === uniteId);
+    const uniteIntitule = selectedUnite?.intitule?.toLowerCase() || '';
+    const isUniteJour = ['heure', 'homme-jour', 'jour'].some(unite => 
+      uniteIntitule.includes(unite.toLowerCase())
+    );
+
+    if (isUniteJour) {
+      // Calculer la quantité basée sur la somme des temps intervenant divisée par 8
+      const totalTempsIntervenant = intervenants.reduce((sum, interv) => {
+        return sum + (parseFloat(interv.temps_intervenant) || 0);
+      }, 0);
+      
+      const quantite = totalTempsIntervenant / 8;
+      
+      // Calculer la somme des montants par intervenant
+      const sommeMontantsIntervenants = intervenants.reduce((sum, interv) => {
+        const temps = parseFloat(interv.temps_intervenant) || 0;
+        const taux = parseFloat(interv.taux_horaire) || 0;
+        return sum + (temps * taux);
+      }, 0);
+      
+      // Le prix unitaire est égal à la somme des montants divisée par la quantité
+      const prixUnitaire = quantite > 0 ? sommeMontantsIntervenants / quantite : 0;
+      return { quantite, prixUnitaire };
+    } else {
+      // Logique normale pour les autres unités
+      const prixUnitaire = intervenants.reduce((sum, interv) => {
+        const temps = parseFloat(interv.temps_intervenant) || 0;
+        const taux = parseFloat(interv.taux_horaire) || 0;
+        return sum + (temps * taux);
+      }, 0);
+      return { quantite: 1, prixUnitaire };
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
@@ -142,7 +191,16 @@ export function DevisCreatePage() {
   };
 
   const handleLigneChange = (field: keyof LigneForm, value: string) => {
-    setCurrentLigne({ ...currentLigne, [field]: value });
+    const newLigne = { ...currentLigne, [field]: value };
+    
+    // Si on change l'unité, recalculer automatiquement la quantité et le prix unitaire
+    if (field === 'unite_id' && newLigne.type_ligne === 'prestation' && newLigne.intervenants.length > 1) {
+      const { quantite, prixUnitaire } = calculateQuantiteAndPrixUnitaire(newLigne.intervenants, value);
+      newLigne.quantite = quantite.toString();
+      newLigne.prix_unitaire = prixUnitaire.toString();
+    }
+    
+    setCurrentLigne(newLigne);
   };
 
   const handleIntervenantChange = (index: number, field: keyof IntervenantForm, value: string) => {
@@ -162,7 +220,16 @@ export function DevisCreatePage() {
       }
     }
     
-    setCurrentLigne({ ...currentLigne, intervenants: newIntervenants });
+    const newLigne = { ...currentLigne, intervenants: newIntervenants };
+    
+    // Recalculer automatiquement la quantité et le prix unitaire si nécessaire
+    if (newLigne.type_ligne === 'prestation' && newLigne.intervenants.length > 1) {
+      const { quantite, prixUnitaire } = calculateQuantiteAndPrixUnitaire(newIntervenants, newLigne.unite_id);
+      newLigne.quantite = quantite.toString();
+      newLigne.prix_unitaire = prixUnitaire.toString();
+    }
+    
+    setCurrentLigne(newLigne);
   };
 
   const addIntervenant = () => {
@@ -197,29 +264,31 @@ export function DevisCreatePage() {
       return;
     }
 
-    // Calcul du prix unitaire et du montant
-    let prixUnitaire = 0;
-    let montant = 0;
-    if (currentLigne.type_ligne === 'prestation') {
-      prixUnitaire = currentLigne.intervenants.reduce((sum, interv) => {
-        const temps = parseFloat(interv.temps_intervenant) || 0;
-        const taux = parseFloat(interv.taux_horaire) || 0;
-        return sum + (temps * taux);
-      }, 0);
-      montant = prixUnitaire * (parseFloat(currentLigne.quantite) || 1);
-    } else if (currentLigne.type_ligne === 'frais') {
-      prixUnitaire = parseFloat(currentLigne.prix_unitaire || '0');
-      montant = prixUnitaire * (parseFloat(currentLigne.quantite) || 1);
-    }
-
     // Récupérer les données complètes pour l'affichage
     const selectedService = services.find(s => s.id.toString() === currentLigne.service_id);
     const selectedActivity = activites.find(a => a.id.toString() === currentLigne.activity_id);
     const selectedUnite = unites.find(u => u.id.toString() === currentLigne.unite_id);
     const selectedLigneFrais = lignesFrais.find(lf => lf.id.toString() === currentLigne.ligne_frais_id);
 
+    // Calcul du prix unitaire et du montant
+    let prixUnitaire = 0;
+    let montant = 0;
+    let quantiteCalculee = parseFloat(currentLigne.quantite) || 1;
+
+    if (currentLigne.type_ligne === 'prestation') {
+      // Utiliser la fonction utilitaire pour calculer quantité et prix unitaire
+      const { quantite, prixUnitaire: prixCalc } = calculateQuantiteAndPrixUnitaire(currentLigne.intervenants, currentLigne.unite_id);
+      quantiteCalculee = quantite;
+      prixUnitaire = prixCalc;
+      montant = prixUnitaire * quantiteCalculee;
+    } else if (currentLigne.type_ligne === 'frais') {
+      prixUnitaire = parseFloat(currentLigne.prix_unitaire || '0');
+      montant = prixUnitaire * quantiteCalculee;
+    }
+
     const ligneWithData = {
       ...currentLigne,
+      quantite: quantiteCalculee.toString(),
       service_name: selectedService?.name,
       activity_intitule: selectedActivity?.intitule,
       unite_intitule: selectedUnite?.intitule,
@@ -360,8 +429,10 @@ export function DevisCreatePage() {
       await createDevisWithLignesMutation.mutateAsync({
         client_id: parseInt(form.client_id),
         date_validite: form.date_validite.toISOString().split('T')[0],
-        taux_tva: form.taux_tva,
+        taux_tva: form.appliquer_tva ? form.taux_tva : 0,
         appliquer_tva: form.appliquer_tva,
+        taux_frais_agence: form.appliquer_frais_agence ? form.taux_frais_agence : 0,
+        appliquer_frais_agence: form.appliquer_frais_agence,
         notes: form.notes,
         conditions: form.conditions,
         lignes: lignesData,
@@ -447,19 +518,51 @@ export function DevisCreatePage() {
                 </Label>
               </div>
             </div>
+            {form.appliquer_tva && (
+              <div>
+                <Label className="text-sm font-medium">Taux de TVA (%)</Label>
+                <Input 
+                  type="number"
+                  name="taux_tva"
+                  value={form.taux_tva}
+                  onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="18.00"
+                />
+              </div>
+            )}
             <div>
-              <Label className="text-sm font-medium">Taux de TVA (%)</Label>
-              <Input 
-                type="number"
-                name="taux_tva"
-                value={form.taux_tva}
-                onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
-                min="0"
-                max="100"
-                step="0.01"
-                placeholder="18.00"
-              />
+              <Label className="text-sm font-medium">Appliquer les frais d'agence</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="appliquer_frais_agence"
+                  checked={form.appliquer_frais_agence}
+                  onChange={(e) => setForm({ ...form, appliquer_frais_agence: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="appliquer_frais_agence" className="text-sm">
+                  Activer les frais d'agence (Conseil, Accompagnement & Coordination générale)
+                </Label>
+              </div>
             </div>
+            {form.appliquer_frais_agence && (
+              <div>
+                <Label className="text-sm font-medium">Taux des frais d'agence (%)</Label>
+                <Input 
+                  type="number"
+                  name="taux_frais_agence"
+                  value={form.taux_frais_agence}
+                  onChange={(e) => setForm({ ...form, taux_frais_agence: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="15.00"
+                />
+              </div>
+            )}
             
             <div className="md:col-span-2">
               <Label className="text-sm font-medium">Notes</Label>
@@ -506,6 +609,7 @@ export function DevisCreatePage() {
                     <TableHead>Désignation</TableHead>
                     <TableHead>Type de ligne</TableHead>
                     <TableHead>Quantité</TableHead>
+                    <TableHead>Unité</TableHead>
                     <TableHead>Prix unitaire</TableHead>
                     <TableHead>Montant</TableHead>
                     <TableHead>Actions</TableHead>
@@ -532,6 +636,7 @@ export function DevisCreatePage() {
                       </TableCell>
                       <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                       <TableCell>{ligne.quantite}</TableCell>
+                      <TableCell>{ligne.unite_intitule || '—'}</TableCell>
                       <TableCell>{formatMontant(parseFloat(ligne.prix_unitaire || '0'))}</TableCell>
                       <TableCell>{formatMontant(parseFloat(ligne.montant || '0'))}</TableCell>
                       <TableCell>

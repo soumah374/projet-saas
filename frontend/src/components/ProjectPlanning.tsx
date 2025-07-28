@@ -142,8 +142,8 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="phases">Phases</TabsTrigger>
             <TabsTrigger value="team">Équipe</TabsTrigger>
-            <TabsTrigger value="tasks">Tâches</TabsTrigger>
-            <TabsTrigger value="templates">Tâches standards</TabsTrigger>
+            <TabsTrigger value="tasks">Activités</TabsTrigger>
+            <TabsTrigger value="templates">Activités standards</TabsTrigger>
           </TabsList>
           
           <TabsContent value="phases" className="space-y-4">
@@ -156,7 +156,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
-                    placeholder="Rechercher une tâche..."
+                    placeholder="Rechercher une activité..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -178,7 +178,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
               <TaskModal projectId={projectId} mode="create" phases={phases}>
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
-                  Nouvelle tâche
+                  Nouvelle activité
                 </Button>
               </TaskModal>
             </div>
@@ -434,7 +434,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
               projectId={projectId}
               phases={phases}
               onTasksCreated={() => {
-                // Rafraîchir les données des tâches
+                // Rafraîchir les données des activités
                 // window.location.reload();
               }}
             />

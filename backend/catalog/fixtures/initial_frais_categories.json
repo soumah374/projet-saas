@@ -1,18 +1,8 @@
 [
+  
   {
     "model": "catalog.fraiscategory",
     "pk": 1,
-    "fields": {
-      "name": "Budget RH mobilisé",
-      "description": "Éléments pris en compte dans une table séparée - Durée d'intervention par fonction/profil, taux horaire ou journalier par fonction/profil, temps d'intervention ajustable par profil selon contexte projet, montant total RH calculé automatiquement (temps × taux), possibilité d'ajouter plusieurs fonctions/profils pour le même projet",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  },
-  {
-    "model": "catalog.fraiscategory",
-    "pk": 2,
     "fields": {
       "name": "Frais techniques et matériels",
       "description": "Location de matériel technique, équipements logistiques événementiels, production audiovisuelle externe, frais de montage vidéo, droits logiciels spécifiques, archivage et stockage, supports de diffusion",
@@ -23,7 +13,7 @@
   },
   {
     "model": "catalog.fraiscategory",
-    "pk": 3,
+    "pk": 2,
     "fields": {
       "name": "Sous-traitance / prestataires externes",
       "description": "Cachet voice-over, comédien, figurant, traducteur, interprète, relecteur externe, régie publicitaire, impression de supports physiques, fabrication signalétique, agence partenaire",
@@ -34,7 +24,7 @@
   },
   {
     "model": "catalog.fraiscategory",
-    "pk": 4,
+    "pk": 3,
     "fields": {
       "name": "Déplacements et logistique",
       "description": "Billets d'avion, transport terrestre, location de véhicules utilitaires, hébergement, restauration, indemnités de déplacement, frais de carburant et péages",
@@ -45,7 +35,7 @@
   },
   {
     "model": "catalog.fraiscategory",
-    "pk": 5,
+    "pk": 4,
     "fields": {
       "name": "Frais administratifs et annexes",
       "description": "Frais administratifs divers, assurances, frais bancaires, frais de gestion",
@@ -56,7 +46,7 @@
   },
   {
     "model": "catalog.fraiscategory",
-    "pk": 6,
+    "pk": 5,
     "fields": {
       "name": "Marge commerciale et ajustements",
       "description": "Marge commerciale, ajustements de prix, remises, majorations",
@@ -67,7 +57,7 @@
   },
   {
     "model": "catalog.fraiscategory",
-    "pk": 7,
+    "pk": 6,
     "fields": {
       "name": "Taxes et TVA",
       "description": "Taxes diverses, TVA, impôts et charges fiscales",

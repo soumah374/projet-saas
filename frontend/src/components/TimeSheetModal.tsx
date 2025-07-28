@@ -102,11 +102,11 @@ export const TimeSheetModal = ({
       newErrors.hours = 'Les heures ne peuvent pas dépasser 24';
     }
     
-    // Validation de la tâche
+    // Validation de la activité
     if (!taskId) {
-      newErrors.task = 'La tâche est requise';
+      newErrors.task = 'La activité est requise';
     } else if (selectedTask?.status === 'Terminé' && mode === 'create') {
-      newErrors.task = 'Impossible d\'ajouter des heures à une tâche terminée';
+      newErrors.task = 'Impossible d\'ajouter des heures à une activité terminée';
     }
     
     // Validation de la description
@@ -294,14 +294,14 @@ export const TimeSheetModal = ({
           </div>
           
           <div>
-            <Label htmlFor="task">Tâche</Label>
+            <Label htmlFor="task">Activité</Label>
             <Select
               value={taskId}
               onValueChange={setTaskId}
               disabled={isReadOnly}
             >
               <SelectTrigger className={errors.task ? 'border-red-500' : ''}>
-                <SelectValue placeholder="Sélectionner une tâche" />
+                <SelectValue placeholder="Sélectionner une activité" />
               </SelectTrigger>
               <SelectContent>
                 {tasks.map((task) => (

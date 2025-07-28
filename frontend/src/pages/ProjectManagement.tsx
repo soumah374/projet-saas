@@ -133,7 +133,7 @@ export function ProjectManagement() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Prospection':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-600';
       case 'Devis':
         return 'bg-yellow-100 text-yellow-800';
       case 'Production':
@@ -154,7 +154,7 @@ export function ProjectManagement() {
       case 'Haute':
         return 'bg-orange-100 text-orange-800';
       case 'Normale':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-600';
       case 'Basse':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -259,7 +259,7 @@ export function ProjectManagement() {
         variant="outline"
         size="sm"
         onClick={() => navigate(`/projects/${project.id}`)}
-        className="text-blue-600 hover:text-blue-700"
+        className="text-blue-600 hover:text-blue-600"
       >
         <Eye className="h-4 w-4 mr-1" />
         Détails
@@ -310,7 +310,7 @@ export function ProjectManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
-          <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets SAKOM</p>
+          <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets saKom</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4 mr-2" />

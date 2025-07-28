@@ -60,7 +60,7 @@ export function ProjectsPage() {
       case 'Terminé':
         return 'bg-green-100 text-green-800';
       case 'En cours':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-600';
       case 'En pause':
         return 'bg-yellow-100 text-yellow-800';
       case 'Planification':
@@ -79,7 +79,7 @@ export function ProjectsPage() {
       case 'Haute':
         return 'bg-orange-100 text-orange-800';
       case 'Normale':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-600';
       case 'Basse':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -234,7 +234,7 @@ export function ProjectsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-gray-500" />
-                    <span>{project.tasks?.length || 0} tâches</span>
+                    <span>{project.tasks?.length || 0} activités</span>
                   </div>
                 </div>
               </div>

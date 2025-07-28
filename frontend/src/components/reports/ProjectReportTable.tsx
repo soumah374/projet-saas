@@ -51,7 +51,7 @@ export const ProjectReportTable = ({
       case 'terminé':
         return 'bg-green-100 text-green-800';
       case 'en cours':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-600';
       case 'en pause':
         return 'bg-yellow-100 text-yellow-800';
       case 'planification':
@@ -68,7 +68,7 @@ export const ProjectReportTable = ({
       case 'haute':
         return 'bg-orange-100 text-orange-800';
       case 'normale':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-blue-600';
       case 'basse':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -239,7 +239,7 @@ export const ProjectReportTable = ({
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </Button>
                 </TableHead>
-                <TableHead>Tâches</TableHead>
+                <TableHead>Activités</TableHead>
                 <TableHead>
                   <Button 
                     variant="ghost" 

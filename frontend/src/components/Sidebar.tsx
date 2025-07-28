@@ -29,6 +29,7 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Logo } from './Logo';
 
 interface User {
   id: number;
@@ -64,7 +65,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
   const getStatusColor = (status: string) => {
     switch (status) {
       case "En cours":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-600";
       case "En retard":
         return "bg-red-100 text-red-800";
       case "Terminé":
@@ -89,17 +90,24 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div>
+          {/* Logo header */}
+          {/* <div className="mb-6 flex items-center justify-center">
+            <Link to="/" className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-lg">
+              <Logo size="md" showText={true} className="text-white" linkTo="" />
+            </Link>
+          </div> */}
+          
           <div className="mb-8">
             <span className="block text-xs text-gray-400 mb-2">Rôle actuel</span>
             <div className="rounded-lg border px-3 py-2 text-sm font-medium bg-gray-50 flex items-center justify-between">
               <span>{user?.role || 'Utilisateur'}</span>
-              {user?.is_staff && <Badge variant="secondary" className="bg-blue-100 text-blue-800">Admin</Badge>}
+              {user?.is_staff && <Badge variant="secondary" className="bg-blue-100 text-blue-600">Admin</Badge>}
             </div>
           </div>
           <nav className="space-y-4">
             <Link to="/" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-              location.pathname === '/' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              location.pathname === '/' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}> 
               <Home className="h-5 w-5" /> Tableau de bord 
             </Link>
@@ -110,7 +118,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 onClick={() => toggleMenu('prestations')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' || location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' || location.pathname === '/categories-services' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' || location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' || location.pathname === '/categories-services' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <Wrench className="h-5 w-5" /> Prestations
@@ -120,19 +128,19 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.prestations && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/categories-services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/categories-services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <List className="h-4 w-4" /> Catégories des prestations
                   </Link>
-                  <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <List className="h-4 w-4" /> Catalogue des prestations
                   </Link>
-                  {/* <Link to="/activities" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  {/* <Link to="/activities" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <Activity className="h-4 w-4" /> Activités
                   </Link> */}
-                  <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <Currency className="h-4 w-4" /> Taux horaires GNF
                   </Link>
-                  <Link to="/unites-standards" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/unites-standards" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <Ruler className="h-4 w-4" /> Unités standards
                   </Link>
                   
@@ -142,10 +150,10 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                       <DollarSign className="h-4 w-4" /> Frais
                     </div>
                     <div className="ml-4 space-y-1">
-                      <Link to="/frais-categories" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                      <Link to="/frais-categories" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                         <List className="h-4 w-4" /> Catégories de frais
                       </Link>
-                      <Link to="/lignes-frais" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                      <Link to="/lignes-frais" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                         <Receipt className="h-4 w-4" /> Lignes de frais
                       </Link>
                     </div>
@@ -160,7 +168,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 onClick={() => toggleMenu('clients')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.startsWith('/clients') || location.pathname.startsWith('/categories-clients') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname.startsWith('/clients') || location.pathname.startsWith('/categories-clients') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <Users className="h-5 w-5" /> Clients
@@ -170,10 +178,10 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.clients && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/categories-clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/categories-clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <List className="h-4 w-4" /> Catégories clients
                   </Link>
-                  <Link to="/clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <Users className="h-4 w-4" /> Liste clients
                   </Link>
                 </div>
@@ -182,7 +190,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             {/* Devis */}
             <Link to="/devis" className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/devis') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+                location.pathname.startsWith('/devis') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:text-gray-900"
               )}>
                 <Receipt className="h-5 w-5" />
                 <span>Devis</span>
@@ -202,12 +210,12 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 onClick={() => toggleMenu('projets')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/projects') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname.includes('/projects') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <FolderOpen className="h-5 w-5" /> Projets
                 <span className="ml-auto flex items-center gap-2">
-                  {/* <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                  {/* <Badge variant="secondary" className="bg-blue-100 text-blue-600">
                     {statistics?.total_projects || 0}
                   </Badge> */}
                   {openMenus.projets ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
@@ -215,22 +223,22 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.projets && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/projects" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">
+                  <Link to="/projects" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
                     <Target className="h-4 w-4" /> Tous les projets
                   </Link>
-                  <Link to="/projects?status=en_cours" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">
+                  <Link to="/projects?status=en_cours" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
                     <Clock className="h-4 w-4" /> Mes projets
                     {/* <Badge variant="secondary" className={getStatusColor("En cours")}>
                       {statistics?.active_projects || 0}
                     </Badge> */}
                   </Link>
-                  {/* <Link to="/projects?status=termine" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">
+                  {/* <Link to="/projects?status=termine" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
                     <CheckCircle2 className="h-4 w-4" /> Terminés
                     <Badge variant="secondary" className={getStatusColor("Terminé")}>
                       {statistics?.completed_projects || 0}
                     </Badge>
                   </Link>
-                  <Link to="/projects?status=retard" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-700">
+                  <Link to="/projects?status=retard" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
                     <AlertCircle className="h-4 w-4" /> En retard
                     <Badge variant="secondary" className={getStatusColor("En retard")}>
                       {statistics?.overdue_projects || 0}
@@ -246,7 +254,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 onClick={() => toggleMenu('planning')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/calendar') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname.includes('/calendar') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <Calendar className="h-5 w-5" /> Planning
@@ -256,13 +264,13 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.planning && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/calendar" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/calendar" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Vue globale
                   </Link>
-                  <Link to="/calendar?view=month" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/calendar?view=month" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Vue mensuelle
                   </Link>
-                  <Link to="/calendar?view=week" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/calendar?view=week" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Vue hebdomadaire
                   </Link>
                 </div>
@@ -275,7 +283,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 onClick={() => toggleMenu('rapports')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/reports') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname.includes('/reports') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <BarChart3 className="h-5 w-5" /> Rapports
@@ -285,13 +293,13 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.rapports && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/reports" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/reports" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Vue d'ensemble
                   </Link>
-                  <Link to="/reports?type=performance" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/reports?type=performance" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Performance
                   </Link>
-                  <Link to="/reports?type=budget" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/reports?type=budget" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Budget
                   </Link>
                 </div>
@@ -304,7 +312,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 onClick={() => toggleMenu('documents')} 
                 className={cn(
                   "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/documents') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                  location.pathname.includes('/documents') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
                 )}
               >
                 <FileText className="h-5 w-5" /> Documents
@@ -314,13 +322,13 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               </button>
               {openMenus.documents && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/documents" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/documents" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Tous les documents
                   </Link>
-                  <Link to="/documents?type=contract" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/documents?type=contract" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Contrats
                   </Link>
-                  <Link to="/documents?type=report" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-700">
+                  <Link to="/documents?type=report" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     Rapports
                   </Link>
                 </div>
@@ -330,7 +338,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             {/* Départements */}
             <Link to="/departments" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              location.pathname.includes('/departments') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              location.pathname.includes('/departments') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}>
               <Building2 className="h-5 w-5" /> Départements
             </Link>
@@ -338,7 +346,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             {/* Équipes */}
             {/* <Link to="/teams" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              location.pathname.includes('/teams') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              location.pathname.includes('/teams') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}>
               <Users className="h-5 w-5" /> Équipes
             </Link> */}
@@ -348,7 +356,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 to="/users" 
                 className={cn(
                   "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                  location.pathname === '/users' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                 )}
               > 
                 <Users className="h-5 w-5" /> Utilisateurs 
@@ -357,7 +365,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
             {/* <Link to="/services" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-              location.pathname === '/services' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              location.pathname === '/services' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}> 
               <FolderOpen className="h-5 w-5" />
               <span>Prestations</span>
@@ -367,7 +375,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
             {/* <Link to="/activities" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-              location.pathname === '/activities' ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              location.pathname === '/activities' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             )}> 
               <Activity className="h-5 w-5" />
               <span>Activités</span>
@@ -383,7 +391,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             <div className="grid gap-2">
               <button 
                 onClick={() => navigate('/projects/new')}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors h-8"
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-600 transition-colors h-8"
               >
                 <Plus className="w-4 h-4" /> Nouveau projet
               </button>

@@ -51,7 +51,7 @@ export function StyledDateInput({ value, onChange, required, className }: DateIn
       onChange={onChange}
       required={required}
       className={cn(
-        "border-gray-300 focus:border-blue-500 focus:ring-blue-500",
+        "border-gray-300 focus:border-blue-600 focus:ring-blue-600",
         "rounded-md shadow-sm",
         className
       )}

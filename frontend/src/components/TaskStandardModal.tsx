@@ -104,7 +104,7 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
-// Fonction pour générer les tâches standards basées sur un service
+// Fonction pour générer les activités standards basées sur un service
 const generateServiceTasks = (service: Service): ServiceTaskTemplate[] => {
   const serviceDuration = typeof service.duration === 'number' ? service.duration : 8;
   const baseTasks: ServiceTaskTemplate[] = [
@@ -207,7 +207,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     }
   }, [open, task?.id]);
 
-  // Générer les tâches quand les services sélectionnés changent
+  // Générer les activités quand les services sélectionnés changent
   useEffect(() => {
     if (selectedServices.length > 0) {
       const tasks: ServiceTaskTemplate[] = [];
@@ -247,7 +247,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
 
   const handleCreateStandardTasks = async () => {
     if (selectedTasks.size === 0) {
-      toast.error('Veuillez sélectionner au moins une tâche');
+      toast.error('Veuillez sélectionner au moins une activité');
       return;
     }
 
@@ -268,13 +268,13 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
         });
       }
       
-      toast.success(`${tasksToCreate.length} tâche(s) créée(s) avec succès`);
+      toast.success(`${tasksToCreate.length} activité(s) créée(s) avec succès`);
       setOpen(false);
       setSelectedServices([]);
       setGeneratedTasks([]);
       setSelectedTasks(new Set());
     } catch (error) {
-      toast.error('Erreur lors de la création des tâches');
+      toast.error('Erreur lors de la création des activités');
       console.error('Error creating tasks:', error);
     }
   };
@@ -283,7 +283,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     e.preventDefault();
     
     if (!formData.title.trim()) {
-      alert('Le titre de la tâche est requis');
+      alert('Le titre de la activité est requis');
       return;
     }
     
@@ -321,10 +321,10 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
         taskId: task.id, 
         data: taskData 
       });
-      toast.success('Tâche mise à jour avec succès');
+      toast.success('Activité mise à jour avec succès');
     } else {
       await createTaskMutation.mutateAsync({ projectId, data: taskData });
-      toast.success('Tâche créée avec succès');
+      toast.success('Activité créée avec succès');
     }
     
     setOpen(false);
@@ -356,7 +356,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     if (!task) return;
     try {
       await deleteTaskMutation.mutateAsync({ projectId, taskId: task.id });
-      toast.success('Tâche supprimée avec succès');
+      toast.success('Activité supprimée avec succès');
       setOpen(false);
     } catch (error) {
       toast.error('Une erreur est survenue');
@@ -367,7 +367,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     if (!task) return;
     try {
       await updateTaskMutation.mutateAsync({ projectId, taskId: task.id, data: { status: 'En cours' } });
-      toast.success('Tâche exécutée avec succès');
+      toast.success('Activité exécutée avec succès');
       setOpen(false);
     } catch (error) {
       toast.error('Une erreur est survenue');
@@ -381,7 +381,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       <div className="space-y-6">
         <div className="space-y-4">
           <div>
-            <Label>Titre de la tâche</Label>
+            <Label>Titre de la activité</Label>
             <p className="mt-1 text-lg font-medium">{task.title}</p>
           </div>
 
@@ -514,7 +514,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
 
         {generatedTasks.length > 0 && (
           <div>
-            <Label>Tâches générées ({generatedTasks.length})</Label>
+            <Label>Activités générées ({generatedTasks.length})</Label>
             <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
               {generatedTasks.map((taskTemplate, index) => (
                 <div key={index} className="flex items-start space-x-2 p-3 border rounded-lg">
@@ -554,7 +554,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
           disabled={selectedTasks.size === 0}
         >
           <CheckSquare className="h-4 w-4 mr-2" />
-          Créer {selectedTasks.size} tâche(s)
+          Créer {selectedTasks.size} activité(s)
         </Button>
       </div>
     </div>
@@ -571,17 +571,17 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
             {mode === 'create' ? (
               <>
                 <Plus className="h-6 w-6" />
-                Nouvelle tâche
+                Nouvelle activité
               </>
             ) : mode === 'edit' ? (
               <>
                 <Edit className="h-6 w-6" />
-                Modifier la tâche
+                Modifier la activité
               </>
             ) : (
               <>
                 <Eye className="h-6 w-6" />
-                Détails de la tâche
+                Détails de la activité
               </>
             )}
           </DialogTitle>
@@ -594,11 +594,11 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="manual" className="flex items-center gap-2">
                 <Plus className="h-4 w-4" />
-                Tâche manuelle
+                Activité manuelle
               </TabsTrigger>
               <TabsTrigger value="standard" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                Tâches standards
+                Activités standards
               </TabsTrigger>
             </TabsList>
             
@@ -606,7 +606,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
               <form key={formKey} onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="title">Titre de la tâche *</Label>
+                    <Label htmlFor="title">Titre de la activité *</Label>
                     <Input
                       id="title"
                       value={formData.title}
@@ -622,7 +622,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                       id="description"
                       value={formData.description}
                       onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      placeholder="Description détaillée de la tâche"
+                      placeholder="Description détaillée de la activité"
                       rows={3}
                     />
                   </div>
@@ -748,7 +748,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                   <div className="flex gap-2">
                     <Button type="submit" variant="default">
                       <Plus className="h-4 w-4 mr-2" />
-                      Créer la tâche
+                      Créer la activité
                     </Button>
                   </div>
                 </div>
@@ -763,7 +763,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
           <form key={formKey} onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="title">Titre de la tâche *</Label>
+                <Label htmlFor="title">Titre de la activité *</Label>
                 <Input
                   id="title"
                   value={formData.title}
@@ -779,7 +779,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Description détaillée de la tâche"
+                  placeholder="Description détaillée de la activité"
                   rows={3}
                 />
               </div>
@@ -947,7 +947,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                   <AlertDialogHeader>
                     <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Cette action ne peut pas être annulée. La tâche sera définitivement supprimée.
+                      Cette action ne peut pas être annulée. La activité sera définitivement supprimée.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

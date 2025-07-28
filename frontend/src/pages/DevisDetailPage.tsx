@@ -132,6 +132,8 @@ export function DevisDetailPage() {
         date_validite: devis.date_validite,
         taux_tva: devis.taux_tva,
         appliquer_tva: devis.appliquer_tva,
+        taux_frais_agence: devis.taux_frais_agence || 15.00,
+        appliquer_frais_agence: devis.appliquer_frais_agence || false,
         notes: devis.notes || '',
         conditions: devis.conditions || '',
       });
@@ -170,6 +172,8 @@ export function DevisDetailPage() {
           date_validite: dateValidite ? dateValidite.toISOString().split('T')[0] : form.date_validite,
           taux_tva: form.taux_tva,
           appliquer_tva: form.appliquer_tva,
+          taux_frais_agence: form.taux_frais_agence,
+          appliquer_frais_agence: form.appliquer_frais_agence,
           notes: form.notes,
           conditions: form.conditions,
         }
@@ -526,6 +530,12 @@ export function DevisDetailPage() {
                 <p className="font-medium">{formatMontant(devis.montant_tva)}</p>
               </div>
             )}
+            {devis.appliquer_frais_agence && (
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Frais d'agence ({devis.taux_frais_agence}%)</Label>
+                <p className="font-medium">{formatMontant(devis.montant_frais_agence || 0)}</p>
+              </div>
+            )}
             <div>
               <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
               <p className="font-medium text-lg">{formatMontant(devis.montant_ttc)}</p>
@@ -549,6 +559,7 @@ export function DevisDetailPage() {
                   <TableHead>Désignation</TableHead>
                   <TableHead>Type ligne</TableHead>
                   <TableHead>Quantité</TableHead>
+                  <TableHead>Unité</TableHead>
                   <TableHead>Prix unitaire HT</TableHead>
                   <TableHead>Montant HT</TableHead>
                   {devis.statut === 'brouillon' && <TableHead>Actions</TableHead>}
@@ -569,6 +580,7 @@ export function DevisDetailPage() {
                     </TableCell>
                     <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
+                    <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
                     <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
                     <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
                     {devis.statut === 'brouillon' && (
@@ -653,19 +665,6 @@ export function DevisDetailPage() {
               </Popover>
             </div>
             <div>
-              <Label className="text-sm font-medium">Taux de TVA (%)</Label>
-              <Input 
-                type="number"
-                name="taux_tva"
-                value={form.taux_tva}
-                onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
-                min="0"
-                max="100"
-                step="0.01"
-                placeholder="18.00"
-              />
-            </div>
-            <div>
               <Label className="text-sm font-medium">Appliquer la TVA</Label>
               <div className="flex items-center space-x-2 mt-2">
                 <input
@@ -680,6 +679,51 @@ export function DevisDetailPage() {
                 </Label>
               </div>
             </div>
+            {form.appliquer_tva && (
+              <div>
+                <Label className="text-sm font-medium">Taux de TVA (%)</Label>
+                <Input 
+                  type="number"
+                  name="taux_tva"
+                  value={form.taux_tva}
+                  onChange={(e) => setForm({ ...form, taux_tva: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="18.00"
+                />
+              </div>
+            )}
+            <div>
+              <Label className="text-sm font-medium">Appliquer les frais d'agence</Label>
+              <div className="flex items-center space-x-2 mt-2">
+                <input
+                  type="checkbox"
+                  id="appliquer_frais_agence"
+                  checked={form.appliquer_frais_agence}
+                  onChange={(e) => setForm({ ...form, appliquer_frais_agence: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                <Label htmlFor="appliquer_frais_agence" className="text-sm">
+                  Activer les frais d'agence (Conseil, Accompagnement & Coordination générale)
+                </Label>
+              </div>
+            </div>
+            {form.appliquer_frais_agence && (
+              <div>
+                <Label className="text-sm font-medium">Taux des frais d'agence (%)</Label>
+                <Input 
+                  type="number"
+                  name="taux_frais_agence"
+                  value={form.taux_frais_agence}
+                  onChange={(e) => setForm({ ...form, taux_frais_agence: parseFloat(e.target.value) || 0 })}
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  placeholder="15.00"
+                />
+              </div>
+            )}
             <div>
               <Label className="text-sm font-medium">Notes</Label>
               <Textarea 
@@ -944,7 +988,8 @@ export function DevisDetailPage() {
                           ) : (
                             intervenants.map(interv => (
                               <SelectItem key={interv.id} value={interv.id.toString()}>
-                                {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire} GNF/h)
+                                {interv.intitule}
+                                {/* {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire} GNF/h) */}
                               </SelectItem>
                             ))
                           )}

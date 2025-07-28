@@ -38,9 +38,14 @@ class Contrat(models.Model):
     taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(0)])
     appliquer_tva = models.BooleanField(default=True, verbose_name="Appliquer la TVA")
     
+    # Configuration Frais d'Agence (héritée du devis)
+    taux_frais_agence = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, validators=[MinValueValidator(0)])
+    appliquer_frais_agence = models.BooleanField(default=False, verbose_name="Appliquer les frais d'agence")
+    
     # Informations commerciales
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    montant_frais_agence = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Conditions et clauses
@@ -86,9 +91,12 @@ class Contrat(models.Model):
         if self.devis:
             self.montant_ht = self.devis.montant_ht
             self.montant_tva = self.devis.montant_tva
+            self.montant_frais_agence = self.devis.montant_frais_agence
             self.montant_ttc = self.devis.montant_ttc
             self.taux_tva = self.devis.taux_tva
             self.appliquer_tva = self.devis.appliquer_tva
+            self.taux_frais_agence = self.devis.taux_frais_agence
+            self.appliquer_frais_agence = self.devis.appliquer_frais_agence
     
     def generate_numero(self):
         """Générer un numéro de contrat unique"""
@@ -108,7 +116,7 @@ class Contrat(models.Model):
         return f"CON{year}{new_number:04d}"
     
     def calculer_montants(self):
-        """Calculer les montants HT, TVA et TTC"""
+        """Calculer les montants HT, TVA, Frais d'Agence et TTC"""
         from decimal import Decimal
         
         total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
@@ -123,7 +131,16 @@ class Contrat(models.Model):
         else:
             self.montant_tva = Decimal('0')
         
-        self.montant_ttc = self.montant_ht + self.montant_tva
+        # Calculer les frais d'agence selon la configuration
+        if self.appliquer_frais_agence:
+            taux_frais = self.taux_frais_agence / 100
+            if isinstance(taux_frais, float):
+                taux_frais = Decimal(str(taux_frais))
+            self.montant_frais_agence = self.montant_ht * taux_frais
+        else:
+            self.montant_frais_agence = Decimal('0')
+        
+        self.montant_ttc = self.montant_ht + self.montant_tva + self.montant_frais_agence
         self.save()
     
     def get_contenu_final(self):
@@ -152,19 +169,37 @@ class Contrat(models.Model):
     def get_variables_contrat(self):
         """Retourne les variables spécifiques au contrat pour remplacer dans le template"""
         from decimal import Decimal
+        from datetime import date, datetime
+        
+        # Fonction helper pour formater les dates
+        def format_date(date_obj):
+            if isinstance(date_obj, str):
+                try:
+                    # Essayer de parser la chaîne en date
+                    if 'T' in date_obj:  # Format ISO avec timezone
+                        date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
+                    else:  # Format YYYY-MM-DD
+                        date_obj = datetime.strptime(date_obj, '%Y-%m-%d')
+                except ValueError:
+                    return date_obj  # Retourner la chaîne si pas possible de parser
+            if hasattr(date_obj, 'strftime'):
+                return date_obj.strftime('%d/%m/%Y')
+            return str(date_obj)
         
         # Variables de base du contrat
         variables = {
             'NUMERO_DEVIS': self.devis.numero if self.devis else '',
-            'DATE_DEVIS': self.devis.date_creation.strftime('%d/%m/%Y') if self.devis and self.devis.date_creation else '',
+            'DATE_DEVIS': format_date(self.devis.date_creation) if self.devis and self.devis.date_creation else '',
             'NUMERO_CONTRAT': self.numero,
-            'DATE_DEBUT_PRESTATION': self.date_debut.strftime('%d/%m/%Y') if self.date_debut else '',
-            'DATE_FIN_PRESTATION': self.date_fin.strftime('%d/%m/%Y') if self.date_fin else '',
+            'DATE_DEBUT_PRESTATION': format_date(self.date_debut) if self.date_debut else '',
+            'DATE_FIN_PRESTATION': format_date(self.date_fin) if self.date_fin else '',
             'MONTANT_HT': f"{self.montant_ht:,.0f}",
             'MONTANT_TVA': f"{self.montant_tva:,.0f}",
+            'MONTANT_FRAIS_AGENCE': f"{self.montant_frais_agence:,.0f}",
             'MONTANT_TTC': f"{self.montant_ttc:,.0f}",
             'TAUX_TVA': f"{self.taux_tva}",
-            'DATE_SIGNATURE': self.date_creation.strftime('%d/%m/%Y') if self.date_creation else '',
+            'TAUX_FRAIS_AGENCE': f"{self.taux_frais_agence}",
+            'DATE_SIGNATURE': format_date(self.date_creation) if self.date_creation else '',
             'VILLE_SIGNATURE': 'Conakry',
             'CONDITIONS_SPECIFIQUES': self.conditions,
             'NOTES_ADDITIONNELLES': self.notes,
@@ -206,17 +241,35 @@ class Contrat(models.Model):
         if self.devis:
             # Calculer la durée estimée
             if self.date_debut and self.date_fin:
-                from datetime import date
-                delta = self.date_fin - self.date_debut
-                jours = delta.days
-                if jours <= 30:
-                    duree = f"{jours} jours"
-                elif jours <= 365:
-                    mois = jours // 30
-                    duree = f"{mois} mois"
+                # Convertir les dates en objets date si nécessaire
+                date_debut = self.date_debut
+                date_fin = self.date_fin
+                
+                if isinstance(date_debut, str):
+                    try:
+                        date_debut = datetime.strptime(date_debut, '%Y-%m-%d').date()
+                    except ValueError:
+                        date_debut = None
+                
+                if isinstance(date_fin, str):
+                    try:
+                        date_fin = datetime.strptime(date_fin, '%Y-%m-%d').date()
+                    except ValueError:
+                        date_fin = None
+                
+                if date_debut and date_fin:
+                    delta = date_fin - date_debut
+                    jours = delta.days
+                    if jours <= 30:
+                        duree = f"{jours} jours"
+                    elif jours <= 365:
+                        mois = jours // 30
+                        duree = f"{mois} mois"
+                    else:
+                        annees = jours // 365
+                        duree = f"{annees} an(s)"
                 else:
-                    annees = jours // 365
-                    duree = f"{annees} an(s)"
+                    duree = "À définir"
             else:
                 duree = "À définir"
             

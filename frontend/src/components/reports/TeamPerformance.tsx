@@ -66,7 +66,7 @@ export function TeamPerformance({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <p className="text-sm text-gray-500">Tâches complétées</p>
+              <p className="text-sm text-gray-500">Activités complétées</p>
               <p className="text-lg font-semibold">{completedTasks}/{totalTasks}</p>
               <Progress value={taskCompletionRate} className="h-2" />
             </div>
@@ -110,7 +110,7 @@ export function TeamPerformance({
                     {member.productivity}%
                   </Badge>
                   <p className="text-xs text-gray-500 mt-1">
-                    {member.tasks_completed} tâches
+                    {member.tasks_completed} activités
                   </p>
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function TeamPerformance({
                     <span>{member.projects_involved}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Tâches complétées</span>
+                    <span className="text-gray-500">Activités complétées</span>
                     <span>{member.tasks_completed}</span>
                   </div>
                   <Progress 

@@ -205,7 +205,7 @@ export function CategoriesPage() {
             </div>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
+                {/* <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button> */}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -241,9 +241,9 @@ export function CategoriesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nom</TableHead>
-                    <TableHead>Prestations associées</TableHead>
-                    <TableHead>Date de création</TableHead>
-                    <TableHead>Dernière modification</TableHead>
+                    {/* <TableHead>Prestations associées</TableHead> */}
+                    {/* <TableHead>Date de création</TableHead> */}
+                    {/* <TableHead>Dernière modification</TableHead> */}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -252,34 +252,33 @@ export function CategoriesPage() {
                     <TableRow><TableCell colSpan={5} className="text-center">Aucune catégorie</TableCell></TableRow>
                   ) : categories.map(category => (
                     <TableRow key={category.id}>
-                      <TableCell>
+                      <TableCell className="">
                         <Link 
                           to={`/categories-services/${category.id}`}
-                          className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
+                          className="font-medium text-blue-600 hover:text-blue-600 hover:underline"
                         >
                           {category.name}
                         </Link>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          {/* TODO: Ajouter le nombre de prestations associées */}
+                      {/* <TableCell>
+                        <Badge variant="secondary" className="bg-blue-100 text-blue-600">
                           Voir prestations
                         </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(category.created_at)}</TableCell>
-                      <TableCell>{formatDate(category.updated_at)}</TableCell>
+                      </TableCell> */}
+                      {/* <TableCell>{formatDate(category.created_at)}</TableCell> */}
+                      {/* <TableCell>{formatDate(category.updated_at)}</TableCell> */}
                       <TableCell className="flex gap-2">
                         <Link to={`/categories-services/${category.id}`}>
                           <Button size="icon" variant="ghost" title="Voir les détails">
                             <Eye size={16}/>
                           </Button>
                         </Link>
-                        <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(category)}>
+                        {/* <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(category)}>
                           <Edit size={16}/>
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(category)}>
                           <Trash2 size={16}/>
-                        </Button>
+                        </Button> */}
                       </TableCell>
                     </TableRow>
                   ))}

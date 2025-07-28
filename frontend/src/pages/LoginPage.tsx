@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
-import { Eye, EyeOff, Lock, User as UserIcon } from "lucide-react";
-import { useAuth } from "@/hooks/use-auth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
+import { Lock, UserIcon, Eye, EyeOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/use-auth';
+import { toast } from 'sonner';
+import { Logo } from '@/components/Logo';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -37,13 +38,14 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="mx-auto w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
             <Lock className="w-6 h-6 text-white" />
+            {/* <Logo size="sm" showText={true} className="text-white" linkTo="" /> */}
           </div>
-          <CardTitle className="text-2xl font-bold">Connexion SAKOM</CardTitle>
+          <CardTitle className="text-2xl font-bold">Connexion saKom</CardTitle>
           <CardDescription>
             Connectez-vous à votre compte pour accéder à la plateforme
           </CardDescription>
@@ -112,9 +114,9 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
+          {/* <div className="mt-6 text-center text-sm text-gray-600">
             <p>Démo: admin / admin123</p>
-          </div>
+          </div> */}
         </CardContent>
       </Card>
     </div>

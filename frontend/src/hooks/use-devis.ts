@@ -18,8 +18,11 @@ export interface Devis {
   statut_display: string;
   taux_tva: number;
   appliquer_tva: boolean;
+  taux_frais_agence: number;
+  appliquer_frais_agence: boolean;
   montant_ht: number;
   montant_tva: number;
+  montant_frais_agence: number;
   montant_ttc: number;
   notes: string;
   conditions: string;
@@ -163,6 +166,8 @@ export const useCreateDevisAvecLignes = () => {
       date_validite: string;
       taux_tva?: number;
       appliquer_tva?: boolean;
+      taux_frais_agence?: number;
+      appliquer_frais_agence?: boolean;
       notes?: string;
       conditions?: string;
       lignes: Array<

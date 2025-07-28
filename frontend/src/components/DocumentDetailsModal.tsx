@@ -34,7 +34,7 @@ const getFileIcon = (type: string) => {
     case 'png':
     case 'gif': return <Image className="h-8 w-8 text-green-500" />;
     case 'mp4':
-    case 'avi': return <Video className="h-8 w-8 text-blue-500" />;
+    case 'avi': return <Video className="h-8 w-8 text-blue-600" />;
     case 'doc':
     case 'docx':
     case 'xls':
@@ -50,12 +50,12 @@ const getFileIcon = (type: string) => {
 
 const getCategoryColor = (category: string) => {
   switch (category) {
-    case 'contract': return 'bg-blue-100 text-blue-800';
+    case 'contract': return 'bg-blue-100 text-blue-600';
     case 'proposal': return 'bg-purple-100 text-purple-800';
     case 'report': return 'bg-green-100 text-green-800';
     case 'presentation': return 'bg-yellow-100 text-yellow-800';
     case 'design': return 'bg-pink-100 text-pink-800';
-    case 'video': return 'bg-blue-100 text-blue-800';
+    case 'video': return 'bg-blue-100 text-blue-600';
     case 'audio': return 'bg-purple-100 text-purple-800';
     case 'photo': return 'bg-green-100 text-green-800';
     default: return 'bg-gray-100 text-gray-800';

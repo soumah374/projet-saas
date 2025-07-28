@@ -32,7 +32,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
   const projectData = data.timeline.labels.map((label, index) => ({
     name: label,
     "Projets complétés": data.timeline.projects_completed[index],
-    "Tâches complétées": data.timeline.tasks_completed[index],
+    "Activités complétées": data.timeline.tasks_completed[index],
   }));
 
   const formatNumber = (value: number) => value.toString();
@@ -72,7 +72,7 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
                     radius={[4, 4, 0, 0]}
                   />
                   <Bar 
-                    dataKey="Tâches complétées" 
+                    dataKey="Activités complétées" 
                     fill="#3b82f6" 
                     radius={[4, 4, 0, 0]}
                   />

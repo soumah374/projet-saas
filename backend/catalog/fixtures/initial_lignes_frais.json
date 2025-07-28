@@ -1,11 +1,12 @@
 [
+  
   {
     "model": "catalog.lignefrais",
     "pk": 1,
     "fields": {
-      "type_frais": "rh",
+      "type_frais": "technique",
       "category": 1,
-      "description": "Durée d'intervention par fonction / profil",
+      "description": "Location de matériel technique (caméras, régie, sonorisation, éclairage)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -15,9 +16,9 @@
     "model": "catalog.lignefrais",
     "pk": 2,
     "fields": {
-      "type_frais": "rh",
+      "type_frais": "technique",
       "category": 1,
-      "description": "Taux horaire ou journalier par fonction / profil",
+      "description": "Location équipements logistiques événementiels (scène, mobilier, stands)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -27,9 +28,9 @@
     "model": "catalog.lignefrais",
     "pk": 3,
     "fields": {
-      "type_frais": "rh",
+      "type_frais": "technique",
       "category": 1,
-      "description": "Temps d'intervention ajustable par profil selon contexte projet",
+      "description": "Production audiovisuelle externe (studios, plateaux, régies mobiles)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -39,9 +40,9 @@
     "model": "catalog.lignefrais",
     "pk": 4,
     "fields": {
-      "type_frais": "rh",
+      "type_frais": "technique",
       "category": 1,
-      "description": "Montant total RH calculé automatiquement (temps × taux)",
+      "description": "Frais de montage vidéo, infographie, motion design",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -51,9 +52,9 @@
     "model": "catalog.lignefrais",
     "pk": 5,
     "fields": {
-      "type_frais": "rh",
+      "type_frais": "technique",
       "category": 1,
-      "description": "Possibilité d'ajouter plusieurs fonctions / profils pour le même projet",
+      "description": "Droits logiciels spécifiques (licences, plugins spécialisés)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -64,8 +65,8 @@
     "pk": 6,
     "fields": {
       "type_frais": "technique",
-      "category": 2,
-      "description": "Location de matériel technique (caméras, régie, sonorisation, éclairage)",
+      "category": 1,
+      "description": "Archivage, stockage cloud sécurisé, sauvegardes de rushs lourds",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -76,8 +77,8 @@
     "pk": 7,
     "fields": {
       "type_frais": "technique",
-      "category": 2,
-      "description": "Location équipements logistiques événementiels (scène, mobilier, stands)",
+      "category": 1,
+      "description": "Achat ou location supports de diffusion (écrans, projecteurs)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -88,8 +89,8 @@
     "pk": 8,
     "fields": {
       "type_frais": "technique",
-      "category": 2,
-      "description": "Production audiovisuelle externe (studios, plateaux, régies mobiles)",
+      "category": 1,
+      "description": "Autres frais techniques et matériels",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -99,9 +100,9 @@
     "model": "catalog.lignefrais",
     "pk": 9,
     "fields": {
-      "type_frais": "technique",
+      "type_frais": "sous_traitance",
       "category": 2,
-      "description": "Frais de montage vidéo, infographie, motion design",
+      "description": "Cachet voice-over, comédien, figurant",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -111,9 +112,9 @@
     "model": "catalog.lignefrais",
     "pk": 10,
     "fields": {
-      "type_frais": "technique",
+      "type_frais": "sous_traitance",
       "category": 2,
-      "description": "Droits logiciels spécifiques (licences, plugins spécialisés)",
+      "description": "Traducteur, interprète, relecteur externe",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -123,9 +124,9 @@
     "model": "catalog.lignefrais",
     "pk": 11,
     "fields": {
-      "type_frais": "technique",
+      "type_frais": "sous_traitance",
       "category": 2,
-      "description": "Archivage, stockage cloud sécurisé, sauvegardes de rushs lourds",
+      "description": "Régie publicitaire (achat d'espaces médias, affichage)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -135,9 +136,9 @@
     "model": "catalog.lignefrais",
     "pk": 12,
     "fields": {
-      "type_frais": "technique",
+      "type_frais": "sous_traitance",
       "category": 2,
-      "description": "Achat ou location supports de diffusion (écrans, projecteurs)",
+      "description": "Impression de supports physiques (flyers, PLV, catalogues)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -147,9 +148,9 @@
     "model": "catalog.lignefrais",
     "pk": 13,
     "fields": {
-      "type_frais": "technique",
+      "type_frais": "sous_traitance",
       "category": 2,
-      "description": "Autres frais techniques et matériels",
+      "description": "Fabrication signalétique ou kits médias",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -160,8 +161,8 @@
     "pk": 14,
     "fields": {
       "type_frais": "sous_traitance",
-      "category": 3,
-      "description": "Cachet voice-over, comédien, figurant",
+      "category": 2,
+      "description": "Agence partenaire pour sous-traitance spécifique",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -172,8 +173,8 @@
     "pk": 15,
     "fields": {
       "type_frais": "sous_traitance",
-      "category": 3,
-      "description": "Traducteur, interprète, relecteur externe",
+      "category": 2,
+      "description": "Diverses prestations externes",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -183,9 +184,9 @@
     "model": "catalog.lignefrais",
     "pk": 16,
     "fields": {
-      "type_frais": "sous_traitance",
+      "type_frais": "deplacement",
       "category": 3,
-      "description": "Régie publicitaire (achat d'espaces médias, affichage)",
+      "description": "Billets d'avion (aller/retour, domestiques ou internationaux)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -195,9 +196,9 @@
     "model": "catalog.lignefrais",
     "pk": 17,
     "fields": {
-      "type_frais": "sous_traitance",
+      "type_frais": "deplacement",
       "category": 3,
-      "description": "Impression de supports physiques (flyers, PLV, catalogues)",
+      "description": "Transport terrestre (véhicule personnel ou loué)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -207,9 +208,9 @@
     "model": "catalog.lignefrais",
     "pk": 18,
     "fields": {
-      "type_frais": "sous_traitance",
+      "type_frais": "deplacement",
       "category": 3,
-      "description": "Fabrication signalétique ou kits médias",
+      "description": "Location de véhicules utilitaires (camion, pick-up, minibus)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -219,9 +220,9 @@
     "model": "catalog.lignefrais",
     "pk": 19,
     "fields": {
-      "type_frais": "sous_traitance",
+      "type_frais": "deplacement",
       "category": 3,
-      "description": "Agence partenaire pour sous-traitance spécifique",
+      "description": "Hébergement (hôtels, résidences)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -231,9 +232,9 @@
     "model": "catalog.lignefrais",
     "pk": 20,
     "fields": {
-      "type_frais": "sous_traitance",
+      "type_frais": "deplacement",
       "category": 3,
-      "description": "Diverses prestations externes",
+      "description": "Restauration (repas, catering mission)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -244,8 +245,8 @@
     "pk": 21,
     "fields": {
       "type_frais": "deplacement",
-      "category": 4,
-      "description": "Billets d'avion (aller/retour, domestiques ou internationaux)",
+      "category": 3,
+      "description": "Indemnités de déplacement ou per diem",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -256,8 +257,8 @@
     "pk": 22,
     "fields": {
       "type_frais": "deplacement",
-      "category": 4,
-      "description": "Transport terrestre (véhicule personnel ou loué)",
+      "category": 3,
+      "description": "Frais de carburant et péages",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -268,8 +269,8 @@
     "pk": 23,
     "fields": {
       "type_frais": "deplacement",
-      "category": 4,
-      "description": "Location de véhicules utilitaires (camion, pick-up, minibus)",
+      "category": 3,
+      "description": "Divers frais de déplacements et logistiques",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -279,9 +280,9 @@
     "model": "catalog.lignefrais",
     "pk": 24,
     "fields": {
-      "type_frais": "deplacement",
+      "type_frais": "administratif",
       "category": 4,
-      "description": "Hébergement (hôtels, résidences)",
+      "description": "Assurance spécifique (matériel, site, participants, tournage)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -291,9 +292,9 @@
     "model": "catalog.lignefrais",
     "pk": 25,
     "fields": {
-      "type_frais": "deplacement",
+      "type_frais": "administratif",
       "category": 4,
-      "description": "Restauration (repas, catering mission)",
+      "description": "Droits et autorisations officiels (permis de filmer, taxes locales)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -303,9 +304,9 @@
     "model": "catalog.lignefrais",
     "pk": 26,
     "fields": {
-      "type_frais": "deplacement",
+      "type_frais": "administratif",
       "category": 4,
-      "description": "Indemnités de déplacement ou per diem",
+      "description": "Honoraires légaux (ex. : frais notariés, droits à l'image)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -315,9 +316,9 @@
     "model": "catalog.lignefrais",
     "pk": 27,
     "fields": {
-      "type_frais": "deplacement",
+      "type_frais": "administratif",
       "category": 4,
-      "description": "Frais de carburant et péages",
+      "description": "Frais de coordination et gestion de projet (au forfait si non ventilé poste par poste)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -327,9 +328,9 @@
     "model": "catalog.lignefrais",
     "pk": 28,
     "fields": {
-      "type_frais": "deplacement",
+      "type_frais": "administratif",
       "category": 4,
-      "description": "Divers frais de déplacements et logistiques",
+      "description": "Divers frais annexes",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -339,9 +340,9 @@
     "model": "catalog.lignefrais",
     "pk": 29,
     "fields": {
-      "type_frais": "administratif",
+      "type_frais": "marge",
       "category": 5,
-      "description": "Assurance spécifique (matériel, site, participants, tournage)",
+      "description": "Marge brute ou frais de gestion appliqués en pourcentage",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -351,9 +352,9 @@
     "model": "catalog.lignefrais",
     "pk": 30,
     "fields": {
-      "type_frais": "administratif",
+      "type_frais": "marge",
       "category": 5,
-      "description": "Droits et autorisations officiels (permis de filmer, taxes locales)",
+      "description": "Contingence pour imprévus techniques ou logistiques (souvent 5–10 % du sous-total HT)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -363,9 +364,9 @@
     "model": "catalog.lignefrais",
     "pk": 31,
     "fields": {
-      "type_frais": "administratif",
-      "category": 5,
-      "description": "Honoraires légaux (ex. : frais notariés, droits à l'image)",
+      "type_frais": "taxes",
+      "category": 6,
+      "description": "Taux de TVA applicable (18 % par défaut)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -375,9 +376,9 @@
     "model": "catalog.lignefrais",
     "pk": 32,
     "fields": {
-      "type_frais": "administratif",
-      "category": 5,
-      "description": "Frais de coordination et gestion de projet (au forfait si non ventilé poste par poste)",
+      "type_frais": "taxes",
+      "category": 6,
+      "description": "Choix prix HT ou TTC paramétrable",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",
       "updated_at": "2024-01-01T00:00:00Z"
@@ -387,68 +388,8 @@
     "model": "catalog.lignefrais",
     "pk": 33,
     "fields": {
-      "type_frais": "administratif",
-      "category": 5,
-      "description": "Divers frais annexes",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  },
-  {
-    "model": "catalog.lignefrais",
-    "pk": 34,
-    "fields": {
-      "type_frais": "marge",
+      "type_frais": "taxes",
       "category": 6,
-      "description": "Marge brute ou frais de gestion appliqués en pourcentage",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  },
-  {
-    "model": "catalog.lignefrais",
-    "pk": 35,
-    "fields": {
-      "type_frais": "marge",
-      "category": 6,
-      "description": "Contingence pour imprévus techniques ou logistiques (souvent 5–10 % du sous-total HT)",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  },
-  {
-    "model": "catalog.lignefrais",
-    "pk": 36,
-    "fields": {
-      "type_frais": "taxes",
-      "category": 7,
-      "description": "Taux de TVA applicable (18 % par défaut)",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  },
-  {
-    "model": "catalog.lignefrais",
-    "pk": 37,
-    "fields": {
-      "type_frais": "taxes",
-      "category": 7,
-      "description": "Choix prix HT ou TTC paramétrable",
-      "is_active": true,
-      "created_at": "2024-01-01T00:00:00Z",
-      "updated_at": "2024-01-01T00:00:00Z"
-    }
-  },
-  {
-    "model": "catalog.lignefrais",
-    "pk": 38,
-    "fields": {
-      "type_frais": "taxes",
-      "category": 7,
       "description": "Déclaration du régime fiscal applicable (exonération possible pour ONG, institution publique)",
       "is_active": true,
       "created_at": "2024-01-01T00:00:00Z",

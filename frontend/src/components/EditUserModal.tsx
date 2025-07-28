@@ -399,7 +399,7 @@ export const EditUserModal = ({ open, onOpenChange, user, onSuccess }: EditUserM
             <Button 
               type="submit" 
               disabled={updateUserMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-600"
             >
               {updateUserMutation.isPending ? (
                 <>

@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
-import { Bell, Search, User, Menu, LogOut, Plus, Settings, HelpCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
+import { useState } from 'react';
+import { 
+  Menu, 
+  Search, 
+  Plus, 
+  User, 
+  Settings, 
+  LogOut, 
+  HelpCircle,
+  Bell
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { NotificationDropdown } from './NotificationDropdown';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +19,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
+import { NotificationDropdown } from './NotificationDropdown';
+import { Logo } from './Logo';
 
 interface User {
   id: number;
@@ -59,7 +68,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
           <Menu className="h-5 w-5" />
         </Button>
         <Link to="/" className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold text-lg whitespace-nowrap">
-          SAKOM
+          <Logo size="md" showText={true} className="text-white" linkTo="" />
         </Link>
         <span className="hidden md:block text-sm text-gray-500 ml-2 whitespace-nowrap">
           Gestion de projets collaborative

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from decimal import Decimal
 from .models import Devis, LigneDevis, LigneDevisIntervenant
 from users.serializers import ClientProfileSerializer
 from catalog.serializers import ServiceSerializer, ActivitySerializer, IntervenantProfileSerializer, UniteStandardSerializer, FraisCategorySerializer, LigneFraisSerializer
@@ -86,12 +87,13 @@ class DevisSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'numero', 'client', 'client_id', 'date_creation', 'date_validite',
             'statut', 'statut_display', 'taux_tva', 'appliquer_tva',
-            'montant_ht', 'montant_tva', 'montant_ttc',
+            'taux_frais_agence', 'appliquer_frais_agence',
+            'montant_ht', 'montant_tva', 'montant_frais_agence', 'montant_ttc',
             'notes', 'conditions', 'lignes', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 
-            'montant_ttc', 'created_at', 'updated_at', 'statut_display'
+            'montant_frais_agence', 'montant_ttc', 'created_at', 'updated_at', 'statut_display'
         ]
 
 
@@ -106,7 +108,8 @@ class DevisCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Devis
         fields = [
-            'client_id', 'date_validite', 'taux_tva', 'appliquer_tva', 'notes', 'conditions'
+            'client_id', 'date_validite', 'taux_tva', 'appliquer_tva', 
+            'taux_frais_agence', 'appliquer_frais_agence', 'notes', 'conditions'
         ]
 
 
@@ -154,25 +157,149 @@ class LigneDevisIntervenantCreateSerializer(serializers.ModelSerializer):
     
     profile_intervenant_id = serializers.PrimaryKeyRelatedField(
         queryset=IntervenantProfile.objects.all(),
-        source='profile_intervenant'
+        source='profile_intervenant',
+        write_only=True
     )
     
     class Meta:
         model = LigneDevisIntervenant
         fields = [
-            'devis_id', 'profile_intervenant_id', 'temps_intervenant', 'taux_horaire'
+            'id', 'devis_id', 'profile_intervenant_id',
+            'temps_intervenant', 'taux_horaire', 'montant_intervenant',
+            'created_at', 'updated_at'
         ]
+        read_only_fields = ['id', 'montant_intervenant', 'created_at', 'updated_at']
+    
+    def validate_temps_intervenant(self, value):
+        """Valider et convertir le temps intervenant en Decimal"""
+        if isinstance(value, str):
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("Le temps intervenant doit être un nombre valide")
+        elif isinstance(value, (int, float)):
+            return Decimal(str(value))
+        return value
+    
+    def validate_taux_horaire(self, value):
+        """Valider et convertir le taux horaire en Decimal"""
+        if isinstance(value, str):
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("Le taux horaire doit être un nombre valide")
+        elif isinstance(value, (int, float)):
+            return Decimal(str(value))
+        return value
     
     def create(self, validated_data):
-        """Override create method to handle devis_id properly"""
-        devis_id = validated_data.pop('devis_id', None)
-        if devis_id:
-            # Trouver la ligne de devis la plus récente du devis
-            from devis.models import LigneDevis
-            ligne_devis = LigneDevis.objects.filter(devis_id=devis_id).order_by('-created_at').first()
-            if ligne_devis:
-                validated_data['ligne_devis'] = ligne_devis
-            else:
-                raise serializers.ValidationError("Aucune ligne de devis trouvée pour ce devis")
+        devis_id = validated_data.pop('devis_id')
+        ligne_devis = LigneDevis.objects.get(devis_id=devis_id)
+        validated_data['ligne_devis'] = ligne_devis
+        return super().create(validated_data)
+
+
+class DevisAvecLignesSerializer(serializers.Serializer):
+    """Serializer pour créer un devis avec ses lignes en une seule requête"""
+    
+    client_id = serializers.PrimaryKeyRelatedField(
+        queryset=ClientProfile.objects.all(),
+        source='client'
+    )
+    date_validite = serializers.DateField()
+    taux_tva = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=18.00)
+    appliquer_tva = serializers.BooleanField(required=False, default=True)
+    taux_frais_agence = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, default=15.00)
+    appliquer_frais_agence = serializers.BooleanField(required=False, default=False)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    conditions = serializers.CharField(required=False, allow_blank=True)
+    lignes = serializers.ListField(child=serializers.DictField())
+    
+    class Meta:
+        fields = ['client_id', 'date_validite', 'taux_tva', 'appliquer_tva', 
+                 'taux_frais_agence', 'appliquer_frais_agence', 'notes', 'conditions', 'lignes']
+    
+    def validate(self, data):
+        """Validation globale du devis"""
+        return data
+
+
+class LigneDevisAvecIntervenantsSerializer(serializers.Serializer):
+    """Serializer pour les lignes de devis avec intervenants"""
+    
+    type_ligne = serializers.ChoiceField(choices=[('prestation', 'Prestation'), ('frais', 'Frais')])
+    service_id = serializers.PrimaryKeyRelatedField(
+        queryset=Service.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    activity_id = serializers.PrimaryKeyRelatedField(
+        queryset=Activity.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    frais_category_id = serializers.PrimaryKeyRelatedField(
+        queryset=FraisCategory.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    ligne_frais_id = serializers.PrimaryKeyRelatedField(
+        queryset=LigneFrais.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    description = serializers.CharField(required=False, allow_blank=True)
+    quantite = serializers.CharField()  # Sera converti en Decimal
+    unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all())
+    prix_unitaire_ht = serializers.CharField(required=False)  # Sera converti en Decimal
+    type_frais = serializers.ChoiceField(
+        choices=[('standard', 'Standard'), ('forfait', 'Forfait'), ('offert', 'Offert')],
+        required=False
+    )
+    intervenants = serializers.ListField(
+        child=serializers.DictField(),
+        required=False
+    )
+    
+    def validate_quantite(self, value):
+        """Valider et convertir la quantité en Decimal"""
+        if isinstance(value, str):
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("La quantité doit être un nombre valide")
+        elif isinstance(value, (int, float)):
+            return Decimal(str(value))
+        return value
+    
+    def validate_prix_unitaire_ht(self, value):
+        """Valider et convertir le prix unitaire en Decimal"""
+        if value is None:
+            return Decimal('0')
+        if isinstance(value, str):
+            try:
+                return Decimal(value)
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("Le prix unitaire doit être un nombre valide")
+        elif isinstance(value, (int, float)):
+            return Decimal(str(value))
+        return value
+    
+    def validate(self, data):
+        """Validation des lignes selon le type"""
+        type_ligne = data.get('type_ligne')
         
-        return super().create(validated_data) 
+        if type_ligne == 'prestation':
+            if not data.get('service_id'):
+                raise serializers.ValidationError("Service est requis pour une ligne de prestation")
+            if not data.get('activity_id'):
+                raise serializers.ValidationError("Activity est requis pour une ligne de prestation")
+            if data.get('frais_category_id') or data.get('ligne_frais_id'):
+                raise serializers.ValidationError("Aucun champ de frais ne doit être défini pour une ligne de prestation")
+        elif type_ligne == 'frais':
+            if not data.get('ligne_frais_id'):
+                raise serializers.ValidationError("LigneFrais est requis pour une ligne de frais")
+            if data.get('service_id') or data.get('activity_id'):
+                raise serializers.ValidationError("Aucun champ de prestation ne doit être défini pour une ligne de frais")
+        
+        return data 

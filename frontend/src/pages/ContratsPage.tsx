@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus, Search, Filter, Eye, Edit, Trash2, Play, Check, X, Pause } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { CalendarIcon, Plus, Search, Filter, Eye, Edit, Trash2, Play, Check, X, Pause, ChevronsUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -65,6 +66,10 @@ export function ContratsPage() {
   const [editDateDebut, setEditDateDebut] = useState<Date | undefined>(undefined);
   const [editDateFin, setEditDateFin] = useState<Date | undefined>(undefined);
 
+  // États pour l'autocomplete des devis
+  const [devisSearchOpen, setDevisSearchOpen] = useState(false);
+  const [devisSearchValue, setDevisSearchValue] = useState('');
+
   // Hooks
   const { data: contratsData, isLoading } = useContrats({
     search: searchTerm,
@@ -73,7 +78,7 @@ export function ContratsPage() {
     page_size: pageSize,
   });
   
-  const { data: devisDisponiblesData } = useDevisDisponibles();
+  const { data: devisDisponiblesData, isLoading: isLoadingDevis } = useDevisDisponibles();
   const createContratMutation = useCreateContratFromDevis();
   const updateContratMutation = useUpdateContrat();
   const deleteContratMutation = useDeleteContrat();
@@ -84,7 +89,15 @@ export function ContratsPage() {
 
   const contrats = contratsData?.results || [];
   const totalCount = contratsData?.count || 0;
-  const devisDisponibles = devisDisponiblesData?.devis || [];
+  const devisDisponibles = devisDisponiblesData || [];
+
+  // Fonction pour obtenir le devis sélectionné
+  const getSelectedDevis = () => {
+    if (!createForm.devis_id) return null;
+    return devisDisponibles.find(devis => devis.id.toString() === createForm.devis_id);
+  };
+
+  const selectedDevis = getSelectedDevis();
 
   // Gestionnaires d'événements
   const handleCreateContrat = async () => {
@@ -368,6 +381,9 @@ export function ContratsPage() {
                   <TableHead>Date début</TableHead>
                   <TableHead>Date fin</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead>Montant HT</TableHead>
+                  <TableHead>TVA</TableHead>
+                  <TableHead>Frais Agence</TableHead>
                   <TableHead>Montant TTC</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -389,6 +405,13 @@ export function ContratsPage() {
                     <TableCell>{formatDate(contrat.date_debut)}</TableCell>
                     <TableCell>{formatDate(contrat.date_fin)}</TableCell>
                     <TableCell>{getStatutBadge(contrat.statut)}</TableCell>
+                    <TableCell className="font-medium">{formatMontant(contrat.montant_ht)}</TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
+                    </TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
+                    </TableCell>
                     <TableCell className="font-medium">{formatMontant(contrat.montant_ttc)}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -433,20 +456,75 @@ export function ContratsPage() {
           <div className="space-y-4">
             <div>
               <Label htmlFor="devis">Devis *</Label>
-              <Select value={createForm.devis_id} onValueChange={(value) => setCreateForm({ ...createForm, devis_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un devis accepté" />
-                </SelectTrigger>
-                <SelectContent>
-                  {devisDisponibles
-                    .filter(devis => devis.id && devis.numero) // Filtrer les devis valides
-                    .map((devis) => (
-                      <SelectItem key={devis.id} value={devis.id.toString()}>
-                        {devis.numero} - {devis.client || 'Client inconnu'} ({formatMontant(devis.montant_ttc || 0)})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <Popover open={devisSearchOpen} onOpenChange={setDevisSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={devisSearchOpen}
+                    className="w-full justify-between"
+                  >
+                    {selectedDevis ? (
+                      `${selectedDevis.numero} - ${selectedDevis.client?.nom_complet || 'Client inconnu'} (${formatMontant(selectedDevis.montant_ttc || 0)})`
+                    ) : (
+                      "Sélectionner un devis accepté..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput 
+                      placeholder="Rechercher un devis..." 
+                      value={devisSearchValue}
+                      onValueChange={setDevisSearchValue}
+                    />
+                    <CommandList>
+                      {isLoadingDevis ? (
+                        <div className="p-4 text-center text-gray-500">
+                          Chargement des devis...
+                        </div>
+                      ) : devisDisponibles.length === 0 ? (
+                        <CommandEmpty>Aucun devis disponible.</CommandEmpty>
+                      ) : (
+                        <>
+                          <CommandEmpty>Aucun devis trouvé.</CommandEmpty>
+                          <CommandGroup>
+                            {devisDisponibles
+                              .filter(devis => 
+                                devis.id && 
+                                devis.numero && 
+                                (devisSearchValue === '' || 
+                                 devis.numero.toLowerCase().includes(devisSearchValue.toLowerCase()) ||
+                                 devis.client?.nom_complet?.toLowerCase().includes(devisSearchValue.toLowerCase()))
+                              )
+                              .map((devis) => (
+                                <CommandItem
+                                  key={devis.id}
+                                  value={devis.id.toString()}
+                                  onSelect={(value) => {
+                                    setCreateForm({ ...createForm, devis_id: value });
+                                    setDevisSearchOpen(false);
+                                    setDevisSearchValue('');
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">
+                                      {devis.numero} - {devis.client?.nom_complet || 'Client inconnu'}
+                                    </span>
+                                    <span className="text-sm text-gray-500">
+                                      {formatMontant(devis.montant_ttc || 0)} • {formatDate(devis.date_creation)}
+                                    </span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </>
+                      )}
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

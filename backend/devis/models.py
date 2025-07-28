@@ -32,9 +32,14 @@ class Devis(models.Model):
     taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(0)])
     appliquer_tva = models.BooleanField(default=True, verbose_name="Appliquer la TVA")
     
+    # Configuration Frais d'Agence
+    taux_frais_agence = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, validators=[MinValueValidator(0)])
+    appliquer_frais_agence = models.BooleanField(default=False, verbose_name="Appliquer les frais d'agence")
+    
     # Informations commerciales
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    montant_frais_agence = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
     # Notes et conditions
@@ -77,7 +82,7 @@ class Devis(models.Model):
         return f"DEV{year}{new_number:04d}"
     
     def calculer_montants(self):
-        """Calculer les montants HT, TVA et TTC"""
+        """Calculer les montants HT, TVA, Frais d'Agence et TTC"""
         from decimal import Decimal
         
         total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
@@ -93,7 +98,17 @@ class Devis(models.Model):
         else:
             self.montant_tva = Decimal('0')
         
-        self.montant_ttc = self.montant_ht + self.montant_tva
+        # Calculer les frais d'agence selon la configuration
+        if self.appliquer_frais_agence:
+            # S'assurer que taux_frais_agence est bien un Decimal
+            taux_frais = self.taux_frais_agence / 100
+            if isinstance(taux_frais, float):
+                taux_frais = Decimal(str(taux_frais))
+            self.montant_frais_agence = self.montant_ht * taux_frais
+        else:
+            self.montant_frais_agence = Decimal('0')
+        
+        self.montant_ttc = self.montant_ht + self.montant_tva + self.montant_frais_agence
         self.save()
     
     def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id, type_ligne):
