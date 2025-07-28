@@ -543,13 +543,32 @@ export function ContratDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Configuration Frais d'Agence */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Configuration Frais d'Agence</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Taux Frais d'Agence</Label>
+                  <p className="font-medium">{contrat.taux_frais_agence}%</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Appliquer Frais d'Agence</Label>
+                  <p className="font-medium">{contrat.appliquer_frais_agence ? 'Oui' : 'Non'}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Montants */}
           <Card>
             <CardHeader>
               <CardTitle>Montants</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
                   <p className="text-lg font-bold">{formatMontant(contrat.montant_ht)}</p>
@@ -557,6 +576,10 @@ export function ContratDetailPage() {
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TVA</Label>
                   <p className="text-lg font-bold">{formatMontant(contrat.montant_tva)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Montant Frais d'Agence</Label>
+                  <p className="text-lg font-bold">{formatMontant(contrat.montant_frais_agence)}</p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
