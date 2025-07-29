@@ -57,15 +57,18 @@ Le Prestataire exécutera les prestations selon les règles de l'art et s'engage
 
 <h4 style="color: #000000; font-size: 16px; font-weight: bold; margin: 20px 0 10px 0; font-family: Arial, Helvetica, sans-serif;">Article 5 – Prix et modalités de paiement</h4>
 
-<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000; list-style-type: none;">
 Le montant total de la prestation est fixé à <strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">[MONTANT_TTC] GNF TTC</strong>, selon le devis accepté.<br>
 Modalités de paiement :
 </p>
 
-<ul style="margin: 15px 0; padding-left: 20px; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
-<li style="margin: 5px 0;">[MODALITES_PAIEMENT]</li>
-<li style="margin: 5px 0;">Paiement par virement bancaire aux coordonnées indiquées sur la facture.</li>
-</ul>
+<div style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+[MODALITES_PAIEMENT]
+</div>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+Paiement par virement bancaire aux coordonnées indiquées sur la facture.
+</p>
 
 <h4 style="color: #000000; font-size: 16px; font-weight: bold; margin: 20px 0 10px 0; font-family: Arial, Helvetica, sans-serif;">Article 6 – Confidentialité</h4>
 

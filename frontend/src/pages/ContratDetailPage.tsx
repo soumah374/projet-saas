@@ -773,6 +773,7 @@ export function ContratDetailPage() {
                 )}
 
                 {/* Boutons de génération d'échéancier */}
+                {contrat.statut !== 'termine' && (
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
@@ -782,15 +783,8 @@ export function ContratDetailPage() {
                     <Plus size={16} className="mr-2" />
                     Générer échéancier
                   </Button>
-                  {/* <Button 
-                    variant="outline" 
-                    onClick={() => handleGenererEcheancier('tranches')}
-                    disabled={isLoadingEcheances}
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Générer échéancier en tranches
-                  </Button> */}
                 </div>
+                )}
 
                 {/* Contrôles de filtres et tri */}
                 {echeances && Array.isArray(echeances) && echeances.length > 0 && (

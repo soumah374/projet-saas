@@ -1,9 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    ContratViewSet, LigneContratViewSet, LigneContratIntervenantViewSet,
-    EcheancierContratViewSet
-)
+from .views import (ContratViewSet, EcheancierContratViewSet, LigneContratIntervenantViewSet,
+    LigneContratViewSet)
 
 # Router pour les contrats
 router = DefaultRouter()

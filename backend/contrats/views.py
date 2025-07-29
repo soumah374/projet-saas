@@ -1,4 +1,5 @@
 from django.shortcuts import render
+import django.template.loader
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,6 +7,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
 from datetime import date, timedelta, datetime
+from django.views.generic import TemplateView
+
 
 from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat
 from .serializers import (
@@ -14,6 +17,11 @@ from .serializers import (
     EcheancierContratSerializer, EcheancierContratCreateSerializer
 )
 from devis.models import Devis
+
+from django.template.loader import render_to_string
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
+from django.http import HttpResponse
 
 
 class ContratViewSet(viewsets.ModelViewSet):
@@ -34,19 +42,22 @@ class ContratViewSet(viewsets.ModelViewSet):
         return ContratSerializer
 
     @action(detail=True, methods=['get'])
-    def download_pdf(self, request, pk=None):
+    def download_pdf(self, request, pk=None): 
         """Télécharger le contrat en PDF"""
         contrat = self.get_object()
         
-        try:
-            pdf_content = contrat.generer_pdf()
-            
-            # Utiliser HttpResponse pour le contenu binaire
-            from django.http import HttpResponse
-            response = HttpResponse(pdf_content, content_type='application/pdf')
+        try:            
+            html_string = render_to_string('contrats/print_contrat.html', {
+                'contrat': contrat
+            })
+            font_config = FontConfiguration()
+            html_doc = HTML(string=html_string)
+            pdf = html_doc.write_pdf(font_config=font_config)
+            response = HttpResponse(pdf, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="contrat_{contrat.numero}.pdf"'
-            response['Content-Length'] = len(pdf_content)
+            response['Content-Length'] = len(pdf)
             return response
+            
         except Exception as e:
             return Response(
                 {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
@@ -116,7 +127,7 @@ class ContratViewSet(viewsets.ModelViewSet):
                 date_fin=date_fin,
                 conditions=conditions,
                 notes=notes,
-                echeances_contrat=echeances_contrat,  # Utiliser le nouveau nom
+                echeances_contrat=echeances_contrat,
                 montant_ht=devis.montant_ht,
                 montant_ttc=devis.montant_ttc,
                 taux_tva=devis.taux_tva,
@@ -153,7 +164,7 @@ class ContratViewSet(viewsets.ModelViewSet):
                             montant_intervenant=intervenant_devis.montant_intervenant
                         )
             
-            # Calculer les montants du contrat
+            # Calculer les montants du contrat APRÈS avoir créé toutes les lignes
             contrat.calculer_montants()
             
             return Response(
@@ -233,9 +244,9 @@ class ContratViewSet(viewsets.ModelViewSet):
         """Activer un contrat (changer le statut de brouillon à actif)"""
         contrat = self.get_object()
         
-        if contrat.statut != 'brouillon':
+        if contrat.statut not in ['brouillon', 'suspendu']:
             return Response(
-                {'error': 'Seuls les contrats en brouillon peuvent être activés'},
+                {'error': 'Seuls les contrats en brouillon ou suspendus peuvent être activés'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -406,30 +417,6 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
                     echeances.append(echeances_contrat[i])
                     if i == 1:
                         echeances[i]['date_echeance'] = contrat.date_debut + (contrat.date_fin - contrat.date_debut) / 2
-                # echeances = [
-                #     {
-                #         'type_echeance': 'acompte',
-                #         'numero_echeance': 1,
-                #         'pourcentage': 25,
-                #         'date_echeance': contrat.date_debut,
-                #         'commentaire': 'Acompte à la commande'
-                #     },
-                #     {
-                #         'type_echeance': 'tranche',
-                #         'numero_echeance': 2,
-                #         'pourcentage': 25,
-                #         'date_echeance': mi_parcours,
-                #         'commentaire': 'Tranche à mi-parcours'
-                #     },
-                #     {
-                #         'type_echeance': 'solde',
-                #         'numero_echeance': 3,
-                #         'pourcentage': 50,
-                #         'date_echeance': contrat.date_fin,
-                #         'commentaire': 'Solde à la livraison'
-                #     }
-                # ]
-            
             # Créer les échéances
             for echeance_data in echeances:
                 # Calculer les montants basés sur le pourcentage
@@ -482,3 +469,15 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
             'echeances_retard': EcheancierContratSerializer(echeances_retard, many=True).data,
             'total_alertes': echeances_3_jours.count() + echeances_retard.count()
         })
+
+class PrintContratView(TemplateView):
+    template_name = 'contrats/print_contrat.html'
+    def get(self, request, pk=None):
+        try:
+            contrat = Contrat.objects.get(id=pk)
+            return render(request, 'contrats/print_contrat.html', {'contrat': contrat})
+        except Contrat.DoesNotExist:
+            return Response(
+                {'error': 'Contrat introuvable'},
+                status=status.HTTP_404_NOT_FOUND
+            )

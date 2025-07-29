@@ -91,7 +91,7 @@ class Contrat(models.Model):
         
         # Créer les échéances si la configuration est fournie ET que le contrat n'est pas terminé
         if (self.echeances_contrat and isinstance(self.echeances_contrat, list) 
-            and self.statut not in ['termine', 'annule']):
+            and self.statut not in ['termine', 'annule','actif','suspendu']):
             self.creer_echeances_depuis_configuration()
     
     def initialiser_montants_depuis_devis(self):
@@ -308,28 +308,83 @@ class Contrat(models.Model):
                         duree = f"{mois} mois"
                     else:
                         annees = jours // 365
-                        duree = f"{annees} an(s)"
+                        duree = f"{annees} ans"
                 else:
                     duree = "À définir"
             else:
                 duree = "À définir"
             
-            # Description des prestations basée sur les lignes (seulement si le contrat a une clé primaire)
-            descriptions = []
-            if self.pk:  # Seulement si le contrat est déjà sauvegardé
-                for ligne in self.lignes.all():
-                    if ligne.description:
-                        descriptions.append(f"• {ligne.description}")
-                    else:
-                        descriptions.append(f"• {ligne.type_ligne} ({ligne.quantite} {ligne.unite.intitule})")
-            
             variables.update({
                 'DUREE_ESTIMEE': duree,
-                'DESCRIPTION_PRESTATION': '\n'.join(descriptions) if descriptions else "Prestations définies dans le devis",
-                'MODALITES_PAIEMENT': '30% à la commande, 70% à la livraison',
+                'DESCRIPTION_PRESTATION': 'Prestation de services',
+            })
+        
+        # Variables des échéances de paiement
+        if self.echeances_contrat and isinstance(self.echeances_contrat, list):
+            echeances_html = []
+            for i, echeance in enumerate(self.echeances_contrat, 1):
+                pourcentage = echeance.get('pourcentage', 0)
+                montant_echeance = (self.montant_ttc * pourcentage) / 100
+                date_echeance = format_date(echeance.get('date_echeance', ''))
+                type_echeance = echeance.get('type', 'tranche')
+                commentaire = echeance.get('commentaire', '')
+                
+                echeance_html = f"""
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{i}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">{type_echeance.title()}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">{pourcentage}%</td>
+                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">{montant_echeance:,.0f} GNF</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">{date_echeance}</td>
+                    <td style="border: 1px solid #ddd; padding: 8px;">{commentaire}</td>
+                </tr>
+                """
+                echeances_html.append(echeance_html)
+            
+            variables.update({
+                'ECHEANCIER_PAIEMENT': ''.join(echeances_html),
+                'NOMBRE_ECHEANCES': len(self.echeances_contrat),
+                'MONTANT_ACOMPTE': self.get_montant_acompte(),
+                'MONTANT_SOLDE': self.get_montant_solde(),
+                'MODALITES_PAIEMENT': self.get_modalites_paiement(),
+            })
+        else:
+            # Échéancier par défaut si aucune échéance n'est définie
+            variables.update({
+                'ECHEANCIER_PAIEMENT': '',
+                'NOMBRE_ECHEANCES': '0',
+                'MONTANT_ACOMPTE': '0',
+                'MONTANT_SOLDE': '0',
+                'MODALITES_PAIEMENT': 'Paiement à 100% à la signature du contrat',
             })
         
         return variables
+    
+    def get_montant_acompte(self):
+        """Calcule le montant total des acomptes"""
+        if not self.echeances_contrat or not isinstance(self.echeances_contrat, list):
+            return 0
+        
+        montant_acompte = 0
+        for echeance in self.echeances_contrat:
+            if echeance.get('type') == 'acompte':
+                pourcentage = echeance.get('pourcentage', 0)
+                montant_acompte += (self.montant_ttc * pourcentage) / 100
+        
+        return f"{montant_acompte:,.0f}"
+    
+    def get_montant_solde(self):
+        """Calcule le montant total des soldes"""
+        if not self.echeances_contrat or not isinstance(self.echeances_contrat, list):
+            return 0
+        
+        montant_solde = 0
+        for echeance in self.echeances_contrat:
+            if echeance.get('type') == 'solde':
+                pourcentage = echeance.get('pourcentage', 0)
+                montant_solde += (self.montant_ttc * pourcentage) / 100
+        
+        return f"{montant_solde:,.0f}"
     
     def generer_pdf(self):
         """Génère le PDF du contrat côté backend"""
@@ -453,6 +508,44 @@ class Contrat(models.Model):
                 articles_content.append(f"• {ligne.type_ligne}: {ligne.quantite} {ligne.unite.intitule}")
         
         return "\n".join(articles_content) if articles_content else "Prestations définies dans le devis"
+
+    def get_modalites_paiement(self):
+        """Retourne les modalités de paiement du contrat"""
+        if self.echeances_contrat and isinstance(self.echeances_contrat, list):
+            modalites = []
+            
+            for echeance in self.echeances_contrat:
+                type_echeance = echeance.get('type', 'tranche')
+                pourcentage = echeance.get('pourcentage', 0)
+                date_echeance = echeance.get('date_echeance', '')
+                commentaire = echeance.get('commentaire', '')
+                
+                if type_echeance == 'acompte':
+                    modalite = f"Acompte de {pourcentage}% à la signature du contrat"
+                elif type_echeance == 'tranche':
+                    modalite = f"Tranche de {pourcentage}%"
+                    if date_echeance:
+                        modalite += f" le {date_echeance}"
+                elif type_echeance == 'solde':
+                    modalite = f"Solde de {pourcentage}%"
+                    if date_echeance:
+                        modalite += f" le {date_echeance}"
+                elif type_echeance == 'retention':
+                    modalite = f"Retenue de garantie de {pourcentage}%"
+                    if date_echeance:
+                        modalite += f" le {date_echeance}"
+                
+                if commentaire:
+                    modalite += f" ({commentaire})"
+                
+                modalites.append(f"<li>{modalite}</li>")
+            
+            if modalites:
+                return f"<ul>{''.join(modalites)}</ul>"
+            else:
+                return "<ul><li>Paiement à 100% à la signature du contrat</li></ul>"
+        else:
+            return "<ul><li>Paiement à 100% à la signature du contrat</li></ul>"
 
 
 class EcheancierContrat(models.Model):

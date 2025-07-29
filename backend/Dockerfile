@@ -1,5 +1,5 @@
 # Use the official Python 3.12 slim image
-FROM python:3.12-slim
+FROM python:3.12.11-bullseye
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
