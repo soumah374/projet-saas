@@ -30,6 +30,7 @@ import {
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { Echeance } from '@/lib/types';
+import { EditContratModal } from '@/components/EditContratModal';
 
 export function ContratsPage() {
   const navigate = useNavigate();
@@ -63,20 +64,9 @@ export function ContratsPage() {
       }>
   });
   
-  // États pour le formulaire d'édition
-  const [editForm, setEditForm] = useState({
-    date_debut: '',
-    date_fin: '',
-    conditions: '',
-    notes: '',
-    echeances: [] as Echeance[]
-  });
-  
   // Dates pour les calendriers
   const [dateDebut, setDateDebut] = useState<Date | undefined>(undefined);
   const [dateFin, setDateFin] = useState<Date | undefined>(undefined);
-  const [editDateDebut, setEditDateDebut] = useState<Date | undefined>(undefined);
-  const [editDateFin, setEditDateFin] = useState<Date | undefined>(undefined);
 
   // États pour l'autocomplete des devis
   const [devisSearchOpen, setDevisSearchOpen] = useState(false);
@@ -144,17 +134,30 @@ export function ContratsPage() {
     }
   };
 
-  const handleUpdateContrat = async () => {
+  const handleUpdateContrat = async (data: {
+    date_debut: string;
+    date_fin: string;
+    conditions: string;
+    notes: string;
+    echeances: Array<{
+      numero: number;
+      type: 'acompte' | 'tranche' | 'solde';
+      pourcentage: number;
+      date_echeance: string;
+      commentaire: string;
+    }>;
+  }) => {
     if (!contratToEdit) return;
 
     try {
       await updateContratMutation.mutateAsync({
         id: contratToEdit.id,
         data: {
-          date_debut: editForm.date_debut,
-          date_fin: editForm.date_fin,
-          conditions: editForm.conditions,
-          notes: editForm.notes,
+          date_debut: data.date_debut,
+          date_fin: data.date_fin,
+          conditions: data.conditions,
+          notes: data.notes,
+          echeances: data.echeances
         }
       });
       
@@ -200,15 +203,6 @@ export function ContratsPage() {
 
   const openEditDialog = (contrat: Contrat) => {
     setContratToEdit(contrat);
-    setEditForm({
-      date_debut: contrat.date_debut,
-      date_fin: contrat.date_fin,
-      conditions: contrat.conditions || '',
-      notes: contrat.notes || '',
-      echeances: contrat.echeances || []
-    });
-    setEditDateDebut(new Date(contrat.date_debut));
-    setEditDateFin(new Date(contrat.date_fin));
     setEditDialogOpen(true);
   };
 
@@ -998,104 +992,13 @@ export function ContratsPage() {
       </Dialog>
 
       {/* Modal d'édition */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Modifier le contrat</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-140px)] pr-2 space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Date de début *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {editDateDebut ? format(editDateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-auto p-0" 
-                    align="start"
-                    side="bottom"
-                    sideOffset={4}
-                  >
-                    <Calendar
-                      mode="single"
-                      selected={editDateDebut}
-                      onSelect={(date) => {
-                        setEditDateDebut(date);
-                        setEditForm({ ...editForm, date_debut: date ? date.toISOString().split('T')[0] : '' });
-                      }}
-                      initialFocus
-                      locale={fr}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div>
-                <Label>Date de fin *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {editDateFin ? format(editDateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent 
-                    className="w-auto p-0" 
-                    align="start"
-                    side="bottom"
-                    sideOffset={4}
-                  >
-                    <Calendar
-                      mode="single"
-                      selected={editDateFin}
-                      onSelect={(date) => {
-                        setEditDateFin(date);
-                        setEditForm({ ...editForm, date_fin: date ? date.toISOString().split('T')[0] : '' });
-                      }}
-                      initialFocus
-                      locale={fr}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="edit-conditions">Conditions</Label>
-              <textarea
-                id="edit-conditions"
-                value={editForm.conditions}
-                onChange={(e) => setEditForm({ ...editForm, conditions: e.target.value })}
-                className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md"
-                placeholder="Conditions du contrat..."
-              />
-            </div>
-            <div>
-              <Label htmlFor="edit-notes">Notes</Label>
-              <textarea
-                id="edit-notes"
-                value={editForm.notes}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                className="w-full min-h-[100px] p-3 border border-gray-300 rounded-md"
-                placeholder="Notes du contrat..."
-              />
-            </div>
-          </div>
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button
-              onClick={handleUpdateContrat}
-              disabled={updateContratMutation.isPending}
-            >
-              {updateContratMutation.isPending ? 'Mise à jour...' : 'Mettre à jour'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditContratModal
+        contrat={contratToEdit}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleUpdateContrat}
+        isLoading={updateContratMutation.isPending}
+      />
 
       {/* Modal de suppression */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
