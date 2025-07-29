@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,11 +8,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import Editor, { 
-  createButton,
-} from 'react-simple-wysiwyg';
 import { api } from '@/lib/api';
 
+// Import de Quill
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 interface ContractEditorProps {
   contrat: any;
@@ -24,8 +24,6 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [editedContract, setEditedContract] = useState('');
   const [isEditingContract, setIsEditingContract] = useState(false);
-  const BtnAlignCenter = createButton('Align center', '≡', 'justifyCenter');
-
 
   // Utiliser le contenu du contrat depuis la base de données
   const contractContent = contrat.contenu_personnalise || '';
@@ -45,8 +43,8 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
     toast.success('Contrat sauvegardé');
   };
 
-  const handleEditorChange = (e: any) => {
-    setEditedContract(e.target.value);
+  const handleEditorChange = (content: string) => {
+    setEditedContract(content);
     if (!isEditingContract) {
       setIsEditingContract(true);
     }
@@ -76,7 +74,7 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `contrat-${contrat.numero}.pdf`;
+      link.download = `contrat-${contrat.id}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -119,6 +117,37 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
   const safeContractContent = typeof contractContent === 'string' ? contractContent : '';
   const safeEditedContract = typeof editedContract === 'string' ? editedContract : '';
 
+  // Configuration Quill
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      [{ 'align': [] }],
+      ['link', 'blockquote'],
+      ['clean']
+    ],
+  };
+
+  const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'color', 'background',
+    'list', 'bullet',
+    'indent',
+    'align',
+    'link', 'blockquote'
+  ];
+
+  // Configuration des styles Quill
+  const quillStyle = {
+    fontFamily: 'Arial, Helvetica, sans-serif',
+    fontSize: '14px',
+    lineHeight: '1.6'
+  };
+
   return (
     <div className="space-y-6">
       {/* Barre d'outils */}
@@ -159,9 +188,16 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
         
         <TabsContent value="edit" className="space-y-4">
           <Card>
-            <CardContent>
-              <Editor value={editedContract} onChange={handleEditorChange}>
-              </Editor>
+            <CardContent className="p-4">
+              <ReactQuill
+                theme="snow"
+                value={editedContract}
+                onChange={handleEditorChange}
+                modules={quillModules}
+                formats={quillFormats}
+                placeholder="Saisissez le contenu du contrat..."
+                style={{ height: '600px', ...quillStyle }}
+              />
             </CardContent>
           </Card>
         </TabsContent>
