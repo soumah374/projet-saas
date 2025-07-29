@@ -74,7 +74,7 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `contrat-${contrat.id}.pdf`;
+      link.download = `contrat-${contrat.numero}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
