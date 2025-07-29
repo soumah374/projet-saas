@@ -520,20 +520,30 @@ class Contrat(models.Model):
                 date_echeance = echeance.get('date_echeance', '')
                 commentaire = echeance.get('commentaire', '')
                 
+                # Formater la date en français si elle existe
+                date_formatee = ''
+                if date_echeance:
+                    try:
+                        from datetime import datetime
+                        date_obj = datetime.strptime(str(date_echeance), '%Y-%m-%d')
+                        date_formatee = date_obj.strftime('%d/%m/%Y')
+                    except:
+                        date_formatee = str(date_echeance)
+                
                 if type_echeance == 'acompte':
                     modalite = f"Acompte de {pourcentage}% à la signature du contrat"
                 elif type_echeance == 'tranche':
                     modalite = f"Tranche de {pourcentage}%"
-                    if date_echeance:
-                        modalite += f" le {date_echeance}"
+                    if date_formatee:
+                        modalite += f" le {date_formatee}"
                 elif type_echeance == 'solde':
                     modalite = f"Solde de {pourcentage}%"
-                    if date_echeance:
-                        modalite += f" le {date_echeance}"
+                    if date_formatee:
+                        modalite += f" le {date_formatee}"
                 elif type_echeance == 'retention':
                     modalite = f"Retenue de garantie de {pourcentage}%"
-                    if date_echeance:
-                        modalite += f" le {date_echeance}"
+                    if date_formatee:
+                        modalite += f" le {date_formatee}"
                 
                 if commentaire:
                     modalite += f" ({commentaire})"
