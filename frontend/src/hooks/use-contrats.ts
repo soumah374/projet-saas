@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contratsAPI } from '@/lib/api';
 import { toast } from 'sonner';
+import { Echeance } from '@/lib/types';
 
 // Types
 export interface Contrat {
@@ -33,6 +34,7 @@ export interface Contrat {
   lignes: LigneContrat[];
   created_at: string;
   updated_at: string;
+  echeances: Echeance[];
 }
 
 export interface LigneContrat {

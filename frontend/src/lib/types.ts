@@ -575,3 +575,4 @@ export interface AlertesQuotidiennes {
   echeances_retard: Echeance[];
   total_alertes: number;
 }
+

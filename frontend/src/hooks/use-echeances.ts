@@ -33,7 +33,13 @@ export function useEcheances(contratId?: number) {
   };
 
   // Générer un échéancier standard
-  const genererEcheancier = async (type: string = 'standard') => {
+  const genererEcheancier = async (type: string = 'standard', echeances: Array<{
+    numero: number;
+    type: 'acompte' | 'tranche' | 'solde';
+    pourcentage: number;
+    date_echeance: string;
+    commentaire: string;
+  }>) => {
     if (!contratId) {
       toast.error('ID du contrat requis');
       return;
@@ -43,9 +49,19 @@ export function useEcheances(contratId?: number) {
     setError(null);
 
     try {
+      // Transformer les données pour correspondre au modèle backend
+      const echeancesTransformed = echeances.map(echeance => ({
+        type_echeance: echeance.type,
+        numero_echeance: echeance.numero,
+        pourcentage: echeance.pourcentage,
+        date_echeance: echeance.date_echeance,
+        commentaire: echeance.commentaire
+      }));
+
       await api.post(`/contrats/echeances/generer_echeancier_standard/`, {
         contrat: contratId,
-        type: type
+        type: type,
+        echeances: echeancesTransformed
       });
       
       toast.success('Échéancier généré avec succès');
@@ -65,8 +81,11 @@ export function useEcheances(contratId?: number) {
     setError(null);
 
     try {
+      // Formater la date en YYYY-MM-DD si fournie
+      const formattedDate = datePaiement ? new Date(datePaiement).toISOString().split('T')[0] : undefined;
+      
       await api.post(`/contrats/echeances/${echeanceId}/marquer_paye/`, {
-        date_paiement: datePaiement
+        date_paiement: formattedDate
       });
       
       toast.success('Échéance marquée comme payée');

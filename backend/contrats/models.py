@@ -89,8 +89,9 @@ class Contrat(models.Model):
                         
         super().save(*args, **kwargs)
         
-        # Créer les échéances si la configuration est fournie
-        if self.echeances_contrat and isinstance(self.echeances_contrat, list):
+        # Créer les échéances si la configuration est fournie ET que le contrat n'est pas terminé
+        if (self.echeances_contrat and isinstance(self.echeances_contrat, list) 
+            and self.statut not in ['termine', 'annule']):
             self.creer_echeances_depuis_configuration()
     
     def initialiser_montants_depuis_devis(self):

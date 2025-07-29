@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -43,8 +43,9 @@ import {
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/ContractEditor';
 import { useEcheances } from '@/hooks/use-echeances';
-import { api } from '@/lib/api';
-import { type Echeance } from '@/lib/types';
+import { Echeance } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +62,16 @@ export function ContratDetailPage() {
     date_debut: '',
     date_fin: '',
     conditions: '',
-    notes: ''
+    notes: '',
+    echeancier_type: 'standard', // 'standard', 'tranches', 'personnalise'
+    nombre_echeances: 3,
+    echeances: [] as Array<{
+      numero: number;
+      type: 'acompte' | 'tranche' | 'solde';
+      pourcentage: number;
+      date_echeance: string;
+      commentaire: string;
+    }>
   });
   const [editDateDebut, setEditDateDebut] = useState<Date | undefined>(undefined);
   const [editDateFin, setEditDateFin] = useState<Date | undefined>(undefined);
@@ -145,12 +155,22 @@ export function ContratDetailPage() {
       return;
     }
 
+    // Validation des échéances
+    if (editForm.echeances.length > 0) {
+      const totalPourcentage = editForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0);
+      if (totalPourcentage !== 100) {
+        toast.error('Le total des pourcentages des échéances doit être égal à 100%');
+        return;
+      }
+    }
+
     console.log('Début de la mise à jour du contrat:', contrat.id);
     console.log('Données à envoyer:', {
       date_debut: editForm.date_debut,
       date_fin: editForm.date_fin,
       conditions: editForm.conditions,
       notes: editForm.notes,
+      echeances: editForm.echeances
     });
 
     try {
@@ -161,6 +181,7 @@ export function ContratDetailPage() {
           date_fin: editForm.date_fin,
           conditions: editForm.conditions || '',
           notes: editForm.notes || '',
+          echeances: editForm.echeances
         }
       });
       
@@ -244,7 +265,7 @@ export function ContratDetailPage() {
 
   const handleConfirmGenererEcheancier = async () => {
     try {
-      await genererEcheancier(selectedEcheancierType);
+      await genererEcheancier(selectedEcheancierType, getEcheancierDetails(selectedEcheancierType)?.echeances);
       setEcheancierDialogOpen(false);
     } catch (err) {
       console.error('Erreur lors de la génération de l\'échéancier:', err);
@@ -253,7 +274,8 @@ export function ContratDetailPage() {
 
   const handleMarquerPaye = async (echeanceId: number) => {
     try {
-      await marquerPaye(echeanceId);
+      const datePaiement = new Date().toISOString();
+      await marquerPaye(echeanceId, datePaiement);
     } catch (err) {
       console.error('Erreur lors du marquage:', err);
     }
@@ -275,11 +297,100 @@ export function ContratDetailPage() {
       date_fin: contrat.date_fin,
       conditions: contrat.conditions || '',
       notes: contrat.notes || '',
+      echeancier_type: 'standard',
+      nombre_echeances: 3,
+      echeances: []
     });
     setEditDateDebut(new Date(contrat.date_debut));
     setEditDateFin(new Date(contrat.date_fin));
     setEditDialogOpen(true);
   };
+
+  // Fonctions pour générer automatiquement les échéances
+  const generateStandardEcheances = () => {
+    const echeances = contrat.echeances_contrat || [
+      {
+        numero: 1,
+        type: 'acompte' as const,
+        pourcentage: 30,
+        date_echeance: editForm.date_debut,
+        commentaire: 'Acompte à la commande'
+      },
+      {
+        numero: 2,
+        type: 'tranche' as const,
+        pourcentage: 40,
+        date_echeance: editForm.date_fin,
+        commentaire: 'Paiement à la livraison'
+      },
+      {
+        numero: 3,
+        type: 'solde' as const,
+        pourcentage: 30,
+        date_echeance: editForm.date_fin,
+        commentaire: 'Solde après réception'
+      }
+    ];
+    setEditForm({ ...editForm, echeances });
+  };
+
+  const generateTranchesEcheances = () => {
+    const echeances = [];
+    const pourcentageParTranche = 100 / editForm.nombre_echeances;
+    
+    for (let i = 1; i <= editForm.nombre_echeances; i++) {
+      echeances.push({
+        numero: i,
+        type: i === 1 ? 'acompte' as const : 'tranche' as const,
+        pourcentage: pourcentageParTranche,
+        date_echeance: editForm.date_debut,
+        commentaire: `Tranche ${i}`
+      });
+    }
+    setEditForm({ ...editForm, echeances });
+  };
+
+  const updateEcheance = (index: number, field: string, value: any) => {
+    const newEcheances = [...editForm.echeances];
+    newEcheances[index] = { ...newEcheances[index], [field]: value };
+    setEditForm({ ...editForm, echeances: newEcheances });
+  };
+
+  const addEcheance = () => {
+    const newEcheance = {
+      numero: editForm.echeances.length + 1,
+      type: 'tranche' as const,
+      pourcentage: 0,
+      date_echeance: editForm.date_debut,
+      commentaire: ''
+    };
+    setEditForm({ 
+      ...editForm, 
+      echeances: [...editForm.echeances, newEcheance] 
+    });
+  };
+
+  const removeEcheance = (index: number) => {
+    const newEcheances = editForm.echeances.filter((_, i) => i !== index);
+    // Recalculer les numéros
+    newEcheances.forEach((echeance, i) => {
+      echeance.numero = i + 1;
+    });
+    setEditForm({ ...editForm, echeances: newEcheances });
+  };
+
+  // Effets pour générer automatiquement les échéances
+  useEffect(() => {
+    if (editForm.echeancier_type === 'standard' && editForm.date_debut && editForm.date_fin) {
+      generateStandardEcheances();
+    }
+  }, [editForm.echeancier_type, editForm.date_debut, editForm.date_fin]);
+
+  useEffect(() => {
+    if (editForm.echeancier_type === 'tranches' && editForm.date_debut && editForm.date_fin) {
+      generateTranchesEcheances();
+    }
+  }, [editForm.echeancier_type, editForm.nombre_echeances, editForm.date_debut, editForm.date_fin]);
 
   const openDeleteDialog = () => {
     setDeleteDialogOpen(true);
@@ -320,24 +431,25 @@ export function ContratDetailPage() {
   };
 
   const getEcheancierDetails = (type: string) => {
+    if (!contrat) return null;    
     const details = {
       'standard': {
         title: 'Échéancier Standard',
         description: 'Échéancier classique avec acompte, tranches et solde',
-        echeances: [
-          { numero: 1, type: 'acompte', pourcentage: 30, description: 'Acompte à la signature' },
-          { numero: 2, type: 'tranche', pourcentage: 40, description: 'Tranche intermédiaire' },
-          { numero: 3, type: 'solde', pourcentage: 30, description: 'Solde à la réception' }
+        echeances: contrat.echeances_contrat || [
+          { numero: 1, type: 'acompte', pourcentage: 30, description: 'Acompte à la signature', date_echeance: contrat.date_debut, commentaire: 'Acompte à la signature'},
+          { numero: 2, type: 'tranche', pourcentage: 40, description: 'Tranche intermédiaire', date_echeance: contrat.date_fin, commentaire: 'Tranche intermédiaire' },
+          { numero: 3, type: 'solde', pourcentage: 30, description: 'Solde à la réception', date_echeance: contrat.date_fin, commentaire: 'Solde à la réception' }
         ]
       },
       'tranches': {
         title: 'Échéancier en Tranches',
         description: 'Échéancier avec plusieurs tranches de paiement',
-        echeances: [
-          { numero: 1, type: 'acompte', pourcentage: 25, description: 'Acompte à la signature' },
-          { numero: 2, type: 'tranche', pourcentage: 25, description: '1ère tranche' },
-          { numero: 3, type: 'tranche', pourcentage: 25, description: '2ème tranche' },
-          { numero: 4, type: 'solde', pourcentage: 25, description: 'Solde à la réception' }
+        echeances: contrat.echeances_contrat || [
+          { numero: 1, type: 'acompte', pourcentage: 25, description: 'Acompte à la signature', date_echeance: contrat.date_debut, commentaire: 'Acompte à la signature' },
+          { numero: 2, type: 'tranche', pourcentage: 25, description: '1ère tranche', date_echeance: contrat.date_debut, commentaire: '1ère tranche' },
+          { numero: 3, type: 'tranche', pourcentage: 25, description: '2ème tranche', date_echeance: contrat.date_fin, commentaire: '2ème tranche' },
+          { numero: 4, type: 'solde', pourcentage: 25, description: 'Solde à la réception', date_echeance: contrat.date_fin, commentaire: 'Solde à la réception' }
         ]
       }
     };
@@ -668,16 +780,16 @@ export function ContratDetailPage() {
                     disabled={isLoadingEcheances}
                   >
                     <Plus size={16} className="mr-2" />
-                    Générer échéancier standard
+                    Générer échéancier
                   </Button>
-                  <Button 
+                  {/* <Button 
                     variant="outline" 
                     onClick={() => handleGenererEcheancier('tranches')}
                     disabled={isLoadingEcheances}
                   >
                     <Plus size={16} className="mr-2" />
                     Générer échéancier en tranches
-                  </Button>
+                  </Button> */}
                 </div>
 
                 {/* Contrôles de filtres et tri */}
@@ -833,15 +945,7 @@ export function ContratDetailPage() {
                         disabled={isLoadingEcheances}
                       >
                         <Plus size={16} className="mr-2" />
-                        Générer échéancier standard
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        onClick={() => handleGenererEcheancier('tranches')}
-                        disabled={isLoadingEcheances}
-                      >
-                        <Plus size={16} className="mr-2" />
-                        Générer échéancier en tranches
+                        Générer échéancier
                       </Button>
                     </div>
                   </div>
@@ -1067,6 +1171,186 @@ export function ContratDetailPage() {
                 placeholder="Notes du contrat..."
                 rows={4}
               />
+            </div>
+
+            {/* Section Échéanciers */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">Échéancier de paiement</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateStandardEcheances}
+                  >
+                    Standard (30-40-30)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateTranchesEcheances}
+                  >
+                    Tranches égales
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Type d'échéancier</Label>
+                  <Select 
+                    value={editForm.echeancier_type} 
+                    onValueChange={(value) => setEditForm({ ...editForm, echeancier_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">Standard (30-40-30)</SelectItem>
+                      <SelectItem value="tranches">Tranches égales</SelectItem>
+                      <SelectItem value="personnalise">Personnalisé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {editForm.echeancier_type === 'tranches' && (
+                  <div>
+                    <Label>Nombre de tranches</Label>
+                    <Select 
+                      value={editForm.nombre_echeances.toString()} 
+                      onValueChange={(value) => setEditForm({ ...editForm, nombre_echeances: parseInt(value) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2 tranches</SelectItem>
+                        <SelectItem value="3">3 tranches</SelectItem>
+                        <SelectItem value="4">4 tranches</SelectItem>
+                        <SelectItem value="5">5 tranches</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {/* Liste des échéances */}
+              {editForm.echeances.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">Échéances</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addEcheance}
+                    >
+                      Ajouter une échéance
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {editForm.echeances.map((echeance, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Échéance {echeance.numero}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeEcheance(index)}
+                            className="text-red-500"
+                          >
+                            <X size={14} />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>Type</Label>
+                            <Select 
+                              value={echeance.type} 
+                              onValueChange={(value) => updateEcheance(index, 'type', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="acompte">Acompte</SelectItem>
+                                <SelectItem value="tranche">Tranche</SelectItem>
+                                <SelectItem value="solde">Solde</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <Label>Pourcentage (%)</Label>
+                            <Input
+                              type="number"
+                              value={echeance.pourcentage}
+                              onChange={(e) => updateEcheance(index, 'pourcentage', parseFloat(e.target.value) || 0)}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label>Date d'échéance</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {echeance.date_echeance ? format(new Date(echeance.date_echeance), "PPP", { locale: fr }) : "Sélectionner une date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent 
+                              className="w-auto p-0" 
+                              align="start"
+                              side="bottom"
+                              sideOffset={4}
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={echeance.date_echeance ? new Date(echeance.date_echeance) : undefined}
+                                onSelect={(date) => updateEcheance(index, 'date_echeance', date ? date.toISOString().split('T')[0] : '')}
+                                initialFocus
+                                locale={fr}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        
+                        <div>
+                          <Label>Commentaire</Label>
+                          <Input
+                            value={echeance.commentaire}
+                            onChange={(e) => updateEcheance(index, 'commentaire', e.target.value)}
+                            placeholder="Commentaire optionnel..."
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Résumé des pourcentages */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Total des pourcentages :</span>
+                      <span className={`font-bold ${editForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                        {editForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0).toFixed(2)}%
+                      </span>
+                    </div>
+                    {editForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0) !== 100 && (
+                      <p className="text-sm text-red-600 mt-1">
+                        Le total doit être égal à 100%
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="border-t pt-4">

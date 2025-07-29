@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { CalendarIcon, Plus, Search, Filter, Eye, Edit, Trash2, Play, Check, X, Pause, ChevronsUpDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CalendarIcon, Plus, Search, Eye, Edit, Trash2, Play, Check, X, Pause, ChevronsUpDown, MoreHorizontal } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -28,6 +29,7 @@ import {
   type Contrat
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
+import { Echeance } from '@/lib/types';
 
 export function ContratsPage() {
   const navigate = useNavigate();
@@ -52,13 +54,13 @@ export function ContratsPage() {
     notes: '',
     echeancier_type: 'standard', // 'standard', 'tranches', 'personnalise'
     nombre_echeances: 3,
-    echeances: [] as Array<{
-      numero: number;
-      type: 'acompte' | 'tranche' | 'solde';
-      pourcentage: number;
-      date_echeance: string;
-      commentaire: string;
-    }>
+      echeances: [] as Array<{
+        numero: number;
+        type: 'acompte' | 'tranche' | 'solde';
+        pourcentage: number;
+        date_echeance: string;
+        commentaire: string;
+      }>
   });
   
   // États pour le formulaire d'édition
@@ -66,7 +68,8 @@ export function ContratsPage() {
     date_debut: '',
     date_fin: '',
     conditions: '',
-    notes: ''
+    notes: '',
+    echeances: [] as Echeance[]
   });
   
   // Dates pour les calendriers
@@ -202,6 +205,7 @@ export function ContratsPage() {
       date_fin: contrat.date_fin,
       conditions: contrat.conditions || '',
       notes: contrat.notes || '',
+      echeances: contrat.echeances || []
     });
     setEditDateDebut(new Date(contrat.date_debut));
     setEditDateFin(new Date(contrat.date_fin));
@@ -228,7 +232,7 @@ export function ContratsPage() {
     setDateFin(undefined);
   };
 
-  // Fonctions pour gérer les échéanciers
+  // Fonctions pour générer automatiquement les échéances
   const generateStandardEcheances = () => {
     const echeances = [
       {
@@ -400,6 +404,84 @@ export function ContratsPage() {
     return buttons;
   };
 
+  const getAvailableActions = (contrat: Contrat) => {
+    const actions = [];
+    
+    // Actions de base toujours disponibles
+    actions.push({
+      label: 'Voir les détails',
+      icon: <Eye size={14} />,
+      onClick: () => navigate(`/contrats/${contrat.id}`),
+      disabled: false
+    });
+    
+    actions.push({
+      label: 'Modifier',
+      icon: <Edit size={14} />,
+      onClick: () => openEditDialog(contrat),
+      disabled: false
+    });
+    
+    // Actions selon le statut
+    if (contrat.statut === 'brouillon') {
+      actions.push({
+        label: 'Activer',
+        icon: <Play size={14} />,
+        onClick: () => handleActionContrat(contrat, 'activer'),
+        disabled: activerContratMutation.isPending
+      });
+    }
+    
+    if (contrat.statut === 'actif') {
+      actions.push(
+        {
+          label: 'Terminer',
+          icon: <Check size={14} />,
+          onClick: () => handleActionContrat(contrat, 'terminer'),
+          disabled: terminerContratMutation.isPending
+        },
+        {
+          label: 'Suspendre',
+          icon: <Pause size={14} />,
+          onClick: () => handleActionContrat(contrat, 'suspendre'),
+          disabled: suspendreContratMutation.isPending
+        }
+      );
+    }
+    
+    if (contrat.statut === 'suspendu') {
+      actions.push({
+        label: 'Réactiver',
+        icon: <Play size={14} />,
+        onClick: () => handleActionContrat(contrat, 'activer'),
+        disabled: activerContratMutation.isPending
+      });
+    }
+    
+    // Actions destructives
+    if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut)) {
+      actions.push({
+        label: 'Annuler',
+        icon: <X size={14} />,
+        onClick: () => handleActionContrat(contrat, 'annuler'),
+        disabled: annulerContratMutation.isPending,
+        destructive: true
+      });
+    }
+    
+    if (contrat.statut === 'brouillon') {
+      actions.push({
+        label: 'Supprimer',
+        icon: <Trash2 size={14} />,
+        onClick: () => openDeleteDialog(contrat),
+        disabled: deleteContratMutation.isPending,
+        destructive: true
+      });
+    }
+    
+    return actions;
+  };
+
   return (
     <div className="max-w-8xl mx-auto space-y-6">
       {/* Header */}
@@ -522,30 +604,38 @@ export function ContratsPage() {
                     </TableCell>
                     <TableCell className="font-medium">{formatMontant(contrat.montant_ttc)}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => navigate(`/contrats/${contrat.id}`)}
-                        >
-                          <Eye size={14} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openEditDialog(contrat)}
-                        >
-                          <Edit size={14} />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => openDeleteDialog(contrat)}
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                        {getActionButtons(contrat)}
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Ouvrir menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          {getAvailableActions(contrat).map((action, index) => {
+                            // Ajouter un séparateur avant les actions destructives
+                            const isDestructive = action.destructive;
+                            const previousAction = getAvailableActions(contrat)[index - 1];
+                            const shouldAddSeparator = isDestructive && previousAction && !previousAction.destructive;
+                            
+                            return (
+                              <div key={index}>
+                                {shouldAddSeparator && <DropdownMenuSeparator />}
+                                <DropdownMenuItem
+                                  onClick={action.onClick}
+                                  disabled={action.disabled}
+                                  className={`flex items-center gap-2 ${
+                                    action.destructive ? 'text-red-600 focus:text-red-600' : ''
+                                  }`}
+                                >
+                                  {action.icon}
+                                  {action.label}
+                                </DropdownMenuItem>
+                              </div>
+                            );
+                          })}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

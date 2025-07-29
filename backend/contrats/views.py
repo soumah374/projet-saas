@@ -386,64 +386,63 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
         """Générer un échéancier standard pour un contrat"""
         contrat_id = request.data.get('contrat')
         type_echeancier = request.data.get('type', 'standard')  # standard, acompte_solde, etc.
+        echeances_contrat = request.data.get('echeances', [])
         
         try:
             contrat = Contrat.objects.get(id=contrat_id)
             
             # Supprimer les échéances existantes
             contrat.echeances.all().delete()
-            
+            echeances = []
             if type_echeancier == 'standard':
                 # Échéancier standard : 30% à la commande, 70% à la livraison
-                echeances = [
-                    {
-                        'type_echeance': 'acompte',
-                        'numero_echeance': 1,
-                        'pourcentage': 30,
-                        'date_echeance': contrat.date_debut,
-                        'commentaire': 'Acompte à la commande'
-                    },
-                    {
-                        'type_echeance': 'solde',
-                        'numero_echeance': 2,
-                        'pourcentage': 70,
-                        'date_echeance': contrat.date_fin,
-                        'commentaire': 'Solde à la livraison'
-                    }
-                ]
+                for echeance in echeances_contrat:
+                    echeances.append(echeance)
             elif type_echeancier == 'tranches':
                 # Échéancier en tranches : 25% à la commande, 25% à mi-parcours, 50% à la livraison
                 from datetime import timedelta
-                mi_parcours = contrat.date_debut + (contrat.date_fin - contrat.date_debut) / 2
-                
-                echeances = [
-                    {
-                        'type_echeance': 'acompte',
-                        'numero_echeance': 1,
-                        'pourcentage': 25,
-                        'date_echeance': contrat.date_debut,
-                        'commentaire': 'Acompte à la commande'
-                    },
-                    {
-                        'type_echeance': 'tranche',
-                        'numero_echeance': 2,
-                        'pourcentage': 25,
-                        'date_echeance': mi_parcours,
-                        'commentaire': 'Tranche à mi-parcours'
-                    },
-                    {
-                        'type_echeance': 'solde',
-                        'numero_echeance': 3,
-                        'pourcentage': 50,
-                        'date_echeance': contrat.date_fin,
-                        'commentaire': 'Solde à la livraison'
-                    }
-                ]
+                # mi_parcours = contrat.date_debut + (contrat.date_fin - contrat.date_debut) / 2
+                for i in range(len(echeances_contrat)):
+                    echeances.append(echeances_contrat[i])
+                    if i == 1:
+                        echeances[i]['date_echeance'] = contrat.date_debut + (contrat.date_fin - contrat.date_debut) / 2
+                # echeances = [
+                #     {
+                #         'type_echeance': 'acompte',
+                #         'numero_echeance': 1,
+                #         'pourcentage': 25,
+                #         'date_echeance': contrat.date_debut,
+                #         'commentaire': 'Acompte à la commande'
+                #     },
+                #     {
+                #         'type_echeance': 'tranche',
+                #         'numero_echeance': 2,
+                #         'pourcentage': 25,
+                #         'date_echeance': mi_parcours,
+                #         'commentaire': 'Tranche à mi-parcours'
+                #     },
+                #     {
+                #         'type_echeance': 'solde',
+                #         'numero_echeance': 3,
+                #         'pourcentage': 50,
+                #         'date_echeance': contrat.date_fin,
+                #         'commentaire': 'Solde à la livraison'
+                #     }
+                # ]
             
             # Créer les échéances
             for echeance_data in echeances:
+                # Calculer les montants basés sur le pourcentage
+                pourcentage = echeance_data.get('pourcentage', 0)
+                montant_ttc = (contrat.montant_ttc * pourcentage) / 100
+                montant_ht = (contrat.montant_ht * pourcentage) / 100
+                montant_tva = (contrat.montant_tva * pourcentage) / 100
+                
                 EcheancierContrat.objects.create(
                     contrat=contrat,
+                    montant_ht=montant_ht,
+                    montant_tva=montant_tva,
+                    montant_ttc=montant_ttc,
                     **echeance_data
                 )
             
