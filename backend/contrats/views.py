@@ -7,7 +7,6 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
 from datetime import date, timedelta, datetime
-from django.views.generic import TemplateView
 
 
 from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat
@@ -69,6 +68,8 @@ class ContratViewSet(viewsets.ModelViewSet):
         """Mettre à jour le contenu personnalisé du contrat"""
         contrat = self.get_object()
         contenu_personnalise = request.data.get('contenu_personnalise', '')
+        
+        print('contenu_personnalise', contenu_personnalise)
         
         contrat.contenu_personnalise = contenu_personnalise
         contrat.save()
@@ -278,6 +279,25 @@ class ContratViewSet(viewsets.ModelViewSet):
         })
 
     @action(detail=True, methods=['post'])
+    def archiver(self, request, pk=None):
+        """Archiver un contrat (changer le statut à archivé)"""
+        contrat = self.get_object()
+        
+        if contrat.statut == 'termine':
+            contrat.statut = 'archive'
+            contrat.save()
+        else:
+            return Response(
+                {'error': 'Seuls les contrats terminés peuvent être archivés'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return Response({
+            'message': 'Contrat archivé avec succès',
+            'statut': contrat.statut
+        })
+
+    @action(detail=True, methods=['post'])
     def annuler(self, request, pk=None):
         """Annuler un contrat (changer le statut à annulé)"""
         contrat = self.get_object()
@@ -469,15 +489,3 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
             'echeances_retard': EcheancierContratSerializer(echeances_retard, many=True).data,
             'total_alertes': echeances_3_jours.count() + echeances_retard.count()
         })
-
-class PrintContratView(TemplateView):
-    template_name = 'contrats/print_contrat.html'
-    def get(self, request, pk=None):
-        try:
-            contrat = Contrat.objects.get(id=pk)
-            return render(request, 'contrats/print_contrat.html', {'contrat': contrat})
-        except Contrat.DoesNotExist:
-            return Response(
-                {'error': 'Contrat introuvable'},
-                status=status.HTTP_404_NOT_FOUND
-            )

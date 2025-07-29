@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Clock,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  Archive
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -35,13 +36,15 @@ import {
   useTerminerContrat,
   useAnnulerContrat,
   useSuspendreContrat,
-  type Contrat
+  useArchiverContrat,
+  type Contrat,
+  useUpdateContratContent
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
-import { ContractEditor } from '@/components/ContractEditor';
+import { ContractEditor } from '@/components/contrats/ContractEditor';
 import { useEcheances } from '@/hooks/use-echeances';
 import { Echeance } from '@/lib/types';
-import { EditContratModal } from '@/components/EditContratModal';
+import { EditContratModal } from '@/components/contrats/EditContratModal';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -66,8 +69,10 @@ export function ContratDetailPage() {
   const deleteContratMutation = useDeleteContrat();
   const activerContratMutation = useActiverContrat();
   const terminerContratMutation = useTerminerContrat();
+  const archiverContratMutation = useArchiverContrat();
   const annulerContratMutation = useAnnulerContrat();
   const suspendreContratMutation = useSuspendreContrat();
+  const updateContratContentMutation = useUpdateContratContent();
 
   // Hook pour les échéances
   const {
@@ -132,6 +137,7 @@ export function ContratDetailPage() {
       date_echeance: string;
       commentaire: string;
     }>;
+    contenu_personnalise: string;
   }) => {
     if (!contrat) return;
 
@@ -146,7 +152,8 @@ export function ContratDetailPage() {
           date_fin: data.date_fin,
           conditions: data.conditions || '',
           notes: data.notes || '',
-          echeances: data.echeances
+          echeances: data.echeances,
+          contenu_personnalise: data.contenu_personnalise || ''
         }
       });
       
@@ -159,9 +166,9 @@ export function ContratDetailPage() {
 
   const handleSaveContractContent = async (contenuPersonnalise: string) => {
     if (!contrat) return;
-
+    console.log('contrat', contrat);
     try {
-      await updateContratMutation.mutateAsync({
+      await updateContratContentMutation.mutateAsync({
         id: contrat.id,
         data: {
           contenu_personnalise: contenuPersonnalise
@@ -201,6 +208,9 @@ export function ContratDetailPage() {
           break;
         case 'terminer':
           await terminerContratMutation.mutateAsync(contrat.id);
+          break;
+        case 'archiver':
+          await archiverContratMutation.mutateAsync(contrat.id);
           break;
         case 'suspendre':
           await suspendreContratMutation.mutateAsync(contrat.id);
@@ -360,6 +370,20 @@ export function ContratDetailPage() {
           Suspendre
         </Button>
       );
+    }
+
+    if (contrat.statut === 'termine') {
+      buttons.push(
+        <Button
+          key="archiver"
+          variant="outline"
+          onClick={() => handleActionContrat('archiver')}
+          disabled={archiverContratMutation.isPending}
+        >
+          <Archive size={16} className="mr-2" />
+          Archiver
+        </Button>
+      )
     }
     
     if (contrat.statut === 'suspendu') {

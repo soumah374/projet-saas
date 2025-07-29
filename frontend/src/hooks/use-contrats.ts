@@ -186,6 +186,23 @@ export const useUpdateContrat = () => {
   });
 };
 
+export const useUpdateContratContent = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => contratsAPI.updateContratContent(id, data),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      queryClient.invalidateQueries({ queryKey: ['contrat', id] });
+      toast.success('Contenu du contrat mis à jour avec succès');
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la mise à jour du contenu du contrat:', error);
+      toast.error('Erreur lors de la mise à jour du contenu du contrat');
+    },
+  });
+};
+
 export const useDeleteContrat = () => {
   const queryClient = useQueryClient();
   
@@ -233,6 +250,23 @@ export const useTerminerContrat = () => {
     onError: (error) => {
       console.error('Erreur lors de la finalisation du contrat:', error);
       toast.error('Erreur lors de la finalisation du contrat');
+    },
+  });
+};
+
+export const useArchiverContrat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: number) => contratsAPI.archiverContrat(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      queryClient.invalidateQueries({ queryKey: ['contrat', id] });
+      toast.success('Contrat archivé avec succès');
+    },
+    onError: (error) => {
+      console.error('Erreur lors de l\'archivage du contrat:', error);
+      toast.error('Erreur lors de l\'archivage du contrat');
     },
   });
 };

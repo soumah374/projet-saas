@@ -17,6 +17,7 @@ class Contrat(models.Model):
         ('termine', 'Terminé'),
         ('annule', 'Annulé'),
         ('suspendu', 'Suspendu'),
+        ('archive', 'Archivé'),
     ]
     
     # Numéro généré automatiquement
@@ -91,7 +92,7 @@ class Contrat(models.Model):
         
         # Créer les échéances si la configuration est fournie ET que le contrat n'est pas terminé
         if (self.echeances_contrat and isinstance(self.echeances_contrat, list) 
-            and self.statut not in ['termine', 'annule','actif','suspendu']):
+            and self.statut not in ['termine', 'annule','actif','suspendu','archive']):
             self.creer_echeances_depuis_configuration()
     
     def initialiser_montants_depuis_devis(self):
@@ -503,9 +504,9 @@ class Contrat(models.Model):
         
         for ligne in self.lignes.all():
             if ligne.description:
-                articles_content.append(f"• {ligne.description}")
+                articles_content.append(f"{ligne.description}")
             else:
-                articles_content.append(f"• {ligne.type_ligne}: {ligne.quantite} {ligne.unite.intitule}")
+                articles_content.append(f"{ligne.type_ligne}: {ligne.quantite} {ligne.unite.intitule}")
         
         return "\n".join(articles_content) if articles_content else "Prestations définies dans le devis"
 

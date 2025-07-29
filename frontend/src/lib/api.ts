@@ -672,11 +672,16 @@ export const contratsAPI = {
         conditions?: string;
         notes?: string;
     }) => api.patch(`/contrats/${id}/`, data),
+
+    updateContratContent: (id: number, data: {
+        contenu_personnalise: string;
+    }) => api.post(`/contrats/${id}/update_content/`, data),    
     
     deleteContrat: (id: number) => api.delete(`/contrats/${id}/`),
     
     activerContrat: (id: number) => api.post(`/contrats/${id}/activer/`),
     terminerContrat: (id: number) => api.post(`/contrats/${id}/terminer/`),
+    archiverContrat: (id: number) => api.post(`/contrats/${id}/archiver/`),
     annulerContrat: (id: number) => api.post(`/contrats/${id}/annuler/`),
     suspendreContrat: (id: number) => api.post(`/contrats/${id}/suspendre/`),
     calculerMontants: (id: number) => api.post(`/contrats/${id}/calculer_montants/`),
