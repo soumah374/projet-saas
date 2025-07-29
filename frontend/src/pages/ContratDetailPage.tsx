@@ -1102,20 +1102,20 @@ export function ContratDetailPage() {
                             {ligne.type_ligne}
                           </Badge>
                         </TableCell>
-                        <TableCell>{ligne.activity.intitule || ligne.ligne_frais.type_frais}</TableCell>
+                        <TableCell>{ligne.activity?.intitule || ligne.ligne_frais?.type_frais || '—'}</TableCell>
                         <TableCell>{ligne.quantite}</TableCell>
-                        <TableCell>{ligne.unite.intitule}</TableCell>
+                        <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
                         <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
                         <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
                         <TableCell>
-                          {ligne.intervenants.length > 0 ? (
+                          {ligne.intervenants && ligne.intervenants.length > 0 ? (
                             <div className="space-y-1">
                               {ligne.intervenants.map((intervenant) => (
                                 <div key={intervenant.id} className="text-sm">
-                                  <span className="font-medium">{intervenant.profile_intervenant.intitule}</span>
+                                  <span className="font-medium">{intervenant.profile_intervenant?.intitule || '—'}</span>
                                   <br />
                                   <span className="text-gray-600">
-                                    {intervenant.temps_intervenant}h × {formatMontant(intervenant.taux_horaire)}/h
+                                    {intervenant.temps_intervenant || 0}h × {formatMontant(intervenant.taux_horaire || 0)}/h
                                   </span>
                                 </div>
                               ))}
