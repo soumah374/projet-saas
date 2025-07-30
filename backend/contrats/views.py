@@ -614,11 +614,14 @@ class AvenantViewSet(viewsets.ModelViewSet):
     def download_pdf(self, request, pk=None, contrat_pk=None):
         """Télécharger le PDF d'un avenant"""
         avenant = self.get_object()
-        
         try:
-            pdf_content = avenant.generer_pdf()
-            
-            response = HttpResponse(pdf_content, content_type='application/pdf')
+            html_string = render_to_string('contrats/print_avenant.html', {
+                'avenant': avenant
+            })
+            font_config = FontConfiguration()
+            html_doc = HTML(string=html_string)
+            pdf = html_doc.write_pdf(font_config=font_config)
+            response = HttpResponse(pdf, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="avenant_{avenant.numero}.pdf"'
             return response
             

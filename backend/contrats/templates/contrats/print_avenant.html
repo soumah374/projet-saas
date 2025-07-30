@@ -16,7 +16,26 @@
   </head>
   <body>
     <div class="container">
-      <p>{{ avenant.contenu_personnalise|safe }}</p>
+      <h1>
+        Avenant {{ avenant.numero }} pour le contrat {{ avenant.contrat.numero
+        }}
+      </h1>
+      <p>
+        <strong>Intitulé de l'avenant :</strong> {{ avenant.intitule_avenant }}
+      </p>
+      <p><strong>Objet de l'avenant :</strong> {{ avenant.objet_avenant }}</p>
+      <p>
+        <strong>Type de modification :</strong> {{ avenant.type_modification }}
+      </p>
+      {% for modification in avenant.modifications %}
+      <p><strong>{{ modification.clause }}</strong></p>
+      <p><strong>Ancienne version :</strong></p>
+      <p>{{ modification.ancienne_version|safe }}</p>
+      <p><strong>Nouvelle version :</strong></p>
+      <p>{{ modification.nouvelle_version|safe }}</p>
+      <p><strong>Contenu personnalisé :</strong></p>
+      <p>{{ modification.contenu_personnalise|safe }}</p>
+      {% endfor %}
 
       <table
         style="
