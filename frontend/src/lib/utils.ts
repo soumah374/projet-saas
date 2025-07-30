@@ -18,3 +18,26 @@ export function safeParseDate(date?: string | Date | null): Date | null {
   const parsed = typeof date === 'string' ? new Date(date) : date;
   return parsed instanceof Date && !isNaN(parsed.getTime()) ? parsed : null;
 }
+
+export function statutContrat(statut: string) {
+  switch (statut) {
+    case 'actif':
+      return 'Actif';
+    case 'suspendu':
+      return 'Suspendu';
+    case 'signe':
+      return 'Signé';
+    case 'termine':
+      return 'Clôturé';
+    case 'annule':
+      return 'Annulé';
+    case 'envoye':
+      return 'Envoyé';
+    case 'brouillon':
+      return 'Brouillon';
+    case 'archive':
+      return 'Archivé';
+    default:
+      return statut;
+  }
+}

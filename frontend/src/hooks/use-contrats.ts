@@ -19,7 +19,7 @@ export interface Contrat {
   date_creation: string;
   date_debut: string;
   date_fin: string;
-  statut: 'brouillon' | 'actif' | 'termine' | 'annule' | 'suspendu';
+  statut: 'brouillon' | 'actif' | 'termine' | 'annule' | 'suspendu' | 'signe' | 'envoye';
   statut_display: string;
   taux_tva: number;
   appliquer_tva: boolean;

@@ -50,6 +50,7 @@ import { ContractEditor } from '@/components/contrats/ContractEditor';
 import { useEcheances } from '@/hooks/use-echeances';
 import { Echeance } from '@/lib/types';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
+import { statutContrat } from '@/lib/utils';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -293,7 +294,7 @@ export function ContratDetailPage() {
       suspendu: 'destructive',
     } as const;
     
-    return <Badge variant={variants[statut as keyof typeof variants]}>{statut}</Badge>;
+    return <Badge variant={variants[statut as keyof typeof variants]}>{statutContrat(statut)}</Badge>;
   };
 
   const getEcheanceStatutBadge = (echeance: Echeance) => {
@@ -405,7 +406,7 @@ export function ContratDetailPage() {
       );
     }
     
-    if (contrat.statut === 'actif' || contrat.statut === 'envoye') {
+    if (contrat.statut === 'actif' || contrat.statut === 'envoye' || contrat.statut === 'signe') {
       buttons.push(
         <Button
           key="terminer"
@@ -414,7 +415,7 @@ export function ContratDetailPage() {
           disabled={terminerContratMutation.isPending}
         >
           <Check size={16} className="mr-2" />
-          Terminer
+          Clôturer
         </Button>,
         <Button
           key="suspendre"
@@ -453,9 +454,7 @@ export function ContratDetailPage() {
                     }
                     setIsSigning(true);
                     try {
-                      const formData = new FormData();
-                      formData.append('fichier_signe', fileToSign);
-                      await signerContratMutation.mutateAsync({ id: contrat.id, fichier_signe: formData.get('fichier_signe') as File });
+                      await signerContratMutation.mutateAsync({ id: contrat.id, fichier_signe: fileToSign });
                       toast.success("Contrat signé et uploadé avec succès !");
                       setShowSignModal(false);
                       setFileToSign(null);
@@ -496,6 +495,36 @@ export function ContratDetailPage() {
             </div>
           )}
         </React.Fragment>
+      );
+    }
+
+    if (contrat.statut === 'signe') {
+      buttons.push(
+        <div key="contrat-signe" className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <CheckCircle className="text-green-600" size={20} />
+          <div>
+            <p className="text-sm font-medium text-green-800">Contrat signé</p>
+            <p className="text-xs text-green-600">
+              {contrat.fichier_signe ? 'Fichier disponible' : 'En attente de fichier'}
+            </p>
+          </div>
+          {contrat.fichier_signe && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const link = document.createElement('a');
+                link.href = contrat.fichier_signe;
+                link.target = '_blank';
+                link.download = `contrat_${contrat.numero}_signe.pdf`;
+                link.click();
+              }}
+            >
+              <FileText size={14} className="mr-2" />
+              Télécharger
+            </Button>
+          )}
+        </div>
       );
     }
 
@@ -578,7 +607,7 @@ export function ContratDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={openEditDialog} variant="outline">
+          <Button onClick={openEditDialog} variant="outline" disabled={contrat.statut === 'archive'}>
             <Edit size={16} className="mr-2" />
             Modifier
           </Button>
@@ -650,6 +679,34 @@ export function ContratDetailPage() {
                   <p className="font-medium">{formatDate(contrat.updated_at)}</p>
                 </div>
               </div>
+              
+              {/* Affichage du fichier signé */}
+              {contrat.fichier_signe && (
+                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <FileText className="text-green-600" size={20} />
+                    <div className="flex-1">
+                      <Label className="text-sm font-medium text-green-800">Contrat signé</Label>
+                      <p className="text-sm text-green-700">
+                        Fichier uploadé le {formatDate(contrat.updated_at)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = contrat.fichier_signe;
+                        link.download = `contrat_${contrat.numero}_signe.pdf`;
+                        link.click();
+                      }}
+                    >
+                      <FileText size={14} className="mr-2" />
+                      Télécharger
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -913,10 +970,12 @@ export function ContratDetailPage() {
                               size="sm"
                               onClick={() => handleMarquerPaye(echeance.id)}
                               className="bg-green-600 hover:bg-green-700"
+                              disabled={contrat.statut === 'archive'}
                             >
                               <CheckCircle size={14} className="mr-1" />
                               Marquer comme payé
                             </Button>
+
                             {echeance.doit_alerter && (
                               <Button 
                                 size="sm"

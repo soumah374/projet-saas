@@ -103,6 +103,7 @@ class ContratSerializer(serializers.ModelSerializer):
     client_id = serializers.IntegerField(write_only=True)
     devis_id = serializers.IntegerField(write_only=True)
     
+    
     class Meta:
         model = Contrat
         fields = [
@@ -110,11 +111,11 @@ class ContratSerializer(serializers.ModelSerializer):
             'date_creation', 'date_debut', 'date_fin', 'statut',
             'taux_tva', 'appliquer_tva', 'montant_ht', 'montant_tva', 'montant_ttc',
             'conditions', 'notes', 'contenu_personnalise', 'variables_personnalisees',
-            'echeances_contrat', 'lignes', 'echeances', 'created_at', 'updated_at'
+            'echeances_contrat', 'lignes', 'echeances', 'created_at', 'updated_at','fichier_signe'
         ]
         read_only_fields = [
             'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 'montant_ttc',
-            'contenu_personnalise', 'variables_personnalisees', 'created_at', 'updated_at'
+            'contenu_personnalise', 'variables_personnalisees', 'created_at', 'updated_at','fichier_signe'
         ]
 
 
@@ -165,12 +166,13 @@ class ContratDetailSerializer(serializers.ModelSerializer):
             'taux_frais_agence', 'appliquer_frais_agence',
             'montant_ht', 'montant_tva', 'montant_frais_agence', 'montant_ttc',
             'conditions', 'notes', 'lignes', 'echeances', 'created_at', 'updated_at', 
-            'contenu_personnalise', 'variables_personnalisees', 'echeances_contrat'
+            'contenu_personnalise', 'variables_personnalisees', 'echeances_contrat',
+            'fichier_signe'
         ]
         read_only_fields = [
             'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 
             'montant_frais_agence', 'montant_ttc', 'contenu_personnalise', 
-            'variables_personnalisees', 'created_at', 'updated_at'
+            'variables_personnalisees', 'created_at', 'updated_at', 'fichier_signe'
         ]
 
 

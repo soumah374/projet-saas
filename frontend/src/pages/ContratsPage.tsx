@@ -260,7 +260,7 @@ export function ContratsPage() {
     if (contrat.statut === 'actif') {
       actions.push(
         {
-          label: 'Terminer',
+          label: 'Clôturer',
           icon: <Check size={14} />,
           onClick: () => handleActionContrat(contrat, 'terminer'),
           disabled: terminerContratMutation.isPending
@@ -274,7 +274,7 @@ export function ContratsPage() {
       );
     }
 
-    if (contrat.statut === 'termine') {
+    if (contrat.statut === 'termine' || contrat.statut === 'signe') {
       actions.push({
         label: 'Archiver',
         icon: <Archive size={14} />,

@@ -252,7 +252,7 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        contrat.statut = 'actif'
+        contrat.statut = 'envoye'
         contrat.save()
         
         return Response({
@@ -265,9 +265,9 @@ class ContratViewSet(viewsets.ModelViewSet):
         """Terminer un contrat (changer le statut à terminé)"""
         contrat = self.get_object()
         
-        if contrat.statut not in ['actif', 'suspendu']:
+        if contrat.statut not in ['actif', 'suspendu', 'signe', 'envoye']:
             return Response(
-                {'error': 'Seuls les contrats actifs ou suspendus peuvent être terminés'},
+                {'error': 'Seuls les contrats actifs, suspendus, signés, envoyés ou brouillons peuvent être terminés'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -423,9 +423,9 @@ class ContratViewSet(viewsets.ModelViewSet):
         """Suspendre un contrat (changer le statut à suspendu)"""
         contrat = self.get_object()
         
-        if contrat.statut != 'actif':
+        if contrat.statut not in ['actif', 'signe']:
             return Response(
-                {'error': 'Seuls les contrats actifs peuvent être suspendus'},
+                {'error': 'Seuls les contrats actifs ou signés peuvent être suspendus'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         

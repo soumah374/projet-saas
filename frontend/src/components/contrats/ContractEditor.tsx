@@ -156,6 +156,7 @@ export function ContractEditor({ contrat, devis, onSave }: ContractEditorProps) 
           <Button
               variant="outline"
               onClick={handleSaveEditedContract}
+              disabled={contrat.statut === 'archive'}
             >
               <Save size={16} className="mr-2" />
               Sauvegarder
