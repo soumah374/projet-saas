@@ -27,7 +27,7 @@ export function statutContrat(statut: string) {
       return 'Suspendu';
     case 'signe':
       return 'Signé';
-    case 'termine':
+    case 'cloture':
       return 'Clôturé';
     case 'annule':
       return 'Annulé';
@@ -37,6 +37,8 @@ export function statutContrat(statut: string) {
       return 'Brouillon';
     case 'archive':
       return 'Archivé';
+    case 'termine':
+      return 'Terminé';
     default:
       return statut;
   }

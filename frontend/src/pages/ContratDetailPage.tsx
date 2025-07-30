@@ -352,14 +352,6 @@ export function ContratDetailPage() {
     
     if (contrat.statut === 'brouillon') {
       buttons.push(
-        // <Button
-        //   key="activer"
-        //   onClick={() => handleActionContrat('activer')}
-        //   disabled={activerContratMutation.isPending}
-        // >
-        //   <Play size={16} className="mr-2" />
-        //   Activer
-        // </Button>,
         <React.Fragment key="envoyer-section">
           <Button
             key="envoyer"
@@ -529,7 +521,7 @@ export function ContratDetailPage() {
     }
 
 
-    if (contrat.statut === 'termine') {
+    if (contrat.statut === 'cloture') {
       buttons.push(
         <Button
           key="archiver"
@@ -697,6 +689,7 @@ export function ContratDetailPage() {
                       onClick={() => {
                         const link = document.createElement('a');
                         link.href = contrat.fichier_signe;
+                        link.target = '_blank';
                         link.download = `contrat_${contrat.numero}_signe.pdf`;
                         link.click();
                       }}
