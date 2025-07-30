@@ -3,6 +3,7 @@ import django.template.loader
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
@@ -296,6 +297,107 @@ class ContratViewSet(viewsets.ModelViewSet):
             'message': 'Contrat archivé avec succès',
             'statut': contrat.statut
         })
+    
+    @action(detail=True, methods=['post'])
+    def envoyer(self, request, pk=None):
+        """
+        Envoyer un contrat (changer le statut à envoyé et envoyer le PDF par email)
+        """
+        from django.core.mail import EmailMessage
+        from django.conf import settings
+
+        contrat = self.get_object()
+        contrat.statut = 'envoye'
+        contrat.save()
+
+        # Générer le PDF du contrat
+        try:
+            html_string = render_to_string('contrats/print_contrat.html', {
+                'contrat': contrat
+            })
+            font_config = FontConfiguration()
+            html_doc = HTML(string=html_string)
+            pdf = html_doc.write_pdf(font_config=font_config)
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        # Préparer l'email
+        destinataire = None
+        # On tente de récupérer l'email du client lié au contrat
+        if hasattr(contrat.client, 'user') and hasattr(contrat.client.user, 'email'):
+            destinataire = contrat.client.user.email
+        elif hasattr(contrat.client, 'email'):
+            destinataire = contrat.client.email
+
+        if not destinataire:
+            return Response(
+                {'error': "Impossible de trouver l'email du client pour l'envoi du contrat."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        sujet = f"Votre contrat n°{contrat.numero}"
+        message = (
+            f"Bonjour,\n\n"
+            f"Veuillez trouver ci-joint votre contrat (n°{contrat.numero}).\n\n"
+            f"Cordialement,\n"
+            f"L'équipe {getattr(settings, 'PROJECT_NAME', 'de la plateforme')}"
+        )
+
+        email = EmailMessage(
+            subject=sujet,
+            body=message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+            to=[destinataire],
+        )
+        email.attach(f"contrat_{contrat.numero}.pdf", pdf, "application/pdf")
+
+        try:
+            email.send()
+        except Exception as e:
+            return Response(
+                {'error': f"Erreur lors de l'envoi de l'email: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response({
+            'message': 'Contrat envoyé avec succès (PDF envoyé par email)',
+            'statut': contrat.statut
+        })
+
+    @action(
+        detail=True,
+        methods=['post'],
+        parser_classes=[MultiPartParser, FormParser],
+        url_path='signer'
+    )
+    def signer(self, request, pk=None):
+        """
+        Permet de marquer le contrat comme signé et d'uploader le contrat signé (PDF ou image).
+        Le fichier doit être envoyé dans le champ 'fichier_signe' du formulaire multipart.
+        """
+        contrat = self.get_object()
+
+        # Vérifier la présence du fichier signé
+        fichier_signe = request.FILES.get('fichier_signe')
+        if not fichier_signe:
+            return Response(
+                {'error': "Veuillez fournir le fichier du contrat signé (champ 'fichier_signe')."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Enregistrer le fichier signé dans le champ du modèle Contrat
+        contrat.fichier_signe = fichier_signe
+        contrat.statut = 'signe'
+        contrat.save()
+
+        return Response({
+            'message': 'Contrat signé et fichier uploadé avec succès',
+            'statut': contrat.statut
+        })
+
 
     @action(detail=True, methods=['post'])
     def annuler(self, request, pk=None):

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -23,7 +24,9 @@ import {
   Clock,
   CheckCircle,
   RefreshCw,
-  Archive
+  Archive,
+  Send,
+  Lock
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -38,7 +41,9 @@ import {
   useSuspendreContrat,
   useArchiverContrat,
   type Contrat,
-  useUpdateContratContent
+  useUpdateContratContent,
+  useEnvoyerContrat,
+  useSignerContrat
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
@@ -58,6 +63,10 @@ export function ContratDetailPage() {
   const [echeancierDialogOpen, setEcheancierDialogOpen] = useState(false);
   const [selectedEcheancierType, setSelectedEcheancierType] = useState<string>('');
   const [showContractEditor, setShowContractEditor] = useState(false);
+  const [showConfirmSendModal, setShowConfirmSendModal] = useState(false);
+  const [showSignModal, setShowSignModal] = useState(false);
+  const [fileToSign, setFileToSign] = useState<File | null>(null);
+  const [isSigning, setIsSigning] = useState(false);
 
   // États pour les filtres d'échéances
   const [filterStatut, setFilterStatut] = useState<string>('all');
@@ -73,7 +82,8 @@ export function ContratDetailPage() {
   const annulerContratMutation = useAnnulerContrat();
   const suspendreContratMutation = useSuspendreContrat();
   const updateContratContentMutation = useUpdateContratContent();
-
+  const envoyerContratMutation = useEnvoyerContrat();
+  const signerContratMutation = useSignerContrat();
   // Hook pour les échéances
   const {
     echeances,
@@ -215,6 +225,9 @@ export function ContratDetailPage() {
         case 'suspendre':
           await suspendreContratMutation.mutateAsync(contrat.id);
           break;
+        case 'envoyer':
+          await envoyerContratMutation.mutateAsync(contrat.id);
+          break;
       }
     } catch (err) {
       // Error handled by hook
@@ -338,18 +351,61 @@ export function ContratDetailPage() {
     
     if (contrat.statut === 'brouillon') {
       buttons.push(
-        <Button
-          key="activer"
-          onClick={() => handleActionContrat('activer')}
-          disabled={activerContratMutation.isPending}
-        >
-          <Play size={16} className="mr-2" />
-          Activer
-        </Button>
+        // <Button
+        //   key="activer"
+        //   onClick={() => handleActionContrat('activer')}
+        //   disabled={activerContratMutation.isPending}
+        // >
+        //   <Play size={16} className="mr-2" />
+        //   Activer
+        // </Button>,
+        <React.Fragment key="envoyer-section">
+          <Button
+            key="envoyer"
+            onClick={() => setShowConfirmSendModal(true)}
+            disabled={envoyerContratMutation.isPending}
+          >
+            <Send size={16} className="mr-2" />
+            Envoyer
+          </Button>
+          {showConfirmSendModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
+                <h2 className="text-lg font-semibold mb-2">Confirmer l'envoi du contrat</h2>
+                <p className="mb-4">Voulez-vous vraiment envoyer ce contrat au client ?</p>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowConfirmSendModal(false)}
+                    disabled={envoyerContratMutation.isPending}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      setShowConfirmSendModal(false);
+                      await handleActionContrat('envoyer');
+                    }}
+                    disabled={envoyerContratMutation.isPending}
+                  >
+                    {envoyerContratMutation.isPending ? (
+                      <span>Envoi...</span>
+                    ) : (
+                      <>
+                        <Send size={16} className="mr-2" />
+                        Confirmer l'envoi
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </React.Fragment>
       );
     }
     
-    if (contrat.statut === 'actif') {
+    if (contrat.statut === 'actif' || contrat.statut === 'envoye') {
       buttons.push(
         <Button
           key="terminer"
@@ -371,6 +427,78 @@ export function ContratDetailPage() {
         </Button>
       );
     }
+
+    if (contrat.statut === 'envoye') {
+      buttons.push(
+        <React.Fragment key="cloturer-section">
+          <Button
+            key="cloturer"
+            variant="outline"
+            onClick={() => setShowSignModal(true)}
+          >
+            <Lock size={16} className="mr-2" />
+            Clôturer (Uploader le contrat signé)
+          </Button>
+          {/* Modal d'upload du contrat signé */}
+          {showSignModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+              <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+                <h2 className="text-lg font-semibold mb-4">Uploader le contrat signé</h2>
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!fileToSign) {
+                      toast.error("Veuillez sélectionner un fichier à uploader.");
+                      return;
+                    }
+                    setIsSigning(true);
+                    try {
+                      const formData = new FormData();
+                      formData.append('fichier_signe', fileToSign);
+                      await signerContratMutation.mutateAsync({ id: contrat.id, fichier_signe: formData.get('fichier_signe') as File });
+                      toast.success("Contrat signé et uploadé avec succès !");
+                      setShowSignModal(false);
+                      setFileToSign(null);
+                    } catch (err) {
+                      toast.error("Erreur lors de l'upload du contrat signé.");
+                    } finally {
+                      setIsSigning(false);
+                    }
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept="application/pdf,image/*"
+                    onChange={e => setFileToSign(e.target.files?.[0] || null)}
+                    className="mb-4"
+                  />
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowSignModal(false);
+                        setFileToSign(null);
+                      }}
+                      disabled={isSigning}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSigning || !fileToSign}
+                    >
+                      {isSigning ? "Envoi..." : "Uploader"}
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </React.Fragment>
+      );
+    }
+
 
     if (contrat.statut === 'termine') {
       buttons.push(

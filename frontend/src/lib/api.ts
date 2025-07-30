@@ -685,9 +685,11 @@ export const contratsAPI = {
     annulerContrat: (id: number) => api.post(`/contrats/${id}/annuler/`),
     suspendreContrat: (id: number) => api.post(`/contrats/${id}/suspendre/`),
     calculerMontants: (id: number) => api.post(`/contrats/${id}/calculer_montants/`),
-    
+    envoyerContrat: (id: number) => api.post(`/contrats/${id}/envoyer/`),
     getDevisDisponibles: () => api.get('/contrats/devis_disponibles/'),
-    
+    signerContrat: (id: number, fichier_signe: File) => api.post(`/contrats/${id}/signer/`, { fichier_signe }, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
     // Lignes de contrat
     getLignesContrat: (contratId: number) => api.get(`/contrats/lignes/?contrat_id=${contratId}`),
     createLigneContrat: (data: any) => api.post('/contrats/lignes/', data),

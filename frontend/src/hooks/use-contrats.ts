@@ -203,6 +203,41 @@ export const useUpdateContratContent = () => {
   });
 };
 
+export const useEnvoyerContrat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: number) => contratsAPI.envoyerContrat(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      queryClient.invalidateQueries({ queryKey: ['contrat', id] });
+      toast.success('Contrat envoyé avec succès');
+    },
+    onError: (error) => {
+      console.error('Erreur lors de l\'envoi du contrat:', error);
+      toast.error('Erreur lors de l\'envoi du contrat');
+    },
+  });
+};
+
+
+export const useSignerContrat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: { id: number; fichier_signe: File }) => contratsAPI.signerContrat(data.id, data.fichier_signe),
+    onSuccess: (_, data) => {
+      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      queryClient.invalidateQueries({ queryKey: ['contrat', data.id] });
+      toast.success('Contrat signé avec succès');
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la signature du contrat:', error);
+      toast.error('Erreur lors de la signature du contrat');
+    },
+  });
+}; 
+
 export const useDeleteContrat = () => {
   const queryClient = useQueryClient();
   
