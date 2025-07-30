@@ -36,14 +36,14 @@ import {
   useUpdateContrat,
   useDeleteContrat,
   useActiverContrat,
-  useTerminerContrat,
   useAnnulerContrat,
   useSuspendreContrat,
   useArchiverContrat,
   type Contrat,
   useUpdateContratContent,
   useEnvoyerContrat,
-  useSignerContrat
+  useSignerContrat,
+  useCloturerContrat
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
@@ -78,7 +78,7 @@ export function ContratDetailPage() {
   const updateContratMutation = useUpdateContrat();
   const deleteContratMutation = useDeleteContrat();
   const activerContratMutation = useActiverContrat();
-  const terminerContratMutation = useTerminerContrat();
+  const cloturerContratMutation = useCloturerContrat();
   const archiverContratMutation = useArchiverContrat();
   const annulerContratMutation = useAnnulerContrat();
   const suspendreContratMutation = useSuspendreContrat();
@@ -217,8 +217,8 @@ export function ContratDetailPage() {
         case 'activer':
           await activerContratMutation.mutateAsync(contrat.id);
           break;
-        case 'terminer':
-          await terminerContratMutation.mutateAsync(contrat.id);
+        case 'cloturer':
+          await cloturerContratMutation.mutateAsync(contrat.id);
           break;
         case 'archiver':
           await archiverContratMutation.mutateAsync(contrat.id);
@@ -411,8 +411,8 @@ export function ContratDetailPage() {
         <Button
           key="terminer"
           variant="outline"
-          onClick={() => handleActionContrat('terminer')}
-          disabled={terminerContratMutation.isPending}
+          onClick={() => handleActionContrat('cloturer')}
+          disabled={cloturerContratMutation.isPending}
         >
           <Check size={16} className="mr-2" />
           Clôturer

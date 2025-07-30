@@ -680,7 +680,7 @@ export const contratsAPI = {
     deleteContrat: (id: number) => api.delete(`/contrats/${id}/`),
     
     activerContrat: (id: number) => api.post(`/contrats/${id}/activer/`),
-    terminerContrat: (id: number) => api.post(`/contrats/${id}/terminer/`),
+    cloturerContrat: (id: number) => api.post(`/contrats/${id}/cloturer/`),
     archiverContrat: (id: number) => api.post(`/contrats/${id}/archiver/`),
     annulerContrat: (id: number) => api.post(`/contrats/${id}/annuler/`),
     suspendreContrat: (id: number) => api.post(`/contrats/${id}/suspendre/`),

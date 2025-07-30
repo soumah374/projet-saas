@@ -19,7 +19,7 @@ export interface Contrat {
   date_creation: string;
   date_debut: string;
   date_fin: string;
-  statut: 'brouillon' | 'actif' | 'termine' | 'annule' | 'suspendu' | 'signe' | 'envoye';
+  statut: 'brouillon' | 'actif' | 'cloture' | 'annule' | 'suspendu' | 'signe' | 'envoye';
   statut_display: string;
   taux_tva: number;
   appliquer_tva: boolean;
@@ -272,19 +272,19 @@ export const useActiverContrat = () => {
   });
 };
 
-export const useTerminerContrat = () => {
+export const useCloturerContrat = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: number) => contratsAPI.terminerContrat(id),
+    mutationFn: (id: number) => contratsAPI.cloturerContrat(id),
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ['contrats'] });
       queryClient.invalidateQueries({ queryKey: ['contrat', id] });
-      toast.success('Contrat terminé avec succès');
+      toast.success('Contrat clôturé avec succès');
     },
     onError: (error) => {
-      console.error('Erreur lors de la finalisation du contrat:', error);
-      toast.error('Erreur lors de la finalisation du contrat');
+      console.error('Erreur lors de la clôture du contrat:', error);
+      toast.error('Erreur lors de la clôture du contrat');
     },
   });
 };

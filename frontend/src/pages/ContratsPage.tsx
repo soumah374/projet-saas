@@ -16,7 +16,7 @@ import {
   useUpdateContrat,
   useDeleteContrat,
   useActiverContrat,
-  useTerminerContrat,
+  useCloturerContrat,
   useAnnulerContrat,
   useSuspendreContrat,
   useDevisDisponibles,
@@ -26,6 +26,7 @@ import {
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
 import { CreateContratModal } from '@/components/contrats/CreateContratModal';
+import { statutContrat } from '@/lib/utils';
 
 export function ContratsPage() {
   const navigate = useNavigate();
@@ -54,7 +55,7 @@ export function ContratsPage() {
   const updateContratMutation = useUpdateContrat();
   const deleteContratMutation = useDeleteContrat();
   const activerContratMutation = useActiverContrat();
-  const terminerContratMutation = useTerminerContrat();
+  const cloturerContratMutation = useCloturerContrat();
   const archiverContratMutation = useArchiverContrat();
   const annulerContratMutation = useAnnulerContrat();
   const suspendreContratMutation = useSuspendreContrat();
@@ -115,8 +116,8 @@ export function ContratsPage() {
         case 'activer':
           await activerContratMutation.mutateAsync(contrat.id);
           break;
-        case 'terminer':
-          await terminerContratMutation.mutateAsync(contrat.id);
+        case 'cloturer':
+          await cloturerContratMutation.mutateAsync(contrat.id);
           break;
         case 'archiver':
           await archiverContratMutation.mutateAsync(contrat.id);
@@ -152,7 +153,7 @@ export function ContratsPage() {
       suspendu: 'destructive',
     } as const;
     
-    return <Badge variant={variants[statut as keyof typeof variants]}>{statut}</Badge>;
+    return <Badge variant={variants[statut as keyof typeof variants]}>{statutContrat(statut)}</Badge>;
   };
 
   const getActionButtons = (contrat: Contrat) => {
@@ -175,14 +176,14 @@ export function ContratsPage() {
     if (contrat.statut === 'actif') {
       buttons.push(
         <Button
-          key="terminer"
+          key="cloturer"
           size="sm"
           variant="outline"
-          onClick={() => handleActionContrat(contrat, 'terminer')}
-          disabled={terminerContratMutation.isPending}
+          onClick={() => handleActionContrat(contrat, 'cloturer')}
+          disabled={cloturerContratMutation.isPending}
         >
           <Check size={14} className="mr-1" />
-          Terminer
+          Clôturer
         </Button>,
         <Button
           key="suspendre"
@@ -262,8 +263,8 @@ export function ContratsPage() {
         {
           label: 'Clôturer',
           icon: <Check size={14} />,
-          onClick: () => handleActionContrat(contrat, 'terminer'),
-          disabled: terminerContratMutation.isPending
+          onClick: () => handleActionContrat(contrat, 'cloturer'),
+          disabled: cloturerContratMutation.isPending
         },
         {
           label: 'Suspendre',
@@ -274,7 +275,7 @@ export function ContratsPage() {
       );
     }
 
-    if (contrat.statut === 'termine' || contrat.statut === 'signe') {
+    if (contrat.statut === 'cloture' || contrat.statut === 'signe') {
       actions.push({
         label: 'Archiver',
         icon: <Archive size={14} />,
@@ -464,7 +465,7 @@ export function ContratsPage() {
                       {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
+                      {contrat.devis.appliquer_frais_agence ? `${contrat.devis.taux_frais_agence}%` : '—'}
                     </TableCell>
                     <TableCell className="font-medium">{formatMontant(contrat.montant_ttc)}</TableCell>
                     <TableCell>

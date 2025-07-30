@@ -261,21 +261,21 @@ class ContratViewSet(viewsets.ModelViewSet):
         })
 
     @action(detail=True, methods=['post'])
-    def terminer(self, request, pk=None):
-        """Terminer un contrat (changer le statut à terminé)"""
+    def cloturer(self, request, pk=None):
+        """Clôturer un contrat (changer le statut à terminé)"""
         contrat = self.get_object()
         
         if contrat.statut not in ['actif', 'suspendu', 'signe', 'envoye']:
             return Response(
-                {'error': 'Seuls les contrats actifs, suspendus, signés, envoyés ou brouillons peuvent être terminés'},
+                {'error': 'Seuls les contrats actifs, suspendus, signés, envoyés ou brouillons peuvent être clôturés'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        contrat.statut = 'termine'
+        contrat.statut = 'cloture'
         contrat.save()
         
         return Response({
-            'message': 'Contrat terminé avec succès',
+            'message': 'Contrat clôturé avec succès',
             'statut': contrat.statut
         })
 
