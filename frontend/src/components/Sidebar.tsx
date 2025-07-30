@@ -24,7 +24,8 @@ import {
   Currency,
   DollarSign,
   Wrench,
-  FileCheck
+  FileCheck,
+  FileEdit
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -204,6 +205,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 <FileCheck className="h-5 w-5" />
                 <span>Contrats</span>
             </Link>
+
             {/* Projets accordéon */}
             <div className="space-y-2">
               <button 

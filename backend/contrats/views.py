@@ -8,13 +8,16 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q
 from django.utils import timezone
 from datetime import date, timedelta, datetime
+from django.core.mail import EmailMessage
+from django.conf import settings
 
 
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat
+from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant
 from .serializers import (
     ContratSerializer, ContratCreateSerializer, ContratDetailSerializer,
     LigneContratSerializer, LigneContratIntervenantSerializer,
-    EcheancierContratSerializer, EcheancierContratCreateSerializer
+    EcheancierContratSerializer, EcheancierContratCreateSerializer,
+    AvenantSerializer, AvenantCreateSerializer, AvenantDetailSerializer
 )
 from devis.models import Devis
 
@@ -303,9 +306,6 @@ class ContratViewSet(viewsets.ModelViewSet):
         """
         Envoyer un contrat (changer le statut à envoyé et envoyer le PDF par email)
         """
-        from django.core.mail import EmailMessage
-        from django.conf import settings
-
         contrat = self.get_object()
         contrat.statut = 'envoye'
         contrat.save()
@@ -591,3 +591,208 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
             'echeances_retard': EcheancierContratSerializer(echeances_retard, many=True).data,
             'total_alertes': echeances_3_jours.count() + echeances_retard.count()
         })
+
+
+class AvenantViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les avenants de contrats"""
+    queryset = Avenant.objects.all()
+    serializer_class = AvenantSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['contrat', 'statut', 'type_modification']
+    search_fields = ['numero', 'intitule_avenant', 'objet_avenant']
+    ordering_fields = ['date_creation', 'date_signature', 'numero']
+    ordering = ['-date_creation']
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return AvenantCreateSerializer
+        elif self.action in ['retrieve', 'update', 'partial_update']:
+            return AvenantDetailSerializer
+        return AvenantSerializer
+
+    @action(detail=True, methods=['get'])
+    def download_pdf(self, request, pk=None, contrat_pk=None):
+        """Télécharger le PDF d'un avenant"""
+        avenant = self.get_object()
+        
+        try:
+            pdf_content = avenant.generer_pdf()
+            
+            response = HttpResponse(pdf_content, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="avenant_{avenant.numero}.pdf"'
+            return response
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def update_content(self, request, pk=None, contrat_pk=None):
+        """Mettre à jour le contenu personnalisé d'un avenant"""
+        avenant = self.get_object()
+        contenu_personnalise = request.data.get('contenu_personnalise')
+        
+        if not contenu_personnalise:
+            return Response(
+                {'error': 'Contenu personnalisé requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        avenant.contenu_personnalise = contenu_personnalise
+        avenant.save()
+        
+        return Response({
+            'message': 'Contenu mis à jour avec succès'
+        })
+
+    @action(detail=True, methods=['post'])
+    def envoyer(self, request, pk=None, contrat_pk=None):
+        """Envoyer un avenant par email"""
+        avenant = self.get_object()
+        
+        if avenant.statut != 'brouillon':
+            return Response(
+                {'error': 'Seuls les avenants en brouillon peuvent être envoyés'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Générer le PDF
+            pdf_content = avenant.generer_pdf()
+            
+            # Envoyer par email
+            subject = f"Avenant {avenant.numero} - {avenant.contrat.numero}"
+            message = f"""
+            Bonjour,
+            
+            Veuillez trouver ci-joint l'avenant {avenant.numero} pour le contrat {avenant.contrat.numero}.
+            
+            Objet de l'avenant : {avenant.objet_avenant}
+            
+            Cordialement,
+            L'équipe SAKOM
+            """
+            
+            # Récupérer l'email du client
+            client_email = avenant.contrat.client.email if avenant.contrat.client else None
+            if not client_email:
+                return Response(
+                    {'error': 'Email du client non disponible'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Créer l'email avec pièce jointe
+            email = EmailMessage(
+                subject=subject,
+                body=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[client_email]
+            )
+            
+            # Attacher le PDF
+            email.attach(
+                f'avenant_{avenant.numero}.pdf',
+                pdf_content,
+                'application/pdf'
+            )
+            
+            # Envoyer l'email
+            email.send()
+            
+            # Mettre à jour le statut
+            avenant.statut = 'envoye'
+            avenant.save()
+            
+            return Response({
+                'message': 'Avenant envoyé avec succès',
+                'statut': avenant.statut
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de l\'envoi: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(
+        detail=True,
+        methods=['post'],
+        parser_classes=[MultiPartParser, FormParser],
+        url_path='signer'
+    )
+    def signer(self, request, pk=None, contrat_pk=None):
+        """Signer un avenant en uploadant le fichier signé"""
+        avenant = self.get_object()
+        
+        if avenant.statut != 'envoye':
+            return Response(
+                {'error': 'Seuls les avenants envoyés peuvent être signés'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        fichier_signe = request.FILES.get('fichier_signe')
+        if not fichier_signe:
+            return Response(
+                {'error': 'Fichier signé requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Sauvegarder le fichier
+            avenant.fichier_signe = fichier_signe
+            avenant.statut = 'signe'
+            avenant.date_signature = timezone.now().date()
+            avenant.save()
+            
+            return Response({
+                'message': 'Avenant signé avec succès',
+                'statut': avenant.statut,
+                'date_signature': avenant.date_signature
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la signature: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'])
+    def annuler(self, request, pk=None, contrat_pk=None):
+        """Annuler un avenant"""
+        avenant = self.get_object()
+        
+        if avenant.statut in ['signe', 'annule']:
+            return Response(
+                {'error': 'Les avenants signés ou annulés ne peuvent pas être annulés'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        avenant.statut = 'annule'
+        avenant.save()
+        
+        return Response({
+            'message': 'Avenant annulé avec succès',
+            'statut': avenant.statut
+        })
+
+    @action(detail=False, methods=['get'])
+    def by_contrat(self, request):
+        """Récupérer tous les avenants d'un contrat spécifique"""
+        contrat_id = request.query_params.get('contrat_id')
+        if not contrat_id:
+            return Response(
+                {'error': 'Le paramètre contrat_id est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            avenants = Avenant.objects.filter(contrat_id=contrat_id).order_by('-date_creation')
+            serializer = AvenantSerializer(avenants, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la récupération des avenants: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

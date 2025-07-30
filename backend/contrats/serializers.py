@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat
+from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant
 from users.serializers import ClientProfileSerializer
 from devis.serializers import DevisSerializer
 from catalog.serializers import ServiceSerializer, ActivitySerializer, IntervenantProfileSerializer, UniteStandardSerializer
@@ -199,3 +199,70 @@ class ContratFromDevisSerializer(serializers.ModelSerializer):
             **validated_data
         )
         return contrat 
+
+
+class AvenantSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les avenants"""
+    contrat = ContratSerializer(read_only=True)
+    contrat_id = serializers.IntegerField(write_only=True)
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+    type_modification_display = serializers.CharField(source='get_type_modification_display', read_only=True)
+    
+    class Meta:
+        model = Avenant
+        fields = [
+            'id', 'numero', 'contrat', 'contrat_id', 'date_creation', 'date_signature',
+            'statut', 'statut_display', 'intitule_avenant', 'objet_avenant',
+            'type_modification', 'type_modification_display', 'modifications',
+            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'numero', 'date_creation', 'contenu_personnalise', 
+            'variables_personnalisees', 'created_at', 'updated_at', 'fichier_signe'
+        ]
+
+
+class AvenantCreateSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour la création d'avenants"""
+    contrat_id = serializers.IntegerField()
+    
+    class Meta:
+        model = Avenant
+        fields = [
+            'contrat_id', 'intitule_avenant', 'objet_avenant', 'type_modification',
+            'modifications', 'contenu_personnalise'
+        ]
+    
+    def create(self, validated_data):
+        """Créer un avenant avec la relation contrat"""
+        contrat_id = validated_data.pop('contrat_id')
+        contrat = Contrat.objects.get(id=contrat_id)
+        
+        avenant = Avenant.objects.create(
+            contrat=contrat,
+            **validated_data
+        )
+        
+        return avenant
+
+
+class AvenantDetailSerializer(serializers.ModelSerializer):
+    """Sérialiseur détaillé pour les avenants"""
+    contrat = ContratDetailSerializer(read_only=True)
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+    type_modification_display = serializers.CharField(source='get_type_modification_display', read_only=True)
+    
+    class Meta:
+        model = Avenant
+        fields = [
+            'id', 'numero', 'contrat', 'date_creation', 'date_signature',
+            'statut', 'statut_display', 'intitule_avenant', 'objet_avenant',
+            'type_modification', 'type_modification_display', 'modifications',
+            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'id', 'numero', 'date_creation', 'contenu_personnalise', 
+            'variables_personnalisees', 'created_at', 'updated_at', 'fichier_signe'
+        ] 

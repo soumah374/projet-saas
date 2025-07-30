@@ -36,6 +36,7 @@ import FraisCategoriesPage from './pages/FraisCategoriesPage';
 import LignesFraisPage from './pages/LignesFraisPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { CategoryDetailsPage } from './pages/CategoryDetailsPage';
+import { AvenantsPage } from './pages/AvenantsPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -214,6 +215,11 @@ function App() {
                 <Route path="/contrats/:id" element={
                   <ProtectedRoute>
                     <ContratDetailPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/avenants" element={
+                  <ProtectedRoute>
+                    <AvenantsPage />
                   </ProtectedRoute>
                 } />
                 

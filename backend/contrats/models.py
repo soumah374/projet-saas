@@ -5,7 +5,7 @@ from django.core.validators import MinValueValidator
 from users.models import ClientProfile
 from devis.models import Devis
 from catalog.models import Service, Activity, IntervenantProfile, UniteStandard
-from .constant import DEFAULT_TEMPLATE_HTML
+from .constant import DEFAULT_TEMPLATE_HTML, DEFAULT_TEMPLATE_AVENANT_HTML
 
 
 class Contrat(models.Model):
@@ -767,3 +767,259 @@ class LigneContratIntervenant(models.Model):
         total_intervenants = sum(interv.montant_intervenant for interv in self.ligne_contrat.intervenants.all())
         self.ligne_contrat.prix_unitaire_ht = total_intervenants
         self.ligne_contrat.save()
+
+
+class Avenant(models.Model):
+    """Modèle pour les avenants de contrats"""
+    
+    STATUT_CHOICES = [
+        ('brouillon', 'Brouillon'),
+        ('envoye', 'Envoyé'),
+        ('signe', 'Signé'),
+        ('annule', 'Annulé'),
+    ]
+    
+    # Numéro généré automatiquement
+    numero = models.CharField(max_length=50, unique=True, editable=False)
+    
+    # Relation avec le contrat principal
+    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='avenants')
+    
+    # Informations de l'avenant
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_signature = models.DateField(null=True, blank=True)
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
+    
+    # Contenu de l'avenant
+    intitule_avenant = models.CharField(max_length=200, verbose_name="Intitulé de l'avenant")
+    objet_avenant = models.TextField(verbose_name="Objet de l'avenant")
+    type_modification = models.CharField(
+        max_length=50, 
+        choices=[
+            ('modifier', 'Modifier'),
+            ('completer', 'Compléter'),
+            ('preciser', 'Préciser'),
+            ('prolonger', 'Prolonger'),
+            ('reduire', 'Réduire'),
+            ('annuler', 'Annuler'),
+        ],
+        default='modifier'
+    )
+    
+    # Modifications spécifiques
+    modifications = models.JSONField(
+        default=list,
+        verbose_name="Liste des modifications",
+        help_text="Liste des clauses modifiées avec ancienne et nouvelle version"
+    )
+    
+    # Contenu personnalisé
+    contenu_personnalise = models.TextField(blank=True, verbose_name="Contenu personnalisé de l'avenant")
+    variables_personnalisees = models.JSONField(default=dict, verbose_name="Variables personnalisées")
+    
+    # Fichier signé
+    fichier_signe = models.FileField(upload_to='avenants/signes/', blank=True, null=True)
+    
+    # Métadonnées
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Avenant'
+        verbose_name_plural = 'Avenants'
+        ordering = ['-date_creation']
+    
+    def __str__(self):
+        return f"Avenant {self.numero} - {self.contrat.numero}"
+    
+    def save(self, *args, **kwargs):
+        if not self.numero:
+            # Générer un numéro unique
+            self.numero = self.generate_numero()
+        
+        # Si c'est un nouvel avenant et qu'il n'y a pas de contenu personnalisé
+        if not self.pk and not self.contenu_personnalise:
+            # Utiliser le template par défaut et remplacer les variables
+            contenu_template = DEFAULT_TEMPLATE_AVENANT_HTML
+            variables = self.get_variables_avenant()
+            self.contenu_personnalise = self.remplacer_variables(contenu_template, variables)
+        
+        super().save(*args, **kwargs)
+    
+    def generate_numero(self):
+        """Générer un numéro d'avenant unique"""
+        year = timezone.now().year
+        # Trouver le plus grand numéro existant pour cette année
+        last_avenant = Avenant.objects.filter(
+            numero__startswith=f"AV{year}"
+        ).order_by('-numero').first()
+        
+        if last_avenant:
+            # Extraire le numéro et incrémenter
+            last_number = int(last_avenant.numero[-4:])
+            new_number = last_number + 1
+        else:
+            new_number = 1
+            
+        return f"AV{year}{new_number:04d}"
+    
+    def get_variables_avenant(self):
+        """Récupérer les variables pour l'avenant"""
+        def format_date(date_obj):
+            if date_obj:
+                return date_obj.strftime('%d/%m/%Y')
+            return str(date_obj)
+        
+        # Variables de base de l'avenant
+        variables = {
+            'NUMERO_AVENANT': self.numero,
+            'INTITULE_CONTRAT': self.intitule_avenant,
+            'DATE_CONTRAT_INITIAL': format_date(self.contrat.date_creation),
+            'OBJET_CONTRAT': self.objet_avenant,
+            'TYPE_MODIFICATION': self.get_type_modification_display(),
+            'DATE_SIGNATURE': format_date(self.date_signature),
+            'VILLE_SIGNATURE': 'Conakry',
+        }
+        
+        # Variables du prestataire (SAKOM)
+        variables.update({
+            'RAISON_SOCIALE_PRESTATAIRE': 'SAKOM SARL',
+            'FORME_JURIDIQUE': 'SARL',
+            'MONTANT_CAPITAL': '100,000,000',
+            'VILLE_RCS': 'Conakry',
+            'SIRET': 'GN12345678901234',
+            'ADRESSE_PRESTATAIRE': '123 Avenue de la République, Conakry, Guinée',
+            'NOM_REPRESENTANT': 'Directeur Général',
+            'FONCTION_REPRESENTANT': 'Directeur Général',
+        })
+        
+        # Variables du client
+        if self.contrat.client:
+            client = self.contrat.client
+            variables.update({
+                'NOM_CLIENT': client.nom_complet,
+                'TYPE_CLIENT': client.get_type_client_display() if hasattr(client, 'get_type_client_display') else 'Société',
+                'ADRESSE_CLIENT': client.adresse_complete or client.adresse or 'Non renseignée',
+                'NUMERO_IDENTIFICATION': client.rccm_nif or 'Non renseigné',
+                'NOM_REPRESENTANT_CLIENT': client.contact or 'Non renseigné',
+                'FONCTION_REPRESENTANT_CLIENT': 'Représentant légal',
+            })
+        
+        # Variables des modifications
+        if self.modifications:
+            for i, modification in enumerate(self.modifications):
+                variables[f'CLAUSE_MODIFIEE_{i+1}'] = modification.get('clause', '')
+                variables[f'ANCIENNE_VERSION_{i+1}'] = modification.get('ancienne_version', '')
+                variables[f'NOUVELLE_VERSION_{i+1}'] = modification.get('nouvelle_version', '')
+        
+        return variables
+    
+    def remplacer_variables(self, contenu, variables):
+        """Remplacer les variables dans le contenu"""
+        for key, value in variables.items():
+            contenu = contenu.replace(f'[{key}]', str(value))
+        return contenu
+    
+    def get_contenu_final(self):
+        """Retourne le contenu final de l'avenant avec les variables remplacées"""
+        if self.contenu_personnalise:
+            variables = self.get_variables_avenant()
+            return self.remplacer_variables(self.contenu_personnalise, variables)
+        return self.contenu_personnalise
+
+    def generer_pdf(self):
+        """Génère le PDF de l'avenant"""
+        # Utiliser ReportLab pour éviter les problèmes de dépendances GTK
+        return self._generer_pdf_fallback()
+
+    def _generer_pdf_fallback(self):
+        """Génère le PDF de l'avenant en utilisant ReportLab comme fallback."""
+        from reportlab.lib.pagesizes import A4
+        from reportlab.platypus import SimpleDocTemplate, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_JUSTIFY
+        from reportlab.lib.units import cm
+        import io
+        import re
+        
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                rightMargin=2*cm, leftMargin=2*cm,
+                                topMargin=2*cm, bottomMargin=2*cm)
+        styles = getSampleStyleSheet()
+        
+        Story = []
+        
+        # Récupérer les variables
+        variables = self.get_variables_avenant()
+        
+        # Styles pour le contenu
+        styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY, fontName='Helvetica', fontSize=10, leading=14))
+        styles.add(ParagraphStyle(name='CustomHeading3', fontName='Helvetica-Bold', fontSize=14, leading=18, spaceAfter=6))
+        styles.add(ParagraphStyle(name='CustomHeading4', fontName='Helvetica-Bold', fontSize=12, leading=16, spaceAfter=4))
+        
+        # Utiliser le contenu personnalisé de l'avenant
+        contenu_html = self.contenu_personnalise
+        if not contenu_html:
+            # Fallback si pas de contenu personnalisé
+            contenu_html = self.get_contenu_final()
+        
+        # Remplacer les variables dans le contenu
+        contenu_html = self.remplacer_variables(contenu_html, variables)
+        
+        # Convertir le HTML en contenu ReportLab
+        # Diviser le contenu en paragraphes basés sur les balises HTML
+        paragraphs = self._convert_html_to_reportlab(contenu_html, styles)
+        
+        # Ajouter tous les paragraphes à l'histoire
+        for paragraph in paragraphs:
+            Story.append(paragraph)
+            Story.append(Spacer(1, 0.2*cm))
+        
+        doc.build(Story)
+        buffer.seek(0)
+        return buffer.getvalue()
+
+    def _convert_html_to_reportlab(self, html_content, styles):
+        """Convertit le contenu HTML en paragraphes ReportLab"""
+        from reportlab.platypus import Paragraph
+        
+        paragraphs = []
+        
+        # Nettoyer le HTML et le diviser en sections
+        # Supprimer les balises HTML complexes et garder le texte
+        import re
+        
+        # Remplacer les balises HTML par du texte formaté pour ReportLab
+        content = html_content
+        
+        # Convertir les balises de titre
+        content = re.sub(r'<h[1-6][^>]*>(.*?)</h[1-6]>', r'<b>\1</b>', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Convertir les balises de paragraphe
+        content = re.sub(r'<p[^>]*>(.*?)</p>', r'\1', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Convertir les balises de division
+        content = re.sub(r'<div[^>]*>(.*?)</div>', r'\1', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Convertir les sauts de ligne
+        content = re.sub(r'<br[^>]*>', r'<br/>', content, flags=re.IGNORECASE)
+        
+        # Diviser le contenu en lignes
+        lines = content.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if line:
+                # Déterminer le style selon le contenu
+                if line.startswith('<b>') and line.endswith('</b>'):
+                    # Titre principal
+                    paragraphs.append(Paragraph(line, styles['CustomHeading3']))
+                elif '<b>' in line and '</b>' in line:
+                    # Sous-titre
+                    paragraphs.append(Paragraph(line, styles['CustomHeading4']))
+                else:
+                    # Texte normal
+                    paragraphs.append(Paragraph(line, styles['Justify']))
+        
+        return paragraphs

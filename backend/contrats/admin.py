@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Contrat, LigneContrat, LigneContratIntervenant
+from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant
 
 
 class LigneContratIntervenantInline(admin.TabularInline):
@@ -58,3 +58,34 @@ class LigneContratIntervenantAdmin(admin.ModelAdmin):
     list_filter = ['ligne_contrat__type_ligne']
     search_fields = ['ligne_contrat__contrat__numero', 'profile_intervenant__intitule']
     readonly_fields = ['montant_intervenant']
+
+
+@admin.register(Avenant)
+class AvenantAdmin(admin.ModelAdmin):
+    list_display = ['numero', 'contrat', 'intitule_avenant', 'type_modification', 'statut', 'date_creation']
+    list_filter = ['statut', 'type_modification', 'date_creation']
+    search_fields = ['numero', 'intitule_avenant', 'objet_avenant', 'contrat__numero']
+    readonly_fields = ['numero', 'date_creation', 'created_at', 'updated_at']
+    ordering = ['-date_creation']
+    
+    fieldsets = (
+        ('Informations générales', {
+            'fields': ('numero', 'contrat', 'intitule_avenant', 'objet_avenant', 'type_modification')
+        }),
+        ('Statut et dates', {
+            'fields': ('statut', 'date_creation', 'date_signature')
+        }),
+        ('Modifications', {
+            'fields': ('modifications',)
+        }),
+        ('Contenu', {
+            'fields': ('contenu_personnalise', 'variables_personnalisees')
+        }),
+        ('Fichier signé', {
+            'fields': ('fichier_signe',)
+        }),
+        ('Métadonnées', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )

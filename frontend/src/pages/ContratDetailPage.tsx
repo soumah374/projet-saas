@@ -51,6 +51,7 @@ import { useEcheances } from '@/hooks/use-echeances';
 import { Echeance } from '@/lib/types';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
 import { statutContrat } from '@/lib/utils';
+import { AvenantList } from '@/components/avenants/AvenantList';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -619,10 +620,11 @@ export function ContratDetailPage() {
 
       {/* Onglets principaux */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="echeancier">Échéancier</TabsTrigger>
           <TabsTrigger value="lignes">Lignes</TabsTrigger>
+          <TabsTrigger value="avenants">Avenants</TabsTrigger>
           <TabsTrigger value="alertes">Alertes</TabsTrigger>
         </TabsList>
 
@@ -1079,6 +1081,14 @@ export function ContratDetailPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Onglet Avenants */}
+        <TabsContent value="avenants" className="space-y-6">
+          <AvenantList 
+            contratId={contrat.id} 
+            contratNumero={contrat.numero} 
+          />
         </TabsContent>
 
         {/* Onglet Alertes */}

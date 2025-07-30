@@ -100,3 +100,88 @@ En deux exemplaires originaux.
 </p>
 """
 
+
+DEFAULT_TEMPLATE_AVENANT_HTML = """<h3 style="color: #000000; font-size: 20px; font-weight: bold; margin: 25px 0 15px 0; border-bottom: 2px solid #000000; padding-bottom: 8px; font-family: Arial, Helvetica, sans-serif;">AVENANT N°[NUMERO_AVENANT] AU CONTRAT DE [INTITULE_CONTRAT]</h3>
+
+<h4 style="color: #000000; font-size: 16px; font-weight: bold; margin: 20px 0 10px 0; font-family: Arial, Helvetica, sans-serif;">Entre les soussignés :</h4>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+<strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">[RAISON_SOCIALE_PRESTATAIRE]</strong>,<br>
+[FORME_JURIDIQUE] dont le siège est situé à [ADRESSE_PRESTATAIRE],<br>
+représenté(e) par [NOM_REPRESENTANT], [FONCTION_REPRESENTANT],<br>
+ci-après dénommé(e) « le Prestataire »,
+</p>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+<strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">Et :</strong>
+</p>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+<strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">[NOM_CLIENT]</strong>,<br>
+[TYPE_CLIENT] dont le siège / domicile est situé à [ADRESSE_CLIENT],<br>
+représenté(e) par [NOM_REPRESENTANT_CLIENT], [FONCTION_REPRESENTANT_CLIENT],<br>
+ci-après dénommé(e) « le Client »,
+</p>
+
+<hr style="border: 1px solid #000000; margin: 30px 0;">
+
+<h4 style="color: #000000; font-size: 16px; font-weight: bold; margin: 20px 0 10px 0; font-family: Arial, Helvetica, sans-serif;">Article 1 – Rappel du contrat initial</h4>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+Les parties ont conclu un <strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">contrat de [INTITULE_CONTRAT]</strong> en date du <strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">[DATE_CONTRAT_INITIAL]</strong>, portant sur <strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">[OBJET_CONTRAT]</strong>.
+</p>
+
+<hr style="border: 1px solid #000000; margin: 30px 0;">
+
+<h4 style="color: #000000; font-size: 16px; font-weight: bold; margin: 20px 0 10px 0; font-family: Arial, Helvetica, sans-serif;">Article 2 – Objet du présent avenant</h4>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+Le présent avenant a pour objet de <strong style="font-weight: bold; color: #000000; font-family: Arial, Helvetica, sans-serif;">[TYPE_MODIFICATION]</strong> les dispositions du contrat initial, comme suit :
+</p>
+
+<div style="margin: 15px 0; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #007bff; font-family: Arial, Helvetica, sans-serif;">
+<p style="margin: 10px 0; line-height: 1.7; color: #000000;">
+<strong style="font-weight: bold; color: #000000;">Clause modifiée :</strong> [CLAUSE_MODIFIEE]<br>
+<strong style="font-weight: bold; color: #000000;">Ancienne version :</strong> « [ANCIENNE_VERSION] »<br>
+<strong style="font-weight: bold; color: #000000;">Nouvelle version :</strong> « [NOUVELLE_VERSION] »
+</p>
+</div>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+[Ajouter autant de modifications que nécessaire]
+</p>
+
+<hr style="border: 1px solid #000000; margin: 30px 0;">
+
+<h4 style="color: #000000; font-size: 16px; font-weight: bold; margin: 20px 0 10px 0; font-family: Arial, Helvetica, sans-serif;">Article 3 – Dispositions inchangées</h4>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+Toutes les autres clauses du contrat initial non modifiées par le présent avenant restent inchangées et continuent de produire leurs effets.
+</p>
+
+<hr style="border: 1px solid #000000; margin: 30px 0;">
+
+<h4 style="color: #000000; font-size: 16px; font-weight: bold; margin: 20px 0 10px 0; font-family: Arial, Helvetica, sans-serif;">Article 4 – Entrée en vigueur</h4>
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+Le présent avenant entre en vigueur à compter de sa date de signature.
+</p>
+
+<hr style="border: 1px solid #000000; margin: 30px 0;">
+
+<p style="margin: 15px 0; text-align: justify; font-family: Arial, Helvetica, sans-serif; line-height: 1.7; color: #000000;">
+Fait à [VILLE_SIGNATURE], le [DATE_SIGNATURE],<br>
+En deux exemplaires originaux, un pour chaque partie.
+</p>
+
+<div style="margin: 30px 0; display: flex; justify-content: space-between; font-family: Arial, Helvetica, sans-serif;">
+<div style="text-align: center; width: 45%;">
+<p style="margin: 10px 0; font-weight: bold; color: #000000; border-top: 1px solid #000000; padding-top: 10px;">Le Prestataire</p>
+<p style="margin: 5px 0; color: #000000;">(Signature + Nom)</p>
+</div>
+<div style="text-align: center; width: 45%;">
+<p style="margin: 10px 0; font-weight: bold; color: #000000; border-top: 1px solid #000000; padding-top: 10px;">Le Client</p>
+<p style="margin: 5px 0; color: #000000;">(Signature + Nom)</p>
+</div>
+</div>
+"""
