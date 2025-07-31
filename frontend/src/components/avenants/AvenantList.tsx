@@ -2,7 +2,10 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, FileText, MoreHorizontal, Edit, Trash2, Send, Download, CheckCircle, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Plus, FileText, MoreHorizontal, Edit, Trash2, Send, Download, CheckCircle, X, AlertTriangle, Eye, Calendar, User, FileEdit } from 'lucide-react';
 import { useAvenantsByContrat, useDeleteAvenant, useEnvoyerAvenant, useDownloadAvenantPDF, useAnnulerAvenant } from '@/hooks/use-avenants';
 import { CreateAvenantModal } from './CreateAvenantModal';
 import { EditAvenantModal } from './EditAvenantModal';
@@ -20,7 +23,13 @@ export const AvenantList: React.FC<AvenantListProps> = ({
 }) => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedAvenant, setSelectedAvenant] = useState<Avenant | null>(null);
+  const [avenantToDelete, setAvenantToDelete] = useState<Avenant | null>(null);
+  const [avenantToCancel, setAvenantToCancel] = useState<Avenant | null>(null);
+  const [avenantDetails, setAvenantDetails] = useState<Avenant | null>(null);
   const { data: avenants, isLoading, error } = useAvenantsByContrat(contratId);
   const avenantsArray = Array.isArray(avenants) ? avenants : [];
 
@@ -31,43 +40,89 @@ export const AvenantList: React.FC<AvenantListProps> = ({
   const annulerAvenantMutation = useAnnulerAvenant();
 
   // Fonctions de gestion des actions
-  const handleDelete = async (avenant: Avenant) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cet avenant ?')) {
-      try {
-        await deleteAvenantMutation.mutateAsync(avenant.id);
-        toast.success('Avenant supprimé avec succès');
-      } catch (error) {
-        toast.error('Erreur lors de la suppression');
-      }
+  const handleDelete = (avenant: Avenant) => {
+    setAvenantToDelete(avenant);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!avenantToDelete) return;
+    
+    try {
+      await deleteAvenantMutation.mutateAsync({ 
+        id: avenantToDelete.id 
+      });
+      toast.success('Avenant supprimé avec succès');
+      setShowDeleteModal(false);
+      setAvenantToDelete(null);
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression:', error);
+      toast.error(error.response?.data?.error || 'Erreur lors de la suppression de l\'avenant');
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setAvenantToDelete(null);
   };
 
   const handleEnvoyer = async (avenant: Avenant) => {
     try {
-      await envoyerAvenantMutation.mutateAsync({ contratId: avenant.contrat.id, id: avenant.id });
+      await envoyerAvenantMutation.mutateAsync({ 
+        id: avenant.id 
+      });
       toast.success('Avenant envoyé avec succès');
-    } catch (error) {
-      toast.error('Erreur lors de l\'envoi');
+    } catch (error: any) {
+      console.error('Erreur lors de l\'envoi:', error);
+      toast.error(error.response?.data?.error || 'Erreur lors de l\'envoi de l\'avenant');
     }
   };
 
   const handleDownload = async (avenant: Avenant) => {
     try {
-      await downloadAvenantPDFMutation.mutateAsync({ contratId: avenant.contrat.id, id: avenant.id });
-    } catch (error) {
-      toast.error('Erreur lors du téléchargement');
+      await downloadAvenantPDFMutation.mutateAsync({ 
+        id: avenant.id 
+      });
+    } catch (error: any) {
+      console.error('Erreur lors du téléchargement:', error);
+      toast.error(error.response?.data?.error || 'Erreur lors du téléchargement');
     }
   };
 
-  const handleAnnuler = async (avenant: Avenant) => {
-    if (confirm('Êtes-vous sûr de vouloir annuler cet avenant ?')) {
-      try {
-        await annulerAvenantMutation.mutateAsync(avenant.id);
-        toast.success('Avenant annulé avec succès');
-      } catch (error) {
-        toast.error('Erreur lors de l\'annulation');
-      }
+  const handleAnnuler = (avenant: Avenant) => {
+    setAvenantToCancel(avenant);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!avenantToCancel) return;
+    
+    try {
+      await annulerAvenantMutation.mutateAsync({ 
+        id: avenantToCancel.id 
+      });
+      toast.success('Avenant annulé avec succès');
+      setShowCancelModal(false);
+      setAvenantToCancel(null);
+    } catch (error: any) {
+      console.error('Erreur lors de l\'annulation:', error);
+      toast.error(error.response?.data?.error || 'Erreur lors de l\'annulation');
     }
+  };
+
+  const cancelAnnulation = () => {
+    setShowCancelModal(false);
+    setAvenantToCancel(null);
+  };
+
+  const handleShowDetails = (avenant: Avenant) => {
+    setAvenantDetails(avenant);
+    setShowDetailsModal(true);
+  };
+
+  const closeDetailsModal = () => {
+    setShowDetailsModal(false);
+    setAvenantDetails(null);
   };
 
   const handleEdit = (avenant: Avenant) => {
@@ -140,6 +195,18 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                   <div>
                     <CardTitle className="text-lg">{avenant.intitule_avenant}</CardTitle>
                     <p className="text-sm text-gray-600">N° {avenant.numero}</p>
+                    <div className="flex gap-1 mt-1">
+                      {avenant.statut === 'brouillon' && (
+                        <span className="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full">
+                          Modifiable
+                        </span>
+                      )}
+                      {avenant.modifications && avenant.modifications.length > 0 && (
+                        <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                          {avenant.modifications.length} modification(s)
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -148,6 +215,10 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleShowDetails(avenant)}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        Voir les détails
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDownload(avenant)}>
                         <Download className="h-4 w-4 mr-2" />
                         Télécharger PDF
@@ -165,18 +236,22 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => handleDelete(avenant)}
-                            className="text-red-600"
+                            className="text-red-600 focus:text-red-600"
+                            disabled={deleteAvenantMutation.isPending}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
-                            Supprimer
+                            {deleteAvenantMutation.isPending ? 'Suppression...' : 'Supprimer'}
                           </DropdownMenuItem>
                         </>
                       )}
                       
                       {avenant.statut === 'envoye' && (
-                        <DropdownMenuItem onClick={() => handleAnnuler(avenant)}>
+                        <DropdownMenuItem 
+                          onClick={() => handleAnnuler(avenant)}
+                          disabled={annulerAvenantMutation.isPending}
+                        >
                           <X className="h-4 w-4 mr-2" />
-                          Annuler
+                          {annulerAvenantMutation.isPending ? 'Annulation...' : 'Annuler'}
                         </DropdownMenuItem>
                       )}
                       
@@ -200,6 +275,17 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                   <div className="text-xs text-gray-500">
                     Créé le: {new Date(avenant.date_creation).toLocaleDateString('fr-FR')}
                   </div>
+                  <div className="pt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleShowDetails(avenant)}
+                      className="w-full"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Voir les détails
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -221,6 +307,256 @@ export const AvenantList: React.FC<AvenantListProps> = ({
         onClose={handleCloseEditModal}
         avenant={selectedAvenant}
       />
+
+      {/* Modal de suppression */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+              Confirmer la suppression
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer l'avenant "{avenantToDelete?.intitule_avenant}" ?
+              <br />
+              <span className="text-red-600 font-medium">Cette action est irréversible.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelDelete} disabled={deleteAvenantMutation.isPending}>
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={deleteAvenantMutation.isPending}
+            >
+              {deleteAvenantMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Supprimer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal d'annulation */}
+      <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <X className="h-5 w-5 text-orange-600" />
+              Confirmer l'annulation
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir annuler l'avenant "{avenantToCancel?.intitule_avenant}" ?
+              <br />
+              <span className="text-orange-600 font-medium">Cette action changera le statut de l'avenant.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelAnnulation} disabled={annulerAvenantMutation.isPending}>
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmCancel}
+              disabled={annulerAvenantMutation.isPending}
+            >
+              {annulerAvenantMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Annulation...
+                </>
+              ) : (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Annuler l'avenant
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de détails */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileEdit className="h-5 w-5 text-blue-600" />
+              Détails de l'avenant
+            </DialogTitle>
+          </DialogHeader>
+          
+          {avenantDetails && (
+            <div className="space-y-6">
+              {/* Informations générales */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold">{avenantDetails.intitule_avenant}</h3>
+                  <Badge 
+                    variant={
+                      avenantDetails.statut === 'brouillon' ? 'secondary' :
+                      avenantDetails.statut === 'envoye' ? 'default' :
+                      avenantDetails.statut === 'signe' ? 'default' :
+                      'destructive'
+                    }
+                  >
+                    {avenantDetails.statut_display}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium">Numéro :</span>
+                      <span>{avenantDetails.numero}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium">Créé le :</span>
+                      <span>{new Date(avenantDetails.date_creation).toLocaleDateString('fr-FR')}</span>
+                    </div>
+                    {avenantDetails.date_signature && (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-gray-500" />
+                        <span className="font-medium">Signé le :</span>
+                        <span>{new Date(avenantDetails.date_signature).toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium">Client :</span>
+                      <span>{avenantDetails.contrat.client.nom_complet}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium">Contrat :</span>
+                      <span>{avenantDetails.contrat.numero}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FileEdit className="h-4 w-4 text-gray-500" />
+                      <span className="font-medium">Type :</span>
+                      <span>{avenantDetails.type_modification_display}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Objet de l'avenant */}
+              <div className="space-y-2">
+                <h4 className="font-semibold text-gray-900">Objet de l'avenant</h4>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded-md">
+                  {avenantDetails.objet_avenant}
+                </p>
+              </div>
+
+              {/* Modifications */}
+              {avenantDetails.modifications && avenantDetails.modifications.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-gray-900">Modifications apportées</h4>
+                  <div className="space-y-3">
+                    {avenantDetails.modifications.map((modification, index) => (
+                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                        <h5 className="font-medium text-gray-900 mb-2">
+                          Clause : {modification.clause}
+                        </h5>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <h6 className="text-sm font-medium text-red-600 mb-1">Ancienne version</h6>
+                            <p className="text-sm text-gray-700 bg-white p-2 rounded border-l-4 border-red-200">
+                              {modification.ancienne_version}
+                            </p>
+                          </div>
+                          <div>
+                            <h6 className="text-sm font-medium text-green-600 mb-1">Nouvelle version</h6>
+                            <p className="text-sm text-gray-700 bg-white p-2 rounded border-l-4 border-green-200">
+                              {modification.nouvelle_version}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Contenu personnalisé */}
+              {avenantDetails.contenu_personnalise && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900">Contenu personnalisé</h4>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-sans">
+                      {avenantDetails.contenu_personnalise}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
+              {/* Variables personnalisées */}
+              {avenantDetails.variables_personnalisees && Object.keys(avenantDetails.variables_personnalisees).length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900">Variables personnalisées</h4>
+                  <div className="bg-gray-50 p-3 rounded-md">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {Object.entries(avenantDetails.variables_personnalisees).map(([key, value]) => (
+                        <div key={key} className="flex justify-between">
+                          <span className="font-medium text-gray-700">{key} :</span>
+                          <span className="text-gray-600">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Fichier signé */}
+              {avenantDetails.fichier_signe && (
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-900">Fichier signé</h4>
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-green-600" />
+                    <span className="text-sm text-gray-700">Document signé disponible</span>
+                    <Button variant="outline" size="sm" onClick={() => handleDownload(avenantDetails)}>
+                      <Download className="h-4 w-4 mr-1" />
+                      Télécharger
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDetailsModal}>
+              Fermer
+            </Button>
+            {avenantDetails?.statut === 'brouillon' && (
+              <Button onClick={() => {
+                closeDetailsModal();
+                handleEdit(avenantDetails);
+              }}>
+                <Edit className="h-4 w-4 mr-2" />
+                Modifier
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }; 

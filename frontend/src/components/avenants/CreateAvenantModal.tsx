@@ -79,7 +79,6 @@ export const CreateAvenantModal: React.FC<CreateAvenantModalProps> = ({
 
     try {
       await createAvenantMutation.mutateAsync({
-        contratId: contratId,
         data: {
           contrat_id: contratId,
           intitule_avenant: intituleAvenant,
@@ -97,8 +96,9 @@ export const CreateAvenantModal: React.FC<CreateAvenantModalProps> = ({
       setModifications([]);
       setContenuPersonnalise('');
       onClose();
-    } catch (error) {
-      // Error is handled by the mutation
+    } catch (error: any) {
+      // L'erreur est déjà gérée par la mutation avec toast
+      console.error('Erreur lors de la création de l\'avenant:', error);
     }
   };
 

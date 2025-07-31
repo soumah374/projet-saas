@@ -50,7 +50,6 @@ export function ContratsPage() {
     page_size: pageSize,
   });
   
-  const { data: devisDisponiblesData, isLoading: isLoadingDevis } = useDevisDisponibles();
   const createContratMutation = useCreateContratFromDevis();
   const updateContratMutation = useUpdateContrat();
   const deleteContratMutation = useDeleteContrat();
@@ -61,7 +60,6 @@ export function ContratsPage() {
   const suspendreContratMutation = useSuspendreContrat();
 
   const contrats = contratsData?.results || [];
-  const devisDisponibles = devisDisponiblesData || [];
 
   // Gestionnaires d'événements
   const handleUpdateContrat = async (data: {
@@ -248,33 +246,6 @@ export function ContratsPage() {
       disabled: false
     });
     
-    // Actions selon le statut
-    if (contrat.statut === 'brouillon') {
-      actions.push({
-        label: 'Activer',
-        icon: <Play size={14} />,
-        onClick: () => handleActionContrat(contrat, 'activer'),
-        disabled: activerContratMutation.isPending
-      });
-    }
-    
-    if (contrat.statut === 'actif') {
-      actions.push(
-        {
-          label: 'Clôturer',
-          icon: <Check size={14} />,
-          onClick: () => handleActionContrat(contrat, 'cloturer'),
-          disabled: cloturerContratMutation.isPending
-        },
-        {
-          label: 'Suspendre',
-          icon: <Pause size={14} />,
-          onClick: () => handleActionContrat(contrat, 'suspendre'),
-          disabled: suspendreContratMutation.isPending
-        }
-      );
-    }
-
     if (contrat.statut === 'cloture' || contrat.statut === 'signe') {
       actions.push({
         label: 'Archiver',
@@ -318,7 +289,9 @@ export function ContratsPage() {
   };
 
   const handleCreateContrat = async (data: {
-    devis_id: number;
+    client_id: number;
+    devis_ids: number[];
+    devis_principal_id: number;
     date_debut: string;
     date_fin: string;
     conditions: string;
@@ -333,7 +306,9 @@ export function ContratsPage() {
   }) => {
     try {
       await createContratMutation.mutateAsync({
-        devis_id: data.devis_id,
+        client_id: data.client_id,
+        devis_ids: data.devis_ids,
+        devis_principal_id: data.devis_principal_id,
         date_debut: data.date_debut,
         date_fin: data.date_fin,
         conditions: data.conditions,
@@ -456,7 +431,29 @@ export function ContratsPage() {
                       </Button>
                     </TableCell>
                     <TableCell>{contrat.client.nom_complet}</TableCell>
-                    <TableCell>{contrat.devis.numero}</TableCell>
+                    <TableCell>
+                      {contrat.devis.length > 0 ? (
+                        <div className="space-y-1">
+                          {contrat.devis.length === 1 ? (
+                            <span>{contrat.devis[0].numero}</span>
+                          ) : (
+                            <div>
+                              <span className="font-medium">{contrat.devis.length} devis</span>
+                              <div className="text-xs text-gray-500">
+                                {contrat.devis.map(d => d.numero).join(', ')}
+                              </div>
+                              {contrat.devis_principal && (
+                                <div className="text-xs text-blue-600">
+                                  Principal: {contrat.devis_principal.numero}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>{formatDate(contrat.date_debut)}</TableCell>
                     <TableCell>{formatDate(contrat.date_fin)}</TableCell>
                     <TableCell>{getStatutBadge(contrat.statut)}</TableCell>
@@ -556,8 +553,6 @@ export function ContratsPage() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSave={handleCreateContrat}
-        devisDisponibles={devisDisponibles}
-        isLoadingDevis={isLoadingDevis}
         isLoading={createContratMutation.isPending}
       />
     </div>

@@ -10,6 +10,10 @@ export interface Contrat {
   devis: {
     id: number;
     numero: string;
+  }[];
+  devis_principal?: {
+    id: number;
+    numero: string;
   };
   client: {
     id: number;
@@ -84,6 +88,17 @@ export interface LigneContratIntervenant {
   updated_at: string;
 }
 
+export interface CreateContratData {
+  client_id: number;
+  devis_ids: number[];
+  devis_principal_id?: number;
+  date_debut: string;
+  date_fin: string;
+  conditions?: string;
+  notes?: string;
+  echeances?: any[];
+}
+
 // Hooks pour les contrats
 export const useContrats = (params?: {
   search?: string;
@@ -141,30 +156,18 @@ export const useCreateContratFromDevis = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: {
-      devis_id: number;
-      date_debut: string;
-      date_fin: string;
-      conditions?: string;
-      notes?: string;
-      echeancier_type?: string;
-      nombre_echeances?: number;
-      echeances?: Array<{
-        numero: number;
-        type: 'acompte' | 'tranche' | 'solde';
-        pourcentage: number;
-        date_echeance: string;
-        commentaire: string;
-      }>;
-    }) => contratsAPI.createContratFromDevis(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['contrats'] });
-      queryClient.invalidateQueries({ queryKey: ['devis'] });
-      toast.success('Contrat créé à partir du devis avec succès');
+    mutationFn: async (data: CreateContratData): Promise<Contrat> => {
+      const response = await contratsAPI.createContratFromDevis(data);
+      return response.data;
     },
-    onError: (error) => {
-      console.error('Erreur lors de la création du contrat:', error);
-      toast.error('Erreur lors de la création du contrat');
+    onSuccess: (data) => {
+      toast.success('Contrat créé avec succès');
+      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      queryClient.invalidateQueries({ queryKey: ['contrats', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['devis'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Erreur lors de la création du contrat');
     },
   });
 };
@@ -358,12 +361,44 @@ export const useCalculerMontantsContrat = () => {
 };
 
 // Hook pour récupérer les devis disponibles
-export const useDevisDisponibles = () => {
+export const useDevisDisponibles = (clientId?: number) => {
   return useQuery({
-    queryKey: ['devis-disponibles'],
+    queryKey: ['devis-disponibles', clientId],
     queryFn: async () => {
       const response = await contratsAPI.getDevisDisponibles();
+      // Si un clientId est spécifié, filtrer les devis par client
+      if (clientId) {
+        return response.data.filter((devis: any) => devis.client.id === clientId);
+      }
       return response.data;
+    },
+    enabled: true, // Toujours activé, même si clientId n'est pas défini
+  });
+}; 
+
+export const useAddDevisToContrat = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (data: {
+      contrat_id: number;
+      devis_ids: number[];
+      devis_principal_id?: number;
+    }): Promise<Contrat> => {
+      const response = await contratsAPI.addDevisToContrat(data.contrat_id, {
+        devis_ids: data.devis_ids,
+        devis_principal_id: data.devis_principal_id
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      toast.success('Devis ajoutés au contrat avec succès');
+      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      queryClient.invalidateQueries({ queryKey: ['contrat', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['devis'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Erreur lors de l\'ajout des devis');
     },
   });
 }; 

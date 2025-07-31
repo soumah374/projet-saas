@@ -70,7 +70,6 @@ export const SignerAvenantModal: React.FC<SignerAvenantModalProps> = ({
 
     try {
       await signerAvenantMutation.mutateAsync({
-        contratId: avenant.contrat.id,
         id: avenant.id,
         fichier_signe: selectedFile,
       });

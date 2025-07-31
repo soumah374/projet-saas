@@ -95,57 +95,71 @@ class LigneContratSerializer(serializers.ModelSerializer):
 class ContratSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les contrats"""
     client = ClientProfileSerializer(read_only=True)
-    devis = DevisSerializer(read_only=True)
+    devis = DevisSerializer(many=True, read_only=True)
+    devis_principal = DevisSerializer(read_only=True)
     lignes = LigneContratSerializer(many=True, read_only=True)
     echeances = EcheancierContratSerializer(many=True, read_only=True)
     
     # IDs pour la création/modification
     client_id = serializers.IntegerField(write_only=True)
-    devis_id = serializers.IntegerField(write_only=True)
-    
+    devis_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False
+    )
+    devis_principal_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     
     class Meta:
         model = Contrat
         fields = [
-            'id', 'numero', 'devis', 'devis_id', 'client', 'client_id',
+            'id', 'numero', 'devis', 'devis_principal', 'devis_ids', 'devis_principal_id', 'client', 'client_id',
             'date_creation', 'date_debut', 'date_fin', 'statut',
             'taux_tva', 'appliquer_tva', 'montant_ht', 'montant_tva', 'montant_ttc',
             'conditions', 'notes', 'contenu_personnalise', 'variables_personnalisees',
             'echeances_contrat', 'lignes', 'echeances', 'created_at', 'updated_at','fichier_signe'
         ]
         read_only_fields = [
-            'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 'montant_ttc',
-            'contenu_personnalise', 'variables_personnalisees', 'created_at', 'updated_at','fichier_signe'
+            'numero', 'montant_ht', 'montant_tva', 'montant_ttc',
+            'created_at', 'updated_at'
         ]
 
 
 class ContratCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour la création de contrats"""
     client_id = serializers.IntegerField()
-    devis_id = serializers.IntegerField()
+    devis_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=False
+    )
+    devis_principal_id = serializers.IntegerField(required=False, allow_null=True)
     
     class Meta:
         model = Contrat
         fields = [
-            'client_id', 'devis_id', 'date_debut', 'date_fin', 'statut',
-            'taux_tva', 'appliquer_tva', 'conditions', 'notes', 'echeances_contrat'
+            'client_id', 'devis_ids', 'devis_principal_id', 'date_debut', 'date_fin',
+            'conditions', 'notes', 'echeances_contrat'
         ]
     
     def create(self, validated_data):
-        """Créer un contrat avec les relations"""
-        client_id = validated_data.pop('client_id')
-        devis_id = validated_data.pop('devis_id')
-        
-        # Récupérer les objets liés
-        client = ClientProfile.objects.get(id=client_id)
-        devis = Devis.objects.get(id=devis_id)
+        devis_ids = validated_data.pop('devis_ids', [])
+        devis_principal_id = validated_data.pop('devis_principal_id', None)
         
         # Créer le contrat
-        contrat = Contrat.objects.create(
-            client=client,
-            devis=devis,
-            **validated_data
-        )
+        contrat = Contrat.objects.create(**validated_data)
+        
+        # Ajouter les devis
+        if devis_ids:
+            devis_list = Devis.objects.filter(id__in=devis_ids)
+            contrat.devis.set(devis_list)
+        
+        # Définir le devis principal
+        if devis_principal_id:
+            contrat.devis_principal_id = devis_principal_id
+            contrat.save()
+        elif devis_ids:
+            # Utiliser le premier devis comme principal
+            contrat.devis_principal_id = devis_ids[0]
+            contrat.save()
         
         return contrat
 
@@ -153,7 +167,8 @@ class ContratCreateSerializer(serializers.ModelSerializer):
 class ContratDetailSerializer(serializers.ModelSerializer):
     """Sérialiseur détaillé pour les contrats avec toutes les relations"""
     client = ClientProfileSerializer(read_only=True)
-    devis = DevisSerializer(read_only=True)
+    devis = DevisSerializer(many=True, read_only=True)
+    devis_principal = DevisSerializer(read_only=True)
     lignes = LigneContratSerializer(many=True, read_only=True)
     echeances = EcheancierContratSerializer(many=True, read_only=True)
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
@@ -161,7 +176,7 @@ class ContratDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contrat
         fields = [
-            'id', 'numero', 'devis', 'client', 'date_creation', 'date_debut', 'date_fin',
+            'id', 'numero', 'devis', 'devis_principal', 'client', 'date_creation', 'date_debut', 'date_fin',
             'statut', 'statut_display', 'taux_tva', 'appliquer_tva',
             'taux_frais_agence', 'appliquer_frais_agence',
             'montant_ht', 'montant_tva', 'montant_frais_agence', 'montant_ttc',
@@ -170,9 +185,8 @@ class ContratDetailSerializer(serializers.ModelSerializer):
             'fichier_signe'
         ]
         read_only_fields = [
-            'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 
-            'montant_frais_agence', 'montant_ttc', 'contenu_personnalise', 
-            'variables_personnalisees', 'created_at', 'updated_at', 'fichier_signe'
+            'numero', 'montant_ht', 'montant_tva', 'montant_frais_agence', 'montant_ttc',
+            'created_at', 'updated_at'
         ]
 
 

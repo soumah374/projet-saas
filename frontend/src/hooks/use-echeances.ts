@@ -120,7 +120,7 @@ export function useEcheances(contratId?: number) {
   // Charger les alertes quotidiennes
   const loadAlertesQuotidiennes = async (): Promise<AlertesQuotidiennes | null> => {
     try {
-      const response = await api.get('/contrats/echeances/alertes_quotidiennes/');
+      const response = await api.get(`/contrats/echeances/alertes_quotidiennes/`);
       return response.data;
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Erreur lors du chargement des alertes';
@@ -133,7 +133,7 @@ export function useEcheances(contratId?: number) {
   // Charger les échéances en alerte
   const loadEcheancesAlertes = async (): Promise<Echeance[]> => {
     try {
-      const response = await api.get('/contrats/echeances_alertes/');
+      const response = await api.get(`/contrats/echeances_alertes/`);
       return response.data;
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Erreur lors du chargement des alertes';
@@ -146,7 +146,7 @@ export function useEcheances(contratId?: number) {
   // Charger les échéances en retard
   const loadEcheancesRetard = async (): Promise<Echeance[]> => {
     try {
-      const response = await api.get('/contrats/echeances_retard/');
+      const response = await api.get(`/contrats/echeances_retard/`);
       return response.data;
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Erreur lors du chargement des échéances en retard';

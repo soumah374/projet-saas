@@ -8,16 +8,21 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { CalendarIcon, X, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, X, ChevronsUpDown, Plus, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { formatMontant } from '@/lib/formatters';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { useClients } from '@/hooks/use-clients';
+import { useDevisDisponibles } from '@/hooks/use-contrats';
 
 interface Devis {
   id: number;
   numero: string;
   client: {
+    id: number;
     nom_complet: string;
   };
   montant_ttc: number;
@@ -27,7 +32,9 @@ interface CreateContratModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: {
-    devis_id: number;
+    client_id: number;
+    devis_ids: number[];
+    devis_principal_id: number;
     date_debut: string;
     date_fin: string;
     conditions: string;
@@ -40,7 +47,6 @@ interface CreateContratModalProps {
       commentaire: string;
     }>;
   }) => Promise<void>;
-  devisDisponibles: Devis[];
   isLoadingDevis?: boolean;
   isLoading?: boolean;
 }
@@ -49,12 +55,13 @@ export function CreateContratModal({
   open, 
   onOpenChange, 
   onSave, 
-  devisDisponibles, 
   isLoadingDevis = false,
   isLoading = false 
 }: CreateContratModalProps) {
   const [createForm, setCreateForm] = useState({
-    devis_id: '',
+    client_id: null as number | null,
+    devis_ids: [] as number[],
+    devis_principal_id: null as number | null,
     date_debut: '',
     date_fin: '',
     conditions: '',
@@ -75,8 +82,16 @@ export function CreateContratModal({
   const [dateFin, setDateFin] = useState<Date | undefined>(undefined);
 
   // États pour l'autocomplete des devis
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [clientSearchOpen, setClientSearchOpen] = useState(false);
   const [devisSearchOpen, setDevisSearchOpen] = useState(false);
-  const [devisSearchValue, setDevisSearchValue] = useState('');
+
+  // Hooks pour récupérer les données
+  const { data: clientsData } = useClients({ page_size: 100 });
+  const { data: devisDisponiblesData } = useDevisDisponibles();
+  
+  const clients = clientsData?.results || [];
+  const allDevisDisponibles = devisDisponiblesData || [];
 
   // Réinitialiser le formulaire quand le modal s'ouvre
   useEffect(() => {
@@ -87,7 +102,9 @@ export function CreateContratModal({
 
   const resetForm = () => {
     setCreateForm({
-      devis_id: '',
+      client_id: null,
+      devis_ids: [],
+      devis_principal_id: null,
       date_debut: '',
       date_fin: '',
       conditions: '',
@@ -98,13 +115,17 @@ export function CreateContratModal({
     });
     setDateDebut(undefined);
     setDateFin(undefined);
-    setDevisSearchValue('');
+    setSelectedClientId(null);
   };
 
   // Fonction pour obtenir le devis sélectionné
   const getSelectedDevis = () => {
-    if (!createForm.devis_id) return null;
-    return devisDisponibles.find(devis => devis.id.toString() === createForm.devis_id);
+    return allDevisDisponibles.filter(devis => createForm.devis_ids.includes(devis.id));
+  };
+
+  const getDevisPrincipal = () => {
+    if (!createForm.devis_principal_id) return null;
+    return allDevisDisponibles.find(devis => devis.id === createForm.devis_principal_id);
   };
 
   const selectedDevis = getSelectedDevis();
@@ -196,367 +217,521 @@ export function CreateContratModal({
   }, [createForm.echeancier_type, createForm.nombre_echeances, createForm.date_debut, createForm.date_fin]);
 
   const handleSave = async () => {
-    if (!createForm.devis_id || !createForm.date_debut || !createForm.date_fin) {
-      toast.error('Veuillez remplir tous les champs obligatoires');
+    if (!selectedClientId) {
+      toast.error('Veuillez sélectionner un client');
       return;
     }
 
-    // Validation des échéances
-    if (createForm.echeances.length > 0) {
-      const totalPourcentage = createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0);
-      if (totalPourcentage !== 100) {
-        toast.error('Le total des pourcentages des échéances doit être égal à 100%');
-        return;
-      }
+    if (!createForm.devis_ids.length) {
+      toast.error('Veuillez sélectionner au moins un devis');
+      return;
+    }
+
+    if (!createForm.devis_principal_id) {
+      toast.error('Veuillez sélectionner un devis principal');
+      return;
+    }
+
+    if (!createForm.date_debut || !createForm.date_fin) {
+      toast.error('Veuillez sélectionner les dates de début et de fin');
+      return;
+    }
+
+    if (new Date(createForm.date_fin) <= new Date(createForm.date_debut)) {
+      toast.error('La date de fin doit être après la date de début');
+      return;
     }
 
     try {
       await onSave({
-        devis_id: parseInt(createForm.devis_id),
+        client_id: selectedClientId,
+        devis_ids: createForm.devis_ids,
+        devis_principal_id: createForm.devis_principal_id,
         date_debut: createForm.date_debut,
         date_fin: createForm.date_fin,
         conditions: createForm.conditions,
         notes: createForm.notes,
         echeances: createForm.echeances
       });
+      
       onOpenChange(false);
-    } catch (err) {
-      console.error('Erreur lors de la création:', err);
+      resetForm();
+    } catch (error) {
+      console.error('Erreur lors de la création du contrat:', error);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>Créer un nouveau contrat</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-140px)] pr-2">
-          {/* Sélection du devis */}
-          <div>
-            <Label>Devis *</Label>
-            <Popover open={devisSearchOpen} onOpenChange={setDevisSearchOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={devisSearchOpen}
-                  className="w-full justify-between"
-                  disabled={isLoadingDevis}
-                >
-                  {selectedDevis ? (
-                    <>
-                      {selectedDevis.numero} - {selectedDevis.client.nom_complet}
-                    </>
-                  ) : (
-                    "Sélectionner un devis..."
-                  )}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-full p-0">
-                <Command>
-                  <CommandInput placeholder="Rechercher un devis..." />
-                  <CommandList>
-                    <CommandEmpty>Aucun devis trouvé.</CommandEmpty>
-                    <CommandGroup>
-                      {devisDisponibles.map((devis) => (
-                        <CommandItem
-                          key={devis.id}
-                          value={`${devis.numero} ${devis.client.nom_complet}`}
-                          onSelect={() => {
-                            setCreateForm({ ...createForm, devis_id: devis.id.toString() });
-                            setDevisSearchOpen(false);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            <span className="font-medium">{devis.numero}</span>
-                            <span className="text-sm text-gray-600">{devis.client.nom_complet}</span>
-                            <span className="text-sm text-gray-500">{formatMontant(devis.montant_ttc)}</span>
-                          </div>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Date de début *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateDebut ? format(dateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" 
-                  align="start"
-                  side="bottom"
-                  sideOffset={4}
-                >
-                  <Calendar
-                    mode="single"
-                    selected={dateDebut}
-                    onSelect={(date) => {
-                      setDateDebut(date);
-                      setCreateForm({ ...createForm, date_debut: date ? date.toISOString().split('T')[0] : '' });
-                    }}
-                    initialFocus
-                    locale={fr}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div>
-              <Label>Date de fin *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFin ? format(dateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" 
-                  align="start"
-                  side="bottom"
-                  sideOffset={4}
-                >
-                  <Calendar
-                    mode="single"
-                    selected={dateFin}
-                    onSelect={(date) => {
-                      setDateFin(date);
-                      setCreateForm({ ...createForm, date_fin: date ? date.toISOString().split('T')[0] : '' });
-                    }}
-                    initialFocus
-                    locale={fr}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          {/* Conditions et notes */}
-          <div className="grid grid-cols-1 gap-4">
-            <div>
-              <Label htmlFor="create-conditions">Conditions</Label>
-              <Textarea
-                id="create-conditions"
-                value={createForm.conditions}
-                onChange={(e) => setCreateForm({ ...createForm, conditions: e.target.value })}
-                placeholder="Conditions du contrat..."
-                rows={3}
-              />
-            </div>
-            <div>
-              <Label htmlFor="create-notes">Notes</Label>
-              <Textarea
-                id="create-notes"
-                value={createForm.notes}
-                onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
-                placeholder="Notes du contrat..."
-                rows={3}
-              />
-            </div>
-          </div>
-
-          {/* Section Échéanciers */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-semibold">Échéancier de paiement</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={generateStandardEcheances}
-                >
-                  Standard (30-40-30)
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={generateTranchesEcheances}
-                >
-                  Tranches égales
-                </Button>
+    <div>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Créer un nouveau contrat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 overflow-y-auto max-h-[calc(90vh-140px)] pr-2">
+            {/* Sélection du client et des devis */}
+            <div className="space-y-4">
+              {/* Sélection du client */}
+              <div className="space-y-2">
+                <Label>Client *</Label>
+                <Popover open={clientSearchOpen} onOpenChange={setClientSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientSearchOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedClientId ? (
+                        clients.find(client => client.id === selectedClientId)?.nom_complet || "Client sélectionné"
+                      ) : (
+                        "Sélectionner un client..."
+                      )}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0">
+                    <Command>
+                      <CommandInput placeholder="Rechercher un client..." />
+                      <CommandList>
+                        <CommandEmpty>Aucun client trouvé.</CommandEmpty>
+                        <CommandGroup>
+                          {clients.map((client) => (
+                            <CommandItem
+                              key={client.id}
+                              value={`${client.nom_complet} ${client.email}`}
+                              onSelect={() => {
+                                setSelectedClientId(client.id);
+                                setCreateForm({ ...createForm, client_id: client.id });
+                                setClientSearchOpen(false);
+                              }}
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium">{client.nom_complet}</span>
+                                <span className="text-sm text-gray-600">{client.email}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
+
+              {/* Sélection des devis */}
+              {selectedClientId && (
+                <div className="space-y-2">
+                  <Label>Devis du client *</Label>
+                  <Popover open={devisSearchOpen} onOpenChange={setDevisSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={devisSearchOpen}
+                        className="w-full justify-between"
+                      >
+                        {createForm.devis_ids.length > 0 
+                          ? `${createForm.devis_ids.length} devis sélectionné(s)`
+                          : "Sélectionner les devis..."
+                        }
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Rechercher des devis..." />
+                        <CommandList>
+                          <CommandEmpty>Aucun devis trouvé.</CommandEmpty>
+                          <CommandGroup>
+                            {allDevisDisponibles
+                              .filter(devis => devis.client.id === selectedClientId)
+                              .map((devis) => (
+                                <CommandItem
+                                  key={devis.id}
+                                  value={`${devis.numero} ${devis.client.nom_complet}`}
+                                  onSelect={() => {
+                                    const isSelected = createForm.devis_ids.includes(devis.id);
+                                    if (isSelected) {
+                                      // Retirer le devis
+                                      const newDevisIds = createForm.devis_ids.filter(id => id !== devis.id);
+                                      setCreateForm({
+                                        ...createForm,
+                                        devis_ids: newDevisIds,
+                                        devis_principal_id: createForm.devis_principal_id === devis.id ? null : createForm.devis_principal_id
+                                      });
+                                    } else {
+                                      // Ajouter le devis
+                                      const newDevisIds = [...createForm.devis_ids, devis.id];
+                                      setCreateForm({
+                                        ...createForm,
+                                        devis_ids: newDevisIds,
+                                        devis_principal_id: createForm.devis_principal_id || devis.id
+                                      });
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{devis.numero}</span>
+                                      <span className="text-sm text-gray-600">{formatMontant(devis.montant_ttc)}</span>
+                                    </div>
+                                    <input
+                                      type="checkbox"
+                                      checked={createForm.devis_ids.includes(devis.id)}
+                                      onChange={() => {}} // Géré par onSelect
+                                      className="ml-2"
+                                    />
+                                  </div>
+                                </CommandItem>
+                              ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              )}
+
+              {/* Sélection du devis principal */}
+              {createForm.devis_ids.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Devis principal</Label>
+                  <Select 
+                    value={createForm.devis_principal_id?.toString() || ''} 
+                    onValueChange={(value) => setCreateForm({ ...createForm, devis_principal_id: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionner le devis principal" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {createForm.devis_ids.map(devisId => {
+                        const devis = allDevisDisponibles.find(d => d.id === devisId);
+                        return devis ? (
+                          <SelectItem key={devisId} value={devisId.toString()}>
+                            {devis.numero} - {formatMontant(devis.montant_ttc)}
+                          </SelectItem>
+                        ) : null;
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Affichage des devis sélectionnés */}
+              {createForm.devis_ids.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Devis sélectionnés ({createForm.devis_ids.length})</Label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {getSelectedDevis().map((devis) => (
+                      <Card key={devis.id} className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-medium">{devis.numero}</div>
+                            <div className="text-sm text-gray-600">{devis.client.nom_complet}</div>
+                            <div className="text-sm text-gray-500">{formatMontant(devis.montant_ttc)}</div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {createForm.devis_principal_id === devis.id && (
+                              <Badge variant="secondary" className="text-xs">Principal</Badge>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setCreateForm({
+                                  ...createForm,
+                                  devis_ids: createForm.devis_ids.filter(id => id !== devis.id),
+                                  devis_principal_id: createForm.devis_principal_id === devis.id ? null : createForm.devis_principal_id
+                                });
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Dates */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Type d'échéancier</Label>
-                <Select 
-                  value={createForm.echeancier_type} 
-                  onValueChange={(value) => setCreateForm({ ...createForm, echeancier_type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="standard">Standard (30-40-30)</SelectItem>
-                    <SelectItem value="tranches">Tranches égales</SelectItem>
-                    <SelectItem value="personnalise">Personnalisé</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Date de début *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateDebut ? format(dateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" 
+                    align="start"
+                    side="bottom"
+                    sideOffset={4}
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={dateDebut}
+                      onSelect={(date) => {
+                        setDateDebut(date);
+                        setCreateForm({ ...createForm, date_debut: date ? date.toISOString().split('T')[0] : '' });
+                      }}
+                      initialFocus
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-              {createForm.echeancier_type === 'tranches' && (
+              <div>
+                <Label>Date de fin *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFin ? format(dateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" 
+                    align="start"
+                    side="bottom"
+                    sideOffset={4}
+                  >
+                    <Calendar
+                      mode="single"
+                      selected={dateFin}
+                      onSelect={(date) => {
+                        setDateFin(date);
+                        setCreateForm({ ...createForm, date_fin: date ? date.toISOString().split('T')[0] : '' });
+                      }}
+                      initialFocus
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Conditions et notes */}
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label htmlFor="create-conditions">Conditions</Label>
+                <Textarea
+                  id="create-conditions"
+                  value={createForm.conditions}
+                  onChange={(e) => setCreateForm({ ...createForm, conditions: e.target.value })}
+                  placeholder="Conditions du contrat..."
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="create-notes">Notes</Label>
+                <Textarea
+                  id="create-notes"
+                  value={createForm.notes}
+                  onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })}
+                  placeholder="Notes du contrat..."
+                  rows={3}
+                />
+              </div>
+            </div>
+
+            {/* Section Échéanciers */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-lg font-semibold">Échéancier de paiement</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateStandardEcheances}
+                  >
+                    Standard (30-40-30)
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={generateTranchesEcheances}
+                  >
+                    Tranches égales
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Nombre de tranches</Label>
+                  <Label>Type d'échéancier</Label>
                   <Select 
-                    value={createForm.nombre_echeances.toString()} 
-                    onValueChange={(value) => setCreateForm({ ...createForm, nombre_echeances: parseInt(value) })}
+                    value={createForm.echeancier_type} 
+                    onValueChange={(value) => setCreateForm({ ...createForm, echeancier_type: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="2">2 tranches</SelectItem>
-                      <SelectItem value="3">3 tranches</SelectItem>
-                      <SelectItem value="4">4 tranches</SelectItem>
-                      <SelectItem value="5">5 tranches</SelectItem>
+                      <SelectItem value="standard">Standard (30-40-30)</SelectItem>
+                      <SelectItem value="tranches">Tranches égales</SelectItem>
+                      <SelectItem value="personnalise">Personnalisé</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              )}
-            </div>
+                {createForm.echeancier_type === 'tranches' && (
+                  <div>
+                    <Label>Nombre de tranches</Label>
+                    <Select 
+                      value={createForm.nombre_echeances.toString()} 
+                      onValueChange={(value) => setCreateForm({ ...createForm, nombre_echeances: parseInt(value) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2">2 tranches</SelectItem>
+                        <SelectItem value="3">3 tranches</SelectItem>
+                        <SelectItem value="4">4 tranches</SelectItem>
+                        <SelectItem value="5">5 tranches</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
 
-            {/* Liste des échéances */}
-            {createForm.echeances.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="font-medium">Échéances</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addEcheance}
-                  >
-                    Ajouter une échéance
-                  </Button>
-                </div>
-                
-                <div className="space-y-3 max-h-60 overflow-y-auto">
-                  {createForm.echeances.map((echeance, index) => (
-                    <div key={index} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Échéance {echeance.numero}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeEcheance(index)}
-                          className="text-red-500"
-                        >
-                          <X size={14} />
-                        </Button>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label>Type</Label>
-                          <Select 
-                            value={echeance.type} 
-                            onValueChange={(value) => updateEcheance(index, 'type', value)}
+              {/* Liste des échéances */}
+              {createForm.echeances.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium">Échéances</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addEcheance}
+                    >
+                      Ajouter une échéance
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3 max-h-60 overflow-y-auto">
+                    {createForm.echeances.map((echeance, index) => (
+                      <div key={index} className="border rounded-lg p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Échéance {echeance.numero}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeEcheance(index)}
+                            className="text-red-500"
                           >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="acompte">Acompte</SelectItem>
-                              <SelectItem value="tranche">Tranche</SelectItem>
-                              <SelectItem value="solde">Solde</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            <X size={14} />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label>Type</Label>
+                            <Select 
+                              value={echeance.type} 
+                              onValueChange={(value) => updateEcheance(index, 'type', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="acompte">Acompte</SelectItem>
+                                <SelectItem value="tranche">Tranche</SelectItem>
+                                <SelectItem value="solde">Solde</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div>
+                            <Label>Pourcentage (%)</Label>
+                            <Input
+                              type="number"
+                              value={echeance.pourcentage}
+                              onChange={(e) => updateEcheance(index, 'pourcentage', parseFloat(e.target.value) || 0)}
+                              min="0"
+                              max="100"
+                              step="0.01"
+                            />
+                          </div>
                         </div>
                         
                         <div>
-                          <Label>Pourcentage (%)</Label>
+                          <Label>Date d'échéance</Label>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" className="w-full justify-start text-left font-normal">
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {echeance.date_echeance ? format(new Date(echeance.date_echeance), "PPP", { locale: fr }) : "Sélectionner une date"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent 
+                              className="w-auto p-0" 
+                              align="start"
+                              side="bottom"
+                              sideOffset={4}
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={echeance.date_echeance ? new Date(echeance.date_echeance) : undefined}
+                                onSelect={(date) => updateEcheance(index, 'date_echeance', date ? date.toISOString().split('T')[0] : '')}
+                                initialFocus
+                                locale={fr}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                        
+                        <div>
+                          <Label>Commentaire</Label>
                           <Input
-                            type="number"
-                            value={echeance.pourcentage}
-                            onChange={(e) => updateEcheance(index, 'pourcentage', parseFloat(e.target.value) || 0)}
-                            min="0"
-                            max="100"
-                            step="0.01"
+                            value={echeance.commentaire}
+                            onChange={(e) => updateEcheance(index, 'commentaire', e.target.value)}
+                            placeholder="Commentaire optionnel..."
                           />
                         </div>
                       </div>
-                      
-                      <div>
-                        <Label>Date d'échéance</Label>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start text-left font-normal">
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {echeance.date_echeance ? format(new Date(echeance.date_echeance), "PPP", { locale: fr }) : "Sélectionner une date"}
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent 
-                            className="w-auto p-0" 
-                            align="start"
-                            side="bottom"
-                            sideOffset={4}
-                          >
-                            <Calendar
-                              mode="single"
-                              selected={echeance.date_echeance ? new Date(echeance.date_echeance) : undefined}
-                              onSelect={(date) => updateEcheance(index, 'date_echeance', date ? date.toISOString().split('T')[0] : '')}
-                              initialFocus
-                              locale={fr}
-                            />
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                      
-                      <div>
-                        <Label>Commentaire</Label>
-                        <Input
-                          value={echeance.commentaire}
-                          onChange={(e) => updateEcheance(index, 'commentaire', e.target.value)}
-                          placeholder="Commentaire optionnel..."
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Résumé des pourcentages */}
-                <div className="bg-gray-50 p-3 rounded-lg">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">Total des pourcentages :</span>
-                    <span className={`font-bold ${createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0) === 100 ? 'text-green-600' : 'text-red-600'}`}>
-                      {createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0).toFixed(2)}%
-                    </span>
+                    ))}
                   </div>
-                  {createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0) !== 100 && (
-                    <p className="text-sm text-red-600 mt-1">
-                      Le total doit être égal à 100%
-                    </p>
-                  )}
+                  
+                  {/* Résumé des pourcentages */}
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">Total des pourcentages :</span>
+                      <span className={`font-bold ${createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0) === 100 ? 'text-green-600' : 'text-red-600'}`}>
+                        {createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0).toFixed(2)}%
+                      </span>
+                    </div>
+                    {createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0) !== 100 && (
+                      <p className="text-sm text-red-600 mt-1">
+                        Le total doit être égal à 100%
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
-        <DialogFooter className="border-t pt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annuler
-          </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isLoading}
-          >
-            {isLoading ? 'Création...' : 'Créer le contrat'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isLoading}
+            >
+              {isLoading ? 'Création...' : 'Créer le contrat'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 } 

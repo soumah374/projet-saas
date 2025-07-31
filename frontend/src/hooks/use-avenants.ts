@@ -70,7 +70,6 @@ export const useAvenants = () => {
     queryKey: ['avenants'],
     queryFn: async (): Promise<Avenant[]> => {
       const response = await api.get('/contrats/avenants/');
-      // Gérer la structure paginée ou directe
       return response.data.results || response.data || [];
     },
   });
@@ -78,9 +77,9 @@ export const useAvenants = () => {
 
 export const useAvenantsByContrat = (contratId: number) => {
   return useQuery({
-    queryKey: ['avenants', 'contrat', contratId],
+    queryKey: ['avenants', 'contrat_id', contratId],
     queryFn: async (): Promise<Avenant[]> => {
-      const response = await api.get(`/contrats/${contratId}/avenants/`);
+      const response = await api.get(`/contrats/avenants/by_contrat/?contrat_id=${contratId}`);
       // Gérer la structure paginée ou directe
       return response.data.results || response.data || [];
     },
@@ -103,14 +102,14 @@ export const useCreateAvenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ contratId, data }: { contratId: number; data: CreateAvenantData }): Promise<Avenant> => {
-      const response = await api.post(`/contrats/${contratId}/avenants/`, data);
+    mutationFn: async ({ data }: { data: CreateAvenantData }): Promise<Avenant> => {
+      const response = await api.post(`/contrats/avenants/store/`, data);
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast.success('Avenant créé avec succès');
       queryClient.invalidateQueries({ queryKey: ['avenants'] });
-      queryClient.invalidateQueries({ queryKey: ['avenants', 'contrat', data.contrat.id] });
+      queryClient.invalidateQueries({ queryKey: ['avenants', 'contrat_id', variables.data.contrat_id] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Erreur lors de la création de l\'avenant');
@@ -122,15 +121,15 @@ export const useUpdateAvenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ contratId, id, data }: { contratId: number; id: number; data: Partial<CreateAvenantData> }): Promise<Avenant> => {
-      const response = await api.patch(`/contrats/${contratId}/avenants/${id}/`, data);
+    mutationFn: async ({ id, data }: { id: number; data: Partial<CreateAvenantData> }): Promise<Avenant> => {
+      const response = await api.patch(`/contrats/avenants/${id}/`, data);
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       toast.success('Avenant mis à jour avec succès');
       queryClient.invalidateQueries({ queryKey: ['avenants'] });
       queryClient.invalidateQueries({ queryKey: ['avenants', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['avenants', 'contrat', data.contrat.id] });
+      queryClient.invalidateQueries({ queryKey: ['avenants', 'contrat', variables] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Erreur lors de la mise à jour de l\'avenant');
@@ -142,8 +141,8 @@ export const useDeleteAvenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ contratId, id }: { contratId: number; id: number }): Promise<void> => {
-      await api.delete(`/contrats/${contratId}/avenants/${id}/`);
+    mutationFn: async ({ id }: { id: number }): Promise<void> => {
+      await api.delete(`/contrats/avenants/${id}/`);
     },
     onSuccess: (_, id) => {
       toast.success('Avenant supprimé avec succès');
@@ -160,8 +159,8 @@ export const useUpdateAvenantContent = () => {
   
   return useMutation({
     mutationFn: async ({ 
-      contratId, id, contenu_personnalise }: { contratId: number; id: number; contenu_personnalise: string }): Promise<void> => {
-      await api.post(`/contrats/${contratId}/avenants/${id}/update_content/`, { contenu_personnalise });
+      id, contenu_personnalise }: { id: number; contenu_personnalise: string }): Promise<void> => {
+      await api.post(`/contrats/avenants/${id}/update_content/`, { contenu_personnalise });
     },
     onSuccess: (_, { id }) => {
       toast.success('Contenu de l\'avenant mis à jour');
@@ -177,8 +176,8 @@ export const useEnvoyerAvenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ contratId, id }: { contratId: number; id: number }): Promise<void> => {
-      await api.post(`/contrats/${contratId}/avenants/${id}/envoyer/`);
+    mutationFn: async ({ id }: { id: number }): Promise<void> => {
+      await api.post(`/contrats/avenants/${id}/envoyer/`);
     },
     onSuccess: (_, id) => {
       toast.success('Avenant envoyé avec succès');
@@ -195,10 +194,10 @@ export const useSignerAvenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ contratId, id, fichier_signe }: { contratId: number; id: number; fichier_signe: File }): Promise<void> => {
+    mutationFn: async ({ id, fichier_signe }: { id: number; fichier_signe: File }): Promise<void> => {
       const formData = new FormData();
       formData.append('fichier_signe', fichier_signe);
-      await api.post(`/contrats/${contratId}/avenants/${id}/signer/`, formData, {
+      await api.post(`/contrats/avenants/${id}/signer/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -219,8 +218,8 @@ export const useAnnulerAvenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ contratId, id }: { contratId: number; id: number }): Promise<void> => {
-      await api.post(`/contrats/${contratId}/avenants/${id}/annuler/`);
+    mutationFn: async ({ id }: { id: number }): Promise<void> => {
+      await api.post(`/contrats/avenants/${id}/annuler/`);
     },
     onSuccess: (_, id) => {
       toast.success('Avenant annulé avec succès');
@@ -235,8 +234,8 @@ export const useAnnulerAvenant = () => {
 
 export const useDownloadAvenantPDF = () => {
   return useMutation({
-    mutationFn: async ({ contratId, id }: { contratId: number; id: number }): Promise<Blob> => {
-      const response = await api.get(`/contrats/${contratId}/avenants/${id}/download_pdf/`, {
+    mutationFn: async ({ id }: { id: number }): Promise<Blob> => {
+      const response = await api.get(`/contrats/avenants/${id}/download_pdf/`, {
         responseType: 'blob',
       });
       return response.data;

@@ -17,15 +17,26 @@ class LigneContratInline(admin.TabularInline):
 
 @admin.register(Contrat)
 class ContratAdmin(admin.ModelAdmin):
-    list_display = ['numero', 'client', 'devis', 'date_debut', 'date_fin', 'statut', 'montant_ttc']
+    list_display = ['numero', 'client', 'get_devis_display', 'devis_principal', 'date_debut', 'date_fin', 'statut', 'montant_ttc']
     list_filter = ['statut', 'date_debut', 'date_fin']
-    search_fields = ['numero', 'client__nom', 'client__prenom', 'devis__numero']
+    search_fields = ['numero', 'client__nom', 'client__prenom', 'devis__numero', 'devis_principal__numero']
     readonly_fields = ['numero', 'date_creation', 'montant_ht', 'montant_tva', 'montant_ttc']
     inlines = [LigneContratInline]
     
+    def get_devis_display(self, obj):
+        """Affiche les devis associés"""
+        if obj.devis.exists():
+            devis_list = [devis.numero for devis in obj.devis.all()]
+            if len(devis_list) == 1:
+                return devis_list[0]
+            else:
+                return f"{len(devis_list)} devis: {', '.join(devis_list[:2])}{'...' if len(devis_list) > 2 else ''}"
+        return "—"
+    get_devis_display.short_description = "Devis associés"
+    
     fieldsets = (
         ('Informations générales', {
-            'fields': ('numero', 'devis', 'client', 'statut')
+            'fields': ('numero', 'devis', 'devis_principal', 'client', 'statut')
         }),
         ('Dates', {
             'fields': ('date_creation', 'date_debut', 'date_fin')

@@ -43,7 +43,8 @@ import {
   useUpdateContratContent,
   useEnvoyerContrat,
   useSignerContrat,
-  useCloturerContrat
+  useCloturerContrat,
+  useAddDevisToContrat,
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
@@ -52,6 +53,8 @@ import { Echeance } from '@/lib/types';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
 import { statutContrat } from '@/lib/utils';
 import { AvenantList } from '@/components/avenants/AvenantList';
+import { DevisSelectionModal } from '@/components/contrats/DevisSelectionModal';
+import { Input } from '@/components/ui/input';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,6 +68,7 @@ export function ContratDetailPage() {
   const [echeancierDialogOpen, setEcheancierDialogOpen] = useState(false);
   const [selectedEcheancierType, setSelectedEcheancierType] = useState<string>('');
   const [showContractEditor, setShowContractEditor] = useState(false);
+  const [showDevisSelectionModal, setShowDevisSelectionModal] = useState(false);
   const [showConfirmSendModal, setShowConfirmSendModal] = useState(false);
   const [showSignModal, setShowSignModal] = useState(false);
   const [fileToSign, setFileToSign] = useState<File | null>(null);
@@ -86,6 +90,7 @@ export function ContratDetailPage() {
   const updateContratContentMutation = useUpdateContratContent();
   const envoyerContratMutation = useEnvoyerContrat();
   const signerContratMutation = useSignerContrat();
+  const addDevisToContratMutation = useAddDevisToContrat();
   // Hook pour les échéances
   const {
     echeances,
@@ -276,6 +281,20 @@ export function ContratDetailPage() {
     } catch (err) {
       console.error('Erreur lors de l\'envoi de l\'alerte:', err);
     }
+  };
+
+  const handleAddDevis = (selectedDevisIds: number[], devisPrincipalId: number) => {
+    if (!contrat) return;
+    
+    addDevisToContratMutation.mutate({
+      contrat_id: contrat.id,
+      devis_ids: selectedDevisIds,
+      devis_principal_id: devisPrincipalId
+    });
+  };
+
+  const handleOpenDevisSelection = () => {
+    setShowDevisSelectionModal(true);
   };
 
   const openEditDialog = () => {
@@ -608,6 +627,10 @@ export function ContratDetailPage() {
             <FileText size={16} className="mr-2" />
             Éditer contrat
           </Button>
+          <Button onClick={handleOpenDevisSelection} variant="outline">
+            <Plus size={16} className="mr-2" />
+            Ajouter des devis
+          </Button>
           {contrat.statut === 'brouillon' && (
             <Button onClick={openDeleteDialog} variant="destructive">
               <Trash2 size={16} className="mr-2" />
@@ -647,8 +670,28 @@ export function ContratDetailPage() {
                   <p className="text-sm text-gray-600">{contrat.client.email}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-600">Devis associé</Label>
-                  <p className="font-medium">{contrat.devis.numero}</p>
+                  <Label className="text-sm font-medium text-gray-600">Devis associés</Label>
+                  {contrat.devis.length > 0 ? (
+                    <div className="space-y-1">
+                      {contrat.devis.length === 1 ? (
+                        <p className="font-medium">{contrat.devis[0].numero}</p>
+                      ) : (
+                        <div>
+                          <p className="font-medium">{contrat.devis.length} devis</p>
+                          <div className="text-sm text-gray-600">
+                            {contrat.devis.map(d => d.numero).join(', ')}
+                          </div>
+                          {contrat.devis_principal && (
+                            <div className="text-sm text-blue-600">
+                              Principal: {contrat.devis_principal.numero}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-gray-400">—</p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Statut</Label>
@@ -1340,6 +1383,53 @@ export function ContratDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Modal de signature */}
+      <Dialog open={showSignModal} onOpenChange={setShowSignModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Signer le contrat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Veuillez télécharger le fichier signé du contrat.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="fichier_signe">Fichier signé</Label>
+              <Input
+                id="fichier_signe"
+                type="file"
+                accept=".pdf"
+                onChange={(e) => setFileToSign(e.target.files?.[0] || null)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSignModal(false)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => {
+                setShowSignModal(false);
+                setFileToSign(null);
+              }}
+              disabled={isSigning}
+            >
+              {isSigning ? 'Signature...' : 'Signer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de sélection de devis */}
+      <DevisSelectionModal
+        isOpen={showDevisSelectionModal}
+        onClose={() => setShowDevisSelectionModal(false)}
+        onConfirm={handleAddDevis}
+        existingDevisIds={contrat?.devis.map(d => d.id) || []}
+        title="Ajouter des devis au contrat"
+        selectedClientId={contrat.client.id}
+      />
     </div>
   );
 } 

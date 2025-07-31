@@ -26,8 +26,11 @@ class Contrat(models.Model):
     # Numéro généré automatiquement
     numero = models.CharField(max_length=50, unique=True, editable=False)
     
-    # Relation avec le devis accepté
-    devis = models.OneToOneField(Devis, on_delete=models.CASCADE, related_name='contrat')
+    # Relation avec les devis acceptés
+    devis = models.ManyToManyField(Devis, related_name='contrats', blank=True, verbose_name="Devis associés", null=True)
+    
+    # Devis principal (pour compatibilité)
+    devis_principal = models.ForeignKey(Devis, on_delete=models.SET_NULL, null=True, blank=True, related_name='contrat_principal', verbose_name="Devis principal")
     
     # Relations
     client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='contrats')
@@ -82,10 +85,8 @@ class Contrat(models.Model):
         if not self.numero:
             # Générer un numéro unique
             self.numero = self.generate_numero()
-        
-        # Si c'est un nouveau contrat, initialiser les montants depuis le devis
-        if not self.pk and self.devis:
-            self.initialiser_montants_depuis_devis()
+            
+        super().save(*args, **kwargs)
         
         # Si c'est un nouveau contrat et qu'il n'y a pas de contenu personnalisé
         if not self.pk and not self.contenu_personnalise:
@@ -102,16 +103,36 @@ class Contrat(models.Model):
             self.creer_echeances_depuis_configuration()
     
     def initialiser_montants_depuis_devis(self):
-        """Initialise les montants du contrat à partir du devis"""
-        if self.devis:
-            self.montant_ht = self.devis.montant_ht
-            self.montant_tva = self.devis.montant_tva
-            self.montant_frais_agence = self.devis.montant_frais_agence
-            self.montant_ttc = self.devis.montant_ttc
-            self.taux_tva = self.devis.taux_tva
-            self.appliquer_tva = self.devis.appliquer_tva
-            self.taux_frais_agence = self.devis.taux_frais_agence
-            self.appliquer_frais_agence = self.devis.appliquer_frais_agence
+        """Initialise les montants du contrat à partir des devis"""
+        if self.devis.exists():
+            # Calculer les montants totaux de tous les devis
+            total_ht = sum(devis.montant_ht for devis in self.devis.all())
+            total_tva = sum(devis.montant_tva for devis in self.devis.all())
+            total_frais_agence = sum(devis.montant_frais_agence for devis in self.devis.all())
+            total_ttc = sum(devis.montant_ttc for devis in self.devis.all())
+            
+            self.montant_ht = total_ht
+            self.montant_tva = total_tva
+            self.montant_frais_agence = total_frais_agence
+            self.montant_ttc = total_ttc
+            
+            # Utiliser les paramètres du premier devis pour la configuration
+            premier_devis = self.devis.first()
+            if premier_devis:
+                self.taux_tva = premier_devis.taux_tva
+                self.appliquer_tva = premier_devis.appliquer_tva
+                self.taux_frais_agence = premier_devis.taux_frais_agence
+                self.appliquer_frais_agence = premier_devis.appliquer_frais_agence
+        elif self.devis_principal:
+            # Fallback pour compatibilité avec l'ancien système
+            self.montant_ht = self.devis_principal.montant_ht
+            self.montant_tva = self.devis_principal.montant_tva
+            self.montant_frais_agence = self.devis_principal.montant_frais_agence
+            self.montant_ttc = self.devis_principal.montant_ttc
+            self.taux_tva = self.devis_principal.taux_tva
+            self.appliquer_tva = self.devis_principal.appliquer_tva
+            self.taux_frais_agence = self.devis_principal.taux_frais_agence
+            self.appliquer_frais_agence = self.devis_principal.appliquer_frais_agence
     
     def creer_echeances_depuis_configuration(self):
         """Crée les échéances à partir de la configuration JSON"""
@@ -215,154 +236,43 @@ class Contrat(models.Model):
         return contenu
     
     def get_variables_contrat(self):
-        """Retourne les variables spécifiques au contrat pour remplacer dans le template"""
-        from decimal import Decimal
-        from datetime import date, datetime
-        
-        # Fonction helper pour formater les dates
+        """Récupère les variables pour le template du contrat"""
         def format_date(date_obj):
-            if isinstance(date_obj, str):
-                try:
-                    # Essayer de parser la chaîne en date
-                    if 'T' in date_obj:  # Format ISO avec timezone
-                        date_obj = datetime.fromisoformat(date_obj.replace('Z', '+00:00'))
-                    else:  # Format YYYY-MM-DD
-                        date_obj = datetime.strptime(date_obj, '%Y-%m-%d')
-                except ValueError:
-                    return date_obj  # Retourner la chaîne si pas possible de parser
-            if hasattr(date_obj, 'strftime'):
+            if date_obj:
                 return date_obj.strftime('%d/%m/%Y')
-            return str(date_obj)
+            return ''
         
-        # Variables de base du contrat
+        # Utiliser le devis principal ou le premier devis disponible
+        devis_reference = None
+        if hasattr(self, 'devis_principal') and self.devis_principal:
+            devis_reference = self.devis_principal
+        elif hasattr(self, 'devis') and self.devis.exists():
+            devis_reference = self.devis.first()
+        
         variables = {
-            'NUMERO_DEVIS': self.devis.numero if self.devis else '',
-            'DATE_DEVIS': format_date(self.devis.date_creation) if self.devis and self.devis.date_creation else '',
-            'NUMERO_CONTRAT': self.numero,
-            'DATE_DEBUT_PRESTATION': format_date(self.date_debut) if self.date_debut else '',
-            'DATE_FIN_PRESTATION': format_date(self.date_fin) if self.date_fin else '',
-            'MONTANT_HT': f"{self.montant_ht:,.0f}",
-            'MONTANT_TVA': f"{self.montant_tva:,.0f}",
-            'MONTANT_FRAIS_AGENCE': f"{self.montant_frais_agence:,.0f}",
-            'MONTANT_TTC': f"{self.montant_ttc:,.0f}",
-            'TAUX_TVA': f"{self.taux_tva}",
-            'TAUX_FRAIS_AGENCE': f"{self.taux_frais_agence}",
-            'DATE_SIGNATURE': format_date(self.date_creation) if self.date_creation else '',
-            'VILLE_SIGNATURE': 'Conakry',
-            'CONDITIONS_SPECIFIQUES': self.conditions,
-            'NOTES_ADDITIONNELLES': self.notes,
-            'DELAI_RESILIATION': '30',
+            'NUMERO_CONTRAT': self.numero or '[NUMERO_CONTRAT]',
+            'DATE_CREATION': format_date(self.date_creation),
+            'DATE_DEBUT': format_date(self.date_debut),
+            'DATE_FIN': format_date(self.date_fin),
+            'CLIENT_NOM': self.client.nom_complet if self.client else '[CLIENT_NOM]',
+            'CLIENT_EMAIL': self.client.email if self.client else '[CLIENT_EMAIL]',
+            'CLIENT_TELEPHONE': self.client.telephone if self.client else '[CLIENT_TELEPHONE]',
+            'CLIENT_ADRESSE': self.client.adresse_complete if self.client else '[CLIENT_ADRESSE]',
+            'CLIENT_TYPE': self.client.get_type_client_display() if self.client else '[CLIENT_TYPE]',
+            'MONTANT_HT': f"{self.montant_ht:,.2f}" if self.montant_ht else '[MONTANT_HT]',
+            'MONTANT_TVA': f"{self.montant_tva:,.2f}" if self.montant_tva else '[MONTANT_TVA]',
+            'MONTANT_TTC': f"{self.montant_ttc:,.2f}" if self.montant_ttc else '[MONTANT_TTC]',
+            'TAUX_TVA': f"{self.taux_tva}%" if self.taux_tva else '[TAUX_TVA]',
+            'CONDITIONS': self.conditions or '[CONDITIONS]',
+            'NOTES': self.notes or '[NOTES]',
         }
         
-        # Variables du prestataire (SAKOM)
-        variables.update({
-            'RAISON_SOCIALE_PRESTATAIRE': 'SAKOM SARL',
-            'FORME_JURIDIQUE': 'SARL',
-            'MONTANT_CAPITAL': '100,000,000',
-            'VILLE_RCS': 'Conakry',
-            'SIRET': 'GN12345678901234',
-            'ADRESSE_PRESTATAIRE': '123 Avenue de la République, Conakry, Guinée',
-            'NOM_REPRESENTANT': 'Directeur Général',
-            'FONCTION_REPRESENTANT': 'Directeur Général',
-        })
-        
-        # Variables du client
-        if self.client:
-            # Déterminer le type de client
-            if self.client.type_client == 'personne_morale':
-                type_client = 'Société'
-                numero_identification = self.client.rccm_nif or ''
-            else:
-                type_client = 'Particulier'
-                numero_identification = ''
-            
+        # Ajouter les variables du devis de référence si disponible
+        if devis_reference:
             variables.update({
-                'NOM_CLIENT': self.client.nom_complet,
-                'TYPE_CLIENT': type_client,
-                'ADRESSE_CLIENT': self.client.adresse_complete or '',
-                'NUMERO_IDENTIFICATION': numero_identification,
-                'NOM_REPRESENTANT_CLIENT': self.client.nom_complet,
-                'FONCTION_REPRESENTANT_CLIENT': 'Représentant',
-            })
-        
-        # Variables du devis
-        if self.devis:
-            # Calculer la durée estimée
-            if self.date_debut and self.date_fin:
-                # Convertir les dates en objets date si nécessaire
-                date_debut = self.date_debut
-                date_fin = self.date_fin
-                
-                if isinstance(date_debut, str):
-                    try:
-                        date_debut = datetime.strptime(date_debut, '%Y-%m-%d').date()
-                    except ValueError:
-                        date_debut = None
-                
-                if isinstance(date_fin, str):
-                    try:
-                        date_fin = datetime.strptime(date_fin, '%Y-%m-%d').date()
-                    except ValueError:
-                        date_fin = None
-                
-                if date_debut and date_fin:
-                    delta = date_fin - date_debut
-                    jours = delta.days
-                    if jours <= 30:
-                        duree = f"{jours} jours"
-                    elif jours <= 365:
-                        mois = jours // 30
-                        duree = f"{mois} mois"
-                    else:
-                        annees = jours // 365
-                        duree = f"{annees} ans"
-                else:
-                    duree = "À définir"
-            else:
-                duree = "À définir"
-            
-            variables.update({
-                'DUREE_ESTIMEE': duree,
-                'DESCRIPTION_PRESTATION': 'Prestation de services',
-            })
-        
-        # Variables des échéances de paiement
-        if self.echeances_contrat and isinstance(self.echeances_contrat, list):
-            echeances_html = []
-            for i, echeance in enumerate(self.echeances_contrat, 1):
-                pourcentage = echeance.get('pourcentage', 0)
-                montant_echeance = (self.montant_ttc * pourcentage) / 100
-                date_echeance = format_date(echeance.get('date_echeance', ''))
-                type_echeance = echeance.get('type', 'tranche')
-                commentaire = echeance.get('commentaire', '')
-                
-                echeance_html = f"""
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">{i}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">{type_echeance.title()}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">{pourcentage}%</td>
-                    <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">{montant_echeance:,.0f} GNF</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">{date_echeance}</td>
-                    <td style="border: 1px solid #ddd; padding: 8px;">{commentaire}</td>
-                </tr>
-                """
-                echeances_html.append(echeance_html)
-            
-            variables.update({
-                'ECHEANCIER_PAIEMENT': ''.join(echeances_html),
-                'NOMBRE_ECHEANCES': len(self.echeances_contrat),
-                'MONTANT_ACOMPTE': self.get_montant_acompte(),
-                'MONTANT_SOLDE': self.get_montant_solde(),
-                'MODALITES_PAIEMENT': self.get_modalites_paiement(),
-            })
-        else:
-            # Échéancier par défaut si aucune échéance n'est définie
-            variables.update({
-                'ECHEANCIER_PAIEMENT': '',
-                'NOMBRE_ECHEANCES': '0',
-                'MONTANT_ACOMPTE': '0',
-                'MONTANT_SOLDE': '0',
-                'MODALITES_PAIEMENT': 'Paiement à 100% à la signature du contrat',
+                'DEVIS_NUMERO': devis_reference.numero,
+                'DEVIS_DATE': format_date(devis_reference.date_creation),
+                'DEVIS_MONTANT': f"{devis_reference.montant_ttc:,.2f}",
             })
         
         return variables

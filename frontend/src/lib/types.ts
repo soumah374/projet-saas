@@ -542,6 +542,95 @@ export interface LigneFraisUpdateData {
   is_active?: boolean;
 }
 
+// Types pour les devis
+export interface Devis {
+  id: number;
+  numero: string;
+  client: ClientProfile;
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+  taux_tva: number;
+  appliquer_tva: boolean;
+  taux_frais_agence: number;
+  appliquer_frais_agence: boolean;
+  statut: string;
+  date_creation: string;
+  updated_at: string;
+}
+
+// Types pour les clients
+export interface ClientProfile {
+  id: number;
+  nom_complet: string;
+  email: string;
+  telephone?: string;
+  adresse?: string;
+  ville?: string;
+  code_postal?: string;
+  pays?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+// Types pour les lignes de contrat
+export interface LigneContrat {
+  id: number;
+  contrat: number;
+  type_ligne: 'prestation' | 'frais';
+  type_frais?: 'standard' | 'forfait' | 'offert';
+  service?: {
+    id: number;
+    name: string;
+  };
+  activity?: {
+    id: number;
+    intitule: string;
+  };
+  frais_category?: {
+    id: number;
+    name: string;
+  };
+  ligne_frais?: {
+    id: number;
+    description: string;
+  };
+  description: string;
+  quantite: number;
+  unite: {
+    id: number;
+    intitule: string;
+    code: string;
+  };
+  prix_unitaire_ht: number;
+  montant_ht: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Types pour les échéanciers de contrat
+export interface EcheancierContrat {
+  id: number;
+  contrat: number;
+  type_echeance: string;
+  numero_echeance: number;
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+  pourcentage: number;
+  date_echeance: string;
+  date_paiement?: string;
+  statut: string;
+  commentaire: string;
+  alerte_envoyee: boolean;
+  jours_restants: number;
+  est_en_retard: boolean;
+  doit_alerter: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // Échéance types
 export interface Echeance {
   id: number;
@@ -574,5 +663,47 @@ export interface AlertesQuotidiennes {
   echeances_3_jours: Echeance[];
   echeances_retard: Echeance[];
   total_alertes: number;
+}
+
+export interface Contrat {
+  id: number;
+  numero: string;
+  devis: Devis[]; // Changé de Devis à Devis[]
+  devis_principal?: Devis;
+  client: ClientProfile;
+  date_creation: string;
+  date_debut: string;
+  date_fin: string;
+  statut: 'brouillon' | 'actif' | 'termine' | 'annule' | 'suspendu' | 'archive' | 'envoye' | 'signe' | 'cloture';
+  statut_display: string;
+  taux_tva: number;
+  appliquer_tva: boolean;
+  taux_frais_agence: number;
+  appliquer_frais_agence: boolean;
+  montant_ht: number;
+  montant_tva: number;
+  montant_frais_agence: number;
+  montant_ttc: number;
+  conditions: string;
+  notes: string;
+  contenu_personnalise: string;
+  variables_personnalisees: Record<string, any>;
+  echeances_contrat: any[];
+  lignes: LigneContrat[];
+  echeances: EcheancierContrat[];
+  fichier_signe?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateContratData {
+  client_id: number;
+  devis_ids: number[]; // Changé de devis_id à devis_ids
+  devis_principal_id?: number;
+  date_debut: string;
+  date_fin: string;
+  conditions?: string;
+  notes?: string;
+  echeances?: any[];
 }
 

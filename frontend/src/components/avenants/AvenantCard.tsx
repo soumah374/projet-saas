@@ -63,18 +63,18 @@ export const AvenantCard: React.FC<AvenantCardProps> = ({
   };
 
   const handleDownloadPDF = () => {
-    downloadPDFMutation.mutate({ contratId: avenant.contrat.id, id: avenant.id });
+    downloadPDFMutation.mutate({  id: avenant.id });
   };
 
   const handleEnvoyer = (avenant: Avenant) => {
     console.log(avenant);
     console.log(avenant);
-    envoyerMutation.mutate({ contratId: avenant.contrat.id, id: avenant.id });
+    envoyerMutation.mutate({ id: avenant.id });
   };
 
   const handleAnnuler = (avenant: Avenant) => {
     if (confirm('Êtes-vous sûr de vouloir annuler cet avenant ?')) {
-      annulerMutation.mutate(avenant.id);
+      annulerMutation.mutate({id: avenant.id});
     }
   };
 

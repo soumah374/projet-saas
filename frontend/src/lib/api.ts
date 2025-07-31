@@ -658,11 +658,13 @@ export const contratsAPI = {
     }) => api.post('/contrats/', data),
     
     createContratFromDevis: (data: {
-        devis_id: number;
+        devis_ids: number[];
+        devis_principal_id?: number;
         date_debut: string;
         date_fin: string;
         conditions?: string;
         notes?: string;
+        echeances?: any[];
     }) => api.post('/contrats/create_from_devis/', data),
     
     updateContrat: (id: number, data: {
@@ -672,6 +674,11 @@ export const contratsAPI = {
         conditions?: string;
         notes?: string;
     }) => api.patch(`/contrats/${id}/`, data),
+
+    addDevisToContrat: (id: number, data: {
+        devis_ids: number[];
+        devis_principal_id?: number;
+    }) => api.post(`/contrats/${id}/add_devis/`, data),
 
     updateContratContent: (id: number, data: {
         contenu_personnalise: string;

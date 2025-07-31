@@ -1,12 +1,14 @@
 from django.shortcuts import render
 import django.template.loader
+import requests
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Q
+import django.db.models
 from django.utils import timezone
+from django.db import transaction
 from datetime import date, timedelta, datetime
 from django.core.mail import EmailMessage
 from django.conf import settings
@@ -82,101 +84,133 @@ class ContratViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def create_from_devis(self, request):
-        """Créer un contrat à partir d'un devis"""
-        devis_id = request.data.get('devis_id')
+        """Créer un contrat à partir d'un ou plusieurs devis"""
+        devis_ids = request.data.get('devis_ids', [])
+        devis_principal_id = request.data.get('devis_principal_id')
         date_debut_str = request.data.get('date_debut')
         date_fin_str = request.data.get('date_fin')
         conditions = request.data.get('conditions', '')
         notes = request.data.get('notes', '')
         echeances_contrat = request.data.get('echeances', [])
+    
         
-        if not devis_id or not date_debut_str or not date_fin_str:
+        if not devis_ids or not date_debut_str or not date_fin_str:
             return Response(
-                {'error': 'devis_id, date_debut et date_fin sont obligatoires'},
+                {'error': 'devis_ids, date_debut et date_fin sont obligatoires'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
         try:
-            # Convertir les chaînes de dates en objets date
-            try:
-                date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
-                date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
-            except ValueError:
-                return Response(
-                    {'error': 'Format de date invalide. Utilisez le format YYYY-MM-DD'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Vérifier que la date de fin est après la date de début
-            if date_fin <= date_debut:
-                return Response(
-                    {'error': 'La date de fin doit être après la date de début'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Récupérer le devis
-            devis = Devis.objects.get(id=devis_id, statut='accepte')
-            
-            # Vérifier que le devis n'a pas déjà un contrat
-            if hasattr(devis, 'contrat') and devis.contrat:
-                return Response(
-                    {'error': 'Ce devis a déjà un contrat associé'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Créer le contrat avec les échéances
-            contrat = Contrat.objects.create(
-                devis=devis,
-                client=devis.client,
-                date_debut=date_debut,
-                date_fin=date_fin,
-                conditions=conditions,
-                notes=notes,
-                echeances_contrat=echeances_contrat,
-                montant_ht=devis.montant_ht,
-                montant_ttc=devis.montant_ttc,
-                taux_tva=devis.taux_tva,
-                statut='brouillon'
-            )
-            
-            # Copier les lignes du devis vers le contrat
-            from devis.models import LigneDevis, LigneDevisIntervenant
-            
-            for ligne_devis in devis.lignes.all():
-                ligne_contrat = LigneContrat.objects.create(
-                    contrat=contrat,
-                    type_ligne=ligne_devis.type_ligne,
-                    type_frais=ligne_devis.type_frais,
-                    service=ligne_devis.service,
-                    activity=ligne_devis.activity,
-                    frais_category=ligne_devis.frais_category,
-                    ligne_frais=ligne_devis.ligne_frais,
-                    description=ligne_devis.description,
-                    quantite=ligne_devis.quantite,
-                    unite=ligne_devis.unite,
-                    prix_unitaire_ht=ligne_devis.prix_unitaire_ht,
-                    montant_ht=ligne_devis.montant_ht
+            with transaction.atomic():
+                # Convertir les chaînes de dates en objets date
+                try:
+                    date_debut = datetime.strptime(date_debut_str, '%Y-%m-%d').date()
+                    date_fin = datetime.strptime(date_fin_str, '%Y-%m-%d').date()
+                except ValueError:
+                    return Response(
+                        {'error': 'Format de date invalide. Utilisez le format YYYY-MM-DD'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Vérifier que la date de fin est après la date de début
+                if date_fin <= date_debut:
+                    return Response(
+                        {'error': 'La date de fin doit être après la date de début'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Récupérer les devis
+                devis_list = Devis.objects.filter(id__in=devis_ids, statut='accepte')
+                if len(devis_list) != len(devis_ids):
+                    return Response(
+                        {'error': 'Certains devis n\'existent pas ou ne sont pas acceptés'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Vérifier que tous les devis ont le même client
+                clients = set(devis.client for devis in devis_list)
+                if len(clients) > 1:
+                    return Response(
+                        {'error': 'Tous les devis doivent avoir le même client'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Vérifier qu'aucun devis n'a déjà un contrat
+                for devis in devis_list:
+                    if devis.contrats.exists():
+                        return Response(
+                            {'error': f'Le devis {devis.numero} a déjà un contrat associé'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                
+                # Utiliser le premier devis comme référence pour le client
+                premier_devis = devis_list.first()
+                
+                # Créer le contrat sans accéder aux devis
+                contrat = Contrat(
+                    client=premier_devis.client,
+                    date_debut=date_debut,
+                    date_fin=date_fin,
+                    conditions=conditions,
+                    notes=notes,
+                    echeances_contrat=echeances_contrat,
+                    statut='brouillon'
                 )
                 
-                # Copier les intervenants si c'est une prestation
-                if ligne_devis.type_ligne == 'prestation':
-                    for intervenant_devis in ligne_devis.intervenants.all():
-                        LigneContratIntervenant.objects.create(
-                            ligne_contrat=ligne_contrat,
-                            profile_intervenant=intervenant_devis.profile_intervenant,
-                            temps_intervenant=intervenant_devis.temps_intervenant,
-                            taux_horaire=intervenant_devis.taux_horaire,
-                            montant_intervenant=intervenant_devis.montant_intervenant
+                print('contrat', contrat.numero)
+                print('contrat', contrat.numero)
+                # Sauvegarder d'abord le contrat pour obtenir un ID
+                contrat.save()
+                
+                # Maintenant que le contrat a un ID, on peut ajouter les devis
+                contrat.devis.set(devis_list)
+                
+                # Définir le devis principal
+                if devis_principal_id and devis_principal_id in devis_ids:
+                    contrat.devis_principal_id = devis_principal_id
+                else:
+                    contrat.devis_principal_id = devis_ids[0]
+                
+                # Initialiser les montants depuis les devis
+                contrat.initialiser_montants_depuis_devis()
+                contrat.save()
+                
+                for devis in devis_list:
+                    for ligne_devis in devis.lignes.all():
+                        ligne_contrat = LigneContrat.objects.create(
+                            contrat=contrat,
+                            type_ligne=ligne_devis.type_ligne,
+                            type_frais=ligne_devis.type_frais,
+                            service=ligne_devis.service,
+                            activity=ligne_devis.activity,
+                            frais_category=ligne_devis.frais_category,
+                            ligne_frais=ligne_devis.ligne_frais,
+                            description=ligne_devis.description,
+                            quantite=ligne_devis.quantite,
+                            unite=ligne_devis.unite,
+                            prix_unitaire_ht=ligne_devis.prix_unitaire_ht,
+                            montant_ht=ligne_devis.montant_ht
                         )
-            
-            # Calculer les montants du contrat APRÈS avoir créé toutes les lignes
-            contrat.calculer_montants()
-            
-            return Response(
-                ContratDetailSerializer(contrat).data,
-                status=status.HTTP_201_CREATED
-            )
-            
+                        
+                        # Copier les intervenants si c'est une prestation
+                        if ligne_devis.type_ligne == 'prestation':
+                            for intervenant_devis in ligne_devis.intervenants.all():
+                                LigneContratIntervenant.objects.create(
+                                    ligne_contrat=ligne_contrat,
+                                    profile_intervenant=intervenant_devis.profile_intervenant,
+                                    temps_intervenant=intervenant_devis.temps_intervenant,
+                                    taux_horaire=intervenant_devis.taux_horaire,
+                                    montant_intervenant=intervenant_devis.montant_intervenant
+                                )
+                
+                # Calculer les montants du contrat APRÈS avoir créé toutes les lignes
+                contrat.calculer_montants()
+                
+                return Response(
+                    ContratDetailSerializer(contrat).data,
+                    status=status.HTTP_201_CREATED
+                )
+                
         except Devis.DoesNotExist:
             return Response(
                 {'error': 'Devis non trouvé ou non accepté'},
@@ -219,30 +253,52 @@ class ContratViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def devis_disponibles(self, request):
         """Récupérer les devis disponibles pour créer un contrat"""
-        # Récupérer les devis acceptés qui n'ont pas encore de contrat
-        devis_disponibles = Devis.objects.filter(
-            statut='accepte',
-            contrat__isnull=True  # Pas encore de contrat associé
-        ).select_related('client').order_by('-date_creation')
-        
-        # Sérialiser les devis avec les informations nécessaires
-        devis_data = []
-        for devis in devis_disponibles:
-            devis_data.append({
-                'id': devis.id,
-                'numero': devis.numero,
-                'client': {
-                    'id': devis.client.id,
-                    'nom_complet': devis.client.nom_complet,
-                    'email': devis.client.email,
-                },
-                'date_creation': devis.date_creation,
-                'montant_ttc': float(devis.montant_ttc),
-                'statut': devis.statut,
-                'statut_display': devis.get_statut_display(),
-            })
-        
-        return Response(devis_data)
+        try:
+            # Récupérer les devis acceptés qui n'ont pas encore de contrat
+            devis_disponibles = Devis.objects.filter(
+                statut='accepte'
+            )
+            
+            # Exclure les devis qui ont déjà des contrats (si la relation existe)
+            if hasattr(Devis, 'contrats'):
+                devis_disponibles = devis_disponibles.exclude(
+                    contrats__isnull=False
+                )
+            else:
+                # Fallback pour l'ancien système
+                devis_disponibles = devis_disponibles.filter(
+                    contrat__isnull=True
+                )
+            
+            devis_disponibles = devis_disponibles.select_related('client').order_by('-date_creation')
+            
+            # Sérialiser les devis avec les informations nécessaires
+            devis_data = []
+            for devis in devis_disponibles:
+                devis_data.append({
+                    'id': devis.id,
+                    'numero': devis.numero,
+                    'client': {
+                        'id': devis.client.id,
+                        'nom_complet': devis.client.nom_complet,
+                        'email': devis.client.email,
+                    },
+                    'date_creation': devis.date_creation,
+                    'montant_ttc': float(devis.montant_ttc),
+                    'statut': devis.statut,
+                    'statut_display': devis.get_statut_display(),
+                })
+            
+            return Response(devis_data)
+            
+        except Exception as e:
+            import traceback
+            print(f"Erreur dans devis_disponibles: {str(e)}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': f'Erreur lors de la récupération des devis: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['post'])
     def activer(self, request, pk=None):
@@ -458,6 +514,75 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['post'])
+    def add_devis(self, request, pk=None):
+        """Ajouter des devis à un contrat existant"""
+        try:
+            contrat = self.get_object()
+            devis_ids = request.data.get('devis_ids', [])
+            devis_principal_id = request.data.get('devis_principal_id')
+            
+            if not devis_ids:
+                return Response(
+                    {'error': 'devis_ids est obligatoire'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Récupérer les devis
+            devis_list = Devis.objects.filter(id__in=devis_ids, statut='accepte')
+            if len(devis_list) != len(devis_ids):
+                return Response(
+                    {'error': 'Certains devis n\'existent pas ou ne sont pas acceptés'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Vérifier que tous les devis ont le même client que le contrat
+            for devis in devis_list:
+                if devis.client != contrat.client:
+                    return Response(
+                        {'error': f'Le devis {devis.numero} a un client différent du contrat'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Vérifier qu'aucun devis n'est déjà associé à un autre contrat
+            for devis in devis_list:
+                if hasattr(devis, 'contrats') and devis.contrats.exists() and not devis.contrats.filter(id=contrat.id).exists():
+                    return Response(
+                        {'error': f'Le devis {devis.numero} est déjà associé à un autre contrat'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            
+            # Ajouter les devis au contrat
+            if hasattr(contrat, 'devis'):
+                contrat.devis.add(*devis_list)
+            else:
+                # Fallback pour l'ancien système
+                if devis_principal_id:
+                    contrat.devis_principal_id = devis_principal_id
+                    contrat.save()
+            
+            # Définir le devis principal si spécifié
+            if devis_principal_id and devis_principal_id in devis_ids:
+                contrat.devis_principal_id = devis_principal_id
+                contrat.save()
+            
+            # Recalculer les montants si la méthode existe
+            if hasattr(contrat, 'calculer_montants'):
+                contrat.calculer_montants()
+            
+            return Response(
+                ContratDetailSerializer(contrat).data,
+                status=status.HTTP_200_OK
+            )
+            
+        except Exception as e:
+            import traceback
+            print(f"Erreur dans add_devis: {str(e)}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': f'Erreur lors de l\'ajout des devis: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class LigneContratViewSet(viewsets.ModelViewSet):
@@ -491,7 +616,7 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
         return EcheancierContratSerializer
 
     @action(detail=True, methods=['post'])
-    def marquer_paye(self, request, pk=None):
+    def marquer_paye(self, request, pk=None, contrat_pk=None):
         """Marquer une échéance comme payée"""
         echeance = self.get_object()
         date_paiement = request.data.get('date_paiement')
@@ -501,7 +626,7 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
         return Response({'message': 'Échéance marquée comme payée'})
 
     @action(detail=True, methods=['post'])
-    def envoyer_alerte(self, request, pk=None):
+    def envoyer_alerte(self, request, pk=None, contrat_pk=None):
         """Envoyer une alerte pour une échéance"""
         echeance = self.get_object()
         
@@ -515,9 +640,9 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
             )
 
     @action(detail=False, methods=['post'])
-    def generer_echeancier_standard(self, request):
+    def generer_echeancier_standard(self, request, contrat_pk=None):
         """Générer un échéancier standard pour un contrat"""
-        contrat_id = request.data.get('contrat')
+        contrat_id = request.data.get('contrat') or contrat_pk
         type_echeancier = request.data.get('type', 'standard')  # standard, acompte_solde, etc.
         echeances_contrat = request.data.get('echeances', [])
         
@@ -609,6 +734,13 @@ class AvenantViewSet(viewsets.ModelViewSet):
         elif self.action in ['retrieve', 'update', 'partial_update']:
             return AvenantDetailSerializer
         return AvenantSerializer
+
+    @action(detail=False,methods=['post'], url_path='store')
+    def store(self, request):
+        serializer = AvenantCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            contrat = serializer.save()
+            return Response(AvenantCreateSerializer(contrat).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'])
     def download_pdf(self, request, pk=None, contrat_pk=None):
