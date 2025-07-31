@@ -244,7 +244,7 @@ export const useDownloadAvenantPDF = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `avenant_${id}.pdf`;
+      link.download = `avenant_${id.id}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
