@@ -89,7 +89,6 @@ export interface LigneContratIntervenant {
 }
 
 export interface CreateContratData {
-  client_id: number;
   devis_ids: number[];
   devis_principal_id?: number;
   date_debut: string;

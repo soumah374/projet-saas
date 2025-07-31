@@ -223,7 +223,7 @@ export function DevisDetailPage() {
       dateFin.setFullYear(dateFin.getFullYear() + 1); // Contrat d'un an par défaut
       
       await createContratMutation.mutateAsync({
-        devis_id: devisId,
+        devis_ids: [devisId], // Utiliser un tableau avec l'ID du devis
         date_debut: dateDebut.toISOString().split('T')[0],
         date_fin: dateFin.toISOString().split('T')[0],
         conditions: devis?.conditions || '',
