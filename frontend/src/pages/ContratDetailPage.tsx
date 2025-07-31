@@ -26,7 +26,8 @@ import {
   RefreshCw,
   Archive,
   Send,
-  Lock
+  Lock,
+  Signature
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -270,7 +271,7 @@ export function ContratDetailPage() {
   const handleMarquerPaye = async (echeanceId: number) => {
     try {
       const datePaiement = new Date().toISOString();
-      await marquerPaye(echeanceId, contratId, datePaiement);
+      await marquerPaye(echeanceId, datePaiement);
     } catch (err) {
       console.error('Erreur lors du marquage:', err);
     }
@@ -278,7 +279,7 @@ export function ContratDetailPage() {
 
   const handleEnvoyerAlerte = async (echeanceId: number) => {
     try {
-      await envoyerAlerte(echeanceId, contratId);
+      await envoyerAlerte(echeanceId);
     } catch (err) {
       console.error('Erreur lors de l\'envoi de l\'alerte:', err);
     }
@@ -427,7 +428,7 @@ export function ContratDetailPage() {
           onClick={() => handleActionContrat('cloturer')}
           disabled={cloturerContratMutation.isPending}
         >
-          <Check size={16} className="mr-2" />
+          <Lock size={16} className="mr-2" />
           Clôturer
         </Button>,
         <Button
@@ -450,8 +451,8 @@ export function ContratDetailPage() {
             variant="outline"
             onClick={() => setShowSignModal(true)}
           >
-            <Lock size={16} className="mr-2" />
-            Clôturer (Uploader le contrat signé)
+            <Signature size={16} className="mr-2" />
+            Signer
           </Button>
           {/* Modal d'upload du contrat signé */}
           {showSignModal && (
@@ -478,6 +479,10 @@ export function ContratDetailPage() {
                     }
                   }}
                 >
+                  <div className="space-y-4">
+                   <label htmlFor="fichier_signe" className="text-gray-600 mb-4">
+                      Veuillez uploader le fichier signé du contrat.
+                    </label>
                   <input
                     type="file"
                     accept="application/pdf,image/*"
@@ -500,8 +505,9 @@ export function ContratDetailPage() {
                       type="submit"
                       disabled={isSigning || !fileToSign}
                     >
-                      {isSigning ? "Envoi..." : "Uploader"}
-                    </Button>
+                        {isSigning ? "Envoi..." : "Uploader le contrat signé"}
+                      </Button>
+                    </div>
                   </div>
                 </form>
               </div>
@@ -1384,43 +1390,6 @@ export function ContratDetailPage() {
           </div>
         </div>
       )}
-
-      {/* Modal de signature */}
-      <Dialog open={showSignModal} onOpenChange={setShowSignModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Signer le contrat</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-600">
-              Veuillez télécharger le fichier signé du contrat.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="fichier_signe">Fichier signé</Label>
-              <Input
-                id="fichier_signe"
-                type="file"
-                accept=".pdf"
-                onChange={(e) => setFileToSign(e.target.files?.[0] || null)}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSignModal(false)}>
-              Annuler
-            </Button>
-            <Button
-              onClick={() => {
-                setShowSignModal(false);
-                setFileToSign(null);
-              }}
-              disabled={isSigning}
-            >
-              {isSigning ? 'Signature...' : 'Signer'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Modal de sélection de devis */}
       <DevisSelectionModal

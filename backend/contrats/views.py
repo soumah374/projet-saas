@@ -728,14 +728,19 @@ class AvenantViewSet(viewsets.ModelViewSet):
     ordering = ['-date_creation']
 
     def get_serializer_class(self):
-        print("=============")
-        print("=============",self.action)
-        print("=============")
+        
         if self.action == 'create':
             return AvenantCreateSerializer
         elif self.action in ['retrieve', 'update', 'partial_update']:
             return AvenantDetailSerializer
         return AvenantSerializer
+
+    @action(detail=False,methods=['post'], url_path='store')
+    def store(self, request):
+        serializer = AvenantCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            contrat = serializer.save()
+            return Response(AvenantCreateSerializer(contrat).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'])
     def download_pdf(self, request, pk=None, contrat_pk=None):
@@ -757,7 +762,7 @@ class AvenantViewSet(viewsets.ModelViewSet):
                 {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
+            
     @action(detail=True, methods=['post'])
     def update_content(self, request, pk=None, contrat_pk=None):
         """Mettre à jour le contenu personnalisé d'un avenant"""
@@ -779,72 +784,70 @@ class AvenantViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def envoyer(self, request, pk=None, contrat_pk=None):
-        """Envoyer un avenant par email"""
+        """
+        Envoyer un avenant (changer le statut à envoyé et envoyer le PDF par email)
+        """
         avenant = self.get_object()
-        
-        if avenant.statut != 'brouillon':
-            return Response(
-                {'error': 'Seuls les avenants en brouillon peuvent être envoyés'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
+        avenant.statut = 'envoye'
+        avenant.save()
+
+        # Générer le PDF du contrat
         try:
-            # Générer le PDF
-            pdf_content = avenant.generer_pdf()
-            
-            # Envoyer par email
-            subject = f"Avenant {avenant.numero} - {avenant.contrat.numero}"
-            message = f"""
-            Bonjour,
-            
-            Veuillez trouver ci-joint l'avenant {avenant.numero} pour le contrat {avenant.contrat.numero}.
-            
-            Objet de l'avenant : {avenant.objet_avenant}
-            
-            Cordialement,
-            L'équipe SAKOM
-            """
-            
-            # Récupérer l'email du client
-            client_email = avenant.contrat.client.email if avenant.contrat.client else None
-            if not client_email:
-                return Response(
-                    {'error': 'Email du client non disponible'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Créer l'email avec pièce jointe
-            email = EmailMessage(
-                subject=subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[client_email]
-            )
-            
-            # Attacher le PDF
-            email.attach(
-                f'avenant_{avenant.numero}.pdf',
-                pdf_content,
-                'application/pdf'
-            )
-            
-            # Envoyer l'email
-            email.send()
-            
-            # Mettre à jour le statut
-            avenant.statut = 'envoye'
-            avenant.save()
-            
-            return Response({
-                'message': 'Avenant envoyé avec succès',
-                'statut': avenant.statut
+            html_string = render_to_string('contrats/print_avenant.html', {
+                'avenant': avenant
             })
-            
+            font_config = FontConfiguration()
+            html_doc = HTML(string=html_string)
+            pdf = html_doc.write_pdf(font_config=font_config)
         except Exception as e:
             return Response(
-                {'error': f'Erreur lors de l\'envoi: {str(e)}'},
+                {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+        # Préparer l'email
+        destinataire = None
+        # On tente de récupérer l'email du client lié au contrat
+        if hasattr(avenant.contrat.client, 'user') and hasattr(avenant.contrat.client.user, 'email'):
+            destinataire = avenant.contrat.client.user.email
+        elif hasattr(avenant.contrat.client, 'email'):
+            destinataire = avenant.contrat.client.email
+
+        if not destinataire:
+            return Response(
+                {'error': "Impossible de trouver l'email du client pour l'envoi du contrat."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        sujet = f"Votre avenant n°{avenant.numero}"
+        message = (
+            f"Bonjour,\n\n"
+            f"Veuillez trouver ci-joint votre avenant (n°{avenant.numero}).\n\n"
+            f"Cordialement,\n"
+            f"L'équipe {getattr(settings, 'PROJECT_NAME', 'de la plateforme')}"
+        )
+
+        email = EmailMessage(
+            subject=sujet,
+            body=message,
+            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
+            to=[destinataire],
+        )
+        email.attach(f"avenant_{avenant.numero}.pdf", pdf, "application/pdf")
+
+        try:
+            email.send()
+        except Exception as e:
+            return Response(
+                {'error': f"Erreur lors de l'envoi de l'email: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response({
+            'message': 'Avenant envoyé avec succès (PDF envoyé par email)',
+            'statut': avenant.statut
+        })
+
 
     @action(
         detail=True,
