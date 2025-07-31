@@ -1,12 +1,11 @@
 from django.shortcuts import render
 import django.template.loader
-import requests
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
-import django.db.models
+from django.db.models import Q
 from django.utils import timezone
 from django.db import transaction
 from datetime import date, timedelta, datetime
@@ -729,18 +728,14 @@ class AvenantViewSet(viewsets.ModelViewSet):
     ordering = ['-date_creation']
 
     def get_serializer_class(self):
+        print("=============")
+        print("=============",self.action)
+        print("=============")
         if self.action == 'create':
             return AvenantCreateSerializer
         elif self.action in ['retrieve', 'update', 'partial_update']:
             return AvenantDetailSerializer
         return AvenantSerializer
-
-    @action(detail=False,methods=['post'], url_path='store')
-    def store(self, request):
-        serializer = AvenantCreateSerializer(data=request.data)
-        if serializer.is_valid():
-            contrat = serializer.save()
-            return Response(AvenantCreateSerializer(contrat).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=['get'])
     def download_pdf(self, request, pk=None, contrat_pk=None):

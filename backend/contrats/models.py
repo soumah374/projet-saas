@@ -267,18 +267,6 @@ class Contrat(models.Model):
             'NOTES': self.notes or '[NOTES]',
         }
         
-        # Variables du prestataire (SAKOM)
-        variables.update({
-            'RAISON_SOCIALE_PRESTATAIRE': 'SAKOM SARL',
-            'FORME_JURIDIQUE': 'SARL',
-            'MONTANT_CAPITAL': '100,000,000',
-            'VILLE_RCS': 'Conakry',
-            'SIRET': 'GN12345678901234',
-            'ADRESSE_PRESTATAIRE': '123 Avenue de la République, Conakry, Guinée',
-            'NOM_REPRESENTANT': 'Directeur Général',
-            'FONCTION_REPRESENTANT': 'Directeur Général',
-        })
-        
         # Ajouter les variables du devis de référence si disponible
         if devis_reference:
             variables.update({

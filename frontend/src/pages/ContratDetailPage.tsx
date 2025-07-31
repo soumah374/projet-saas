@@ -45,6 +45,7 @@ import {
   useSignerContrat,
   useCloturerContrat,
   useAddDevisToContrat,
+  useCreateContratFromDevis
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
@@ -269,7 +270,7 @@ export function ContratDetailPage() {
   const handleMarquerPaye = async (echeanceId: number) => {
     try {
       const datePaiement = new Date().toISOString();
-      await marquerPaye(echeanceId, datePaiement);
+      await marquerPaye(echeanceId, contratId, datePaiement);
     } catch (err) {
       console.error('Erreur lors du marquage:', err);
     }
@@ -277,7 +278,7 @@ export function ContratDetailPage() {
 
   const handleEnvoyerAlerte = async (echeanceId: number) => {
     try {
-      await envoyerAlerte(echeanceId);
+      await envoyerAlerte(echeanceId, contratId);
     } catch (err) {
       console.error('Erreur lors de l\'envoi de l\'alerte:', err);
     }

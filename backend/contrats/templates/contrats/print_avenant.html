@@ -3,73 +3,133 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Impression du contrat</title>
+    <title>Avenant - {{ avenant.numero }}</title>
     <style>
+      @page {
+        margin: 1cm;
+      }
       body {
-        width: 100%;
-        height: 100%;
         font-family: Arial, Helvetica, sans-serif;
-        line-height: 1.7;
-        color: #000000;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #000;
+        margin: 40px;
+      }
+
+      h1 {
+        text-align: center;
+        margin-top: 0;
+        font-size: 24px;
+      }
+
+      h1 small {
+        font-size: 14px;
+        display: block;
+        margin-top: 5px;
+        color: #555;
+      }
+
+      .section {
+        margin-top: 20px;
+      }
+
+      .modification-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .modification-table td {
+        vertical-align: top;
+        padding: 10px;
+      }
+
+      .modification-table .old {
+        border-left: 3px solid red;
+      }
+
+      .modification-table .new {
+        border-left: 3px solid green;
+      }
+
+      .signatures {
+        width: 100%;
+        margin-top: 40px;
+        border-collapse: collapse;
+      }
+
+      .signatures td {
+        width: 50%;
+        text-align: center;
+        padding: 40px 20px;
+        font-weight: bold;
+      }
+
+      .custom-content {
+        margin-top: 40px;
+      }
+
+      p {
+        margin: 10px 0;
+      }
+      modification-apportees {
+        font-weight: bold;
+        margin-top: 20px;
+        color: #333;
+      }
+      .modification-apportees h3 {
+        font-size: 18px;
+        margin-bottom: 1px;
       }
     </style>
   </head>
   <body>
-    <div class="container">
-      <h1>
-        Avenant {{ avenant.numero }} pour le contrat {{ avenant.contrat.numero
-        }}
-      </h1>
-      <p>
-        <strong>Intitulé de l'avenant :</strong> {{ avenant.intitule_avenant }}
-      </p>
-      <p><strong>Objet de l'avenant :</strong> {{ avenant.objet_avenant }}</p>
-      <p>
-        <strong>Type de modification :</strong> {{ avenant.type_modification }}
-      </p>
-      {% for modification in avenant.modifications %}
-      <p><strong>{{ modification.clause }}</strong></p>
-      <p><strong>Ancienne version :</strong></p>
-      <p>{{ modification.ancienne_version|safe }}</p>
-      <p><strong>Nouvelle version :</strong></p>
-      <p>{{ modification.nouvelle_version|safe }}</p>
-      <p><strong>Contenu personnalisé :</strong></p>
-      <p>{{ modification.contenu_personnalise|safe }}</p>
-      {% endfor %}
+    <h1>
+      Avenant {{ avenant.numero }}
+      <small>Contrat n° : {{ avenant.contrat.numero }}</small>
+      <small>Type de modification : {{ avenant.type_modification }}</small>
+    </h1>
 
-      <table
-        style="
-          width: 100%;
-          margin: 30px 0;
-          border-collapse: collapse;
-          font-family: Arial, Helvetica, sans-serif;
-        "
-      >
-        <tr>
-          <td style="width: 50%; padding: 20px; text-align: center">
-            <strong
-              style="
-                font-weight: bold;
-                color: #000000;
-                font-family: Arial, Helvetica, sans-serif;
-              "
-              >Le Prestataire</strong
-            ><br />
-            (signature)
-          </td>
-          <td style="width: 50%; padding: 20px; text-align: center">
-            <strong
-              style="
-                font-weight: bold;
-                color: #000000;
-                font-family: Arial, Helvetica, sans-serif;
-              "
-              >Le Client</strong
-            ><br />
-            (signature)
-          </td>
-        </tr>
-      </table>
+    <div class="section">
+      <strong>Objet de l'avenant :</strong><br />
+      {{ avenant.objet_avenant }}
     </div>
+
+    <h3 class="modification-apportees">
+      Modifications apportées : {{ avenant.type_modification }}
+    </h3>
+
+    {% for modification in avenant.modifications %}
+    <table class="modification-table">
+      <tr>
+        <td colspan="2"><strong>Clause :</strong> {{ modification.clause }}</td>
+      </tr>
+      <tr>
+        <td class="old">
+          <p><strong>Ancienne version :</strong></p>
+          {{ modification.ancienne_version|safe }}
+        </td>
+        <td class="new">
+          <p><strong>Nouvelle version :</strong></p>
+          {{ modification.nouvelle_version|safe }}
+        </td>
+      </tr>
+    </table>
+    {% endfor %} {% if avenant.contenu_personnalise %}
+    <div class="custom-content">{{ avenant.contenu_personnalise|safe }}</div>
+    {% endif %}
+
+    <table class="signatures">
+      <tr>
+        <td>
+          Le Prestataire<br /><br /><br /><br />
+          (signature)
+        </td>
+        <td>
+          Le Client<br /><br /><br /><br />
+          (signature)
+        </td>
+      </tr>
+    </table>
   </body>
 </html>

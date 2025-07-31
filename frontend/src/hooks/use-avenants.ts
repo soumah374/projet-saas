@@ -103,7 +103,7 @@ export const useCreateAvenant = () => {
   
   return useMutation({
     mutationFn: async ({ data }: { data: CreateAvenantData }): Promise<Avenant> => {
-      const response = await api.post(`/contrats/avenants/store/`, data);
+      const response = await api.post(`/contrats/avenants/`, data);
       return response.data;
     },
     onSuccess: (data, variables) => {
@@ -121,15 +121,15 @@ export const useUpdateAvenant = () => {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<CreateAvenantData> }): Promise<Avenant> => {
-      const response = await api.patch(`/contrats/avenants/${id}/`, data);
+    mutationFn: async ({ contratId, id, data }: { contratId: number; id: number; data: Partial<CreateAvenantData> }): Promise<Avenant> => {
+      const response = await api.patch(`/contrats/${contratId}/avenants/${id}/`, data);
       return response.data;
     },
     onSuccess: (data, variables) => {
       toast.success('Avenant mis à jour avec succès');
       queryClient.invalidateQueries({ queryKey: ['avenants'] });
       queryClient.invalidateQueries({ queryKey: ['avenants', data.id] });
-      queryClient.invalidateQueries({ queryKey: ['avenants', 'contrat', variables] });
+      queryClient.invalidateQueries({ queryKey: ['avenants', 'contrat', variables.contratId] });
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.error || 'Erreur lors de la mise à jour de l\'avenant');
