@@ -6,16 +6,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Package, CheckSquare, Clock, Users } from 'lucide-react';
+import { Loader2, Package, CheckSquare, Clock, Users, FileText } from 'lucide-react';
 import { useCategories, useServices, useServicesByCategory } from '@/hooks/use-services';
 import { useCreateProjectTask } from '@/hooks/use-projects';
+import { useContratById } from '@/hooks/use-contrats';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Service, Phase, Category } from '@/lib/types';
+import { Service, Category } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
+import { formatMontant } from '@/lib/formatters';
 
 interface ServiceTaskTemplate {
   id: number;
@@ -27,14 +29,21 @@ interface ServiceTaskTemplate {
     id: number;
     name: string;
   } | null;
+  quantity?: number;
+  unite?: {
+    id: number;
+    intitule: string;
+    code: string;
+  };
 }
 
 interface StandardTasksManagerProps {
   projectId: string;
+  contractId?: number | null;
   onTasksCreated?: () => void;
 }
 
-export function StandardTasksManager({ projectId, onTasksCreated }: StandardTasksManagerProps) {
+export function StandardTasksManager({ projectId, contractId, onTasksCreated }: StandardTasksManagerProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [generatedTasks, setGeneratedTasks] = useState<ServiceTaskTemplate[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
@@ -43,6 +52,9 @@ export function StandardTasksManager({ projectId, onTasksCreated }: StandardTask
 
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const createTaskMutation = useCreateProjectTask();
+
+  // Récupérer les détails du contrat si disponible
+  const { data: contractDetails, isLoading: contractLoading } = useContratById(contractId || 0);
 
   // Récupérer tous les services actifs avec leurs catégories
   const { data: allServices, isLoading: servicesLoading } = useServices({
@@ -55,24 +67,47 @@ export function StandardTasksManager({ projectId, onTasksCreated }: StandardTask
     selectedCategory?.id || 0
   );
 
-  // Filtrer les services par catégorie sélectionnée
+  // Extraire les services des lignes du contrat
+  const contractServices = useMemo(() => {
+    if (!contractDetails?.lignes) {
+      return [];
+    }
+    
+    return contractDetails.lignes
+      .filter(ligne => ligne.type_ligne === 'prestation' && ligne.service)
+      .map(ligne => ({
+        id: ligne.service!.id,
+        name: ligne.service!.name,
+        description: ligne.description,
+        duration: 8, // Durée par défaut
+        price: ligne.prix_unitaire_ht,
+        category: null, // À déterminer si nécessaire
+        quantity: ligne.quantite,
+        unite: ligne.unite
+      }));
+  }, [contractDetails?.lignes]);
+
+  // Filtrer les services par catégorie sélectionnée (seulement si pas de contrat)
   const filteredServices = useMemo(() => {
-    if (!allServices?.results || !selectedCategory) {
+    if (!allServices?.results || !selectedCategory || contractId) {
       return [];
     }
     
     return allServices.results.filter(service => 
       service.category && service.category.id === selectedCategory.id
     );
-  }, [allServices?.results, selectedCategory]);
+  }, [allServices?.results, selectedCategory, contractId]);
 
-  // Utiliser les services par catégorie si disponible, sinon utiliser le filtrage local
+  // Utiliser les services du contrat si disponible, sinon utiliser les services par catégorie
   const effectiveServices = useMemo(() => {
+    if (contractId && contractServices.length > 0) {
+      return contractServices;
+    }
     if (selectedCategory && servicesByCategory?.results) {
       return servicesByCategory.results;
     }
     return filteredServices;
-  }, [selectedCategory, servicesByCategory?.results, filteredServices]);
+  }, [contractId, contractServices, selectedCategory, servicesByCategory?.results, filteredServices]);
 
   // Générer les activités quand les services filtrés changent
   useEffect(() => {
@@ -85,9 +120,12 @@ export function StandardTasksManager({ projectId, onTasksCreated }: StandardTask
         duration: Number(service.duration) || 8,
         price: service.price,
         category: service.category,
+        quantity: (service as any).quantity,
+        unite: (service as any).unite,
       }));
       
       setGeneratedTasks(tasks);
+      // Sélectionner automatiquement toutes les activités
       setSelectedTasks(new Set(tasks.map((_, index) => index)));
     } else {
       setGeneratedTasks([]);
@@ -173,8 +211,14 @@ export function StandardTasksManager({ projectId, onTasksCreated }: StandardTask
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Activités standards basées sur le catalogue
+          {contractId ? 'Activités basées sur le contrat' : 'Activités standards basées sur le catalogue'}
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          {contractId 
+            ? 'Les activités sont créées à partir des services définis dans le contrat du projet.'
+            : 'Toutes les activités du projet sont créées à partir des services du catalogue. Sélectionnez une catégorie pour voir les activités disponibles.'
+          }
+        </p>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Date d'échéance globale */}
@@ -203,41 +247,84 @@ export function StandardTasksManager({ projectId, onTasksCreated }: StandardTask
 
         <Separator />
 
-        {/* Sélection de la catégorie */}
-        <div>
-          <Label>Sélectionner une catégorie du catalogue</Label>
-          <div className="mt-2 max-h-40 overflow-y-auto border rounded-lg p-3">
-            {categoriesLoading ? (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Chargement des catégories...
-              </div>
-            ) : !categories?.results || categories.results.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                Aucune catégorie disponible
-              </div>
-            ) : (
-              <RadioGroup value={selectedCategory?.id?.toString() || ""} onValueChange={(value) => {
-                const category = categories.results.find(c => c.id.toString() === value);
-                if (category) handleCategoryChange(category);
-              }}>
-                {categories.results.map((category: Category) => (
-                  <div key={category.id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={category.id.toString()} id={`category-${category.id}`} />
-                    <Label htmlFor={`category-${category.id}`} className="flex-1 cursor-pointer">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{category.name} {category.id}</span>
-                        <div className="flex items-center gap-2">
-                          
-                        </div>
-                      </div>
-                    </Label>
+        {/* Sélection de la catégorie ou affichage du contrat */}
+        {contractId ? (
+          <div>
+            <Label>Services du contrat</Label>
+            <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              {contractLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Chargement du contrat...
+                </div>
+              ) : contractDetails ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium">Contrat {contractDetails.numero}</span>
                   </div>
-                ))}
-              </RadioGroup>
-            )}
+                  <p className="text-sm text-blue-700">
+                    {contractServices.length} service(s) trouvé(s) dans le contrat
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center text-gray-500">
+                  Aucun contrat trouvé
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div>
+            <Label>Sélectionner une catégorie du catalogue</Label>
+            <div className="mt-2 max-h-40 overflow-y-auto border rounded-lg p-3">
+              {categoriesLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Chargement des catégories...
+                </div>
+              ) : !categories?.results || categories.results.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  Aucune catégorie disponible
+                </div>
+              ) : (
+                <RadioGroup value={selectedCategory?.id?.toString() || ""} onValueChange={(value) => {
+                  const category = categories.results.find(c => c.id.toString() === value);
+                  if (category) handleCategoryChange(category);
+                }}>
+                  {categories.results.map((category: Category) => (
+                    <div key={category.id} className="flex items-center space-x-2">
+                      <RadioGroupItem value={category.id.toString()} id={`category-${category.id}`} />
+                      <Label htmlFor={`category-${category.id}`} className="flex-1 cursor-pointer">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">{category.name}</span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleCategoryChange(category);
+                                // Créer immédiatement toutes les activités de cette catégorie
+                                if (globalDueDate) {
+                                  handleCreateStandardTasks();
+                                }
+                              }}
+                              disabled={!globalDueDate}
+                            >
+                              Créer toutes
+                            </Button>
+                          </div>
+                        </div>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Activités générées */}
         {generatedTasks.length > 0 && (
@@ -288,6 +375,16 @@ export function StandardTasksManager({ projectId, onTasksCreated }: StandardTask
                                 <Clock className="h-3 w-3 mr-1" />
                                 {taskTemplate.duration}h
                               </Badge>
+                              {taskTemplate.quantity && (
+                                <Badge variant="outline" className="text-xs">
+                                  Qté: {taskTemplate.quantity} {taskTemplate.unite?.code || 'unité(s)'}
+                                </Badge>
+                              )}
+                              {taskTemplate.price && (
+                                <Badge variant="outline" className="text-xs">
+                                  {formatMontant(taskTemplate.price)}/unité
+                                </Badge>
+                              )}
                               {taskTemplate.category && (
                                 <Badge variant="outline" className="text-xs">
                                   {taskTemplate.category.name}

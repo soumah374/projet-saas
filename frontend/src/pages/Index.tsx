@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, Users, FileText, Clock, LogOut, User } from 'lucide-react';
-import { ProjectCard } from '@/components/ProjectCard';
+import { ProjectCard } from '@/components/projects/ProjectCard';
 import { TopNavigation } from '@/components/TopNavigation';
 import { StatsOverview } from '@/components/StatsOverview';
 import { UserSidebar } from '@/components/UserSidebar';
 import { CreateProjectModal } from '@/components/projects/CreateProjectModal';
 import { ProjectDetailsPage } from '@/pages/ProjectDetailsPage';
 import { DocumentManager } from '@/components/DocumentManager';
-import { ProjectCalendar } from '@/components/ProjectCalendar';
+import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { useAuth } from '@/hooks/use-auth';
 
 const Index = () => {

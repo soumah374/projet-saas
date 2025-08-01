@@ -2,19 +2,19 @@ import { useState, useMemo, useContext } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
-import { CalendarHeader } from './calendar/CalendarHeader';
-import { CalendarStats } from './calendar/CalendarStats';
-import { MonthView } from './calendar/MonthView';
-import { WeekView } from './calendar/WeekView';
-import { AgendaView } from './calendar/AgendaView';
-import { GanttView } from './calendar/GanttView';
-import { Event, EventStatus, EventType } from './calendar/types';
-import { getEventStats } from './calendar/utils';
+import { CalendarHeader } from '../calendar/CalendarHeader';
+import { CalendarStats } from '../calendar/CalendarStats';
+import { MonthView } from '../calendar/MonthView';
+import { WeekView } from '../calendar/WeekView';
+import { AgendaView } from '../calendar/AgendaView';
+import { GanttView } from '../calendar/GanttView';
+import { Event, EventStatus, EventType } from '../calendar/types';
+import { getEventStats } from '../calendar/utils';
 import { useProjects, useProjectTasks, useProjectEvents } from '@/hooks/use-projects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { EventModal } from './EventModal';
+import { EventModal } from '../EventModal';
 
 // Options de mise en cache pour les requêtes
 const queryOptions = {

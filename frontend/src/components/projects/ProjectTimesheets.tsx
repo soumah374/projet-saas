@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TimeSheetList } from './TimeSheetList';
+import { TimeSheetList } from '../TimeSheetList';
 import { useTimesheets } from '@/hooks/use-timesheets';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';

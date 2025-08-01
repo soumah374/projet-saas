@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
-import { ProjectCalendar } from '@/components/ProjectCalendar';
+import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { useProject } from '@/hooks/use-projects';
 import { Loader2 } from 'lucide-react';
 

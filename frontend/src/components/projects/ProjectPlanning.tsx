@@ -10,17 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
 import { useProjectTasks } from '@/hooks/use-projects';
+import { useProject } from '@/hooks/use-projects';
 
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { TaskModal } from './TaskModal';
+import { TaskModal } from '../TaskModal';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { DeleteMemberProject } from './DeleteMemberProject';
-import { StartTaskProjectModal } from './StartTaskProjectModal';
+import { DeleteMemberProject } from '../DeleteMemberProject';
+import { StartTaskProjectModal } from '../StartTaskProjectModal';
 import { StandardTasksManager } from './StandardTasksManager';
 
 interface ProjectPlanningProps {
@@ -44,7 +45,7 @@ const roleOptions = [
 ];
 
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
-  const [activeTab, setActiveTab] = useState('team');
+  const [activeTab, setActiveTab] = useState('templates');
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -60,6 +61,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
 
   const { data: users } = useUsers();
   const { data: tasks } = useProjectTasks(projectId);
+  const { data: projectDetails } = useProject(projectId);
   
   const form = useForm<z.infer<typeof teamMemberSchema>>({
     resolver: zodResolver(teamMemberSchema),
@@ -124,12 +126,15 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="team">Équipe</TabsTrigger>
-            <TabsTrigger value="tasks">Activités</TabsTrigger>
             <TabsTrigger value="templates">Activités standards</TabsTrigger>
+            <TabsTrigger value="tasks">Activités</TabsTrigger>
+            <TabsTrigger value="team">Équipe</TabsTrigger>
           </TabsList>
 
           <TabsContent value="tasks" className="space-y-4">
+            <div className="text-sm text-muted-foreground mb-4">
+              <span className="font-medium">ℹ️</span> Toutes les activités sont créées à partir des services du catalogue dans l'onglet "Activités standards"
+            </div>
             <div className="flex justify-between items-center mb-4">
               <div className="flex-1 flex gap-4">
                 <div className="relative flex-1">
@@ -154,12 +159,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <TaskModal projectId={projectId} mode="create">
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nouvelle activité
-                </Button>
-              </TaskModal>
+              
             </div>
 
             <ScrollArea className="h-[400px]">
@@ -401,8 +401,20 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
           </TabsContent>
 
           <TabsContent value="templates" className="space-y-4">
+            <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <h3 className="font-medium text-blue-900 mb-2">
+                {projectDetails?.contract ? 'Création d\'activités basées sur le contrat' : 'Création d\'activités standards'}
+              </h3>
+              <p className="text-sm text-blue-700">
+                {projectDetails?.contract 
+                  ? 'Les activités sont créées automatiquement à partir des services définis dans le contrat du projet.'
+                  : 'Sélectionnez une catégorie du catalogue pour créer automatiquement toutes les activités standards associées au projet. Ces activités seront basées sur les services disponibles dans le catalogue.'
+                }
+              </p>
+            </div>
             <StandardTasksManager 
               projectId={projectId}
+              contractId={projectDetails?.contract || null}
               onTasksCreated={() => {
                 // Rafraîchir les données des activités
                 // window.location.reload();
