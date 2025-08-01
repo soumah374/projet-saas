@@ -84,7 +84,8 @@ const toProjectList = (project: ExtendedProject): ProjectList => ({
   team_count: project.team_count || '0',
   days_remaining: project.days_remaining || null,
   is_overdue: project.is_overdue || null,
-  created_at: project.created_at || null
+  created_at: project.created_at || null,
+  client_details: project.client_details
 });
 
 export function ProjectManagement() {
@@ -321,7 +322,6 @@ export function ProjectManagement() {
       <CreateProjectModal 
         isOpen={showCreateModal} 
         onClose={() => setShowCreateModal(false)}
-        onProjectCreate={handleProjectCreate}
       />
 
       {/* Statistics Cards */}
@@ -486,7 +486,7 @@ export function ProjectManagement() {
                   {projects.map((project) => (
                     <TableRow key={project.id}>
                       <TableCell className="font-medium">{project.title}</TableCell>
-                      <TableCell>{project.client}</TableCell>
+                      <TableCell>{project.client_details.nom_complet}</TableCell>
                       <TableCell>{project.type}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(project.status)}>

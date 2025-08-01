@@ -168,6 +168,17 @@ export interface Project {
   tags?: string[];
 }
 
+export interface ClientData {
+  id: number;
+  nom_complet: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ExtendedProject extends Omit<Project, 'created_by' | 'budget' | 'team_members' | 'tasks'> {
   created_by: number | User;
   budget: string | number | null;
@@ -180,6 +191,7 @@ export interface ExtendedProject extends Omit<Project, 'created_by' | 'budget' |
   is_overdue?: string | null;
   events?: ProjectEvent[];
   team_count?: string;
+  client_details: ClientData;
 }
 
 export interface ProjectList {
