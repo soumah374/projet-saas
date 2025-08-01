@@ -10,6 +10,7 @@ import { Loader2, Package, CheckSquare, Clock, Users, FileText } from 'lucide-re
 import { useCategories, useServices, useServicesByCategory } from '@/hooks/use-services';
 import { useCreateProjectTask } from '@/hooks/use-projects';
 import { useContratById } from '@/hooks/use-contrats';
+import { useDevisServicesByContract } from '@/hooks/use-devis';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -35,6 +36,19 @@ interface ServiceTaskTemplate {
     intitule: string;
     code: string;
   };
+  type?: 'activity' | 'frais';
+  devis_info?: {
+    numero: string;
+    statut: string;
+  };
+  intervenants?: Array<{
+    id: number;
+    intitule: string;
+    temps_intervenant: number;
+    taux_horaire: number;
+    montant_intervenant: number;
+  }>;
+
 }
 
 interface StandardTasksManagerProps {
@@ -53,61 +67,88 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const createTaskMutation = useCreateProjectTask();
 
+  
   // Récupérer les détails du contrat si disponible
   const { data: contractDetails, isLoading: contractLoading } = useContratById(contractId || 0);
 
-  // Récupérer tous les services actifs avec leurs catégories
-  const { data: allServices, isLoading: servicesLoading } = useServices({
-    is_active: true,
-    ordering: 'name'
-  });
+  // Récupérer les services des devis liés au contrat
+  const { data: devisServicesData, isLoading: devisServicesLoading } = useDevisServicesByContract(contractId);
 
-  // Récupérer les services par catégorie sélectionnée
-  const { data: servicesByCategory, isLoading: categoryServicesLoading } = useServicesByCategory(
-    selectedCategory?.id || 0
-  );
-
-  // Extraire les services des lignes du contrat
-  const contractServices = useMemo(() => {
-    if (!contractDetails?.lignes) {
+  // Extraire les activités et frais des devis liés au contrat
+  const devisServices = useMemo(() => {
+    if (!devisServicesData?.devis_services) {
       return [];
     }
     
-    return contractDetails.lignes
-      .filter(ligne => ligne.type_ligne === 'prestation' && ligne.service)
-      .map(ligne => ({
-        id: ligne.service!.id,
-        name: ligne.service!.name,
-        description: ligne.description,
-        duration: 8, // Durée par défaut
-        price: ligne.prix_unitaire_ht,
-        category: null, // À déterminer si nécessaire
-        quantity: ligne.quantite,
-        unite: ligne.unite
-      }));
-  }, [contractDetails?.lignes]);
+    const allItems = [];
+    for (const devisData of devisServicesData.devis_services) {
+      // Activités
+      if (devisData.activities && Array.isArray(devisData.activities)) {
+        for (const activity of devisData.activities) {
+          allItems.push({
+            id: activity.id,
+            name: activity.activity?.name || 'Activité',
+            description: `Service: ${activity.activity.service.name}` || 'Service',   //activity.description,
+            duration: activity.activity?.duree_standard || 8, // Utiliser la durée standard de l'activité
+            price: activity.prix_unitaire_ht,
+            category: null,
+            quantity: activity.quantite,
+            unite: activity.unite,
+            type: 'activity',
+            devis_info: {
+              numero: devisData.devis.numero,
+              statut: devisData.devis.statut
+            },
+            intervenants: activity.intervenants
+          });
+        }
+      }
+      
+      // Frais
+      if (devisData.frais && Array.isArray(devisData.frais)) {
+        for (const frais of devisData.frais) {
+          allItems.push({
+            id: frais.id,
+            name: frais.ligne_frais?.description || frais.frais_category?.name || 'Frais',
+            description: frais.description,
+            duration: 0, // Pas de durée pour les frais
+            price: frais.prix_unitaire_ht,
+            category: null,
+            quantity: frais.quantite,
+            unite: frais.unite,
+            type: 'frais',
+            devis_info: {
+              numero: devisData.devis.numero,
+              statut: devisData.devis.statut
+            },
+            intervenants: frais.intervenants
+          });
+        }
+      }
+    }
+    
+    return allItems;
+  }, [devisServicesData?.devis_services]);
 
-  // Filtrer les services par catégorie sélectionnée (seulement si pas de contrat)
+  // Filtrer les activités et frais par catégorie sélectionnée (seulement si pas de contrat)
   const filteredServices = useMemo(() => {
-    if (!allServices?.results || !selectedCategory || contractId) {
+    if (!devisServicesData?.devis_services || !selectedCategory || contractId) {
       return [];
     }
     
-    return allServices.results.filter(service => 
-      service.category && service.category.id === selectedCategory.id
+    // Les activités et frais des devis n'ont pas de catégorie, donc on retourne tous les éléments
+    return devisServicesData.devis_services.flatMap(devisData => 
+      [...(devisData.activities || []), ...(devisData.frais || [])]
     );
-  }, [allServices?.results, selectedCategory, contractId]);
+  }, [devisServicesData?.devis_services, selectedCategory, contractId]);
 
-  // Utiliser les services du contrat si disponible, sinon utiliser les services par catégorie
+  // Utiliser les activités et frais des devis si disponible, sinon utiliser les services par catégorie
   const effectiveServices = useMemo(() => {
-    if (contractId && contractServices.length > 0) {
-      return contractServices;
-    }
-    if (selectedCategory && servicesByCategory?.results) {
-      return servicesByCategory.results;
+    if (contractId && devisServices.length > 0) {
+      return devisServices;
     }
     return filteredServices;
-  }, [contractId, contractServices, selectedCategory, servicesByCategory?.results, filteredServices]);
+  }, [contractId, devisServices, selectedCategory, filteredServices]);
 
   // Générer les activités quand les services filtrés changent
   useEffect(() => {
@@ -122,6 +163,9 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
         category: service.category,
         quantity: (service as any).quantity,
         unite: (service as any).unite,
+        type: (service as any).type,
+        devis_info: (service as any).devis_info,
+        intervenants: (service as any).intervenants,
       }));
       
       setGeneratedTasks(tasks);
@@ -134,7 +178,6 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
   }, [effectiveServices]);
 
   const handleCategoryChange = (category: Category) => {
-    console.log({...category})
     setSelectedCategory(category);
   };
 
@@ -215,7 +258,7 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
         </CardTitle>
         <p className="text-sm text-muted-foreground">
           {contractId 
-            ? 'Les activités sont créées à partir des services définis dans le contrat du projet.'
+            ? 'Les activités sont créées à partir des activités et frais définis dans les devis liés au contrat du projet.'
             : 'Toutes les activités du projet sont créées à partir des services du catalogue. Sélectionnez une catégorie pour voir les activités disponibles.'
           }
         </p>
@@ -250,7 +293,7 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
         {/* Sélection de la catégorie ou affichage du contrat */}
         {contractId ? (
           <div>
-            <Label>Services du contrat</Label>
+            <Label>Éléments des devis du contrat</Label>
             <div className="mt-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               {contractLoading ? (
                 <div className="flex items-center justify-center p-4">
@@ -258,15 +301,21 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
                   Chargement du contrat...
                 </div>
               ) : contractDetails ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-blue-600" />
-                    <span className="font-medium">Contrat {contractDetails.numero}</span>
-                  </div>
-                  <p className="text-sm text-blue-700">
-                    {contractServices.length} service(s) trouvé(s) dans le contrat
+                                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium">Contrat {contractDetails.numero}</span>
+                    </div>
+                    <p className="text-sm text-blue-700">
+                    {devisServices.length} élément(s) trouvé(s) dans les devis du contrat (activités et frais)
                   </p>
-                </div>
+                    {devisServicesLoading && (
+                      <div className="flex items-center gap-2 text-sm text-blue-600">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Chargement des services des devis...
+                      </div>
+                    )}
+                  </div>
               ) : (
                 <div className="text-center text-gray-500">
                   Aucun contrat trouvé
@@ -352,7 +401,7 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
               </div>
               
               <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-3">
-                {servicesLoading ? (
+                {devisServicesLoading ? (
                   <div className="flex items-center justify-center p-4">
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     Chargement des services...
@@ -369,11 +418,12 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
                             <p className="font-medium">{taskTemplate.name}</p>
+                            {/* <p className="text-sm text-gray-600 mt-1">{taskTemplate.description}</p> */}
                             <p className="text-sm text-gray-600 mt-1">{taskTemplate.description}</p>
                             <div className="flex items-center gap-2 mt-2">
                               <Badge variant="outline" className="text-xs">
                                 <Clock className="h-3 w-3 mr-1" />
-                                {taskTemplate.duration}h
+                                {taskTemplate.duration / 8} J
                               </Badge>
                               {taskTemplate.quantity && (
                                 <Badge variant="outline" className="text-xs">
@@ -383,6 +433,16 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
                               {taskTemplate.price && (
                                 <Badge variant="outline" className="text-xs">
                                   {formatMontant(taskTemplate.price)}/unité
+                                </Badge>
+                              )}
+                              {taskTemplate.type && (
+                                <Badge variant={taskTemplate.type === 'frais' ? 'destructive' : 'outline'} className="text-xs">
+                                  {taskTemplate.type === 'activity' ? 'Activité' : 'Frais'}
+                                </Badge>
+                              )}
+                              {(taskTemplate as any).devis_info && (
+                                <Badge variant="outline" className="text-xs">
+                                  Devis {(taskTemplate as any).devis_info.numero}
                                 </Badge>
                               )}
                               {taskTemplate.category && (
@@ -418,7 +478,7 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-blue-600">Temps total estimé:</span>
-                  <p className="font-medium text-blue-900">{totalEstimatedHours} heures</p>
+                  <p className="font-medium text-blue-900">{totalEstimatedHours/8} J</p>
                 </div>
                 <div>
                   <span className="text-blue-600">Catégorie sélectionnée:</span>

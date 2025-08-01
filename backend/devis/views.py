@@ -299,6 +299,142 @@ class DevisViewSet(viewsets.ModelViewSet):
         devis.calculer_montants()
         return Response(DevisSerializer(devis).data)
 
+    @action(detail=False, methods=['get'])
+    def services_by_contract(self, request):
+        """Récupérer les services associés aux devis liés à un contrat"""
+        contract_id = request.query_params.get('contract_id')
+        
+        if not contract_id:
+            return Response(
+                {'error': 'Le paramètre contract_id est requis'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Récupérer les devis liés au contrat
+            from contrats.models import Contrat
+            contrat = Contrat.objects.get(id=contract_id)
+            
+            # Récupérer tous les devis associés à ce contrat
+            devis_ids = []
+            if contrat.devis_principal:
+                devis_ids.append(contrat.devis_principal.id)
+            if contrat.devis:
+                devis_ids.extend([devis.id for devis in contrat.devis.all()])
+            
+            # Récupérer les lignes de devis avec activités et frais
+            lignes_devis = LigneDevis.objects.filter(
+                devis_id__in=devis_ids,
+                type_ligne__in=['prestation', 'frais']
+            ).select_related('activity', 'frais_category', 'ligne_frais', 'unite', 'devis').prefetch_related('intervenants')
+            
+            # Organiser les activités et frais par devis
+            services_by_devis = {}
+            for ligne in lignes_devis:
+                devis_id = ligne.devis.id
+                if devis_id not in services_by_devis:
+                    services_by_devis[devis_id] = {
+                        'devis': {
+                            'id': ligne.devis.id,
+                            'numero': ligne.devis.numero,
+                            'date_creation': ligne.devis.date_creation,
+                            'statut': ligne.devis.statut
+                        },
+                        'activities': [],
+                        'frais': []
+                    }
+                
+                # Debug: logger le type de ligne
+                logger.info(f"Traitement ligne {ligne.id}: type={ligne.type_ligne}, service={ligne.service}, activity={ligne.activity}, frais_category={ligne.frais_category}")
+                
+                # Ajouter les informations d'intervenants
+                intervenants = []
+                for intervenant in ligne.intervenants.all():
+                    intervenants.append({
+                        'id': intervenant.profile_intervenant.id,
+                        'intitule': intervenant.profile_intervenant.name,
+                        'temps_intervenant': float(intervenant.temps_intervenant),
+                        'taux_horaire': float(intervenant.taux_horaire),
+                        'montant_intervenant': float(intervenant.montant_intervenant)
+                    })
+                
+                # Créer l'objet ligne avec type
+                ligne_data = {
+                    'id': ligne.id,
+                    'type_ligne': ligne.type_ligne,
+                    'description': ligne.description,
+                    'quantite': float(ligne.quantite),
+                    'unite': {
+                        'id': ligne.unite.id,
+                        'intitule': ligne.unite.intitule,
+                        'code': ligne.unite.code
+                    },
+                    'prix_unitaire_ht': float(ligne.prix_unitaire_ht),
+                    'montant_ht': float(ligne.montant_ht),
+                    'intervenants': intervenants
+                }
+                
+                # Ajouter selon le type de ligne
+                if ligne.type_ligne == 'prestation' and ligne.activity:
+                    logger.info(f"Ajout activité {ligne.activity.name} au devis {devis_id}")
+                    ligne_data.update({
+                        'activity': {
+                            'id': ligne.activity.id,
+                            'name': ligne.activity.name,
+                            'duree_standard': float(ligne.activity.duree_standard),
+                            'service': {
+                                'id': ligne.activity.service.id,
+                                'name': ligne.activity.service.name
+                            }
+                        }
+                    })
+                    services_by_devis[devis_id]['activities'].append(ligne_data)
+                
+                elif ligne.type_ligne == 'frais':
+                    frais_name = 'Frais'
+                    if ligne.frais_category:
+                        frais_name = ligne.frais_category.name
+                    elif ligne.ligne_frais:
+                        frais_name = ligne.ligne_frais.description
+                    
+                    logger.info(f"Ajout frais {frais_name} au devis {devis_id}")
+                    ligne_data.update({
+                        'type_frais': ligne.type_frais,
+                        'frais_category': {
+                            'id': ligne.frais_category.id,
+                            'name': ligne.frais_category.name
+                        } if ligne.frais_category else None,
+                        'ligne_frais': {
+                            'id': ligne.ligne_frais.id,
+                            'description': ligne.ligne_frais.description,
+                            'type_frais': ligne.ligne_frais.type_frais
+                        } if ligne.ligne_frais else None
+                    })
+                    services_by_devis[devis_id]['frais'].append(ligne_data)
+                else:
+                    logger.warning(f"Type de ligne non reconnu: {ligne.type_ligne} pour la ligne {ligne.id}")
+            
+            # Debug: logger le résumé
+            for devis_id, devis_data in services_by_devis.items():
+                logger.info(f"Devis {devis_id}: {len(devis_data['activities'])} activités, {len(devis_data['frais'])} frais")
+            
+            return Response({
+                'contract_id': contract_id,
+                'contract_numero': contrat.numero,
+                'devis_services': list(services_by_devis.values())
+            })
+            
+        except Contrat.DoesNotExist:
+            return Response(
+                {'error': 'Contrat non trouvé'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la récupération des services: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class LigneDevisViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des lignes de devis"""
@@ -396,3 +532,4 @@ class LigneDevisIntervenantViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """The serializer now handles devis_id automatically"""
         serializer.save()
+

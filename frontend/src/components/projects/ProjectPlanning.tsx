@@ -32,7 +32,7 @@ const teamMemberSchema = z.object({
   project: z.string().min(1, 'Sélectionnez un projet'),
   user: z.string().min(1, 'Sélectionnez un utilisateur'),
   role: z.string().min(1, 'Sélectionnez un rôle'),
-  allocation_percentage: z.number().min(0, { message: "L'allocation doit être supérieure ou égale à 0%" })
+  // allocation_percentage: z.number().min(0, { message: "L'allocation doit être supérieure ou égale à 0%" })
 });
 
 const roleOptions = [
@@ -69,7 +69,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       project: projectId,
       user: '',
       role: '',
-      allocation_percentage: 100
+      // allocation_percentage: 100
     }
   });
   
@@ -80,16 +80,16 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       form.reset();
     } catch (error: any) {
       if (error.response?.data?.error) {
-        form.setError('allocation_percentage', {
-          type: 'manual',
-          message: error.response.data.error
-        });
+        // form.setError('allocation_percentage', {
+        //   type: 'manual',
+        //   message: error.response.data.error
+        // });
       } else {
-        console.error('Error adding team member:', error);
-        form.setError('allocation_percentage', {
-          type: 'manual',
-          message: "Une erreur s'est produite lors de l'ajout du membre"
-        });
+        // console.error('Error adding team member:', error);
+        // form.setError('allocation_percentage', {
+        //   type: 'manual',
+        //   message: "Une erreur s'est produite lors de l'ajout du membre"
+        // });
       }
     }
   };
@@ -215,7 +215,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                               {task.estimated_hours && (
                                 <div className="flex items-center gap-1">
                                   <Clock className="h-4 w-4" />
-                                  <span>{task.estimated_hours}h</span>
+                                  <span>{task.estimated_hours / 8}J</span>
                                 </div>
                               )}
 
@@ -326,34 +326,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                           </FormItem>
                         )}
                       />
-                      
-                      <FormField
-                        control={form.control}
-                        name="allocation_percentage"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Allocation (%)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                placeholder="100"
-                                {...field}
-                                min={0}
-                                value={field.value}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  if (value === '' || Number(value) >= 0) {
-                                    field.onChange(Number(value));
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
                       <Button type="submit" className="w-full">
                         Ajouter
                       </Button>
@@ -377,10 +349,10 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
-                        <Badge variant="secondary">
+                        {/* <Badge variant="secondary">
                           {member.allocation_percentage}% alloué
                         </Badge>
-                        
+                         */}
                         <DeleteMemberProject 
                           projectId={projectId} 
                           userId={member.id} 
