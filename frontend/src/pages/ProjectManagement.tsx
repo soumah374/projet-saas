@@ -44,7 +44,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import { CreateProjectModal } from "@/components/CreateProjectModal";
+import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 import { useProjects, useCreateProject, useUpdateProject } from "@/hooks/use-projects";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import type { 

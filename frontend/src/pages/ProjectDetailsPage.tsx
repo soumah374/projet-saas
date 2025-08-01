@@ -7,6 +7,8 @@ import { ProjectTimesheets } from '@/components/ProjectTimesheets';
 import { ProjectTrackingAlerts } from '@/components/ProjectTrackingAlerts';
 import { ProjectCalendar } from '@/components/ProjectCalendar';
 import { DocumentManager } from '@/components/DocumentManager';
+import { ClientDetailsCard } from '@/components/ClientDetailsCard';
+import type { ClientProfile } from '@/hooks/use-clients';
 import { useProject } from '@/hooks/use-projects';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -55,11 +57,18 @@ export function ProjectDetailsPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">{project.title}</h1>
-          <p className="text-gray-600">{project.client}</p>
+          <p className="text-gray-600">{project.client_details?.nom_complet || 'Client non assigné'}</p>
         </div>
       </div>
       
       <ProjectTrackingAlerts projectId={projectId} />
+      
+      {/* Informations client */}
+      {project.client_details && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ClientDetailsCard client={project.client_details} />
+        </div>
+      )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">

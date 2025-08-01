@@ -163,7 +163,8 @@ export interface Project {
   deadline: string;
   progress: number;
   budget: string | null;
-  client: string;
+  client: number | null;
+  client_details?: ClientProfile;
   departments: string[];
   contract: string;
   created_by: number;
@@ -200,7 +201,8 @@ export interface ProjectList {
   priority: ProjectPriority;
   progress: number;
   deadline: string | null;
-  client: string;
+  client: number | null;
+  client_details?: ClientProfile;
   created_by: User | number;
   team_count: string;
   days_remaining: string | null;
@@ -219,7 +221,7 @@ export interface ProjectCreate {
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   tags?: any;
   budget_details?: ProjectBudget;
 }
@@ -235,7 +237,7 @@ export interface ProjectUpdate {
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   tags?: any;
   budget_details?: ProjectBudget;
 }
@@ -250,7 +252,7 @@ export interface CreateProjectPayload {
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   departments?: string[];
   contract?: string;
   tags?: string[];
@@ -264,7 +266,7 @@ export interface ProjectFilters {
   status?: ProjectStatus;
   type?: ProjectType;
   priority?: ProjectPriority;
-  client?: string;
+  client?: number;
   start_date?: string;
   end_date?: string;
   team_member?: number;
@@ -380,7 +382,7 @@ export interface CreateProjectForm {
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   tags?: string[];
   budget_details?: {
     production: string;

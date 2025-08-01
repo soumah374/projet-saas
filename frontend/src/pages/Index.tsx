@@ -8,7 +8,7 @@ import { ProjectCard } from '@/components/ProjectCard';
 import { TopNavigation } from '@/components/TopNavigation';
 import { StatsOverview } from '@/components/StatsOverview';
 import { UserSidebar } from '@/components/UserSidebar';
-import { CreateProjectModal } from '@/components/CreateProjectModal';
+import { CreateProjectModal } from '@/components/projects/CreateProjectModal';
 import { ProjectDetailsPage } from '@/pages/ProjectDetailsPage';
 import { DocumentManager } from '@/components/DocumentManager';
 import { ProjectCalendar } from '@/components/ProjectCalendar';

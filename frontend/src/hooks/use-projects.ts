@@ -59,7 +59,7 @@ export function useProjects(filters?: ProjectsFilters) {
       if (filters?.status) params.append('status', filters.status);
       if (filters?.type) params.append('type', filters.type);
       if (filters?.priority) params.append('priority', filters.priority);
-      if (filters?.client) params.append('client', filters.client);
+      if (filters?.client) params.append('client', filters.client.toString());
       if (filters?.start_date) params.append('start_date', filters.start_date);
       if (filters?.end_date) params.append('end_date', filters.end_date);
       if (filters?.team_member) params.append('team_member', filters.team_member.toString());

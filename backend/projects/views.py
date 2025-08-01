@@ -28,8 +28,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'type', 'priority']
-    search_fields = ['title', 'description', 'client', 'id']
+    filterset_fields = ['status', 'type', 'priority', 'client']
+    search_fields = ['title', 'description', 'client__nom_complet', 'id']
     ordering_fields = ['created_at', 'deadline', 'progress', 'title']
     ordering = ['-created_at']
     

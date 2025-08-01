@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.db.models import Sum
 from departments.models import Department
+from users.models import ClientProfile
 from decimal import Decimal
 
 class Project(models.Model):
@@ -54,7 +55,7 @@ class Project(models.Model):
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     
     # Relations
-    client = models.CharField(max_length=200)
+    client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='projects', null=True, blank=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_projects')
     team_members = models.ManyToManyField(User, through='ProjectMember', related_name='projects')
     departments = models.ManyToManyField(Department, related_name='projects', help_text="Départements impliqués")

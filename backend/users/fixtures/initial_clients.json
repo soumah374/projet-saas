@@ -1,0 +1,112 @@
+[
+  {
+    "model": "users.clientprofile",
+    "pk": 1,
+    "fields": {
+      "nom": "ABC",
+      "prenom": "Entreprise",
+      "email": "contact@abc-entreprise.com",
+      "telephone": "+33123456789",
+      "type_client": "personne_morale",
+      "statut_commercial": "actif",
+      "raison_sociale": "Entreprise ABC SARL",
+      "rccm_nif": "RCCM-2024-001",
+      "contact": "M. Jean Dupont",
+      "adresse_complete": "123 Avenue de la République",
+      "adresse": "123 Avenue de la République",
+      "ville": "Conakry",
+      "code_postal": "001",
+      "pays": "Guinée",
+      "date_inscription": "2024-01-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "users.clientprofile",
+    "pk": 2,
+    "fields": {
+      "nom": "XYZ",
+      "prenom": "Startup",
+      "email": "info@startup-xyz.com",
+      "telephone": "+33123456790",
+      "type_client": "personne_morale",
+      "statut_commercial": "actif",
+      "raison_sociale": "Startup XYZ SAS",
+      "rccm_nif": "RCCM-2024-002",
+      "contact": "Mme Marie Martin",
+      "adresse_complete": "456 Boulevard du Commerce",
+      "adresse": "456 Boulevard du Commerce",
+      "ville": "Conakry",
+      "code_postal": "002",
+      "pays": "Guinée",
+      "date_inscription": "2024-02-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "users.clientprofile",
+    "pk": 3,
+    "fields": {
+      "nom": "DEF",
+      "prenom": "Organisation",
+      "email": "contact@org-def.org",
+      "telephone": "+33123456791",
+      "type_client": "personne_morale",
+      "statut_commercial": "actif",
+      "raison_sociale": "Organisation DEF ONG",
+      "rccm_nif": "RCCM-2024-003",
+      "contact": "M. Pierre Durand",
+      "adresse_complete": "789 Rue de la Paix",
+      "adresse": "789 Rue de la Paix",
+      "ville": "Conakry",
+      "code_postal": "003",
+      "pays": "Guinée",
+      "date_inscription": "2024-01-15T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "users.clientprofile",
+    "pk": 4,
+    "fields": {
+      "nom": "Dupont",
+      "prenom": "Sophie",
+      "email": "sophie.dupont@email.com",
+      "telephone": "+33123456792",
+      "type_client": "personne_physique",
+      "statut_commercial": "prospect",
+      "raison_sociale": null,
+      "rccm_nif": null,
+      "contact": null,
+      "adresse_complete": "10 Rue des Fleurs",
+      "adresse": "10 Rue des Fleurs",
+      "ville": "Conakry",
+      "code_postal": "004",
+      "pays": "Guinée",
+      "date_inscription": "2024-03-01T00:00:00Z",
+      "is_active": true
+    }
+  },
+  {
+    "model": "users.clientprofile",
+    "pk": 5,
+    "fields": {
+      "nom": "Martin",
+      "prenom": "Thomas",
+      "email": "thomas.martin@email.com",
+      "telephone": "+33123456793",
+      "type_client": "personne_physique",
+      "statut_commercial": "actif",
+      "raison_sociale": null,
+      "rccm_nif": null,
+      "contact": null,
+      "adresse_complete": "25 Avenue des Palmiers",
+      "adresse": "25 Avenue des Palmiers",
+      "ville": "Conakry",
+      "code_postal": "005",
+      "pays": "Guinée",
+      "date_inscription": "2024-02-15T00:00:00Z",
+      "is_active": true
+    }
+  }
+] 

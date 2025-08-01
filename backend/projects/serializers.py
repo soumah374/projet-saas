@@ -7,6 +7,21 @@ from .models import (
     Project, ProjectMember, ProjectPhase, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget
 )
 from users.serializers import UserSerializer  # Import UserSerializer from users app
+from users.models import ClientProfile
+
+
+class ClientProfileSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les détails du client"""
+    
+    class Meta:
+        model = ClientProfile
+        fields = [
+            'id', 'nom', 'prenom', 'email', 'telephone', 'type_client', 
+            'statut_commercial', 'raison_sociale', 'rccm_nif', 'contact',
+            'adresse_complete', 'adresse', 'ville', 'code_postal', 'pays',
+            'nom_complet', 'is_active', 'date_inscription'
+        ]
+        read_only_fields = ['id', 'nom_complet', 'date_inscription']
 
 
 class ProjectPhaseSerializer(serializers.ModelSerializer):
@@ -177,13 +192,14 @@ class ProjectListSerializer(serializers.ModelSerializer):
     phase_count = serializers.SerializerMethodField()
     team_count = serializers.SerializerMethodField()
     current_phase = serializers.SerializerMethodField()
+    client_details = ClientProfileSerializer(source='client', read_only=True)
     
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'type', 'status', 'priority',
             'start_date', 'deadline', 'progress', 'client',
-            'phase_count', 'team_count', 'current_phase'
+            'client_details', 'phase_count', 'team_count', 'current_phase'
         ]
     
     @extend_schema_field(int)
@@ -209,6 +225,7 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     phases = ProjectPhaseSerializer(many=True, read_only=True)
     team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
     tasks = ProjectTaskSerializer(many=True, read_only=True)
+    client_details = ClientProfileSerializer(source='client', read_only=True)
     created_by_name = serializers.SerializerMethodField()
     total_hours = serializers.SerializerMethodField()
     total_estimated_hours = serializers.SerializerMethodField()
@@ -338,13 +355,14 @@ class ProjectSerializer(serializers.ModelSerializer):
     phases = ProjectPhaseSerializer(many=True, read_only=True)
     team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
     budget_details = ProjectBudgetSerializer(read_only=True)
+    client_details = ClientProfileSerializer(source='client', read_only=True)
     
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'description', 'objectives', 'type',
             'status', 'priority', 'start_date', 'deadline',
-            'progress', 'budget', 'client', 'created_by',
+            'progress', 'budget', 'client', 'client_details', 'created_by',
             'contract', 'tags', 'phases', 'team_members',
             'budget_details', 'created_at', 'updated_at'
         ]
