@@ -80,6 +80,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       form.reset();
     } catch (error: any) {
       if (error.response?.data?.error) {
+        console.log(error.response.data.error)
         // form.setError('allocation_percentage', {
         //   type: 'manual',
         //   message: error.response.data.error
@@ -349,10 +350,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                         </div>
                       </div>
                       <div className="flex items-center space-x-4">
-                        {/* <Badge variant="secondary">
-                          {member.allocation_percentage}% alloué
-                        </Badge>
-                         */}
                         <DeleteMemberProject 
                           projectId={projectId} 
                           userId={member.id} 
