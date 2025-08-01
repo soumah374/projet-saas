@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TopNavigation } from './components/TopNavigation';
@@ -17,60 +17,30 @@ import { ProjectManagement } from './pages/ProjectManagement';
 import { ProjectReportPage } from './pages/ProjectReportPage';
 import { UsersPage } from './pages/UsersPage';
 import { ProjectCalendarPage } from './pages/ProjectCalendarPage';
-
-interface User {
-  id: number;
-  username: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  role: string;
-  is_staff: boolean;
-}
+import { ServicesPage } from './pages/ServicesPage';
+import { ServiceDetailsPage } from './pages/ServiceDetailsPage';
+import { ClientsPage } from './pages/ClientsPage';
+import { ActivitiesPage } from './pages/ActivitiesPage';
+import { TauxHorairesPage } from './pages/TauxHorairesPage';
+import { UnitesStandardsPage } from './pages/UnitesStandardsPage';
+import { DevisPage } from './pages/DevisPage';
+import { DevisDetailPage } from './pages/DevisDetailPage';
+import { DevisCreatePage } from './pages/DevisCreatePage';
+import { ContratsPage } from './pages/ContratsPage';
+import { ContratDetailPage } from './pages/ContratDetailPage';
+import { useAuth } from './hooks/use-auth';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import DepartmentsPage from './pages/DepartmentsPage';
+import ClientCategoriesPage from './pages/ClientCategoriesPage';
+import FraisCategoriesPage from './pages/FraisCategoriesPage';
+import LignesFraisPage from './pages/LignesFraisPage';
+import { CategoriesPage } from './pages/CategoriesPage';
+import { CategoryDetailsPage } from './pages/CategoryDetailsPage';
+import { AvenantsPage } from './pages/AvenantsPage';
 
 function App() {
+  const { user, isLoading, logout } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Vérifier si l'utilisateur est connecté au chargement
-    const token = localStorage.getItem('access_token');
-    const userData = localStorage.getItem('user');
-    
-    console.log('App loading - Token:', token ? 'exists' : 'missing');
-    console.log('App loading - User data:', userData ? 'exists' : 'missing');
-    
-    if (token && userData) {
-      try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        console.log('User authenticated:', parsedUser.username);
-      } catch (error) {
-        console.error('Erreur lors du parsing des données utilisateur:', error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-      }
-    } else {
-      console.log('No authentication data found, redirecting to login');
-    }
-    
-    setIsLoading(false);
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
-    setUser(null);
-  };
-
-  const handleLogin = (userData: User, token: string) => {
-    setUser(userData);
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
 
   if (isLoading) {
     return (
@@ -81,53 +51,194 @@ function App() {
   }
 
   return (
-    <Router>
-      <div className="min-h-screen bg-gray-50">
-        <Toaster />
-        <Sonner />
-        
-        {user ? (
-          <div className="flex h-screen">
-            <Sidebar 
-              isOpen={isSidebarOpen} 
-              user={user} 
-              onLogout={handleLogout}
+    <div className="min-h-screen bg-gray-50">
+      <Toaster />
+      <Sonner />
+      
+      {user ? (
+        <div className="flex h-screen">
+          <Sidebar 
+            isOpen={isSidebarOpen} 
+            user={user} 
+            setIsSidebarOpen={setIsSidebarOpen}
+            onLogout={logout}
+          />
+          <div className="flex-1 flex flex-col min-w-0">
+            <TopNavigation 
+              isSidebarOpen={isSidebarOpen}
               setIsSidebarOpen={setIsSidebarOpen}
+              user={user}
+              onLogout={logout}
             />
-            <div className="flex-1 flex flex-col min-w-0">
-              <TopNavigation 
-                isSidebarOpen={isSidebarOpen}
-                setIsSidebarOpen={setIsSidebarOpen}
-                user={user}
-                onLogout={handleLogout}
-              />
-              <main className="flex-1 overflow-auto p-6">
-                <Routes>
-                  <Route path="/" element={<Dashboard user={user} />} />
-                  <Route path="/projects" element={<ProjectManagement />} />
-                  <Route path="/projects/:id" element={<ProjectDetailsPage />} />
-                  <Route path="/projects/:id/reports" element={<ProjectReportPage />} />
-                  <Route path="/projects/:projectId/team" element={<ProjectTeamPage />} />
-                  <Route path="/projects/:projectId/calendar" element={<ProjectCalendarPage />} />
-                  <Route path="/teams" element={<TeamsPage />} />
-                  <Route path="/users" element={<UsersPage />} />
-                  <Route path="/calendar" element={<CalendarPage />} />
-                  <Route path="/reports" element={<ReportsPage />} />
-                  <Route path="/documents" element={<DocumentsPage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </main>
-            </div>
+            <main className="flex-1 overflow-auto p-6">
+              <Routes>
+                <Route path="/" element={
+                  <ProtectedRoute>
+                    <Dashboard user={user} />
+                  </ProtectedRoute>
+                } />
+                <Route path="/projects" element={
+                  <ProtectedRoute>
+                    <ProjectManagement />
+                  </ProtectedRoute>
+                } />
+                <Route path="/projects/:projectId" element={
+                  <ProtectedRoute>
+                    <ProjectDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/projects/:id/reports" element={
+                  <ProtectedRoute>
+                    <ProjectReportPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/projects/:projectId/team" element={
+                  <ProtectedRoute>
+                    <ProjectTeamPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/projects/:projectId/calendar" element={
+                  <ProtectedRoute>
+                    <ProjectCalendarPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/teams" element={
+                  <ProtectedRoute>
+                    <TeamsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/users" element={
+                  <ProtectedRoute requireStaff>
+                    <UsersPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/calendar" element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/reports" element={
+                  <ProtectedRoute>
+                    <ReportsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/documents" element={
+                  <ProtectedRoute>
+                    <DocumentsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/settings" element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/categories-services" element={
+                  <ProtectedRoute>
+                    <CategoriesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/categories-services/:categoryId" element={
+                  <ProtectedRoute>
+                    <CategoryDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/services" element={
+                  <ProtectedRoute>
+                    <ServicesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/services/:serviceId" element={
+                  <ProtectedRoute>
+                    <ServiceDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/clients" element={
+                  <ProtectedRoute>
+                    <ClientsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/departments" element={
+                  <ProtectedRoute>
+                    <DepartmentsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/activities" element={
+                  <ProtectedRoute>
+                    <ActivitiesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/taux-horaires" element={
+                  <ProtectedRoute>
+                    <TauxHorairesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/unites-standards" element={
+                  <ProtectedRoute>
+                    <UnitesStandardsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/devis" element={
+                  <ProtectedRoute>
+                    <DevisPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/devis/create" element={
+                  <ProtectedRoute>
+                    <DevisCreatePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/devis/:id" element={
+                  <ProtectedRoute>
+                    <DevisDetailPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/categories-clients" element={
+                  <ProtectedRoute>
+                    <ClientCategoriesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/frais-categories" element={
+                  <ProtectedRoute>
+                    <FraisCategoriesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/lignes-frais" element={
+                  <ProtectedRoute>
+                    <LignesFraisPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/contrats" element={
+                  <ProtectedRoute>
+                    <ContratsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/contrats/:id" element={
+                  <ProtectedRoute>
+                    <ContratDetailPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/avenants" element={
+                  <ProtectedRoute>
+                    <AvenantsPage />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </main>
           </div>
-        ) : (
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        )}
-      </div>
-    </Router>
+        </div>
+      ) : (
+        <Routes>
+          <Route path="/login" element={
+            <ProtectedRoute requireAuth={false}>
+              <LoginPage />
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      )}
+    </div>
   );
 }
 

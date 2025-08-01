@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,13 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
-  Activity
+  Activity,
+  Loader2,
+  AlertTriangle
 } from "lucide-react";
+import { useProjects } from '@/hooks/use-projects';
+import { useNavigate } from 'react-router-dom';
+import { BudgetChart } from '@/components/BudgetChart';
 
 interface User {
   id: number;
@@ -29,116 +34,32 @@ interface DashboardProps {
   user: User;
 }
 
-interface Project {
-  id: number;
-  name: string;
-  status: string;
-  progress: number;
-  due_date: string;
-  team_size: number;
-}
-
-interface Task {
-  id: number;
-  title: string;
-  status: string;
-  priority: string;
-  due_date: string;
-  assigned_to: string;
-}
-
 export function Dashboard({ user }: DashboardProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [stats, setStats] = useState({
-    totalProjects: 0,
-    activeProjects: 0,
-    completedProjects: 0,
-    totalTasks: 0,
-    completedTasks: 0,
-    pendingTasks: 0,
-    teamMembers: 0,
-    upcomingDeadlines: 0
-  });
+  const navigate = useNavigate();
+  const { data: projectsData, isLoading: isLoadingProjects } = useProjects();
+  const projects = projectsData?.results || [];
 
-  useEffect(() => {
-    // Simuler le chargement des données
-    const mockProjects: Project[] = [
-      {
-        id: 1,
-        name: "Refonte du site web",
-        status: "En cours",
-        progress: 75,
-        due_date: "2024-02-15",
-        team_size: 5
-      },
-      {
-        id: 2,
-        name: "Application mobile",
-        status: "Planifié",
-        progress: 25,
-        due_date: "2024-03-20",
-        team_size: 8
-      },
-      {
-        id: 3,
-        name: "Base de données",
-        status: "Terminé",
-        progress: 100,
-        due_date: "2024-01-30",
-        team_size: 3
-      }
-    ];
-
-    const mockTasks: Task[] = [
-      {
-        id: 1,
-        title: "Révision du design",
-        status: "En cours",
-        priority: "Haute",
-        due_date: "2024-02-10",
-        assigned_to: "Marie Dupont"
-      },
-      {
-        id: 2,
-        title: "Tests d'intégration",
-        status: "En attente",
-        priority: "Moyenne",
-        due_date: "2024-02-12",
-        assigned_to: "Jean Martin"
-      },
-      {
-        id: 3,
-        title: "Documentation API",
-        status: "Terminé",
-        priority: "Basse",
-        due_date: "2024-02-08",
-        assigned_to: "Sophie Bernard"
-      }
-    ];
-
-    setProjects(mockProjects);
-    setTasks(mockTasks);
-    setStats({
-      totalProjects: mockProjects.length,
-      activeProjects: mockProjects.filter(p => p.status === "En cours").length,
-      completedProjects: mockProjects.filter(p => p.status === "Terminé").length,
-      totalTasks: mockTasks.length,
-      completedTasks: mockTasks.filter(t => t.status === "Terminé").length,
-      pendingTasks: mockTasks.filter(t => t.status === "En attente").length,
-      teamMembers: 12,
-      upcomingDeadlines: 3
-    });
-  }, []);
+  const summary = {
+    projects: {
+      total: projects.length,
+      active: projects.filter(p => p.status !== 'Terminé').length,
+      completed: projects.filter(p => p.status === 'Terminé').length,
+      delayed: projects.filter(p => new Date(p.deadline) < new Date() && p.status !== 'Terminé').length
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "En cours":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-600";
       case "En pause":
         return "bg-gray-100 text-gray-800";
       case "Terminé":
         return "bg-green-100 text-green-800";
+      case "Planification":
+        return "bg-yellow-100 text-yellow-800";
+      case "Production":
+        return "bg-purple-100 text-purple-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -151,13 +72,21 @@ export function Dashboard({ user }: DashboardProps) {
       case "Haute":
         return "bg-orange-100 text-orange-800";
       case "Normale":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-600";
       case "Basse":
         return "bg-gray-100 text-gray-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (isLoadingProjects) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -171,7 +100,7 @@ export function Dashboard({ user }: DashboardProps) {
             Bonjour {user.first_name}, voici un aperçu de vos activités
           </p>
         </div>
-        <Button>
+        <Button onClick={() => navigate('/reports')}>
           <Activity className="w-4 h-4 mr-2" />
           Voir les rapports
         </Button>
@@ -185,141 +114,106 @@ export function Dashboard({ user }: DashboardProps) {
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalProjects}</div>
+            <div className="text-2xl font-bold">{summary.projects.total}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.activeProjects} actifs, {stats.completedProjects} terminés
+              {summary.projects.active} actifs, {summary.projects.completed} terminés
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tâches</CardTitle>
+            <CardTitle className="text-sm font-medium">Projets actifs</CardTitle>
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTasks}</div>
+            <div className="text-2xl font-bold">{summary.projects.active}</div>
             <p className="text-xs text-muted-foreground">
-              {stats.completedTasks} terminées, {stats.pendingTasks} en attente
+              En cours de réalisation
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Équipe</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Projets terminés</CardTitle>
+            <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.teamMembers}</div>
+            <div className="text-2xl font-bold">{summary.projects.completed}</div>
             <p className="text-xs text-muted-foreground">
-              Membres actifs
+              Projets finalisés
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Échéances</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Projets en retard</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.upcomingDeadlines}</div>
+            <div className="text-2xl font-bold text-red-600">{summary.projects.delayed}</div>
             <p className="text-xs text-muted-foreground">
-              Cette semaine
+              Dépassement d'échéance
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Projets récents et Tâches */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Projets récents */}
+      {/* Projets récents */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Projets récents</CardTitle>
             <CardDescription>
-              Aperçu des projets en cours
+              Les derniers projets créés ou mis à jour
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {projects.map((project) => (
-              <div key={project.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <h4 className="font-medium">{project.name}</h4>
-                  <div className="flex items-center space-x-2 mt-1">
+          <CardContent>
+            <div className="space-y-4">
+              {projects.slice(0, 5).map((project) => (
+                <div
+                  key={project.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                >
+                  <div>
+                    <div className="font-medium">{project.title}</div>
+                    <div className="text-sm text-gray-500">{project.client}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Badge className={getStatusColor(project.status)}>
                       {project.status}
                     </Badge>
-                    <span className="text-sm text-gray-500">
-                      {project.team_size} membres
-                    </span>
-                  </div>
-                  <div className="mt-2">
-                    <div className="flex justify-between text-sm text-gray-600 mb-1">
-                      <span>Progression</span>
-                      <span>{project.progress}%</span>
-                    </div>
-                    <Progress value={project.progress} className="h-2" />
+                    <Badge className={getPriorityColor(project.priority)}>
+                      {project.priority}
+                    </Badge>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Tâches récentes */}
         <Card>
           <CardHeader>
-            <CardTitle>Tâches récentes</CardTitle>
+            <CardTitle>Budget</CardTitle>
             <CardDescription>
-              Vos tâches en cours
+              Répartition du budget par projet
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {tasks.map((task) => (
-              <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <h4 className="font-medium">{task.title}</h4>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Badge className={getStatusColor(task.status)}>
-                      {task.status}
-                    </Badge>
-                    <Badge className={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Assigné à {task.assigned_to}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Échéance: {new Date(task.due_date).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
+          <CardContent>
+            <BudgetChart budgetDetails={{
+              production: "0",
+              personnel: "0",
+              marketing: "0",
+              other: "0",
+              ...projects[0]?.budget_details || {}
+            }} />
           </CardContent>
         </Card>
       </div>
-
-      {/* Graphique d'activité */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Activité récente</CardTitle>
-          <CardDescription>
-            Progression des projets sur les 30 derniers jours
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64 flex items-center justify-center bg-gray-50 rounded-lg">
-            <div className="text-center text-gray-500">
-              <BarChart3 className="w-12 h-12 mx-auto mb-2" />
-              <p>Graphique d'activité</p>
-              <p className="text-sm">Intégration des graphiques en cours</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 } 

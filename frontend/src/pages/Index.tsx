@@ -9,7 +9,7 @@ import { TopNavigation } from '@/components/TopNavigation';
 import { StatsOverview } from '@/components/StatsOverview';
 import { UserSidebar } from '@/components/UserSidebar';
 import { CreateProjectModal } from '@/components/CreateProjectModal';
-import { ProjectDetailsPage } from '@/components/ProjectDetailsPage';
+import { ProjectDetailsPage } from '@/pages/ProjectDetailsPage';
 import { DocumentManager } from '@/components/DocumentManager';
 import { ProjectCalendar } from '@/components/ProjectCalendar';
 import { useAuth } from '@/hooks/use-auth';
@@ -114,13 +114,13 @@ const Index = () => {
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-8 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">Bienvenue sur SAKOM</h1>
+                  <h1 className="text-3xl font-bold mb-2">Bienvenue sur saKom</h1>
                   <p className="text-blue-100 text-lg">Plateforme de gestion collaborative des projets</p>
                   <div className="mt-4 flex gap-4">
-                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-100 hover:bg-blue-500/30">
+                    <Badge variant="secondary" className="bg-blue-600/20 text-blue-100 hover:bg-blue-600/30">
                       {selectedRole}
                     </Badge>
-                    <Badge variant="secondary" className="bg-blue-500/20 text-blue-100 hover:bg-blue-500/30">
+                    <Badge variant="secondary" className="bg-blue-600/20 text-blue-100 hover:bg-blue-600/30">
                       {projects.length} projets actifs
                     </Badge>
                   </div>
@@ -134,7 +134,7 @@ const Index = () => {
                     variant="ghost"
                     size="sm"
                     onClick={handleLogout}
-                    className="text-white hover:bg-blue-700"
+                    className="text-white hover:bg-blue-600"
                   >
                     <LogOut className="h-4 w-4 mr-2" />
                     Déconnexion
@@ -160,7 +160,7 @@ const Index = () => {
                   {/* Actions rapides */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <CreateProjectModal onProjectCreate={handleProjectCreate}>
-                      <Button className="h-16 bg-blue-600 hover:bg-blue-700 flex items-center gap-3">
+                      <Button className="h-16 bg-blue-600 hover:bg-blue-600 flex items-center gap-3">
                         <FileText className="h-5 w-5" />
                         Nouveau Projet
                       </Button>

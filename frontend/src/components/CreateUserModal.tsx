@@ -126,14 +126,13 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
   };
 
   const roles: UserProfileRole[] = [
-    'Chef de projet', 
-    'Designer', 
-    'Développeur', 
-    'Rédacteur', 
-    'Consultant', 
-    'Assistant', 
-    'Managing Director', 
-    'Finance/Admin'
+    "Managing Director",
+    "Chef de projet",
+    "Directeur de production",
+    "Responsable communication",
+    "Administrateur financier",
+    "Assistant",
+    "Consultant"
   ];
 
   const departments = [
@@ -377,7 +376,7 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
             <Button 
               type="submit" 
               disabled={createUserMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
+              className="bg-blue-600 hover:bg-blue-600"
             >
               {createUserMutation.isPending ? (
                 <>

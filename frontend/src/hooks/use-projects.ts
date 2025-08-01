@@ -1,388 +1,390 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import { projectsAPI, projectMembersAPI, projectTasksAPI } from '@/lib/api';
-import type { 
-  CreateProjectForm, 
-  CreateTaskForm,
-  CreateTeamMemberForm
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { config } from '@/lib/config';
+import type {
+  Project,
+  CreateProjectPayload,
+  UpdateProjectPayload,
+  ProjectFilters,
+  ProjectTask,
+  ProjectMember,
+  ProjectPhase,
+  ProjectEvent,
+  PaginatedResponse,
+  ExtendedProject
 } from '@/lib/types';
-import { toast } from 'sonner';
 import { useMemo } from 'react';
 
-// Query keys
-export const projectKeys = {
-  all: ['projects'] as const,
-  lists: () => [...projectKeys.all, 'list'] as const,
-  list: (filters: any) => [...projectKeys.lists(), filters] as const,
-  details: () => [...projectKeys.all, 'detail'] as const,
-  detail: (id: string) => [...projectKeys.details(), id] as const,
-  statistics: () => [...projectKeys.all, 'statistics'] as const,
-  upcomingDeadlines: () => [...projectKeys.all, 'upcoming-deadlines'] as const,
-  myProjects: () => [...projectKeys.all, 'my-projects'] as const,
-  teamProjects: () => [...projectKeys.all, 'team-projects'] as const,
-};
+const BASE_URL = `${config.api.baseUrl}/projects`;
 
-// ===== PROJETS =====
-
-export const useProjects = (
-  params?: {
-    search?: string;
-    ordering?: string;
-    page?: number;
-    page_size?: number;
-    status?: string;
-    type?: string;
-    priority?: string;
-    category?: string;
-  },
-  options?: Omit<UseQueryOptions<any, any, any>, 'queryKey' | 'queryFn'>
-) => {
-  return useQuery({
-    queryKey: ['projects', params],
-    queryFn: () => projectsAPI.getProjects(params),
-    retry: (failureCount, error: any) => {
-      // Don't retry on authentication errors
-      if (error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      // Retry up to 3 times for other errors
-      return failureCount < 3;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    ...options,
-  });
-};
-
-export const useProject = (id: string) => {
-  return useQuery({
-    queryKey: ['project', id],
-    queryFn: () => projectsAPI.getProject(id),
-    enabled: !!id,
-  });
-};
-
-export const useCreateProject = () => {
-  const queryClient = useQueryClient();
+async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const token = localStorage.getItem('access_token');
   
+  const defaultHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json();
+}
+
+interface ProjectsFilters extends ProjectFilters {
+  search?: string;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export function useProjects(filters?: ProjectsFilters) {
+  return useQuery({
+    queryKey: ['projects', filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      
+      if (filters?.search) params.append('search', filters.search);
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.type) params.append('type', filters.type);
+      if (filters?.priority) params.append('priority', filters.priority);
+      if (filters?.client) params.append('client', filters.client);
+      if (filters?.start_date) params.append('start_date', filters.start_date);
+      if (filters?.end_date) params.append('end_date', filters.end_date);
+      if (filters?.team_member) params.append('team_member', filters.team_member.toString());
+      if (filters?.ordering) params.append('ordering', filters.ordering);
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.page_size) params.append('page_size', filters.page_size.toString());
+
+      return apiRequest<PaginatedResponse<ExtendedProject>>(`/?${params.toString()}`);
+    },
+  });
+}
+
+export function useProject(projectId: string) {
+  return useQuery({
+    queryKey: ['project', projectId],
+    queryFn: () => apiRequest<Project>(`/${projectId}/`),
+    enabled: !!projectId,
+  });
+}
+
+export function useCreateProject() {
+  const queryClient = useQueryClient();
+
   return useMutation({
-    mutationFn: (data: CreateProjectForm) => projectsAPI.createProject(data),
+    mutationFn: (data: CreateProjectPayload) =>
+      apiRequest<Project>('/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
-};
+}
 
-export const useUpdateProject = () => {
+export function useUpdateProject() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<CreateProjectForm> }) =>
-      projectsAPI.updateProject(id, data),
-    onSuccess: (_, { id }) => {
+    mutationFn: ({ projectId, data }: { projectId: string; data: UpdateProjectPayload }) =>
+      apiRequest<Project>(`/${projectId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['project', id] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
-};
+}
 
-export const useDeleteProject = () => {
+export function useDeleteProject() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: (id: string) => projectsAPI.deleteProject(id),
+    mutationFn: (projectId: string) =>
+      apiRequest(`/${projectId}/`, {
+        method: 'DELETE',
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
-};
+}
 
-export const useProjectStatistics = () => {
+// Project Tasks
+export function useProjectTasks(projectId: string) {
   return useQuery({
-    queryKey: ['project-statistics'],
-    queryFn: () => projectsAPI.getStatistics(),
-    retry: (failureCount, error: any) => {
-      // Don't retry on authentication errors
-      if (error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      // Retry up to 3 times for other errors
-      return failureCount < 3;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  });
-};
-
-export const useMyProjects = () => {
-  return useQuery({
-    queryKey: ['my-projects'],
-    queryFn: () => projectsAPI.getMyProjects(),
-  });
-};
-
-export const useTeamProjects = () => {
-  return useQuery({
-    queryKey: ['team-projects'],
-    queryFn: () => projectsAPI.getTeamProjects(),
-  });
-};
-
-export const useUpcomingDeadlines = () => {
-  return useQuery({
-    queryKey: ['upcoming-deadlines'],
-    queryFn: () => projectsAPI.getUpcomingDeadlines(),
-  });
-};
-
-export const useUpdateProjectProgress = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ id, progress }: { id: string; progress: number }) =>
-      projectsAPI.updateProgress(id, progress),
-    onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      queryClient.invalidateQueries({ queryKey: ['project', id] });
-    },
-  });
-};
-
-// ===== MEMBRES DE PROJET =====
-
-export const useProjectMembers = (projectId: string) => {
-  return useQuery({
-    queryKey: ['project-members', projectId],
-    queryFn: () => projectMembersAPI.getProjectMembers(projectId),
+    queryKey: ['project-tasks', projectId],
+    queryFn: () => apiRequest<PaginatedResponse<ProjectTask>>(`/${projectId}/tasks/`),
     enabled: !!projectId,
   });
-};
+}
 
-export const useAddProjectMember = () => {
+export function useCreateTask() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: string; data: CreateTeamMemberForm }) =>
-      projectMembersAPI.addProjectMember(projectId, data),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-    },
-  });
-};
-
-export const useUpdateProjectMember = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ 
-      projectId, 
-      memberId, 
-      data 
-    }: { 
-      projectId: string; 
-      memberId: number; 
-      data: Partial<CreateTeamMemberForm> 
-    }) => projectMembersAPI.updateProjectMember(projectId, memberId, data),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-    },
-  });
-};
-
-export const useDeleteProjectMember = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ projectId, memberId }: { projectId: string; memberId: number }) =>
-      projectMembersAPI.deleteProjectMember(projectId, memberId),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-    },
-  });
-};
-
-// ===== TÂCHES DE PROJET =====
-
-export const useProjectTasks = (
-  projectId: string | undefined,
-  params?: {
-    status?: string;
-    assigned_to?: number;
-    ordering?: string;
-    page?: number;
-  },
-  options?: Omit<UseQueryOptions<any, any, any>, 'queryKey' | 'queryFn' | 'enabled'>
-) => {
-  const queryKey = useMemo(() => ['project-tasks', projectId, params], [projectId, params]);
-
-  return useQuery({
-    queryKey,
-    queryFn: () => {
-      if (!projectId) {
-        return Promise.resolve({ results: [] });
-      }
-      return projectTasksAPI.getProjectTasks(projectId, params);
-    },
-    enabled: !!projectId,
-    retry: (failureCount, error: any) => {
-      // Don't retry on authentication errors
-      if (error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      // Retry up to 3 times for other errors
-      return failureCount < 3;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    ...options,
-  });
-};
-
-export const useCreateProjectTask = () => {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: string; data: CreateTaskForm }) =>
-      projectTasksAPI.createProjectTask(projectId, data),
+    mutationFn: ({ projectId, data }: { projectId: string; data: Omit<ProjectTask, 'id' | 'completion_percentage' | 'phase_name' | 'assigned_to_name' | 'actual_hours' | 'created_at' | 'updated_at'> }) =>
+      apiRequest<ProjectTask>(`/${projectId}/tasks/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
-};
+}
 
-export const useUpdateProjectTask = () => {
+export function useCreateProjectTask() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ 
-      projectId, 
-      taskId, 
-      data 
-    }: { 
-      projectId: string; 
-      taskId: number; 
-      data: Partial<CreateTaskForm> 
-    }) => projectTasksAPI.updateProjectTask(projectId, taskId, data),
+    mutationFn: ({ projectId, data }: { projectId: string; data: Partial<ProjectTask> }) =>
+      apiRequest<ProjectTask>(`/${projectId}/tasks/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
-};
+}
 
-export const useDeleteProjectTask = () => {
+export function useDeleteProjectTask() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ projectId, taskId }: { projectId: string; taskId: number }) =>
-      projectTasksAPI.deleteProjectTask(projectId, taskId),
+      apiRequest<ProjectTask>(`/${projectId}/tasks/${taskId}/`, {
+        method: 'DELETE',
+      }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
-};
+}
 
-export const useUpdateTaskStatus = () => {
+export function useExecuteTask() {
   const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ projectId, taskId, status }: { projectId: string; taskId: number; status: string }) =>
-      projectTasksAPI.updateTaskStatus(projectId, taskId, status),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-    },
-  });
-};
 
-export const useExecuteTask = () => {
-  const queryClient = useQueryClient();
-  
   return useMutation({
     mutationFn: ({ projectId, taskId }: { projectId: string; taskId: number }) =>
-      projectTasksAPI.executeTask(projectId, taskId),
+      apiRequest<ProjectTask>(`/${projectId}/tasks/$  {taskId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'En cours' }),
+      }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      toast.success('Tâche exécutée avec succès');
     },
   });
-};
+}
 
-export const useUpcomingTaskDeadlines = (projectId: string) => {
-  return useQuery({
-    queryKey: ['upcoming-task-deadlines', projectId],
-    queryFn: () => projectTasksAPI.getUpcomingDeadlines(projectId),
-    enabled: !!projectId,
-    // Rafraîchir toutes les 5 minutes
-    refetchInterval: 5 * 60 * 1000,
+export function useUpdateProjectTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, taskId, data }: { projectId: string; taskId: number; data: Partial<ProjectTask> }) =>
+      apiRequest<ProjectTask>(`/${projectId}/tasks/${taskId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
   });
-};
+}
 
-export function useProjectEvents(
-  projectId: string | undefined,
-  queryOptions?: Omit<UseQueryOptions<any>, 'queryKey' | 'queryFn'>
-) {
-  const queryKey = useMemo(() => ['project-events', projectId], [projectId]);
+export function useUpcomingTaskDeadlines(projectId: string) {
+  const { data: tasks } = useProjectTasks(projectId);
+  
+  const upcomingTasks = useMemo(() => {
+    if (!tasks || !Array.isArray(tasks)) return [];
+ 
+    return tasks.filter((task: ProjectTask) => {
+      if (!task.due_date) return false;
+      
+      const dueDate = new Date(task.due_date);
+      const now = new Date();
+      const diffDays = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return diffDays >= 0 && diffDays <= 5; // Show tasks due within next 5 days
+    }).map((task: ProjectTask) => ({
+      ...task,
+      days_remaining: Math.ceil((new Date(task.due_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    }));
+  }, [tasks]);
 
+  return { data: upcomingTasks, isLoading: !tasks };
+}
+
+export function useProjectEvents(projectId: string) {
   return useQuery({
-    queryKey,
-    queryFn: () => {
-      if (!projectId) {
-        return Promise.resolve({ results: [] });
-      }
-      return projectsAPI.getProjectEvents(projectId);
-    },
+    queryKey: ['project-events', projectId],
+    queryFn: () => apiRequest<ProjectEvent[]>(`/${projectId}/events/`),
     enabled: !!projectId,
-    retry: (failureCount, error: any) => {
-      if (error?.message?.includes('401') || error?.message?.includes('403')) {
-        return false;
-      }
-      return failureCount < 3;
-    },
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    ...queryOptions,
   });
 }
 
 export function useCreateProjectEvent() {
   const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ projectId, eventData }: { projectId: string; eventData: any }) => {
-      const response = await projectsAPI.createProjectEvent(projectId, eventData);
-      return response;
-    },
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
-    },
-  });
-}
 
-export function useUpdateProjectEvent() {
-  const queryClient = useQueryClient();
-  
   return useMutation({
-    mutationFn: async ({ projectId, eventId, eventData }: { projectId: string; eventId: number; eventData: any }) => {
-      const response = await projectsAPI.updateProjectEvent(projectId, eventId, eventData);
-      return response;
-    },
+    mutationFn: ({ projectId, data }: { projectId: string; data: Partial<ProjectEvent> }) =>
+      apiRequest<ProjectEvent>(`/${projectId}/events/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
 }
 
 export function useDeleteProjectEvent() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ projectId, eventId }: { projectId: string; eventId: number }) => {
-      await projectsAPI.deleteProjectEvent(projectId, eventId);
-    },
+    mutationFn: ({ projectId, eventId }: { projectId: string; eventId: number }) =>
+      apiRequest<void>(`/${projectId}/events/${eventId}/`, {
+        method: 'DELETE',
+      }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+}
+
+export function useUpdateProjectEvent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, eventId, data }: { projectId: string; eventId: number; data: Partial<ProjectEvent> }) =>
+      apiRequest<ProjectEvent>(`/${projectId}/events/${eventId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+}
+
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, taskId, data }: { projectId: string; taskId: number; data: Partial<ProjectTask> }) =>
+      apiRequest<ProjectTask>(`/${projectId}/tasks/${taskId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+}
+
+// Project Team Members
+export function useProjectTeam(projectId: string, userId: number) {
+  return useQuery({
+    queryKey: ['project-team', projectId],
+    queryFn: () => apiRequest<ProjectMember[]>(`/projects/${projectId}/team/user/${userId}/delete/`),
+    enabled: !!projectId && !!userId
+  });
+}
+
+export function useAddTeamMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: { user: number; role: string; allocation_percentage?: number } }) =>
+      apiRequest<ProjectMember>(`/${projectId}/team/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-team', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+}
+
+export function useUpdateTeamMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, memberId, data }: { projectId: string; memberId: number; data: Partial<ProjectMember> }) =>
+      apiRequest<ProjectMember>(`/${projectId}/team/${memberId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-team', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+}
+
+// Project Phases
+export function useProjectPhases(projectId: string) {
+  return useQuery({
+    queryKey: ['project-phases', projectId],
+    queryFn: () => apiRequest<ProjectPhase[]>(`/${projectId}/phases/`),
+    enabled: !!projectId,
+  });
+}
+
+export function useCreatePhase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, data }: { projectId: string; data: Omit<ProjectPhase, 'id' | 'project'> }) =>
+      apiRequest<ProjectPhase>(`/${projectId}/phases/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+}
+
+export function useUpdatePhase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, phaseId, data }: { projectId: string; phaseId: number; data: Partial<ProjectPhase> }) =>
+      apiRequest<ProjectPhase>(`/${projectId}/phases/${phaseId}/`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
 } 

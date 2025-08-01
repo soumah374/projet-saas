@@ -1,10 +1,11 @@
+import random
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import UserProfile, OTPCode
+from .models import UserProfile, OTPCode, ClientProfile, ClientCategory
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -250,3 +251,39 @@ class OTPVerificationSerializer(serializers.Serializer):
         # Ajouter l'utilisateur au contexte
         attrs['user'] = user
         return attrs 
+
+
+class ClientProfileSerializer(serializers.ModelSerializer):
+    type_client_display = serializers.CharField(source='get_type_client_display', read_only=True)
+    statut_commercial_display = serializers.CharField(source='get_statut_commercial_display', read_only=True)
+    nom_complet = serializers.CharField(read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    
+    class Meta:
+        model = ClientProfile
+        fields = [
+            'id', 'nom', 'prenom', 'email', 'telephone', 'type_client', 'type_client_display',
+            'statut_commercial', 'statut_commercial_display', 'raison_sociale', 'rccm_nif',
+            'contact', 'adresse_complete', 'adresse', 'ville', 'code_postal', 'pays', 
+            'date_inscription', 'is_active', 'nom_complet', 'category', 'category_name'
+        ]
+        read_only_fields = ['id', 'date_inscription', 'type_client_display', 'statut_commercial_display', 'nom_complet', 'category_name']
+    
+    def validate(self, attrs):
+        # Validation : si type_client est personne_physique, raison_sociale et rccm_nif doivent être vides
+        if attrs.get('type_client') == 'personne_physique':
+            if attrs.get('raison_sociale'):
+                raise serializers.ValidationError("La raison sociale ne peut pas être définie pour une personne physique")
+            if attrs.get('rccm_nif'):
+                raise serializers.ValidationError("Le RCCM/NIF ne peut pas être défini pour une personne physique")
+        # Validation : si type_client est personne_physique, category doit être vide
+        elif attrs.get('type_client') == 'personne_physique':
+            if attrs.get('category'):
+                raise serializers.ValidationError("La catégorie ne peut pas être définie pour une personne physique")
+        return attrs
+
+
+class ClientCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClientCategory
+        fields = ['id', 'name', 'description']

@@ -82,7 +82,7 @@ clean:
 # Backend Commands
 makemigrations:
 	@echo "Creating Django migrations..."
-	docker compose exec backend python manage.py makemigrations users teams projects documents notifications
+	docker compose exec backend python manage.py makemigrations users teams projects documents notifications catalog devis contrats
 
 makemigrations-users:
 	@echo "Creating migrations for users app..."
@@ -145,6 +145,21 @@ load-fixtures:
 	docker compose exec backend python manage.py loaddata initial_teams
 	docker compose exec backend python manage.py loaddata initial_projects
 	docker compose exec backend python manage.py loaddata initial_documents
+	docker compose exec backend python manage.py loaddata initial_departments
+	docker compose exec backend python manage.py loaddata initial_department_managers
+
+	docker compose exec backend python manage.py loaddata initial_client_categories
+	docker compose exec backend python manage.py loaddata initial_unites_standards
+	docker compose exec backend python manage.py loaddata initial_categorie_service
+	docker compose exec backend python manage.py loaddata initial_profils_intervenants
+
+	docker compose exec backend python manage.py loaddata initial_lignes_services
+	docker compose exec backend python manage.py loaddata initial_activities
+	docker compose exec backend python manage.py loaddata initial_activities_profiles
+	docker compose exec backend python manage.py loaddata initial_taux_horaires
+
+	docker compose exec backend python manage.py loaddata initial_frais_categories
+	docker compose exec backend python manage.py loaddata initial_lignes_frais
 
 load-fixtures-clean:
 	@echo "Cleaning database and loading fixtures..."
@@ -153,10 +168,17 @@ load-fixtures-clean:
 
 dump-fixtures:
 	@echo "Dumping fixtures from database..."
-	docker compose exec backend python manage.py dumpdata users --indent 2 > users/fixtures/users_dump.json
-	docker compose exec backend python manage.py dumpdata teams --indent 2 > teams/fixtures/teams_dump.json
-	docker compose exec backend python manage.py dumpdata projects --indent 2 > projects/fixtures/projects_dump.json
-	docker compose exec backend python manage.py dumpdata documents --indent 2 > documents/fixtures/documents_dump.json
+	docker compose exec backend python manage.py dumpdata auth.user users --indent 2 --natural-foreign > backend/users/fixtures/users_dump.json
+	docker compose exec backend python manage.py dumpdata teams --indent 2 --natural-foreign > backend/teams/fixtures/teams_dump.json
+	docker compose exec backend python manage.py dumpdata projects --indent 2 --natural-foreign > backend/projects/fixtures/projects_dump.json
+	docker compose exec backend python manage.py dumpdata documents --indent 2 --natural-foreign > backend/documents/fixtures/documents_dump.json
+	docker compose exec backend python manage.py dumpdata users.clientcategory --indent 2 --natural-foreign > backend/users/fixtures/initial_client_categories.json
+	docker compose exec backend python manage.py dumpdata catalog.fraiscategory --indent 2 --natural-foreign > backend/catalog/fixtures/initial_frais_categories.json
+	docker compose exec backend python manage.py dumpdata catalog.lignefrais --indent 2 --natural-foreign > backend/catalog/fixtures/initial_lignes_frais.json
+
+generate-fake-clients:
+	@echo "Generating fake data..."
+	docker compose exec backend python manage.py generate_fake_clients --count 100
 
 create-fixtures:
 	@echo "Creating fixtures from current data..."

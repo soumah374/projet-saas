@@ -39,7 +39,7 @@ export const CalendarHeader = ({
             <SelectItem value="milestone">Jalons</SelectItem>
             <SelectItem value="deadline">Échéances</SelectItem>
             <SelectItem value="meeting">Réunions</SelectItem>
-            <SelectItem value="task">Tâches</SelectItem>
+            <SelectItem value="task">Activités</SelectItem>
           </SelectContent>
         </Select>
       </div>

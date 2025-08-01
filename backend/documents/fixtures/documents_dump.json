@@ -1,0 +1,155 @@
+[
+{
+  "model": "documents.document",
+  "pk": 1,
+  "fields": {
+    "title": "Cahier des charges - Refonte Site Web",
+    "description": "Cahier des charges détaillé pour la refonte du site web corporate",
+    "file": "documents/cahier_charges_site_web.pdf",
+    "document_type": "pdf",
+    "category": "proposal",
+    "tags": [
+      "web",
+      "cahier des charges",
+      "corporate"
+    ],
+    "project": null,
+    "uploaded_by": [
+      "manager"
+    ],
+    "file_size": 2048576,
+    "created_at": "2024-01-15T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z",
+    "is_public": false
+  }
+},
+{
+  "model": "documents.document",
+  "pk": 2,
+  "fields": {
+    "title": "Maquettes Design - Page d'accueil",
+    "description": "Maquettes de design pour la page d'accueil du nouveau site",
+    "file": "documents/maquettes_accueil.psd",
+    "document_type": "other",
+    "category": "design",
+    "tags": [
+      "design",
+      "maquettes",
+      "accueil"
+    ],
+    "project": null,
+    "uploaded_by": [
+      "designer"
+    ],
+    "file_size": 15728640,
+    "created_at": "2024-02-01T00:00:00Z",
+    "updated_at": "2024-02-01T00:00:00Z",
+    "is_public": false
+  }
+},
+{
+  "model": "documents.document",
+  "pk": 3,
+  "fields": {
+    "title": "Guide de style - Identité visuelle",
+    "description": "Guide de style complet pour l'identité visuelle de l'entreprise",
+    "file": "documents/guide_style_identite.pdf",
+    "document_type": "pdf",
+    "category": "design",
+    "tags": [
+      "identité visuelle",
+      "guide",
+      "style"
+    ],
+    "project": null,
+    "uploaded_by": [
+      "designer"
+    ],
+    "file_size": 5242880,
+    "created_at": "2024-01-20T00:00:00Z",
+    "updated_at": "2024-01-20T00:00:00Z",
+    "is_public": true
+  }
+},
+{
+  "model": "documents.documentversion",
+  "pk": 1,
+  "fields": {
+    "document": 1,
+    "file": "documents/cahier_charges_site_web_v1.0.pdf",
+    "version_number": 1,
+    "changes_description": "Version initiale du cahier des charges",
+    "uploaded_by": [
+      "manager"
+    ],
+    "created_at": "2024-01-15T00:00:00Z"
+  }
+},
+{
+  "model": "documents.documentversion",
+  "pk": 2,
+  "fields": {
+    "document": 1,
+    "file": "documents/cahier_charges_site_web_v1.1.pdf",
+    "version_number": 2,
+    "changes_description": "Ajout des spécifications techniques et contraintes",
+    "uploaded_by": [
+      "manager"
+    ],
+    "created_at": "2024-01-25T00:00:00Z"
+  }
+},
+{
+  "model": "documents.documentversion",
+  "pk": 3,
+  "fields": {
+    "document": 2,
+    "file": "documents/maquettes_accueil_v1.0.psd",
+    "version_number": 1,
+    "changes_description": "Première version des maquettes",
+    "uploaded_by": [
+      "designer"
+    ],
+    "created_at": "2024-02-01T00:00:00Z"
+  }
+},
+{
+  "model": "documents.documentcomment",
+  "pk": 1,
+  "fields": {
+    "document": 1,
+    "author": [
+      "manager"
+    ],
+    "content": "Le cahier des charges est très complet. Il faudrait ajouter une section sur les performances attendues.",
+    "created_at": "2024-01-16T00:00:00Z",
+    "updated_at": "2024-01-16T00:00:00Z"
+  }
+},
+{
+  "model": "documents.documentcomment",
+  "pk": 2,
+  "fields": {
+    "document": 2,
+    "author": [
+      "manager"
+    ],
+    "content": "Les maquettes sont excellentes ! Le design est moderne et professionnel.",
+    "created_at": "2024-02-02T00:00:00Z",
+    "updated_at": "2024-02-02T00:00:00Z"
+  }
+},
+{
+  "model": "documents.documentcomment",
+  "pk": 3,
+  "fields": {
+    "document": 3,
+    "author": [
+      "managing_director"
+    ],
+    "content": "Guide très utile pour maintenir la cohérence de l'identité visuelle.",
+    "created_at": "2024-01-21T00:00:00Z",
+    "updated_at": "2024-01-21T00:00:00Z"
+  }
+}
+]

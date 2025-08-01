@@ -1,319 +1,351 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Project, ProjectMember, ProjectBudget, ProjectTask, ProjectEvent, Notification
+from django.utils import timezone
+from django.db import models
+from drf_spectacular.utils import extend_schema_field
+from .models import (
+    Project, ProjectMember, ProjectPhase, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget
+)
+from users.serializers import UserSerializer  # Import UserSerializer from users app
 
 
-class UserSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les utilisateurs"""
-    
+class ProjectPhaseSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
-        fields = ['id', 'username', 'first_name', 'last_name', 'email']
+        model = ProjectPhase
+        fields = ['id', 'project', 'name', 'description', 'start_date', 'end_date', 'progress', 'order']
         read_only_fields = ['id']
 
 
-class ProjectMemberSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les membres d'un projet"""
-    
-    user = UserSerializer(read_only=True)
-    user_id = serializers.IntegerField(write_only=True)
-    
-    class Meta:
-        model = ProjectMember
-        fields = ['id', 'user', 'user_id', 'role', 'joined_at', 'is_active']
-        read_only_fields = ['id', 'joined_at']
-
-
-class ProjectBudgetSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour le budget d'un projet"""
-    
-    total = serializers.ReadOnlyField()
+class TimeSheetSerializer(serializers.ModelSerializer):
+    user_name = serializers.SerializerMethodField()
+    validator_name = serializers.SerializerMethodField()
+    task_details = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
     
     class Meta:
-        model = ProjectBudget
-        fields = ['id', 'production', 'personnel', 'marketing', 'other', 'total']
+        model = TimeSheet
+        fields = '__all__'
+        read_only_fields = ['validated_by', 'validated_at', 'user_name', 'validator_name', 'can_edit']
+    
+    @extend_schema_field(str)
+    def get_user_name(self, obj):
+        return obj.user.get_full_name() if obj.user else None
+    
+    @extend_schema_field(str)
+    def get_validator_name(self, obj):
+        return obj.validated_by.get_full_name() if obj.validated_by else None
+    
+    @extend_schema_field(dict)
+    def get_task_details(self, obj):
+        return {
+            'id': obj.task.id,
+            'title': obj.task.title,
+            'status': obj.task.status
+        } if obj.task else None
+    
+    @extend_schema_field(bool)
+    def get_can_edit(self, obj):
+        request = self.context.get('request')
+        if request and hasattr(request, 'user'):
+            return obj.can_edit(request.user)
+        return False
+    
+    def validate_task(self, value):
+        """Valider que la tâche appartient au bon projet"""
+        project_id = self.context.get('project_id')
+        if project_id and value.project_id != project_id:
+            raise serializers.ValidationError(
+                "La tâche sélectionnée n'appartient pas à ce projet"
+            )
+        return value
+    
+    def validate_hours(self, value):
+        """Valider les heures saisies"""
+        if value <= 0:
+            raise serializers.ValidationError("Les heures doivent être supérieures à 0")
+        if value > 24:
+            raise serializers.ValidationError("Les heures ne peuvent pas dépasser 24")
+        return value
+    
+    def validate_date(self, value):
+        """Valider la date saisie"""
+        if value > timezone.now().date():
+            raise serializers.ValidationError("La date ne peut pas être dans le futur")
+        
+        # Vérifier que la date n'est pas trop ancienne (par exemple, plus de 30 jours)
+        if value < timezone.now().date() - timezone.timedelta(days=30):
+            raise serializers.ValidationError(
+                "Impossible de saisir des heures pour une date trop ancienne (> 30 jours)"
+            )
+        return value
+    
+    def validate(self, data):
+        """Validation personnalisée pour les feuilles de temps"""
+        request = self.context.get('request')
+        if not request or not hasattr(request, 'user'):
+            raise serializers.ValidationError("Utilisateur non authentifié")
+        
+        # Si c'est une mise à jour, vérifier que l'utilisateur peut modifier
+        if self.instance and not self.instance.can_edit(request.user):
+            raise serializers.ValidationError(
+                "Vous n'avez pas le droit de modifier cette feuille de temps"
+            )
+        
+        # Vérifier le total quotidien
+        date = data.get('date') or (self.instance.date if self.instance else None)
+        hours = data.get('hours') or (self.instance.hours if self.instance else 0)
+        
+        if date:
+            daily_total = TimeSheet.objects.filter(
+                user=request.user,
+                date=date
+            ).exclude(
+                id=self.instance.id if self.instance else None
+            ).aggregate(total=models.Sum('hours'))['total'] or 0
+            
+            if daily_total + hours > 24:
+                raise serializers.ValidationError({
+                    'hours': f"Le total des heures pour ce jour ({daily_total + hours}h) ne peut pas dépasser 24h"
+                })
+        
+        return data
 
 
 class ProjectTaskSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les tâches d'un projet"""
-    
-    assigned_to = UserSerializer(read_only=True)
-    assigned_to_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
-    
+    completion_percentage = serializers.SerializerMethodField()
+    phase_name = serializers.SerializerMethodField()
+    assigned_to_name = serializers.SerializerMethodField()
     class Meta:
         model = ProjectTask
         fields = [
-            'id', 'title', 'description', 'status', 'assigned_to', 
-            'assigned_to_id', 'start_date', 'due_date', 'created_at', 
-            'updated_at', 'executed_at'
+            'id', 'project', 'phase', 'title', 'description', 'status',
+            'assigned_to', 'start_date', 'due_date', 'estimated_hours',
+            'actual_hours', 'is_template', 'template_category',
+            'completion_percentage', 'phase_name', 'assigned_to_name','created_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'executed_at']
-
-
-class ProjectEventSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les événements d'un projet"""
+        read_only_fields = ['id', 'actual_hours']
     
-    created_by = UserSerializer(read_only=True)
-    participants = UserSerializer(many=True, read_only=True)
-    participant_ids = serializers.ListField(
-        child=serializers.IntegerField(),
-        write_only=True,
-        required=False
-    )
+    @extend_schema_field(int)
+    def get_completion_percentage(self, obj):
+        return obj.get_completion_percentage()
+    
+    @extend_schema_field(str)
+    def get_phase_name(self, obj):
+        return obj.phase.name if obj.phase else None
+    
+    @extend_schema_field(str)
+    def get_assigned_to_name(self, obj):
+        return obj.assigned_to.get_full_name() if obj.assigned_to else None
+
+
+class ProjectMemberSerializer(serializers.ModelSerializer):
+    user_details = UserSerializer(source='user', read_only=True)
+    total_hours = serializers.SerializerMethodField()
     
     class Meta:
-        model = ProjectEvent
-        fields = [
-            'id', 'title', 'description', 'type', 'date', 'start_time',
-            'end_time', 'location', 'created_by', 'participants',
-            'participant_ids', 'created_at', 'updated_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        model = ProjectMember
+        fields = ['id', 'project', 'user', 'role', 'joined_at', 'is_active', 'allocation_percentage', 'total_hours', 'user_details']
+        read_only_fields = ['id', 'joined_at']
     
-    def create(self, validated_data):
-        """Créer un événement avec les participants"""
-        participant_ids = validated_data.pop('participant_ids', [])
-        validated_data['created_by'] = self.context['request'].user
-        event = super().create(validated_data)
-        
-        # Ajouter les participants
-        if participant_ids:
-            participants = User.objects.filter(id__in=participant_ids)
-            event.participants.set(participants)
-            # Ajouter automatiquement le créateur comme participant s'il ne l'est pas déjà
-            if event.created_by.id not in participant_ids:
-                event.participants.add(event.created_by)
-        else:
-            # Si aucun participant n'est spécifié, ajouter au moins le créateur
-            event.participants.add(event.created_by)
-        
-        return event
+    @extend_schema_field(int)
+    def get_total_hours(self, obj):
+        return obj.user.timesheets.filter(project=obj.project).aggregate(
+            total=models.Sum('hours')
+        )['total'] or 0
     
-    def update(self, instance, validated_data):
-        """Mettre à jour un événement avec les participants"""
-        participant_ids = validated_data.pop('participant_ids', None)
-        event = super().update(instance, validated_data)
+    def validate_allocation_percentage(self, value):
+        """Valider que l'allocation ne dépasse pas 100%"""
+        if value <= 0:
+            raise serializers.ValidationError("L'allocation doit être supérieure à 0")
         
-        # Mettre à jour les participants si fournis
-        if participant_ids is not None:
-            participants = User.objects.filter(id__in=participant_ids)
-            event.participants.set(participants)
+        user = self.context['request'].user
+        current_allocation = user.project_roles.exclude(
+            id=self.instance.id if self.instance else None
+        ).aggregate(total=models.Sum('allocation_percentage'))['total'] or 0
         
-        return event
+        if current_allocation + value > 100:
+            raise serializers.ValidationError(
+                f"L'allocation totale ({current_allocation + value}%) ne peut pas dépasser 100%"
+            )
+        
+        return value
 
 
-class ProjectSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les projets"""
+class ProjectListSerializer(serializers.ModelSerializer):
+    """Sérialiseur léger pour la liste des projets"""
     
-    created_by = UserSerializer(read_only=True)
-    team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
-    budget_details = ProjectBudgetSerializer(read_only=True)
-    tasks = ProjectTaskSerializer(many=True, read_only=True)
-    events = ProjectEventSerializer(many=True, read_only=True)
-    
-    # Champs calculés
-    days_remaining = serializers.SerializerMethodField()
-    is_overdue = serializers.SerializerMethodField()
+    phase_count = serializers.SerializerMethodField()
+    team_count = serializers.SerializerMethodField()
+    current_phase = serializers.SerializerMethodField()
     
     class Meta:
         model = Project
         fields = [
-            'id', 'title', 'description', 'objectives', 'type', 'category',
-            'status', 'priority', 'start_date', 'deadline', 'created_at',
-            'updated_at', 'progress', 'budget', 'client', 'created_by',
-            'team_members', 'budget_details', 'tasks', 'events', 'tags',
-            'days_remaining', 'is_overdue'
+            'id', 'title', 'type', 'status', 'priority',
+            'start_date', 'deadline', 'progress', 'client',
+            'phase_count', 'team_count', 'current_phase'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
     
-    def get_days_remaining(self, obj):
-        """Calculer le nombre de jours restants"""
-        from django.utils import timezone
-        if obj.deadline:
-            delta = obj.deadline - timezone.now().date()
-            return delta.days
-        return None
+    @extend_schema_field(int)
+    def get_phase_count(self, obj):
+        return obj.phases.count()
     
-    def get_is_overdue(self, obj):
-        """Vérifier si le projet est en retard"""
-        from django.utils import timezone
-        if obj.deadline:
-            return obj.deadline < timezone.now().date()
-        return False
+    @extend_schema_field(int)
+    def get_team_count(self, obj):
+        return obj.team_members.count()
+    
+    @extend_schema_field(str)
+    def get_current_phase(self, obj):
+        current_phase = obj.phases.filter(
+            start_date__lte=timezone.now().date(),
+            end_date__gte=timezone.now().date()
+        ).first()
+        return current_phase.name if current_phase else None
+
+
+class ProjectDetailSerializer(serializers.ModelSerializer):
+    """Sérialiseur complet pour les détails d'un projet"""
+    
+    phases = ProjectPhaseSerializer(many=True, read_only=True)
+    team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
+    tasks = ProjectTaskSerializer(many=True, read_only=True)
+    created_by_name = serializers.SerializerMethodField()
+    total_hours = serializers.SerializerMethodField()
+    total_estimated_hours = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Project
+        fields = '__all__'
+    
+    @extend_schema_field(str)
+    def get_created_by_name(self, obj):
+        return obj.created_by.get_full_name() if obj.created_by else None
+    
+    @extend_schema_field(int)
+    def get_total_hours(self, obj):
+        return obj.timesheets.aggregate(total=models.Sum('hours'))['total'] or 0
+    
+    @extend_schema_field(int)
+    def get_total_estimated_hours(self, obj):
+        return obj.tasks.aggregate(
+            total=models.Sum('estimated_hours')
+        )['total'] or 0
+
+
+class ProjectCreateSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour la création d'un projet"""
+    
+    class Meta:
+        model = Project
+        fields = [
+            'title', 'description', 'objectives', 'type',
+            'status', 'priority', 'start_date', 'deadline',
+            'budget', 'client', 'departments', 'contract'
+        ]
     
     def create(self, validated_data):
-        """Créer un projet avec l'utilisateur connecté"""
         validated_data['created_by'] = self.context['request'].user
         return super().create(validated_data)
 
 
-class ProjectListSerializer(serializers.ModelSerializer):
-    """Sérialiseur simplifié pour la liste des projets"""
-    
-    created_by = UserSerializer(read_only=True)
-    team_count = serializers.SerializerMethodField()
-    days_remaining = serializers.SerializerMethodField()
-    is_overdue = serializers.SerializerMethodField()
+class ProjectUpdateSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour la mise à jour d'un projet"""
     
     class Meta:
         model = Project
         fields = [
-            'id', 'title', 'type', 'status', 'priority', 'progress',
-            'deadline', 'client', 'created_by', 'team_count',
-            'days_remaining', 'is_overdue', 'created_at'
+            'title', 'description', 'objectives', 'type',
+            'status', 'priority', 'start_date', 'deadline',
+            'progress', 'budget', 'client', 'departments',
+            'contract'
         ]
-        read_only_fields = ['id', 'created_at']
     
-    def get_team_count(self, obj):
-        """Compter le nombre de membres de l'équipe"""
-        return obj.project_members.count()
-    
-    def get_days_remaining(self, obj):
-        """Calculer le nombre de jours restants"""
-        from django.utils import timezone
-        if obj.deadline:
-            delta = obj.deadline - timezone.now().date()
-            return delta.days
-        return None
-    
-    def get_is_overdue(self, obj):
-        """Vérifier si le projet est en retard"""
-        from django.utils import timezone
-        if obj.deadline:
-            return obj.deadline < timezone.now().date()
-        return False
+    def validate_status(self, value):
+        """Valider les transitions de statut"""
+        if self.instance:
+            current_idx = [s[0] for s in Project.STATUS_CHOICES].index(self.instance.status)
+            new_idx = [s[0] for s in Project.STATUS_CHOICES].index(value)
+            
+            # Empêcher le retour en arrière sauf cas particuliers
+            if new_idx < current_idx and value not in ['Production', 'Devis']:
+                raise serializers.ValidationError(
+                    "Impossible de revenir à un statut précédent"
+                )
+        
+        return value 
 
 
-class ProjectCreateSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour la création de projets avec budget"""
+class ProjectEventSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les événements de projet"""
     
-    budget_details = ProjectBudgetSerializer(required=False)
-    team_members = serializers.ListField(
-        child=serializers.DictField(),
-        required=True,
-        write_only=True
+    participants = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.all(),
+        required=False
     )
+    created_by_name = serializers.SerializerMethodField()
     
     class Meta:
-        model = Project
+        model = ProjectEvent
         fields = [
-            'title', 'description', 'objectives', 'type', 'category',
-            'status', 'priority', 'start_date', 'deadline', 'budget',
-            'client', 'tags', 'budget_details', 'team_members'
+            'id', 'project', 'title', 'description', 'event_type',
+            'start_date', 'end_date', 'location', 'participants',
+            'created_by', 'created_by_name', 'created_at', 'updated_at',
+            'is_all_day'
         ]
+        read_only_fields = ['created_by', 'created_at', 'updated_at']
     
-    def validate_team_members(self, value):
-        """Validate team members data"""
-        if not value:
-            raise serializers.ValidationError("Ce champ est obligatoire.")
-        
-        for member in value:
-            if not member.get('user_id'):
-                raise serializers.ValidationError("user_id est requis pour chaque membre.")
-            if not member.get('role'):
-                raise serializers.ValidationError("role est requis pour chaque membre.")
-            
-            # Validate that user exists
-            try:
-                User.objects.get(id=member['user_id'])
-            except User.DoesNotExist:
-                raise serializers.ValidationError(f"L'utilisateur avec l'ID {member['user_id']} n'existe pas.")
-            
-            # Validate role
-            if member['role'] not in dict(ProjectMember.ROLE_CHOICES):
-                raise serializers.ValidationError(f"Le rôle '{member['role']}' n'est pas valide.")
-        
-        return value
+    def get_created_by_name(self, obj):
+        return f"{obj.created_by.first_name} {obj.created_by.last_name}"
+    
+    def validate(self, data):
+        """Valider les dates de l'événement"""
+        if data.get('end_date') and data.get('start_date'):
+            if data['end_date'] < data['start_date']:
+                raise serializers.ValidationError(
+                    "La date de fin ne peut pas être antérieure à la date de début"
+                )
+        return data
     
     def create(self, validated_data):
-        """Créer un projet avec budget et membres d'équipe"""
-        budget_details_data = validated_data.pop('budget_details', None)
-        team_members_data = validated_data.pop('team_members', [])
-        
-        # Handle created_by field
-        user = self.context['request'].user
-        if user.is_authenticated:
-            validated_data['created_by'] = user
-        else:
-            # For anonymous users, we need to handle this
-            # For now, let's try to get a default user or handle the error
-            try:
-                # Try to get the first available user as a fallback
-                default_user = User.objects.first()
-                if default_user:
-                    validated_data['created_by'] = default_user
-                else:
-                    # If no users exist, we can't create a project
-                    raise serializers.ValidationError("No users available to assign as project creator")
-            except User.DoesNotExist:
-                raise serializers.ValidationError("No users available to assign as project creator")
-        
-        # Créer le projet
-        project = super().create(validated_data)
-        
-        # Créer le budget si fourni
-        if budget_details_data:
-            ProjectBudget.objects.create(project=project, **budget_details_data)
-        
-        # Ajouter les membres d'équipe
-        for member_data in team_members_data:
-            user_id = member_data.get('user_id')
-            role = member_data.get('role')
-            if user_id and role:
-                try:
-                    user = User.objects.get(id=user_id)
-                    ProjectMember.objects.create(
-                        project=project,
-                        user=user,
-                        role=role
-                    )
-                except User.DoesNotExist:
-                    pass
-        
-        return project
+        """Créer un événement avec l'utilisateur connecté"""
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data) 
 
+class ProjectBudgetSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectBudget
+        fields = ['id', 'project', 'production', 'personnel', 'marketing', 'other', 'total']
+        read_only_fields = ['id', 'total']
 
-class ProjectUpdateSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour la mise à jour de projets"""
+class TimeSheetSerializer(serializers.ModelSerializer):
+    task_details = serializers.SerializerMethodField()
+    class Meta:
+        model = TimeSheet
+        fields = [
+            'id', 'project', 'task', 'user', 'date', 'hours',
+            'description', 'validated_by', 'validated_at',
+            'created_at', 'updated_at', 'task_details'
+        ]
+        read_only_fields = ['id', 'validated_by', 'validated_at', 'created_at', 'updated_at']
     
-    budget_details = ProjectBudgetSerializer(required=False)
+    @extend_schema_field(dict)
+    def get_task_details(self, obj):
+        return obj.details_task()
+        
+
+class ProjectSerializer(serializers.ModelSerializer):
+    phases = ProjectPhaseSerializer(many=True, read_only=True)
+    team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
+    budget_details = ProjectBudgetSerializer(read_only=True)
     
     class Meta:
         model = Project
         fields = [
-            'title', 'description', 'objectives', 'type', 'category',
-            'status', 'priority', 'start_date', 'deadline', 'budget',
-            'client', 'tags', 'budget_details'
+            'id', 'title', 'description', 'objectives', 'type',
+            'status', 'priority', 'start_date', 'deadline',
+            'progress', 'budget', 'client', 'created_by',
+            'contract', 'tags', 'phases', 'team_members',
+            'budget_details', 'created_at', 'updated_at'
         ]
-    
-    def update(self, instance, validated_data):
-        """Mettre à jour un projet avec son budget"""
-        budget_details_data = validated_data.pop('budget_details', None)
-        
-        # Mettre à jour le projet
-        project = super().update(instance, validated_data)
-        
-        # Mettre à jour le budget
-        if budget_details_data:
-            budget_details, created = ProjectBudget.objects.get_or_create(
-                project=project,
-                defaults=budget_details_data
-            )
-            if not created:
-                for attr, value in budget_details_data.items():
-                    setattr(budget_details, attr, value)
-                budget_details.save()
-        
-        return project
-
-
-class NotificationSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les notifications"""
-    
-    project = ProjectListSerializer(read_only=True)
-    task = ProjectTaskSerializer(read_only=True)
-    
-    class Meta:
-        model = Notification
-        fields = ['id', 'type', 'project', 'task', 'message', 'is_read', 'created_at']
-        read_only_fields = ['id', 'created_at'] 
+        read_only_fields = ['id', 'created_at', 'updated_at'] 

@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets, status, filters, permissions, mixins
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
@@ -9,11 +9,12 @@ from django.contrib.auth.models import User
 from django.contrib.auth import update_session_auth_hash
 from django.db.models import Count
 
-from .models import UserProfile, OTPCode
+from .models import UserProfile, OTPCode, ClientProfile, ClientCategory
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     UserListSerializer, ChangePasswordSerializer, CustomTokenObtainPairSerializer,
-    LoginRequestSerializer, OTPVerificationSerializer
+    LoginRequestSerializer, OTPVerificationSerializer, ClientProfileSerializer,
+    ClientCategorySerializer
 )
 
 
@@ -204,4 +205,20 @@ class UserViewSet(viewsets.ModelViewSet):
         """Obtenir la liste des membres d'équipe pour les projets"""
         users = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
         serializer = UserListSerializer(users, many=True)
-        return Response(serializer.data) 
+        return Response(serializer.data)
+
+
+class ClientProfileViewSet(viewsets.ModelViewSet):
+    queryset = ClientProfile.objects.all()
+    serializer_class = ClientProfileSerializer
+    permission_classes = [permissions.IsAdminUser]
+    filterset_fields = ['is_active', 'pays', 'ville', 'type_client', 'statut_commercial']
+    search_fields = ['nom', 'prenom', 'email', 'telephone', 'contact', 'raison_sociale', 'rccm_nif']
+
+
+class ClientCategoryViewSet(viewsets.ModelViewSet):
+    queryset = ClientCategory.objects.all()
+    serializer_class = ClientCategorySerializer
+    permission_classes = []  # À adapter selon la politique de sécurité
+
+    

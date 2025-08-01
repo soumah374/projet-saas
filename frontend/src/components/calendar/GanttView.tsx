@@ -2,87 +2,231 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { ChevronLeft, ChevronRight, Link2, Link2Off } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { format, addDays, eachDayOfInterval, differenceInDays, addMonths, subMonths } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ProjectTask } from '@/lib/types';
 
 interface GanttViewProps {
-  projects: any[];
+  projectId: string;
 }
 
-export const GanttView = ({ projects }: GanttViewProps) => {
-  const [currentMonth] = useState(new Date());
+interface GanttTask {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  progress: number;
+  dependencies: string[];
+  assignee?: string;
+  status: string;
+}
+
+function safeParseDate(date?: string | Date | null): Date | null {
+  if (!date) return null;
+  const parsed = typeof date === 'string' ? new Date(date) : date;
+  return parsed instanceof Date && !isNaN(parsed.getTime()) ? parsed : null;
+}
+
+
+export const GanttView = ({ projectId }: GanttViewProps) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [visibleDays, setVisibleDays] = useState(30);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [showDependencies, setShowDependencies] = useState(true);
+
+  const { data: tasks } = useProjectTasks(projectId);
   
-  const today = new Date();
-  const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  const dateRange = useMemo(() => {
+    const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const end = addDays(start, visibleDays - 1);
+    return eachDayOfInterval({ start, end });
+  }, [currentDate, visibleDays]);
+
+  const ganttTasks = useMemo(() => {
+    if (!tasks) return [];
+    return tasks.results.map((task: ProjectTask) => {
+      const fallbackDate = addDays(new Date(), 1);
+      const start = safeParseDate(task.start_date) || fallbackDate;
+      const end = safeParseDate(task.due_date) || fallbackDate;
+  
+      return {
+        id: task.id.toString(),
+        title: task.title,
+        start,
+        end,
+        progress: task.completion_percentage || 0,
+        dependencies: [],
+        assignee: task.assigned_to_name,
+        status: task.status
+      };
+    });
+  }, [tasks]);
+
+  const handlePreviousMonth = () => {
+    setCurrentDate(prev => subMonths(prev, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(prev => addMonths(prev, 1));
+  };
+
+  const renderTaskList = () => (
+    <Droppable droppableId="task-list" type="TASK">
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.droppableProps}
+          className={`space-y-2 p-4 ${snapshot.isDraggingOver ? 'bg-gray-50' : ''}`}
+        >
+          {ganttTasks.map((task, index) => (
+            <Draggable key={task.id} draggableId={task.id} index={index}>
+              {(provided, snapshot) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.draggableProps}
+                  {...provided.dragHandleProps}
+                  className={`rounded-lg border p-3 ${
+                    snapshot.isDragging ? 'bg-gray-100' : 'bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{task.title}</span>
+                    <Badge variant={task.status === 'Terminé' ? 'default' : 'secondary'}>
+                      {task.status}
+                    </Badge>
+                  </div>
+                  {task.assignee && (
+                    <div className="mt-2 text-sm text-gray-500">
+                      Assigné à: {task.assignee}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Draggable>
+          ))}
+          {provided.placeholder}
+        </div>
+      )}
+    </Droppable>
+  );
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Diagramme de Gantt</CardTitle>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle>Vue Gantt</CardTitle>
+        <div className="flex items-center space-x-2">
+          <Select
+            value={selectedProject || projectId}
+            onValueChange={(value) => setSelectedProject(value)}
+            disabled={true}
+          >
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Sélectionner un projet" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={projectId}>{projectId}</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" onClick={handleNextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowDependencies(!showDependencies)}
+          >
+            {showDependencies ? (
+              <Link2 className="h-4 w-4" />
+            ) : (
+              <Link2Off className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Diagramme de Gantt</h3>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="px-4 py-2 text-sm font-medium">
-                {startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
-              </span>
-              <Button variant="outline" size="sm">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg border overflow-hidden">
+        <div className="grid grid-cols-[300px,1fr] gap-6">
+          <div className="border rounded-lg">
             <div className="p-4 border-b bg-gray-50">
-              <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-600">
-                {Array.from({ length: 31 }, (_, i) => (
-                  <div key={i} className="text-center p-1">
-                    {i + 1}
-                  </div>
-                ))}
-              </div>
+              <h3 className="font-semibold">Activités</h3>
             </div>
-            
-            <div className="p-4 space-y-4">
-              {projects.map((project) => (
-                <div key={project.id} className="space-y-2">
-                  <div className="flex items-center gap-4">
-                    <div className="w-48 text-sm font-medium">
-                      {project.title}
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {project.progress}%
-                    </Badge>
-                    <div className="text-xs text-gray-500">
-                      Échéance: {new Date(project.deadline).toLocaleDateString('fr-FR')}
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-12 gap-2 h-8">
-                    {Array.from({ length: 31 }, (_, i) => {
-                      const isActive = i < (31 * project.progress / 100);
-                      const isToday = i === new Date().getDate() - 1;
-                      return (
-                        <div 
-                          key={i} 
-                          className={`rounded-sm border ${
-                            isActive 
-                              ? 'bg-blue-500 border-blue-600' 
-                              : 'bg-gray-100 border-gray-200'
-                          } ${isToday ? 'ring-2 ring-orange-400' : ''}`}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ScrollArea className="h-[500px]">
+              <DragDropContext onDragEnd={() => {}}>
+                {renderTaskList()}
+              </DragDropContext>
+            </ScrollArea>
           </div>
+
+          
+          <div className="border rounded-lg">
+            <div className="p-4 border-b bg-gray-50">
+              <h3 className="font-semibold">Diagramme</h3>
+            </div>
+            <ScrollArea className="h-[500px] overflow-y-auto">
+              <div className="min-w-[800px]">
+                {/* Timeline header */}
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(30px,1fr))] border-b">
+                  {dateRange.map((date) => (
+                    <div
+                      key={date.toISOString()}
+                      className="px-1 py-2 text-center text-xs border-r last:border-r-0"
+                    >
+                      {format(date, 'd', { locale: fr })}
+                    </div>
+                  ))}
+                </div>
+                {/* Tasks timeline */}
+                <div className="space-y-2 py-4">
+                  {ganttTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="grid grid-cols-[repeat(auto-fill,minmax(30px,1fr))] relative h-8"
+                    >
+                      {/* Task bar */}
+                      <div
+                        className="absolute h-6 rounded bg-blue-600"
+                        style={{
+                          left: `${(differenceInDays(task.start, dateRange[0]) * 100) / visibleDays}%`,
+                          width: `${(differenceInDays(task.end, task.start) * 100) / visibleDays}%`,
+                          backgroundColor: task.status === 'Terminé' ? '#22c55e' : task.status === 'En cours' ? '#f59e0b' : task.status === 'En pause' ? '#f43f5e' : '#3b82f6'
+                        }}
+                      >
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="w-full h-full cursor-pointer">
+                                <div
+                                  className="h-full bg-blue-600"
+                                  style={{ width: `${task.progress}%` }}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="font-medium">{task.title}</p>
+                              <p className="text-sm">
+                                {format(task?.start, 'dd/MM/yyyy')} - {format(task?.end, 'dd/MM/yyyy')}
+                              </p>
+                              <p className="text-sm">Progression: {task.progress}%</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </ScrollArea>
+          </div>
+
         </div>
       </CardContent>
     </Card>

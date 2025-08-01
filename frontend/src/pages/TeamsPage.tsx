@@ -97,13 +97,9 @@ export function TeamsPage() {
     ordering: 'first_name'
   });
 
-  const { data: teamMembers, isLoading: membersLoading } = useTeamMembers(
-    selectedTeam ? {
-      team: selectedTeam.id,
-      ordering: 'user__first_name',
-      is_active: true
-    } : undefined
-  );
+  const { data: teamMembers, isLoading: membersLoading } = useTeamMembers({
+    team: selectedTeam?.id
+  });
 
   // Calculate team stats
   const teamStats = useTeamStats(teamMembers?.results || []);
@@ -132,7 +128,7 @@ export function TeamsPage() {
   const getRoleBadge = (role: TeamMemberRole) => {
     const roleColors = {
       leader: 'bg-yellow-100 text-yellow-800',
-      member: 'bg-blue-100 text-blue-800',
+      member: 'bg-blue-100 text-blue-600',
       consultant: 'bg-purple-100 text-purple-800'
     };
 
@@ -289,7 +285,7 @@ export function TeamsPage() {
         </div>
         <Button 
           onClick={() => setIsCreateTeamDialogOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
+          className="bg-blue-600 hover:bg-blue-600"
         >
               <Plus className="w-4 h-4 mr-2" />
               Nouvelle équipe

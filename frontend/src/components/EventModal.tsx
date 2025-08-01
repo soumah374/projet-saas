@@ -11,11 +11,11 @@ import { useCreateProjectEvent, useUpdateProjectEvent, useDeleteProjectEvent } f
 import { Label } from './ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
-import { CalendarIcon, Check, ChevronsUpDown, CloudFog, Trash2 } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { Badge } from './ui/badge';
-import { ProjectEvent } from '@/lib/types';
+import { ProjectEvent, User } from '@/lib/types';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -46,6 +46,10 @@ interface EventFormData {
   participant_ids: string[];
 }
 
+interface UsersResponse {
+  results: User[];
+}
+
 export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProps) => {
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
@@ -69,7 +73,7 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
     participant_ids: []
   });
 
-  const { data: usersData } = useUsers();
+  const { data: usersData } = useUsers() as { data: UsersResponse };
 
   useEffect(() => {
     if (usersData) {
@@ -93,12 +97,12 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
         await updateEvent.mutateAsync({
           projectId,
           eventId: event.id,
-          eventData
+          data: eventData
         });
       } else {
         await createEvent.mutateAsync({
           projectId,
-          eventData
+          data: eventData
         });
       }
       onClose();
@@ -144,7 +148,7 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-[500px] max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[600px] max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>{event ? 'Modifier l\'événement' : 'Nouvel événement'}</span>
@@ -284,7 +288,7 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
                         <span className="text-muted-foreground">Sélectionner les participants</span>
                       ) : (
                         formData.participant_ids.map(id => {
-                          const user = usersData?.results?.find((u: any) => u.id.toString() === id);
+                          const user = usersData?.results?.find((u: User) => u.id.toString() === id);
                           return user ? (
                             <Badge variant="secondary" key={id}>
                               {user.first_name} {user.last_name}
@@ -308,7 +312,7 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
                     {isLoading ? (
                       <CommandItem disabled>Chargement...</CommandItem>
                     ) : (
-                      usersData?.results?.map((user: any) => (
+                      usersData?.results?.map((user: User) => (
                         <CommandItem
                           key={user.id}
                           value={user.id.toString()}

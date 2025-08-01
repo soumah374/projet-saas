@@ -1,675 +1,714 @@
+import axios from 'axios';
 import { config } from './config';
-import type {
-  User,
-  UserList,
-  UserCreate,
-  UserUpdate,
-  Project,
-  ProjectList,
-  ProjectMember,
-  ProjectTask,
-  Team,
-  TeamMember,
-  Document,
-  PaginatedResponse,
-  ProjectStatistics,
-  UserStatistics,
-  LoginRequest,
-  LoginResponse,
-  OTPRequest,
-  OTPVerification,
-  CreateProjectForm,
-  CreateTaskForm,
-  CreateTeamMemberForm,
-  TaskWithDeadline,
-  ProjectMemberUpdate,
-  Notification,
+import type { 
+    PaginatedResponse, 
+    ProjectType, 
+    ProjectStatus, 
+    ProjectPriority,
+    TeamMember,
+    ProjectPhase,
+    ClientCategory
 } from './types';
 
-// Configuration de base pour les requêtes API
-const API_BASE = config.api.baseUrl;
-
-
-// Fonction utilitaire pour les requêtes API
-async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
-  
-  // Récupérer le token d'authentification
-  const token = localStorage.getItem('access_token');
-  
-  const defaultHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
-  // Ne pas définir Content-Type pour les requêtes FormData
-  if (options.body instanceof FormData) {
-    delete defaultHeaders['Content-Type'];
-  }
-
-  // Ajouter le header d'autorisation si un token existe
-  if (token) {
-    defaultHeaders['Authorization'] = `Bearer ${token}`;
-    console.log('Adding Authorization header with token:', token.substring(0, 20) + '...');
-  } else {
-    console.log('No access token found in localStorage');
-  }
-
-  const response = await fetch(url, {
-    ...options,
+export const api = axios.create({
+    baseURL: config.api.baseUrl,
     headers: {
-      ...defaultHeaders,
-      ...options.headers,
+        'Content-Type': 'application/json',
     },
-  });
+});
 
-  if (!response.ok) {
-    // Handle authentication errors
-    if (response.status === 401 || response.status === 403) {
-      console.log('Authentication error:', response.status, response.statusText);
-      
-      // Only clear tokens and redirect if we have a token (user was logged in)
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        console.log('User was authenticated, clearing tokens and redirecting');
-        // Clear invalid tokens
+export const handleLogout = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+  localStorage.removeItem('user');
+  window.location.href = '/login';
+};
+
+// Intercepteur pour ajouter le token d'authentification
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Intercepteur pour gérer les réponses
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error("API Error:", error);
+    if (error.response?.status === 401) {
+      handleLogout();
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Types
+export interface Project {
+    id: string;
+    title: string;
+    description: string;
+    objectives: string;
+    type: ProjectType;
+    status: ProjectStatus;
+    priority: ProjectPriority;
+    start_date: string | null;
+    deadline: string;
+    progress: number;
+    budget: number | null;
+    client: string;
+    departments: string[];
+    contract: string;
+    created_by: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ProjectTask {
+    id: number;
+    project: string;
+    phase: number | null;
+    title: string;
+    description: string;
+    status: 'À faire' | 'En cours' | 'Terminé' | 'En pause';
+    assigned_to: number | null;
+    start_date: string | null;
+    due_date: string | null;
+    estimated_hours: number | null;
+    actual_hours: number;
+    created_at: string;
+    updated_at: string;
+    executed_at: string | null;
+    is_template: boolean;
+    template_category: string;
+}
+
+export interface TimeSheet {
+    id: number;
+    project: number;
+    task: number;
+    task_details?: {
+        id: number;
+        title: string;
+        status: string;
+    };
+    user: number;
+    user_name?: string;
+    date: string;
+    hours: number;
+    description: string;
+    validated_by: number | null;
+    validator_name?: string;
+    validated_at: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ProjectMember {
+    id: number;
+    project: string;
+    user: number;
+    role: string;
+    joined_at: string;
+    is_active: boolean;
+    allocation_percentage: number;
+}
+
+// API Client
+export const projectApi = {
+    // Projets
+    getProjects: () => api.get<PaginatedResponse<Project>>('/projects/'),
+    getProject: (id: string) => api.get<Project>(`/projects/${id}/`),
+    createProject: (data: Partial<Project>) => api.post<Project>('/projects/', data),
+    updateProject: (id: string, data: Partial<Project>) => api.patch<Project>(`/projects/${id}/`, data),
+    deleteProject: (id: string) => api.delete(`/projects/${id}/`),
+    
+    // Phases
+    getProjectPhases: (projectId: string) => api.get<PaginatedResponse<ProjectPhase>>(`/projects/${projectId}/phases/`),
+    getProjectPhase: (projectId: string, phaseId: number) => 
+        api.get<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/`),
+    createProjectPhase: (projectId: string, data: Partial<ProjectPhase>) => 
+        api.post<ProjectPhase>(`/projects/${projectId}/phases/`, data),
+    updateProjectPhase: (projectId: string, phaseId: number, data: Partial<ProjectPhase>) => 
+        api.patch<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/`, data),
+    deleteProjectPhase: (projectId: string, phaseId: number) => 
+        api.delete(`/projects/${projectId}/phases/${phaseId}/`),
+    reorderPhase: (projectId: string, phaseId: number, order: number) =>
+        api.post(`/projects/${projectId}/phases/${phaseId}/reorder/`, { order }),
+    
+    // Activités
+    getProjectTasks: (projectId: string) => api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
+    getProjectTask: (projectId: string, taskId: number) => 
+        api.get<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`),
+    createProjectTask: (projectId: string, data: Partial<ProjectTask>) => 
+        api.post<ProjectTask>(`/projects/${projectId}/tasks/`, data),
+    updateProjectTask: (projectId: string, taskId: number, data: Partial<ProjectTask>) => 
+        api.patch<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, data),
+    deleteProjectTask: (projectId: string, taskId: number) => 
+        api.delete(`/projects/${projectId}/tasks/${taskId}/`),
+
+    updateTaskStatus: (projectId: string, taskId: number, status: ProjectTask['status']) =>
+        api.patch(`/projects/${projectId}/tasks/${taskId}/`, { status }),
+
+    assignTask: (projectId: string, taskId: number, userId: number) =>
+        api.post(`/projects/${projectId}/tasks/${taskId}/assign/`, { user_id: userId }),
+    getTaskTemplates: (projectId: string) => 
+        api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/templates/`),
+    createTaskFromTemplate: (projectId: string, templateId: number, data: {
+        phase_id?: number;
+        start_date?: string;
+        due_date?: string;
+    }) => api.post<ProjectTask>(
+        `/projects/${projectId}/tasks/${templateId}/create_from_template/`,
+        data
+    ),
+    
+    // Feuilles de temps
+    getProjectTimeSheets: (projectId: string) => 
+        api.get<PaginatedResponse<TimeSheet>>(`/projects/${projectId}/timesheets/`),
+    getProjectTimeSheet: (projectId: string, timeSheetId: number) => 
+        api.get<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`),
+    createProjectTimeSheet: (projectId: string, data: Partial<TimeSheet>) => 
+        api.post<TimeSheet>(`/projects/${projectId}/timesheets/`, data),
+    updateProjectTimeSheet: (projectId: string, timeSheetId: number, data: Partial<TimeSheet>) => 
+        api.patch<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`, data),
+    deleteProjectTimeSheet: (projectId: string, timeSheetId: number) => 
+        api.delete(`/projects/${projectId}/timesheets/${timeSheetId}/`),
+    validateTimeSheet: (projectId: string, timeSheetId: number) =>
+        api.post<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/validate/`),
+    getTimeSheetSummary: (projectId: string) =>
+        api.get(`/projects/${projectId}/timesheets/summary/`),
+    
+
+    // Suivi et alertes
+    getProjectTimeline: (projectId: string) => api.get(`/projects/${projectId}/timeline/`),
+    getProjectWorkload: (projectId: string) => api.get(`/projects/${projectId}/workload/`),
+    getProjectAlerts: (projectId: string) => api.get(`/projects/${projectId}/alerts/`),
+    updateProjectStatus: (projectId: string, status: Project['status']) =>
+        api.post(`/projects/${projectId}/update_phase/`, { status }),
+};
+
+export const projectsAPI = {
+    getProjects: (params?: {
+        search?: string;
+        ordering?: string;
+        page?: number;
+        status?: string;
+        type?: string;
+        priority?: string;
+        category?: string;
+    }) => api.get<PaginatedResponse<Project>>('/projects/', { params }),
+    getProject: (id: string) => api.get<Project>(`/projects/${id}/`),
+    createProject: (data: Partial<Project>) => api.post<Project>('/projects/', data),
+    updateProject: (id: string, data: Partial<Project>) => api.patch<Project>(`/projects/${id}/`, data),
+    deleteProject: (id: string) => api.delete(`/projects/${id}/`),
+    getMyProjects: () => api.get('/projects/my-projects/'),
+    getTeamProjects: () => api.get('/projects/team-projects/'),
+    getUpcomingDeadlines: () => api.get('/projects/upcoming-deadlines/'),
+    updateProgress: (id: string, progress: number) => api.post(`/projects/${id}/update-progress/`, { progress }),
+    getProjectEvents: (projectId: string) => api.get(`/projects/${projectId}/events/`),
+    createProjectEvent: (projectId: string, data: any) => api.post(`/projects/${projectId}/events/`, data),
+    updateProjectEvent: (projectId: string, eventId: number, data: any) => 
+        api.patch(`/projects/${projectId}/events/${eventId}/`, data),
+    deleteProjectEvent: (projectId: string, eventId: number) => 
+        api.delete(`/projects/${projectId}/events/${eventId}/`),
+};
+
+export const projectMembersAPI = {
+    getProjectMembers: (projectId: string) => 
+        api.get(`/projects/${projectId}/members/`),
+    addProjectMember: (projectId: string, data: any) => 
+        api.post(`/projects/${projectId}/members/`, data),
+    updateProjectMember: (projectId: string, memberId: number, data: any) => 
+        api.patch(`/projects/${projectId}/members/${memberId}/`, data)
+};
+
+export const projectTasksAPI = {
+    getProjectTasks: (projectId: string) => 
+        api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
+    createTask: (projectId: string, data: any) => 
+        api.post<ProjectTask>(`/projects/${projectId}/tasks/`, data),
+    updateTask: (projectId: string, taskId: number, data: any) => 
+        api.patch<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, data),
+    deleteTask: (projectId: string, taskId: number) => 
+        api.delete(`/projects/${projectId}/tasks/${taskId}/`),
+    applyTaskTemplate: (projectId: string, category: string) =>
+        api.post<void>(`/projects/${projectId}/tasks/create_from_template/`, { category })
+};
+
+export const notificationsAPI = {
+    getNotifications: (params?: {
+        type?: string;
+        is_read?: boolean;
+        page?: number;
+        page_size?: number;
+    }) => api.get<PaginatedResponse<Notification>>('/notifications/', { params }),
+    
+    getUnreadCount: () => api.get<{ unread_count: number }>('/notifications/unread_count/'),
+    
+    markRead: (notificationId: number) => 
+        api.post(`/notifications/${notificationId}/mark_read/`),
+    
+    markAllRead: () => api.post('/notifications/mark_all_read/'),
+};
+
+export const authAPI = {
+    login: async ({ username, password }: { username: string; password: string }) => {
+        try {
+            const response = await api.post<{
+                access: string;
+                refresh: string;
+                user: {
+                    id: number;
+                    username: string;
+                    first_name: string;
+                    last_name: string;
+                    email: string;
+                    role: string;
+                    is_staff: boolean;
+                }
+            }>('auth/login/', { username, password });
+            return response.data;
+        } catch (error: any) {
+            if (error.response) {
+                throw new Error(error.response.data.detail || "Erreur d'authentification");
+            }
+            throw new Error("Erreur de connexion au serveur");
+        }
+    },
+    
+    refreshToken: (refresh: string) => 
+        api.post<{ access: string }>('/auth/token/refresh/', { refresh }),
+    
+    verifyToken: (token: string) => 
+        api.post('/auth/token/verify/', { token }),
+    
+    logout: () => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
-        // Redirect to login
-        window.location.href = '/login';
-      }
-    }
-    throw new Error(`API Error: ${response.status} ${response.statusText}`);
-  }
+    },
 
-  // Gérer les réponses vides (comme pour DELETE)
-  if (response.status === 204) {
-    return {} as T;
-  }
-
-  return response.json();
-}
-
-// ===== AUTHENTIFICATION =====
-
-export const authAPI = {
-  // Connexion classique avec username/password
-  login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    return apiRequest<LoginResponse>('/auth/login/', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
-  },
-
-  // Demander un code OTP
-  requestOTP: async (data: OTPRequest): Promise<{ message: string; email: string }> => {
-    return apiRequest<{ message: string; email: string }>('/auth/otp/request/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Vérifier le code OTP
-  verifyOTP: async (data: OTPVerification): Promise<LoginResponse> => {
-    return apiRequest<LoginResponse>('/auth/otp/verify/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Renvoyer un code OTP
-  resendOTP: async (data: OTPRequest): Promise<{ message: string; email: string }> => {
-    return apiRequest<{ message: string; email: string }>('/auth/otp/resend/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Rafraîchir le token
-  refreshToken: async (refresh: string): Promise<{ access: string }> => {
-    return apiRequest<{ access: string }>('/auth/token/refresh/', {
-      method: 'POST',
-      body: JSON.stringify({ refresh }),
-    });
-  },
+    changePassword: (data: { old_password: string; new_password: string; new_password_confirm: string }) =>
+        api.post('/auth/change-password/', data),
 };
-
-// ===== UTILISATEURS =====
-
-export const usersAPI = {
-  // Liste des utilisateurs
-  getUsers: async (params?: {
-    search?: string;
-    ordering?: string;
-    page?: number;
-    is_active?: boolean;
-    profile__role?: string;
-    profile__department?: string;
-  }): Promise<PaginatedResponse<UserList>> => {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/auth/users/?${queryString}` : '/auth/users/';
-    
-    return apiRequest<PaginatedResponse<UserList>>(endpoint);
-  },
-
-  // Détails d'un utilisateur
-  getUser: async (id: number): Promise<User> => {
-    return apiRequest<User>(`/auth/users/${id}/`);
-  },
-
-  // Créer un utilisateur
-  createUser: async (userData: UserCreate): Promise<User> => {
-    return apiRequest<User>('/auth/users/', {
-      method: 'POST',
-      body: JSON.stringify(userData),
-    });
-  },
-
-  // Mettre à jour un utilisateur
-  updateUser: async (id: number, userData: UserUpdate): Promise<User> => {
-    return apiRequest<User>(`/auth/users/${id}/`, {
-      method: 'PUT',
-      body: JSON.stringify(userData),
-    });
-  },
-
-  // Supprimer un utilisateur
-  deleteUser: async (id: number): Promise<void> => {
-    return apiRequest<void>(`/auth/users/${id}/`, {
-      method: 'DELETE',
-    });
-  },
-
-  // Informations de l'utilisateur connecté
-  getMe: async (): Promise<User> => {
-    return apiRequest<User>('/auth/users/me/');
-  },
-
-  // Mettre à jour les informations de l'utilisateur connecté
-  updateMe: async (userData: UserUpdate): Promise<User> => {
-    return apiRequest<User>('/auth/users/update_me/', {
-      method: 'PATCH',
-      body: JSON.stringify(userData),
-    });
-  },
-
-  // Changer le mot de passe
-  changePassword: async (data: {
-    old_password: string;
-    new_password: string;
-    new_password_confirm: string;
-  }): Promise<{ message: string }> => {
-    return apiRequest<{ message: string }>('/users/change_password/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Statistiques des utilisateurs
-  getStatistics: async (): Promise<UserStatistics> => {
-    return apiRequest<UserStatistics>('/users/statistics/');
-  },
-};
-
-// ===== PROJETS =====
-
-export const projectsAPI = {
-  // Liste des projets
-  getProjects: async (params?: {
-    search?: string;
-    ordering?: string;
-    page?: number;
-    page_size?: number;
-    status?: string;
-    type?: string;
-    priority?: string;
-    category?: string;
-  }): Promise<PaginatedResponse<ProjectList>> => {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/projects/?${queryString}` : '/projects/';
-    
-    return apiRequest<PaginatedResponse<ProjectList>>(endpoint);
-  },
-
-  // Détails d'un projet
-  getProject: async (id: string): Promise<Project> => {
-    return apiRequest<Project>(`/projects/${id}/`);
-  },
-
-  // Créer un projet
-  createProject: async (projectData: CreateProjectForm): Promise<Project> => {
-    return apiRequest<Project>('/projects/', {
-      method: 'POST',
-      body: JSON.stringify(projectData),
-    });
-  },
-
-  // Mettre à jour un projet
-  updateProject: async (id: string, projectData: Partial<CreateProjectForm>): Promise<Project> => {
-    return apiRequest<Project>(`/projects/${id}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(projectData),
-    });
-  },
-
-  // Supprimer un projet
-  deleteProject: async (id: string): Promise<void> => {
-    return apiRequest<void>(`/projects/${id}/`, {
-      method: 'DELETE',
-    });
-  },
-
-  // Statistiques des projets
-  getStatistics: async (): Promise<ProjectStatistics> => {
-    return apiRequest<ProjectStatistics>('/projects/statistics/');
-  },
-
-  // Projets de l'utilisateur connecté
-  getMyProjects: async (): Promise<ProjectList[]> => {
-    return apiRequest<ProjectList[]>('/projects/my_projects/');
-  },
-
-  // Projets où l'utilisateur est membre de l'équipe
-  getTeamProjects: async (): Promise<ProjectList[]> => {
-    return apiRequest<ProjectList[]>('/projects/team_projects/');
-  },
-
-  // Projets avec échéances proches
-  getUpcomingDeadlines: async (): Promise<ProjectList[]> => {
-    return apiRequest<ProjectList[]>('/projects/upcoming_deadlines/');
-  },
-
-  // Mettre à jour la progression d'un projet
-  updateProgress: async (id: string, progress: number): Promise<{ progress: number }> => {
-    return apiRequest<{ progress: number }>(`/projects/${id}/update_progress/`, {
-      method: 'POST',
-      body: JSON.stringify({ progress }),
-    });
-  },
-
-  // Project Members
-  addMember: async (projectId: string, data: { user_id: number; role: string }) => {
-    return apiRequest<ProjectMember>(`/projects/${projectId}/members/`, { 
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  removeMember: async (projectId: string, memberId: number): Promise<void> => {
-    return apiRequest<void>(`/projects/${projectId}/members/${memberId}/`, {
-      method: 'DELETE',
-    });
-  },
-
-  updateMember: async (projectId: string, memberId: number, data: ProjectMemberUpdate) => {
-    return apiRequest<ProjectMember>(`/projects/${projectId}/members/${memberId}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Événements
-  getProjectEvents: (projectId: string) => {
-    return apiRequest<any[]>(`/projects/${projectId}/events/`);
-  },
-  
-  createProjectEvent: (projectId: string, eventData: any) => {
-    return apiRequest<any>(`/projects/${projectId}/events/`, {
-      method: 'POST',
-      body: JSON.stringify(eventData),
-    });
-  },
-  
-  updateProjectEvent: (projectId: string, eventId: number, eventData: any) => {
-    return apiRequest<any>(`/projects/${projectId}/events/${eventId}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(eventData),
-    });
-  },
-  
-  deleteProjectEvent: (projectId: string, eventId: number) => {
-    return apiRequest<void>(`/projects/${projectId}/events/${eventId}/`, {
-      method: 'DELETE',
-    });
-  },
-};
-
-// ===== MEMBRES DE PROJET =====
-
-export const projectMembersAPI = {
-  // Liste des membres d'un projet
-  getProjectMembers: async (projectId: string): Promise<PaginatedResponse<ProjectMember>> => {
-    return apiRequest<PaginatedResponse<ProjectMember>>(`/projects/${projectId}/members/`);
-  },
-
-  // Ajouter un membre à un projet
-  addProjectMember: async (projectId: string, memberData: CreateTeamMemberForm): Promise<ProjectMember> => {
-    return apiRequest<ProjectMember>(`/projects/${projectId}/members/`, {
-      method: 'POST',
-      body: JSON.stringify(memberData),
-    });
-  },
-
-  // Mettre à jour un membre de projet
-  updateProjectMember: async (
-    projectId: string,
-    memberId: number,
-    memberData: Partial<CreateTeamMemberForm>
-  ): Promise<ProjectMember> => {
-    return apiRequest<ProjectMember>(`/projects/${projectId}/members/${memberId}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(memberData),
-    });
-  },
-
-  // Supprimer un membre de projet
-  deleteProjectMember: async (projectId: string, memberId: number): Promise<void> => {
-    return apiRequest<void>(`/projects/${projectId}/members/${memberId}/`, {
-      method: 'DELETE',
-    });
-  },
-};
-
-// ===== TÂCHES DE PROJET =====
-
-export const projectTasksAPI = {
-  // Liste des tâches d'un projet
-  getProjectTasks: async (projectId: string, params?: {
-    status?: string;
-    assigned_to?: number;
-    ordering?: string;
-    page?: number;
-  }): Promise<PaginatedResponse<ProjectTask>> => {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const queryString = searchParams.toString();
-    const endpoint = queryString 
-      ? `/projects/${projectId}/tasks/?${queryString}` 
-      : `/projects/${projectId}/tasks/`;
-    
-    return apiRequest<PaginatedResponse<ProjectTask>>(endpoint);
-  },
-
-  // Créer une tâche
-  createProjectTask: async (projectId: string, taskData: CreateTaskForm): Promise<ProjectTask> => {
-    return apiRequest<ProjectTask>(`/projects/${projectId}/tasks/`, {
-      method: 'POST',
-      body: JSON.stringify(taskData),
-    });
-  },
-
-  // Mettre à jour une tâche
-  updateProjectTask: async (
-    projectId: string,
-    taskId: number,
-    taskData: Partial<CreateTaskForm>
-  ): Promise<ProjectTask> => {
-    return apiRequest<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(taskData),
-    });
-  },
-
-  // Supprimer une tâche
-  deleteProjectTask: async (projectId: string, taskId: number): Promise<void> => {
-    return apiRequest<void>(`/projects/${projectId}/tasks/${taskId}/`, {
-      method: 'DELETE',
-    });
-  },
-
-  // Mettre à jour le statut d'une tâche
-  updateTaskStatus: async (projectId: string, taskId: number, status: string): Promise<{ status: string }> => {
-    return apiRequest<{ status: string }>(`/projects/${projectId}/tasks/${taskId}/update_status/`, {
-      method: 'POST',
-      body: JSON.stringify({ status }),
-    });
-  },
-
-  // Exécuter une tâche
-  executeTask: async (projectId: string, taskId: number): Promise<ProjectTask> => {
-    return apiRequest<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/execute/`, {
-      method: 'POST',
-    });
-  },
-
-  getUpcomingDeadlines: async (projectId: string): Promise<TaskWithDeadline[]> => {
-    const response = await apiRequest<TaskWithDeadline[]>(`/projects/${projectId}/tasks/upcoming_deadlines/`);
-    return response;
-  },
-};
-
-// ===== ÉQUIPES =====
 
 export const teamsAPI = {
-  // Liste des équipes
-  getTeams: async (params?: {
-    search?: string;
-    ordering?: string;
-    page?: number;
-    is_active?: boolean;
-    created_by?: number;
-  }): Promise<PaginatedResponse<Team>> => {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/teams/?${queryString}` : '/teams/';
-    
-    return apiRequest<PaginatedResponse<Team>>(endpoint);
-  },
-
-  // Détails d'une équipe
-  getTeam: async (id: number): Promise<Team> => {
-    return apiRequest<Team>(`/teams/${id}/`);
-  },
-
-  // Créer une équipe
-  createTeam: async (teamData: { name: string; description?: string }): Promise<Team> => {
-    return apiRequest<Team>('/teams/', {
-      method: 'POST',
-      body: JSON.stringify(teamData),
-    });
-  },
-
-  // Mettre à jour une équipe
-  updateTeam: async (id: number, teamData: { name?: string; description?: string }): Promise<Team> => {
-    return apiRequest<Team>(`/teams/${id}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(teamData),
-    });
-  },
-
-  // Supprimer une équipe
-  deleteTeam: async (id: number): Promise<void> => {
-    return apiRequest<void>(`/teams/${id}/`, {
-      method: 'DELETE',
-    });
-  },
-
-  // Ajouter un membre à une équipe
-  addTeamMember: async (teamId: number, memberData: {
-    user: number;
-    role: string;
-    is_active?: boolean;
-  }): Promise<TeamMember> => {
-    return apiRequest<TeamMember>(`/teams/${teamId}/add_member/`, {
-      method: 'POST',
-      body: JSON.stringify(memberData),
-    });
-  },
+    getTeams: (params?: {
+        search?: string;
+        ordering?: string;
+        page?: number;
+        is_active?: boolean;
+        created_by?: number;
+    }) => api.get('/teams/', { params }),
+    getTeam: (id: number) => api.get(`/teams/${id}/`),
+    createTeam: (data: { name: string; description?: string }) => api.post('/teams/', data),
+    updateTeam: (id: number, data: { name?: string; description?: string }) => 
+        api.patch(`/teams/${id}/`, data),
+    deleteTeam: (id: number) => api.delete(`/teams/${id}/`),
+    addTeamMember: (teamId: number, data: { user: number; role: string; is_active?: boolean }) => 
+        api.post(`/teams/${teamId}/members/`, data),
 };
-
-// ===== MEMBRES D'ÉQUIPE =====
 
 export const teamMembersAPI = {
-  // Liste des membres d'équipe
-  getTeamMembers: async (params?: {
-    team?: number;
-    role?: string;
-    is_active?: boolean;
-    ordering?: string;
-    page?: number;
-  }): Promise<PaginatedResponse<TeamMember>> => {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
-    
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/teams/members/?${queryString}` : '/teams/members/';
-    
-    return apiRequest<PaginatedResponse<TeamMember>>(endpoint);
-  },
-
-  // Détails d'un membre d'équipe
-  getTeamMember: async (id: number): Promise<TeamMember> => {
-    return apiRequest<TeamMember>(`/teams/members/${id}/`);
-  },
-
-  // Créer un membre d'équipe
-  createTeamMember: async (data: { team: number; user: number; role: string; is_active?: boolean }): Promise<TeamMember> => {
-    return apiRequest<TeamMember>('/teams/members/', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Mettre à jour un membre d'équipe
-  updateTeamMember: async (id: number, data: Partial<{ team: number; user: number; role: string; is_active: boolean }>): Promise<TeamMember> => {
-    return apiRequest<TeamMember>(`/teams/members/${id}/`, {
-      method: 'PATCH',
-      body: JSON.stringify(data),
-    });
-  },
-
-  // Supprimer un membre d'équipe
-  deleteTeamMember: async (id: number): Promise<void> => {
-    return apiRequest<void>(`/teams/members/${id}/`, {
-      method: 'DELETE',
-    });
-  },
+    getTeamMembers: (params?: {
+        team?: number;
+        role?: string;
+        is_active?: boolean;
+        ordering?: string;
+        page?: number;
+    }) => api.get('/team-members/', { params }),
+    getTeamMember: (id: number) => api.get(`/team-members/${id}/`),
+    createTeamMember: (data: { team: number; user: number; role: string; is_active?: boolean }) => 
+        api.post('/team-members/', data),
+    updateTeamMember: (id: number, data: Partial<{ team: number; user: number; role: string; is_active: boolean }>) => 
+        api.patch(`/team-members/${id}/`, data),
+    deleteTeamMember: (id: number) => api.delete(`/team-members/${id}/`),
 };
 
-// ===== DOCUMENTS =====
+export const usersAPI = {
+    getUsers: (params?: {
+        search?: string;
+        role?: string;
+        is_active?: boolean;
+        ordering?: string;
+        page?: number;
+    }) => api.get('/auth/users/', { params }),
+    getCurrentUser: () => api.get('/auth/users/me/'),
+    getUser: (id: number) => api.get(`/auth/users/${id}/`),
+    createUser: (data: any) => api.post('/auth/users/', data),
+    updateUser: (id: number, data: any) => api.patch(`/auth/users/${id}/`, data),
+    deleteUser: (id: number) => api.delete(`/auth/users/${id}/`),
+    getUserProfile: (id: number) => api.get(`/auth/users/${id}/profile/`),
+    updateUserProfile: (id: number, data: any) => api.patch(`/auth/users/${id}/profile/`, data),
+    getStatistics: () => api.get('/auth/users/statistics/'),
+};
+
+export const clientsAPI = {
+    getClients: (params?: {
+        search?: string;
+        is_active?: boolean;
+        ville?: string;
+        pays?: string;
+        type_client?: string;
+        statut_commercial?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/auth/clients/', { params }),
+    getClient: (id: number) => api.get(`/auth/clients/${id}/`),
+    createClient: (data: {
+        nom: string;
+        prenom: string;
+        email: string;
+        telephone: string;
+        type_client: 'personne_physique' | 'personne_morale';
+        raison_sociale?: string;
+        rccm_nif?: string;
+        contact?: string;
+        adresse_complete?: string;
+        adresse: string;
+        ville: string;
+        code_postal: string;
+        pays: string;
+        statut_commercial: 'prospect' | 'actif' | 'inactif' | 'bloque';
+        is_active: boolean;
+    }) => api.post('/auth/clients/', data),
+    updateClient: (id: number, data: {
+        nom?: string;
+        prenom?: string;
+        email?: string;
+        telephone?: string;
+        type_client?: 'personne_physique' | 'personne_morale';
+        raison_sociale?: string;
+        rccm_nif?: string;
+        contact?: string;
+        adresse_complete?: string;
+        adresse?: string;
+        ville?: string;
+        code_postal?: string;
+        pays?: string;
+        statut_commercial?: 'prospect' | 'actif' | 'inactif' | 'bloque';
+        is_active?: boolean;
+    }) => api.patch(`/auth/clients/${id}/`, data),
+    deleteClient: (id: number) => api.delete(`/auth/clients/${id}/`),
+};
+
+export const clientCategoriesAPI = {
+    getCategories: (params?: { search?: string; ordering?: string; page?: number; }) =>
+        api.get<PaginatedResponse<ClientCategory>>('/auth/categories/', { params }),
+    getCategory: (id: number) => api.get<ClientCategory>(`/auth/categories/${id}/`),
+    createCategory: (data: { name: string; description?: string }) => api.post<ClientCategory>('/auth/categories/', data),
+    updateCategory: (id: number, data: { name?: string; description?: string }) => api.patch<ClientCategory>(`/auth/categories/${id}/`, data),
+    deleteCategory: (id: number) => api.delete(`/auth/categories/${id}/`),
+};
 
 export const documentsAPI = {
-  // Liste des documents
-  getDocuments: async (projectId?: string): Promise<PaginatedResponse<Document>> => {
-    const endpoint = projectId ? `/documents/?project=${projectId}` : '/documents/';
-    return apiRequest<PaginatedResponse<Document>>(endpoint);
-  },
-
-  // Créer un document
-  createDocument: async (formData: FormData): Promise<Document> => {
-    return apiRequest<Document>('/documents/', {
-      method: 'POST',
-      body: formData,
-    });
-  },
-
-  // Mettre à jour un document
-  updateDocument: async (id: number, formData: FormData): Promise<Document> => {
-    return apiRequest<Document>(`/documents/${id}/`, {
-      method: 'PATCH',
-      body: formData,
-    });
-  },
-
-  // Supprimer un document
-  deleteDocument: async (id: number): Promise<void> => {
-    return apiRequest<void>(`/documents/${id}/`, {
-      method: 'DELETE',
-    });
-  },
+    getDocuments: (params?: {
+        search?: string;
+        type?: string;
+        category?: string;
+        project?: string;
+        is_public?: boolean;
+        ordering?: string;
+        page?: number;
+    }) => api.get('/documents/', { params }),
+    getDocument: (id: number) => api.get(`/documents/${id}/`),
+    uploadDocument: (data: FormData) => api.post('/documents/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    updateDocument: (id: number, data: any) => api.patch(`/documents/${id}/`, data),
+    deleteDocument: (id: number) => api.delete(`/documents/${id}/`),
 };
 
-// ===== NOTIFICATIONS =====
-
-export const notificationsAPI = {
-  // Liste des notifications
-  getNotifications: async (params?: {
-    type?: string;
-    is_read?: boolean;
-    page?: number;
-    page_size?: number;
-  }): Promise<PaginatedResponse<Notification>> => {
-    const searchParams = new URLSearchParams();
-    if (params) {
-      Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined) {
-          searchParams.append(key, value.toString());
-        }
-      });
-    }
+export const departmentsAPI = {
+    getDepartments: (params?: {
+        search?: string;
+        is_active?: boolean;
+        ordering?: string;
+        page?: number;
+    }) => api.get('/departments/', { params }),
     
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/notifications/?${queryString}` : '/notifications/';
+    getDepartment: (id: number) => 
+        api.get(`/departments/${id}/`),
     
-    return apiRequest<PaginatedResponse<Notification>>(endpoint);
-  },
-
-  // Marquer une notification comme lue
-  markRead: async (notificationId: number): Promise<{ status: string }> => {
-    return apiRequest<{ status: string }>(`/notifications/${notificationId}/mark_read/`, {
-      method: 'POST',
-    });
-  },
-
-  // Marquer toutes les notifications comme lues
-  markAllRead: async (): Promise<{ status: string }> => {
-    return apiRequest<{ status: string }>('/notifications/mark_all_read/', {
-      method: 'POST',
-    });
-  },
-
-  // Obtenir le nombre de notifications non lues
-  getUnreadCount: async (): Promise<{ unread_count: number }> => {
-    return apiRequest<{ unread_count: number }>('/notifications/unread_count/');
-  },
+    createDepartment: (data: { 
+        name: string;
+        description: string;
+        is_active?: boolean;
+    }) => api.post('/departments/', data),
+    
+    updateDepartment: (id: number, data: {
+        name?: string;
+        description?: string;
+        is_active?: boolean;
+    }) => api.patch(`/departments/${id}/`, data),
+    
+    deleteDepartment: (id: number) => 
+        api.delete(`/departments/${id}/`),
+    
+    assignManager: (id: number, data: {
+        manager_id: number;
+        start_date?: string;
+        notes?: string;
+    }) => api.post(`/departments/${id}/assign_manager/`, data),
+    
+    toggleActive: (id: number) => 
+        api.post(`/departments/${id}/toggle_active/`),
+    
+    getManagerHistory: (id: number) => 
+        api.get(`/departments/${id}/manager_history/`),
 };
 
-// Project Members
-export const updateProjectMember = async (projectId: string, memberId: number, data: { role: string; is_active: boolean }) => {
-  return apiRequest<any>(`/projects/${projectId}/members/${memberId}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  });
+// Calendar event functions
+export const fetchEvents = (params?: {
+    start_date?: string;
+    end_date?: string;
+    project?: string;
+}) => api.get('/events/', { params });
+
+export const createEvent = (data: any) => api.post('/events/', data);
+
+export const updateEvent = (id: number, data: any) => api.patch(`/events/${id}/`, data);
+
+export const deleteEvent = (id: number) => api.delete(`/events/${id}/`);
+
+export const fetchUpcomingEvents = () => api.get('/events/upcoming/');
+
+export default api; 
+
+export const projectPhasesAPI = {
+    getProjectPhases: (projectId: string) => 
+        api.get<PaginatedResponse<ProjectPhase>>(`/projects/${projectId}/phases/`),
+    
+    createProjectPhase: (projectId: string, data: Omit<ProjectPhase, 'id'>) => 
+        api.post<ProjectPhase>(`/projects/${projectId}/phases/`, {
+            ...data,
+            project: projectId
+        }),
+    
+    updateProjectPhase: (projectId: string, phaseId: number, data: Partial<ProjectPhase>) => 
+        api.patch<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/`, data),
+    
+    deleteProjectPhase: (projectId: string, phaseId: number) => 
+        api.delete(`/projects/${projectId}/phases/${phaseId}/`),
+    
+    reorderProjectPhase: (projectId: string, phaseId: number, order: number) =>
+        api.post<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/reorder/`, { order }),
+};
+
+export const projectTeamAPI = {
+    getProjectTeam: (projectId: string) => 
+        api.get<TeamMember>(`/projects/${projectId}/team/`),
+    addTeamMember: (projectId: string, data: { user: string; role: string; allocation_percentage: number }) => 
+        api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
+    updateTeamMember: (projectId: string, memberId: number, data: { role?: string; allocation_percentage?: number }) => 
+        api.patch<TeamMember>(`/projects/${projectId}/team/${memberId}/`, data),
+    removeTeamMember: (projectId: string, memberId: number) => 
+        api.delete(`/projects/${projectId}/team/${memberId}/`),
+    getUserAllocation: (userId: string) => 
+        api.get<{ total_allocation: number }>(`/projects/team/user/${userId}/allocation/`),
+    deleteProjectMember: (projectId: string, id: number) => 
+        api.delete(`/projects/${projectId}/team/${id}/delete/`),
 }; 
+
+// Services
+export const servicesAPI = {
+    getServices: () => api.get('/catalog/services/'),
+};
+
+// Devis
+export const devisAPI = {
+    getDevis: (params?: {
+        search?: string;
+        statut?: string;
+        client?: number;
+        date_creation?: string;
+        date_validite?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/devis/devis/', { params }),
+    
+    getDevisById: (id: number) => api.get(`/devis/devis/${id}/`),
+    
+    createDevis: (data: {
+        client_id: number;
+        date_validite: string;
+        taux_tva?: number;
+        appliquer_tva?: boolean;
+        notes?: string;
+        conditions?: string;
+    }) => api.post('/devis/devis/', data),
+    
+    updateDevis: (id: number, data: {
+        client_id?: number;
+        date_validite?: string;
+        statut?: string;
+        taux_tva?: number;
+        appliquer_tva?: boolean;
+        notes?: string;
+        conditions?: string;
+    }) => api.patch(`/devis/devis/${id}/`, data),
+    
+    deleteDevis: (id: number) => api.delete(`/devis/devis/${id}/`),
+    
+    envoyerDevis: (id: number) => api.post(`/devis/devis/${id}/envoyer/`),
+    accepterDevis: (id: number) => api.post(`/devis/devis/${id}/accepter/`),
+    refuserDevis: (id: number) => api.post(`/devis/devis/${id}/refuser/`),
+    calculerMontants: (id: number) => api.post(`/devis/devis/${id}/calculer_montants/`),
+    createDevisAvecLignes: (data: any) => api.post('/devis/devis/creer_avec_lignes/', data),
+    
+    // Endpoint pour envoyer le PDF par email
+    envoyerEmailPDF: (id: number, data: {
+        email_destinataire: string;
+        sujet: string;
+        message: string;
+        pdf_data: string;
+    }) => api.post(`/devis/devis/${id}/envoyer_email_pdf/`, data),
+};
+
+// Lignes de devis
+export const lignesDevisAPI = {
+    getLignes: (params?: {
+        devis?: number;
+        service?: number;
+        activity?: number;
+        frais_category?: number;
+        ligne_frais?: number;
+        unite?: number;
+        type_ligne?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/devis/lignes/', { params }),
+    
+    getLigne: (id: number) => api.get(`/devis/lignes/${id}/`),
+    
+    createLigne: (data: any) => api.post('/devis/lignes/', data),
+    
+    updateLigne: (id: number, data: any) => api.patch(`/devis/lignes/${id}/`, data),
+    
+    deleteLigne: (id: number) => api.delete(`/devis/lignes/${id}/`),
+    
+    getActivitesParService: (service_id: number) => 
+        api.get(`/devis/lignes/activites_by_service/?service_id=${service_id}`),
+    
+    getFraisParCategory: (category_id: number) =>
+        api.get(`/devis/lignes/frais_by_category/?category_id=${category_id}`),
+
+    getIntervenantsParActivite: (activity_id: number) =>
+        api.get(`/devis/lignes/intervenants_with_activite/?activity_id=${activity_id}`),
+};
+
+// Intervenants de ligne de devis
+export const intervenantsDevisAPI = {
+    getIntervenants: (params?: {
+        devis_id?: number;
+        profile_intervenant?: number;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/devis/intervenants/', { params }),
+    
+    getIntervenant: (id: number) => api.get(`/devis/intervenants/${id}/`),
+    
+    createIntervenant: (data: {
+        devis_id: number;
+        profile_intervenant_id: number;
+        temps_intervenant: number;
+        taux_horaire: number;
+    }) => api.post('/devis/intervenants/', data),
+    
+    updateIntervenant: (id: number, data: {
+        profile_intervenant_id?: number;
+        temps_intervenant?: number;
+        taux_horaire?: number;
+    }) => api.patch(`/devis/intervenants/${id}/`, data),
+    
+    deleteIntervenant: (id: number) => api.delete(`/devis/intervenants/${id}/`),
+}; 
+
+// Contrats
+export const contratsAPI = {
+    getContrats: (params?: {
+        search?: string;
+        statut?: string;
+        client?: number;
+        date_debut?: string;
+        date_fin?: string;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/contrats/', { params }),
+    
+    getContratById: (id: number) => api.get(`/contrats/${id}/`),
+    
+    createContrat: (data: {
+        devis_id: number;
+        date_debut: string;
+        date_fin: string;
+        conditions?: string;
+        notes?: string;
+    }) => api.post('/contrats/', data),
+    
+    createContratFromDevis: (data: {
+        devis_ids: number[];
+        devis_principal_id?: number;
+        date_debut: string;
+        date_fin: string;
+        conditions?: string;
+        notes?: string;
+        echeances?: any[];
+    }) => api.post('/contrats/create_from_devis/', data),
+    
+    updateContrat: (id: number, data: {
+        date_debut?: string;
+        date_fin?: string;
+        statut?: string;
+        conditions?: string;
+        notes?: string;
+    }) => api.patch(`/contrats/${id}/`, data),
+
+    addDevisToContrat: (id: number, data: {
+        devis_ids: number[];
+        devis_principal_id?: number;
+    }) => api.post(`/contrats/${id}/add_devis/`, data),
+
+    updateContratContent: (id: number, data: {
+        contenu_personnalise: string;
+    }) => api.post(`/contrats/${id}/update_content/`, data),    
+    
+    deleteContrat: (id: number) => api.delete(`/contrats/${id}/`),
+    
+    activerContrat: (id: number) => api.post(`/contrats/${id}/activer/`),
+    cloturerContrat: (id: number) => api.post(`/contrats/${id}/cloturer/`),
+    archiverContrat: (id: number) => api.post(`/contrats/${id}/archiver/`),
+    annulerContrat: (id: number) => api.post(`/contrats/${id}/annuler/`),
+    suspendreContrat: (id: number) => api.post(`/contrats/${id}/suspendre/`),
+    calculerMontants: (id: number) => api.post(`/contrats/${id}/calculer_montants/`),
+    envoyerContrat: (id: number) => api.post(`/contrats/${id}/envoyer/`),
+    getDevisDisponibles: () => api.get('/contrats/devis_disponibles/'),
+    signerContrat: (id: number, fichier_signe: File) => api.post(`/contrats/${id}/signer/`, { fichier_signe }, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    // Lignes de contrat
+    getLignesContrat: (contratId: number) => api.get(`/contrats/lignes/?contrat_id=${contratId}`),
+    createLigneContrat: (data: any) => api.post('/contrats/lignes/', data),
+    updateLigneContrat: (id: number, data: any) => api.patch(`/contrats/lignes/${id}/`, data),
+    deleteLigneContrat: (id: number) => api.delete(`/contrats/lignes/${id}/`),
+    
+    // Intervenants de ligne de contrat
+    getIntervenantsLigneContrat: (ligneId: number) => api.get(`/contrats/intervenants/?ligne_contrat=${ligneId}`),
+    createIntervenantLigneContrat: (data: any) => api.post('/contrats/intervenants/', data),
+    updateIntervenantLigneContrat: (id: number, data: any) => api.patch(`/contrats/intervenants/${id}/`, data),
+    deleteIntervenantLigneContrat: (id: number) => api.delete(`/contrats/intervenants/${id}/`),
+}; 
+
+// PATCHs
+// 

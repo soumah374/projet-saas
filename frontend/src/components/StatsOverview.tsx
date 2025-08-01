@@ -35,7 +35,7 @@ export const StatsOverview = ({ projects }: StatsOverviewProps) => {
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-700">Projets actifs</p>
+            <p className="text-sm font-medium text-blue-600">Projets actifs</p>
             <p className="text-3xl font-bold text-blue-900">{stats.total}</p>
             <div className="flex items-center gap-1 mt-2">
               <TrendingUp className="h-4 w-4 text-blue-600" />
@@ -53,7 +53,7 @@ export const StatsOverview = ({ projects }: StatsOverviewProps) => {
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-700">En cours</p>
+            <p className="text-sm font-medium text-blue-600">En cours</p>
             <p className="text-3xl font-bold text-blue-900">{stats.inProgress}</p>
             <div className="flex items-center gap-1 mt-2">
               <span className="text-sm text-blue-600">Avancement moyen: {stats.avgProgress}%</span>
@@ -84,7 +84,7 @@ export const StatsOverview = ({ projects }: StatsOverviewProps) => {
       <Card className="p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-700">Types de projets</p>
+            <p className="text-sm font-medium text-blue-600">Types de projets</p>
             <div className="mt-2 space-y-1">
               {Object.entries(typeStats).map(([type, count]) => (
                 <div key={type} className="flex justify-between items-center">

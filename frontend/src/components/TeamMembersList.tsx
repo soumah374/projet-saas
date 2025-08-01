@@ -63,7 +63,7 @@ export function TeamMembersList({
   const getRoleBadge = (role: TeamMemberRole) => {
     const roleColors = {
       leader: 'bg-yellow-100 text-yellow-800',
-      member: 'bg-blue-100 text-blue-800',
+      member: 'bg-blue-100 text-blue-600',
       consultant: 'bg-purple-100 text-purple-800'
     };
 
@@ -159,7 +159,7 @@ export function TeamMembersList({
               <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-4">
                   <Avatar className="w-12 h-12">
-                    <AvatarFallback className="bg-blue-100 text-blue-700">
+                    <AvatarFallback className="bg-blue-100 text-blue-600">
                       {member.user_name.split(' ').map(n => n[0]).join('').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>

@@ -1,0 +1,38 @@
+[
+    {
+        "model": "departments.departmentmanagerhistory",
+        "pk": 1,
+        "fields": {
+            "department": 1,
+            "manager": 2,
+            "start_date": "2024-01-01",
+            "end_date": null,
+            "notes": "Manager initial du département Direction Générale",
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "departments.departmentmanagerhistory",
+        "pk": 2,
+        "fields": {
+            "department": 2,
+            "manager": 3,
+            "start_date": "2024-01-01",
+            "end_date": null,
+            "notes": "Manager initial du département Développement",
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "departments.departmentmanagerhistory",
+        "pk": 3,
+        "fields": {
+            "department": 3,
+            "manager": 4,
+            "start_date": "2024-01-01",
+            "end_date": null,
+            "notes": "Manager initial du département Design & UX",
+            "created_at": "2024-01-01T00:00:00Z"
+        }
+    }
+] 

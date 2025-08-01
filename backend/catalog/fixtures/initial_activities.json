@@ -1,0 +1,314 @@
+[
+    {
+        "model": "catalog.activity",
+        "pk": 1,
+        "fields": {
+            "name": "Conception et planification d'événement",
+            "duree_standard": "24.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 2,
+        "fields": {
+            "name": "Élaboration de budget prévisionnel",
+            "duree_standard": "8.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 3,
+        "fields": {
+            "name": "Repérage et réservation de site",
+            "duree_standard": "16.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 4,
+        "fields": {
+            "name": "Obtention des autorisations administratives et sécuritaires",
+            "duree_standard": "8.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 5,
+        "fields": {
+            "name": "Logistique invités (transport, hébergement, restauration)",
+            "duree_standard": "24.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 6,
+        "fields": {
+            "name": "Coordination des prestataires externes",
+            "duree_standard": "32.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 7,
+        "fields": {
+            "name": "Conception et diffusion des invitations",
+            "duree_standard": "8.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 8,
+        "fields": {
+            "name": "Gestion de la billetterie ou contrôle des accès",
+            "duree_standard": "4.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 9,
+        "fields": {
+            "name": "Supervision et encadrement sur site le jour J",
+            "duree_standard": "16.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 10,
+        "fields": {
+            "name": "Installation et démontage des structures temporaires",
+            "duree_standard": "16.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 11,
+        "fields": {
+            "name": "Suivi post-événement et rapport bilan",
+            "duree_standard": "4.00",
+            "service": 1,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 12,
+        "fields": {
+            "name": "Rédaction de script et storyboard",
+            "duree_standard": "16.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 13,
+        "fields": {
+            "name": "Préparation et planification du tournage",
+            "duree_standard": "8.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 14,
+        "fields": {
+            "name": "Captation vidéo sur site",
+            "duree_standard": "32.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 15,
+        "fields": {
+            "name": "Prise de son direct",
+            "duree_standard": "8.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 16,
+        "fields": {
+            "name": "Montage vidéo (assemblage, étalonnage)",
+            "duree_standard": "24.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 17,
+        "fields": {
+            "name": "Habillage graphique et titrage",
+            "duree_standard": "8.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 18,
+        "fields": {
+            "name": "Animation motion design 2D/3D",
+            "duree_standard": "16.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 19,
+        "fields": {
+            "name": "Enregistrement voice-over et doublage",
+            "duree_standard": "8.00",
+            "service": 2,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 20,
+        "fields": {
+            "name": "Élaboration de ligne éditoriale digitale",
+            "duree_standard": "8.00",
+            "service": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 21,
+        "fields": {
+            "name": "Création de calendriers de publication",
+            "duree_standard": "8.00",
+            "service": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 22,
+        "fields": {
+            "name": "Création de contenus visuels",
+            "duree_standard": "24.00",
+            "service": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 23,
+        "fields": {
+            "name": "Rédaction de contenus web et posts réseaux",
+            "duree_standard": "16.00",
+            "service": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 24,
+        "fields": {
+            "name": "Publication et modération (community management)",
+            "duree_standard": "8.00",
+            "service": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 25,
+        "fields": {
+            "name": "Mise en place et gestion campagnes pub payantes",
+            "duree_standard": "8.00",
+            "service": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    },
+    {
+        "model": "catalog.activity",
+        "pk": 26,
+        "fields": {
+            "name": "Suivi et analyse indicateurs de performance",
+            "duree_standard": "8.00",
+            "service": 3,
+            "is_active": true,
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z"
+        }
+    }
+] 

@@ -44,9 +44,18 @@ class TeamMemberViewSet(viewsets.ModelViewSet):
     serializer_class = TeamMemberSerializer
     permission_classes = [AllowAny]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['team', 'role', 'is_active']
+    filterset_fields = ['team']
     ordering_fields = ['joined_at', 'user__first_name']
     ordering = ['joined_at']
+
+    def get_queryset(self):
+        print("get_queryset")
+        print(self.request.GET.get('team'))
+        print(self.request.GET.get('team'))
+        print(self.request.GET.get('team'))
+        print(self.request.GET.get('team'))
+        """Filtrer les membres d'équipe en fonction de l'équipe"""
+        return TeamMember.objects.filter(team=self.request.GET.get('team'))
     
     def perform_create(self, serializer):
         """Créer un membre d'équipe"""

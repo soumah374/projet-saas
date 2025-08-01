@@ -29,30 +29,25 @@ export const ReportFilters = ({
   const [endDateOpen, setEndDateOpen] = useState(false);
 
   const projectStatuses = [
-    'Planification',
-    'En cours', 
-    'Production',
-    'En pause',
-    'Terminé'
-  ];
-
-  const projectPriorities = [
-    'Basse',
-    'Normale', 
-    'Haute',
-    'Urgente'
+    { value: 'all', label: 'Tous les statuts' },
+    { value: 'planning', label: 'Planification' },
+    { value: 'in_progress', label: 'En cours' },
+    { value: 'production', label: 'Production' },
+    { value: 'paused', label: 'En pause' },
+    { value: 'completed', label: 'Terminé' }
   ];
 
   const projectTypes = [
-    'Événementiel',
-    'Communication',
-    'Audiovisuel',
-    'Production',
-    'Digital',
-    'Conseil'
+    { value: 'all', label: 'Tous les types' },
+    { value: 'event', label: 'Événementiel' },
+    { value: 'communication', label: 'Communication' },
+    { value: 'audiovisual', label: 'Audiovisuel' },
+    { value: 'production', label: 'Production' },
+    { value: 'digital', label: 'Digital' },
+    { value: 'consulting', label: 'Conseil' }
   ];
 
-  const handleDateChange = (field: 'date_from' | 'date_to', date: Date | undefined) => {
+  const handleDateChange = (field: 'startDate' | 'endDate', date: Date | undefined) => {
     onFiltersChange({
       ...filters,
       [field]: date ? format(date, 'yyyy-MM-dd') : undefined
@@ -106,8 +101,8 @@ export const ReportFilters = ({
                   className="w-full justify-start text-left font-normal"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filters.date_from 
-                    ? format(new Date(filters.date_from), 'PPP', { locale: fr })
+                  {filters.startDate 
+                    ? format(new Date(filters.startDate), 'PPP', { locale: fr })
                     : 'Sélectionner une date'
                   }
                 </Button>
@@ -115,9 +110,9 @@ export const ReportFilters = ({
               <PopoverContent className="w-auto p-0" style={{ zIndex: 9999 }}>
                 <Calendar
                   mode="single"
-                  selected={filters.date_from ? new Date(filters.date_from) : undefined}
+                  selected={filters.startDate ? new Date(filters.startDate) : undefined}
                   onSelect={(date) => {
-                    handleDateChange('date_from', date);
+                    handleDateChange('startDate', date);
                     setStartDateOpen(false);
                   }}
                   initialFocus
@@ -135,8 +130,8 @@ export const ReportFilters = ({
                   className="w-full justify-start text-left font-normal"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {filters.date_to 
-                    ? format(new Date(filters.date_to), 'PPP', { locale: fr })
+                  {filters.endDate 
+                    ? format(new Date(filters.endDate), 'PPP', { locale: fr })
                     : 'Sélectionner une date'
                   }
                 </Button>
@@ -144,9 +139,9 @@ export const ReportFilters = ({
               <PopoverContent className="w-auto p-0" style={{ zIndex: 9999 }}>
                 <Calendar
                   mode="single"
-                  selected={filters.date_to ? new Date(filters.date_to) : undefined}
+                  selected={filters.endDate ? new Date(filters.endDate) : undefined}
                   onSelect={(date) => {
-                    handleDateChange('date_to', date);
+                    handleDateChange('endDate', date);
                     setEndDateOpen(false);
                   }}
                   initialFocus
@@ -159,35 +154,17 @@ export const ReportFilters = ({
           <div className="space-y-2">
             <Label>Statut du projet</Label>
             <Select 
-              value={filters.status || ''} 
-              onValueChange={(value) => onFiltersChange({ ...filters, status: value || undefined })}
+              value={filters.status || 'all'} 
+              onValueChange={(value) => onFiltersChange({ ...filters, status: value === 'all' ? undefined : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Tous les statuts" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tous les statuts</SelectItem>
                 {projectStatuses.map(status => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Priorité */}
-          <div className="space-y-2">
-            <Label>Priorité</Label>
-            <Select 
-              value={filters.priority || ''} 
-              onValueChange={(value) => onFiltersChange({ ...filters, priority: value || undefined })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Toutes les priorités" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Toutes les priorités</SelectItem>
-                {projectPriorities.map(priority => (
-                  <SelectItem key={priority} value={priority}>{priority}</SelectItem>
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -197,16 +174,17 @@ export const ReportFilters = ({
           <div className="space-y-2">
             <Label>Type de projet</Label>
             <Select 
-              value={filters.project_type || ''} 
-              onValueChange={(value) => onFiltersChange({ ...filters, project_type: value || undefined })}
+              value={filters.type || 'all'} 
+              onValueChange={(value) => onFiltersChange({ ...filters, type: value === 'all' ? undefined : value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Tous les types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tous les types</SelectItem>
                 {projectTypes.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -218,10 +196,10 @@ export const ReportFilters = ({
             <Input
               type="number"
               placeholder="ID du membre"
-              value={filters.team_member || ''}
+              value={filters.team || ''}
               onChange={(e) => onFiltersChange({ 
                 ...filters, 
-                team_member: e.target.value ? parseInt(e.target.value) : undefined 
+                team: e.target.value ? e.target.value : undefined 
               })}
             />
           </div>
@@ -232,57 +210,48 @@ export const ReportFilters = ({
           <div className="mt-4 pt-4 border-t">
             <Label className="text-sm font-medium">Filtres actifs:</Label>
             <div className="flex flex-wrap gap-2 mt-2">
-              {filters.date_from && (
+              {filters.startDate && (
                 <Badge variant="outline" className="flex items-center gap-1">
-                  Début: {format(new Date(filters.date_from), 'dd/MM/yyyy')}
+                  Début: {format(new Date(filters.startDate), 'dd/MM/yyyy')}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
-                    onClick={() => removeFilter('date_from')}
+                    onClick={() => removeFilter('startDate')}
                   />
                 </Badge>
               )}
-              {filters.date_to && (
+              {filters.endDate && (
                 <Badge variant="outline" className="flex items-center gap-1">
-                  Fin: {format(new Date(filters.date_to), 'dd/MM/yyyy')}
+                  Fin: {format(new Date(filters.endDate), 'dd/MM/yyyy')}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
-                    onClick={() => removeFilter('date_to')}
+                    onClick={() => removeFilter('endDate')}
                   />
                 </Badge>
               )}
               {filters.status && (
                 <Badge variant="outline" className="flex items-center gap-1">
-                  Statut: {filters.status}
+                  Statut: {projectStatuses.find(s => s.value === filters.status)?.label}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
                     onClick={() => removeFilter('status')}
                   />
                 </Badge>
               )}
-              {filters.priority && (
+              {filters.type && (
                 <Badge variant="outline" className="flex items-center gap-1">
-                  Priorité: {filters.priority}
+                  Type: {projectTypes.find(t => t.value === filters.type)?.label}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
-                    onClick={() => removeFilter('priority')}
+                    onClick={() => removeFilter('type')}
                   />
                 </Badge>
               )}
-              {filters.project_type && (
+              {filters.team && (
                 <Badge variant="outline" className="flex items-center gap-1">
-                  Type: {filters.project_type}
+                  Membre: {filters.team}
                   <X 
                     className="w-3 h-3 cursor-pointer" 
-                    onClick={() => removeFilter('project_type')}
-                  />
-                </Badge>
-              )}
-              {filters.team_member && (
-                <Badge variant="outline" className="flex items-center gap-1">
-                  Membre: {filters.team_member}
-                  <X 
-                    className="w-3 h-3 cursor-pointer" 
-                    onClick={() => removeFilter('team_member')}
+                    onClick={() => removeFilter('team')}
                   />
                 </Badge>
               )}

@@ -1,0 +1,112 @@
+[
+    {
+        "model": "departments.department",
+        "pk": 1,
+        "fields": {
+            "name": "Direction Générale",
+            "description": "Département responsable de la stratégie globale et de la direction de l'entreprise",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 2,
+        "fields": {
+            "name": "Développement",
+            "description": "Département responsable du développement des solutions logicielles",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 3,
+        "fields": {
+            "name": "Design & UX",
+            "description": "Département responsable de l'expérience utilisateur et du design des interfaces",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 4,
+        "fields": {
+            "name": "Marketing & Communication",
+            "description": "Département responsable de la stratégie marketing et de la communication",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 5,
+        "fields": {
+            "name": "Ressources Humaines",
+            "description": "Département responsable de la gestion des ressources humaines et du développement des talents",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 6,
+        "fields": {
+            "name": "Finance & Comptabilité",
+            "description": "Département responsable de la gestion financière et comptable",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 7,
+        "fields": {
+            "name": "Support Technique",
+            "description": "Département responsable du support technique et de la maintenance",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 8,
+        "fields": {
+            "name": "Qualité & Tests",
+            "description": "Département responsable de l'assurance qualité et des tests",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 9,
+        "fields": {
+            "name": "Innovation & R&D",
+            "description": "Département responsable de la recherche et développement et de l'innovation",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    },
+    {
+        "model": "departments.department",
+        "pk": 10,
+        "fields": {
+            "name": "Commercial & Ventes",
+            "description": "Département responsable des ventes et du développement commercial",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-01T00:00:00Z",
+            "is_active": true
+        }
+    }
+] 

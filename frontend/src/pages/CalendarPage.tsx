@@ -56,7 +56,7 @@ export function CalendarPage() {
         location: "Salle de réunion A",
         attendees: ["Marie Dupont", "Jean Martin", "Sophie Bernard"],
         type: "meeting",
-        color: "bg-blue-500"
+        color: "bg-blue-600"
       },
       {
         id: 2,
@@ -135,14 +135,14 @@ export function CalendarPage() {
 
   const eventTypes = [
     { id: 'deadline', name: 'Échéance', color: "bg-red-500" },
-    { id: 'milestone', name: 'Jalon', color: "bg-blue-500" },
+    { id: 'milestone', name: 'Jalon', color: "bg-blue-600" },
     { id: 'meeting', name: 'Réunion', color: "bg-gray-500" }
   ];
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'deadline': return 'bg-red-100 text-red-800';
-      case 'milestone': return 'bg-blue-100 text-blue-800';
+      case 'milestone': return 'bg-blue-100 text-blue-600';
       case 'meeting': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -151,7 +151,7 @@ export function CalendarPage() {
   const getEventColor = (type: 'meeting' | 'deadline' | 'milestone') => {
     switch (type) {
       case 'deadline': return 'bg-red-500';
-      case 'milestone': return 'bg-blue-500';
+      case 'milestone': return 'bg-blue-600';
       case 'meeting': return 'bg-gray-500';
     }
   };
@@ -347,7 +347,7 @@ export function CalendarPage() {
                   key={index}
                   className={`min-h-[120px] p-2 border rounded-lg ${
                     day.isCurrentMonth ? 'bg-white' : 'bg-gray-50'
-                  } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                  } ${isToday ? 'ring-2 ring-blue-600' : ''}`}
                 >
                   <div className={`text-sm font-medium mb-1 ${
                     day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'

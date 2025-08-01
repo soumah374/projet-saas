@@ -216,7 +216,7 @@ export function ProjectTeamPage() {
       case "Chef de projet":
         return "bg-yellow-100 text-yellow-800";
       case "Développeur Senior":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-600";
       case "Designer":
         return "bg-purple-100 text-purple-800";
       case "Développeur":
@@ -248,7 +248,7 @@ export function ProjectTeamPage() {
     !teamMembers.some(member => member.user.id === user.id)
   ) || [];
 
-  const roles: ProjectMemberRole[] = ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'];
+  const roles: ProjectMemberRole[] = ['Managing Director', 'Chef de projet', 'Directeur de production', 'Responsable communication', 'Administrateur financier', 'Assistant', 'Consultant'];
 
   if (isLoading) {
     return (

@@ -4,12 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Calendar, Users, FileText, MoreHorizontal, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Project } from '@/lib/api';
+import { ExtendedProject } from '@/lib/types';
 
 interface ProjectCardProps {
-  project: Project;
+  project: ExtendedProject;
   userRole: string;
-  onViewDetails?: (project: Project) => void;
+  onViewDetails?: (project: ExtendedProject) => void;
 }
 
 export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardProps) => {
@@ -17,23 +17,19 @@ export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardPro
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Planification': return 'bg-gray-100 text-gray-800';
-      case 'En cours': return 'bg-blue-100 text-blue-800';
-      case 'Production': return 'bg-gray-100 text-gray-800';
-      case 'En pause': return 'bg-gray-100 text-gray-800';
-      case 'Terminé': return 'bg-blue-100 text-blue-800';
+      case 'Prospection': return 'bg-gray-100 text-gray-800';
+      case 'Devis': return 'bg-yellow-100 text-yellow-800';
+      case 'Production': return 'bg-blue-100 text-blue-600';
+      case 'Livraison': return 'bg-purple-100 text-purple-800';
+      case 'Terminé': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'Communication': return 'bg-blue-100 text-blue-800';
-      case 'Événementiel': return 'bg-red-100 text-red-800';
-      case 'Audiovisuel': return 'bg-blue-100 text-blue-800';
-      case 'Production': return 'bg-gray-100 text-gray-800';
-      case 'Digital': return 'bg-blue-100 text-blue-800';
-      case 'Conseil': return 'bg-gray-100 text-gray-800';
+      case 'Externe': return 'bg-blue-100 text-blue-600';
+      case 'Interne': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -41,15 +37,18 @@ export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardPro
   const isDeadlineClose = new Date(project.deadline) < new Date(Date.now() + 7*24*60*60*1000);
   const canViewBudget = ['Managing Director', 'Finance/Admin'].includes(userRole);
   
-  // Extract team member names for display - handle both detailed and list views
+  // Extract team member names for display
   const teamMemberNames = project.team_members 
-    ? project.team_members.map(member => 
-        `${member.user.first_name} ${member.user.last_name}`.trim() || member.user.username
-      )
+    ? project.team_members.map(member => {
+        if (typeof member.user === 'object' && member.user !== null) {
+          return `${member.user.first_name} ${member.user.last_name}`.trim() || member.user.username;
+        }
+        return '';
+      })
     : [];
   
   // Use team_count if available, otherwise use team_members length
-  const teamCount = project.team_count || teamMemberNames.length;
+  const teamCount = project.team_count ? parseInt(project.team_count) : teamMemberNames.length;
 
   return (
     <Card className="p-6 hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
@@ -135,7 +134,7 @@ export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardPro
       <div className="flex gap-2 pt-4 border-t border-gray-100 mt-4">
         <Button 
           size="sm" 
-          className="flex-1 bg-blue-600 hover:bg-blue-700"
+          className="flex-1 bg-blue-600 hover:bg-blue-600"
           onClick={() => navigate(`/projects/${project.id}`)}
         >
           <Eye className="h-4 w-4 mr-2" />

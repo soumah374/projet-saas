@@ -1,0 +1,80 @@
+[
+  {
+    "model": "projects.projecttask",
+    "pk": "template_event_logistics_1",
+    "fields": {
+      "title": "Recherche et réservation du lieu",
+      "description": "Identifier et réserver le lieu de l'événement en fonction des critères (capacité, accessibilité, budget)",
+      "status": "À faire",
+      "estimated_hours": "8.0",
+      "is_template": true,
+      "template_category": "Événementiel",
+      "phase": null
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": "template_event_logistics_2",
+    "fields": {
+      "title": "Planification logistique",
+      "description": "Organiser la logistique générale : mobilier, équipement technique, restauration, signalétique",
+      "status": "À faire",
+      "estimated_hours": "16.0",
+      "is_template": true,
+      "template_category": "Événementiel",
+      "phase": null
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": "template_event_comm_1",
+    "fields": {
+      "title": "Stratégie de communication",
+      "description": "Définir la stratégie de communication et les supports nécessaires",
+      "status": "À faire",
+      "estimated_hours": "8.0",
+      "is_template": true,
+      "template_category": "Événementiel",
+      "phase": null
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": "template_event_comm_2",
+    "fields": {
+      "title": "Relations Presse",
+      "description": "Préparer et diffuser les communiqués de presse, gérer les relations médias",
+      "status": "À faire",
+      "estimated_hours": "12.0",
+      "is_template": true,
+      "template_category": "Événementiel",
+      "phase": null
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": "template_event_prod_1",
+    "fields": {
+      "title": "Production des supports",
+      "description": "Créer et produire les supports de communication (invitations, affiches, programmes)",
+      "status": "À faire",
+      "estimated_hours": "20.0",
+      "is_template": true,
+      "template_category": "Événementiel",
+      "phase": null
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": "template_event_coord_1",
+    "fields": {
+      "title": "Coordination des prestataires",
+      "description": "Sélectionner et coordonner les différents prestataires (traiteur, technique, sécurité)",
+      "status": "À faire",
+      "estimated_hours": "16.0",
+      "is_template": true,
+      "template_category": "Événementiel",
+      "phase": null
+    }
+  }
+] 

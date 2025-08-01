@@ -8,6 +8,13 @@ from django.conf import settings
 import os
 from datetime import datetime
 from .health_utils import get_system_info
+from contrats.models import Contrat
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
+
 
 
 @api_view(['GET'])
@@ -89,3 +96,78 @@ def api_root(request):
         'documentation': '/api/docs/',
         'schema': '/api/schema/',
     }) 
+
+
+def print_contrat(request, pk):
+    """
+    Endpoint pour l'impression d'un contrat en PDF
+    """
+    try:
+        contrat = Contrat.objects.get(id=pk)
+        
+        from reportlab.pdfgen import canvas
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import cm
+        from io import BytesIO
+        from django.http import HttpResponse
+        
+        # Créer le PDF avec ReportLab
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=A4)
+        width, height = A4
+        
+        # Titre
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(2*cm, height-3*cm, f"CONTRAT - {contrat.numero}")
+        
+        # Informations du contrat
+        p.setFont("Helvetica", 12)
+        y_position = height-5*cm
+        
+        p.drawString(2*cm, y_position, f"Client: {contrat.client.nom_complet}")
+        y_position -= 1*cm
+        
+        p.drawString(2*cm, y_position, f"Date de début: {contrat.date_debut.strftime('%d/%m/%Y')}")
+        y_position -= 1*cm
+        
+        p.drawString(2*cm, y_position, f"Date de fin: {contrat.date_fin.strftime('%d/%m/%Y')}")
+        y_position -= 1*cm
+        
+        p.drawString(2*cm, y_position, f"Montant TTC: {contrat.montant_ttc:.2f} €")
+        y_position -= 1*cm
+        
+        p.drawString(2*cm, y_position, f"Statut: {contrat.get_statut_display()}")
+        y_position -= 2*cm
+        
+        # Contenu personnalisé
+        if contrat.contenu_personnalise:
+            p.setFont("Helvetica-Bold", 12)
+            p.drawString(2*cm, y_position, "Contenu personnalisé:")
+            y_position -= 1*cm
+            
+            p.setFont("Helvetica", 10)
+            # Diviser le texte en lignes
+            text_lines = contrat.contenu_personnalise.split('\n')
+            for line in text_lines:
+                if y_position < 2*cm:  # Nouvelle page si nécessaire
+                    p.showPage()
+                    p.setFont("Helvetica", 10)
+                    y_position = height-3*cm
+                
+                p.drawString(2*cm, y_position, line[:80])  # Limiter la largeur
+                y_position -= 0.5*cm
+        
+        p.save()
+        pdf = buffer.getvalue()
+        buffer.close()
+        
+        # Créer la réponse HTTP
+        response = HttpResponse(pdf, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="contrat_{contrat.numero}.pdf"'
+        
+        return response
+        
+    except Contrat.DoesNotExist:
+        return HttpResponse('Contrat introuvable', status=404)
+    except Exception as e:
+        return HttpResponse(f'Erreur lors de la génération du PDF: {str(e)}', status=500)

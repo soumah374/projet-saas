@@ -1,0 +1,113 @@
+[
+{
+  "model": "auth.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$hash_here",
+    "last_login": null,
+    "is_superuser": true,
+    "username": "managing_director",
+    "first_name": "Admin",
+    "last_name": "SAKOM",
+    "email": "admin@sakom.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2024-01-01T00:00:00Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$hash_here",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "manager",
+    "first_name": "Jean",
+    "last_name": "Dupont",
+    "email": "jean.dupont@sakom.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2024-01-01T00:00:00Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$hash_here",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "designer",
+    "first_name": "Marie",
+    "last_name": "Martin",
+    "email": "marie.martin@sakom.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2024-01-01T00:00:00Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "users.userprofile",
+  "pk": 1,
+  "fields": {
+    "user": [
+      "managing_director"
+    ],
+    "role": "Managing Director",
+    "phone": "+33123456789",
+    "avatar": "",
+    "bio": "Directeur général de SAKOM",
+    "department": "Direction",
+    "position": "Directeur Général",
+    "hire_date": "2024-01-01",
+    "is_active": true,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  }
+},
+{
+  "model": "users.userprofile",
+  "pk": 2,
+  "fields": {
+    "user": [
+      "manager"
+    ],
+    "role": "Chef de projet",
+    "phone": "+33123456790",
+    "avatar": "",
+    "bio": "Chef de projet expérimenté",
+    "department": "Gestion de Projet",
+    "position": "Chef de Projet",
+    "hire_date": "2024-01-15",
+    "is_active": true,
+    "created_at": "2024-01-15T00:00:00Z",
+    "updated_at": "2024-01-15T00:00:00Z"
+  }
+},
+{
+  "model": "users.userprofile",
+  "pk": 3,
+  "fields": {
+    "user": [
+      "designer"
+    ],
+    "role": "Designer",
+    "phone": "+33123456791",
+    "avatar": "",
+    "bio": "Designer créatif spécialisé en identité visuelle",
+    "department": "Design",
+    "position": "Designer Graphique",
+    "hire_date": "2024-02-01",
+    "is_active": true,
+    "created_at": "2024-02-01T00:00:00Z",
+    "updated_at": "2024-02-01T00:00:00Z"
+  }
+}
+]
