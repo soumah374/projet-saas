@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Edit, Plus, Eye, CalendarIcon, Package, CheckSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Phase, ProjectTask, UserList, Service } from '@/lib/types';
+import { ProjectTask, UserList, Service } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useServices } from '@/hooks/use-services';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -33,7 +33,6 @@ interface TaskModalProps {
   projectId: string;
   onTaskSave?: (taskData: CreateTaskData | UpdateTaskData) => void;
   mode: 'create' | 'edit' | 'view';
-  phases: Phase[];
 }
 
 export interface CreateTaskData {
@@ -43,7 +42,6 @@ export interface CreateTaskData {
   due_date: string;
   project: string;
   estimated_hours?: number;
-  phase?: number | null;
 }
 
 export interface ExecuteTaskData extends CreateTaskData {
@@ -60,7 +58,6 @@ interface ServiceTaskTemplate {
   title: string;
   description: string;
   estimated_hours: number;
-  phase?: number | null;
 }
 
 // Custom styles for date inputs
@@ -133,7 +130,7 @@ const generateServiceTasks = (service: Service): ServiceTaskTemplate[] => {
   return baseTasks;
 };
 
-export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}: TaskModalProps) => {
+export const TaskModal = ({ children, task, projectId, onTaskSave, mode}: TaskModalProps) => {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [deadlineOpen, setDeadlineOpen] = useState(false);
@@ -704,36 +701,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <div>
-                      <Label htmlFor="assigned_to">Phase</Label>
-                      <Select 
-                        value={formData.phase?.toString() || ''} 
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, phase: parseInt(value) }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une phase" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {phases.length > 0 ? (
-                            phases.map((phase: Phase) => (
-                              <SelectItem key={phase.id} value={phase.id.toString()}>
-                                {phase.name}
-                              </SelectItem>
-                            ))
-                          ) : phases.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500">
-                              Aucune phase disponible
-                            </div>
-                          ) : (
-                              phases.map((phase: Phase) => (
-                              <SelectItem key={phase.id} value={phase.id.toString()}>
-                                {phase.name}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
+
                   </div>
                 </div>
 
@@ -861,36 +829,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div>
-                  <Label htmlFor="assigned_to">Phase</Label>
-                  <Select 
-                    value={formData.phase?.toString() || ''} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, phase: parseInt(value) }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une phase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {phases.length > 0 ? (
-                        phases.map((phase: Phase) => (
-                          <SelectItem key={phase.id} value={phase.id.toString()}>
-                            {phase.name}
-                          </SelectItem>
-                        ))
-                      ) : phases.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          Aucune phase disponible
-                        </div>
-                      ) : (
-                          phases.map((phase: Phase) => (
-                          <SelectItem key={phase.id} value={phase.id.toString()}>
-                            {phase.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+
               </div>
             </div>
 

@@ -13,8 +13,9 @@ import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useCreateProject } from '@/hooks/use-projects';
 import { useClients } from '@/hooks/use-clients';
+import { useContrats } from '@/hooks/use-contrats';
 import { toast } from 'sonner';
-import type { CreateProjectPayload, ProjectType, ProjectStatus, ProjectPriority } from '@/lib/types';
+import type { CreateProjectPayload, ProjectType, ProjectStatus, ProjectPriority, Contrat } from '@/lib/types';
 import { ClientAutocomplete } from '../ui/ClientAutocomplete';
 
 interface CreateProjectModalProps {
@@ -34,15 +35,17 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     deadline: '',
     client: null,
     departments: [],
-    contract: '',
+    contract: null,
     tags: []
   });
 
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedClient, setSelectedClient] = useState<number | null>(null);
+  const [selectedContrat, setSelectedContrat] = useState<Contrat | null>(null);
 
   const createProject = useCreateProject();
   const { data: clientsData } = useClients();
+  const { data: contratsData, isLoading: contratsLoading } = useContrats({ client: selectedClient });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +63,8 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
     const projectData: CreateProjectPayload = {
       ...formData,
       deadline: format(selectedDate, 'yyyy-MM-dd'),
-      client: selectedClient
+      client: selectedClient,
+      contract: selectedContrat?.id || null
     };
 
     try {
@@ -79,11 +83,12 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
         deadline: '',
         client: null,
         departments: [],
-        contract: '',
+        contract: null,
         tags: []
       });
       setSelectedDate(undefined);
       setSelectedClient(null);
+      setSelectedContrat(null);
     } catch (error) {
       toast.error('Erreur lors de la création du projet');
     }
@@ -199,9 +204,14 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
 
           {/* Client */}
           <div>
+            <Label htmlFor="client">Client *</Label>
             <ClientAutocomplete
-              value={formData.client?.toString() || ''}
-              onValueChange={(value) => handleInputChange('client', value)}
+              value={selectedClient?.toString() || ''}
+              onValueChange={(value) => {
+                const clientId = value ? parseInt(value) : null;
+                setSelectedClient(clientId);
+                setSelectedContrat(null); // Reset contrat when client changes
+              }}
               placeholder="Sélectionnez un client"
             />
           </div>
@@ -235,13 +245,38 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
             </div>
 
             <div>
-              <Label htmlFor="contract">Référence contrat</Label>
-              <Input
-                id="contract"
-                value={formData.contract}
-                onChange={(e) => handleInputChange('contract', e.target.value)}
-                placeholder="Référence du contrat"
-              />
+              <Label htmlFor="contract">Contrat (optionnel)</Label>
+              <Select
+                value={selectedContrat?.id?.toString() || ''}
+                onValueChange={(value) => {
+                  const contrat = contratsData?.results?.find(c => c.id.toString() === value);
+                  setSelectedContrat(contrat || null);
+                }}
+                disabled={!selectedClient || contratsLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={
+                    !selectedClient 
+                      ? "Sélectionnez d'abord un client" 
+                      : contratsLoading 
+                        ? "Chargement des contrats..." 
+                        : "Sélectionnez un contrat"
+                  } />
+                </SelectTrigger>
+                <SelectContent>
+                  {contratsData?.results?.length === 0 ? (
+                    <div className="px-2 py-1 text-sm text-muted-foreground">
+                      Aucun contrat disponible pour ce client
+                    </div>
+                  ) : (
+                    contratsData?.results?.map((contrat) => (
+                      <SelectItem key={contrat.id} value={contrat.id.toString()}>
+                        {contrat.numero} - {contrat.statut}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

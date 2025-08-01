@@ -8,7 +8,7 @@ import { ProjectTrackingAlerts } from '@/components/ProjectTrackingAlerts';
 import { ProjectCalendar } from '@/components/ProjectCalendar';
 import { DocumentManager } from '@/components/DocumentManager';
 import { ClientDetailsCard } from '@/components/ClientDetailsCard';
-import type { ClientProfile } from '@/hooks/use-clients';
+import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
 import { useProject } from '@/hooks/use-projects';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -63,12 +63,19 @@ export function ProjectDetailsPage() {
       
       <ProjectTrackingAlerts projectId={projectId} />
       
-      {/* Informations client */}
-      {project.client_details && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Informations client et contrat */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {project.client_details && (
           <ClientDetailsCard client={project.client_details} />
-        </div>
-      )}
+        )}
+        {project.contract_details && (
+          <ContratDetailsCard 
+            contrat={project.contract_details} 
+            showViewButton={true}
+            onView={() => window.open(`/contrats/${project.contract}`, '_blank')}
+          />
+        )}
+      </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">

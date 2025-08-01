@@ -7,7 +7,6 @@ import type {
   ProjectFilters,
   ProjectTask,
   ProjectMember,
-  ProjectPhase,
   ProjectEvent,
   PaginatedResponse,
   ExtendedProject
@@ -60,6 +59,7 @@ export function useProjects(filters?: ProjectsFilters) {
       if (filters?.type) params.append('type', filters.type);
       if (filters?.priority) params.append('priority', filters.priority);
       if (filters?.client) params.append('client', filters.client.toString());
+      if (filters?.contract) params.append('contract', filters.contract.toString());
       if (filters?.start_date) params.append('start_date', filters.start_date);
       if (filters?.end_date) params.append('end_date', filters.end_date);
       if (filters?.team_member) params.append('team_member', filters.team_member.toString());
@@ -138,7 +138,7 @@ export function useCreateTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: string; data: Omit<ProjectTask, 'id' | 'completion_percentage' | 'phase_name' | 'assigned_to_name' | 'actual_hours' | 'created_at' | 'updated_at'> }) =>
+    mutationFn: ({ projectId, data }: { projectId: string; data: Omit<ProjectTask, 'id' | 'completion_percentage' | 'assigned_to_name' | 'actual_hours' | 'created_at' | 'updated_at'> }) =>
       apiRequest<ProjectTask>(`/${projectId}/tasks/`, {
         method: 'POST',
         body: JSON.stringify(data),
@@ -348,43 +348,4 @@ export function useUpdateTeamMember() {
   });
 }
 
-// Project Phases
-export function useProjectPhases(projectId: string) {
-  return useQuery({
-    queryKey: ['project-phases', projectId],
-    queryFn: () => apiRequest<ProjectPhase[]>(`/${projectId}/phases/`),
-    enabled: !!projectId,
-  });
-}
-
-export function useCreatePhase() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ projectId, data }: { projectId: string; data: Omit<ProjectPhase, 'id' | 'project'> }) =>
-      apiRequest<ProjectPhase>(`/${projectId}/phases/`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-    },
-  });
-}
-
-export function useUpdatePhase() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ projectId, phaseId, data }: { projectId: string; phaseId: number; data: Partial<ProjectPhase> }) =>
-      apiRequest<ProjectPhase>(`/${projectId}/phases/${phaseId}/`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    onSuccess: (_, { projectId }) => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-    },
-  });
-} 
+ 

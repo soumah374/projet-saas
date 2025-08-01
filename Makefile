@@ -143,12 +143,12 @@ load-fixtures:
 	docker compose exec backend python manage.py loaddata initial_users
 	docker compose exec backend python manage.py loaddata initial_profiles
 	docker compose exec backend python manage.py loaddata initial_teams
+	docker compose exec backend python manage.py loaddata initial_client_categories
 	docker compose exec backend python manage.py loaddata initial_clients
 	docker compose exec backend python manage.py loaddata initial_contrats
 	docker compose exec backend python manage.py loaddata initial_projects
 	docker compose exec backend python manage.py loaddata initial_documents
 	docker compose exec backend python manage.py loaddata initial_departments
-	docker compose exec backend python manage.py loaddata initial_client_categories
 	docker compose exec backend python manage.py loaddata initial_department_managers
 
 	docker compose exec backend python manage.py loaddata initial_unites_standards

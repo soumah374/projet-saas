@@ -16,15 +16,22 @@ class Command(BaseCommand):
                 self.style.SUCCESS("✓ Clients chargés avec succès")
             )
             
-            # 2. Charger les projets
-            self.stdout.write("2. Chargement des projets...")
+            # 2. Charger les contrats
+            self.stdout.write("2. Chargement des contrats...")
+            call_command('loaddata', 'initial_contrats', verbosity=0)
+            self.stdout.write(
+                self.style.SUCCESS("✓ Contrats chargés avec succès")
+            )
+            
+            # 3. Charger les projets
+            self.stdout.write("3. Chargement des projets...")
             call_command('loaddata', 'initial_projects', verbosity=0)
             self.stdout.write(
                 self.style.SUCCESS("✓ Projets chargés avec succès")
             )
             
-            # 3. Charger les templates de tâches
-            self.stdout.write("3. Chargement des templates de tâches...")
+            # 4. Charger les templates de tâches
+            self.stdout.write("4. Chargement des templates de tâches...")
             call_command('loaddata', 'task_templates', verbosity=0)
             self.stdout.write(
                 self.style.SUCCESS("✓ Templates de tâches chargés avec succès")

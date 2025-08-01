@@ -31,11 +31,10 @@ interface ServiceTaskTemplate {
 
 interface StandardTasksManagerProps {
   projectId: string;
-  phases: Phase[];
   onTasksCreated?: () => void;
 }
 
-export function StandardTasksManager({ projectId, phases, onTasksCreated }: StandardTasksManagerProps) {
+export function StandardTasksManager({ projectId, onTasksCreated }: StandardTasksManagerProps) {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [generatedTasks, setGeneratedTasks] = useState<ServiceTaskTemplate[]>([]);
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
@@ -143,7 +142,7 @@ export function StandardTasksManager({ projectId, phases, onTasksCreated }: Stan
             title: taskTemplate.name,
             description: taskTemplate.description,
             estimated_hours: taskTemplate.duration,
-            phase: null,
+    
             project: projectId,
             due_date: format(globalDueDate, 'yyyy-MM-dd'),
             is_standard_task: true,

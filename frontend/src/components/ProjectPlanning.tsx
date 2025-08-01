@@ -14,7 +14,7 @@ import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clo
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
 import { useProjectTasks } from '@/hooks/use-projects';
-import { ProjectPhases } from './ProjectPhases';
+
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { TaskModal } from './TaskModal';
 import { format } from 'date-fns';
@@ -31,7 +31,7 @@ const teamMemberSchema = z.object({
   project: z.string().min(1, 'Sélectionnez un projet'),
   user: z.string().min(1, 'Sélectionnez un utilisateur'),
   role: z.string().min(1, 'Sélectionnez un rôle'),
-  allocation_percentage: z.number().min(1, { message: "L'allocation doit être supérieure à 0%" }).max(100, { message: "L'allocation ne peut pas dépasser 100%" })
+  allocation_percentage: z.number().min(0, { message: "L'allocation doit être supérieure ou égale à 0%" })
 });
 
 const roleOptions = [
@@ -44,19 +44,17 @@ const roleOptions = [
 ];
 
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
-  const [activeTab, setActiveTab] = useState('phases');
+  const [activeTab, setActiveTab] = useState('team');
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   
   const { 
-    phases,
     teamMembers,
     addTeamMember,
     applyTaskTemplate,
     loading,
-    checkUserAllocation,
     services
   } = useProjectLifecycle(projectId);
 
@@ -112,24 +110,10 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   });
 
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [currentAllocation, setCurrentAllocation] = useState<number | null>(null);
 
   const handleUserChange = async (userId: string) => {
     form.setValue('user', userId);
     setSelectedUser(userId);
-    try {
-      const allocation = await checkUserAllocation(userId);
-      setCurrentAllocation(allocation);
-      form.setValue('allocation_percentage', allocation);
-      if (allocation > 0) {
-        form.setError('allocation_percentage', {
-          type: 'info',
-          message: `Allocation actuelle: ${allocation}%`
-        });
-      }
-    } catch (error) {
-      console.error('Error checking user allocation:', error);
-    }
   };
   
   return (
@@ -139,16 +123,11 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       </CardHeader>
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="phases">Phases</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="team">Équipe</TabsTrigger>
             <TabsTrigger value="tasks">Activités</TabsTrigger>
             <TabsTrigger value="templates">Activités standards</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="phases" className="space-y-4">
-            <ProjectPhases projectId={projectId} />
-          </TabsContent>
 
           <TabsContent value="tasks" className="space-y-4">
             <div className="flex justify-between items-center mb-4">
@@ -175,7 +154,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <TaskModal projectId={projectId} mode="create" phases={phases}>
+              <TaskModal projectId={projectId} mode="create">
                 <Button>
                   <Plus className="h-4 w-4 mr-2" />
                   Nouvelle activité
@@ -239,11 +218,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                                   <span>{task.estimated_hours}h</span>
                                 </div>
                               )}
-                              {task.phase && (
-                                <div className="flex items-center gap-1">
-                                  <Badge variant="secondary">{task.phase_name}</Badge>
-                                </div>
-                              )}
+
                             </div>
                           </div>
                           <div className="flex gap-1">
@@ -257,14 +232,14 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                             )}
 
                             {task.status !== 'Terminé' && (
-                              <TaskModal projectId={projectId} task={extendedTask} mode="edit" phases={phases}>
+                              <TaskModal projectId={projectId} task={extendedTask} mode="edit">
                                 <Button variant="ghost" size="icon">
                                   <Edit className="h-4 w-4" />
                                 </Button>
                               </TaskModal>
                             )}
                             
-                            <TaskModal projectId={projectId} task={extendedTask} mode="view" phases={phases}>
+                            <TaskModal projectId={projectId} task={extendedTask} mode="view">
                               <Button variant="ghost" size="icon">
                                 <View className="h-4 w-4" />
                               </Button>
@@ -293,6 +268,9 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Ajouter un membre à l'équipe</DialogTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Ajoutez un nouveau membre à l'équipe du projet avec son rôle et son allocation de temps.
+                    </p>
                   </DialogHeader>
                   <Form {...form}>
                     <form onSubmit={form.handleSubmit(handleAddTeamMember)} className="space-y-4">
@@ -320,11 +298,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                               </SelectContent>
                             </Select>
                             <FormMessage />
-                            {currentAllocation !== null && (
-                              <p className="text-sm text-gray-500">
-                                Allocation actuelle: {currentAllocation}%
-                              </p>
-                            )}
                           </FormItem>
                         )}
                       />
@@ -356,7 +329,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                       
                       <FormField
                         control={form.control}
-                        rules={{ validate: (value) => Number(value) >= 0 && Number(value) <= 100 }}
                         name="allocation_percentage"
                         render={({ field }) => (
                           <FormItem>
@@ -369,11 +341,10 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                                 placeholder="100"
                                 {...field}
                                 min={0}
-                                max={100}
                                 value={field.value}
                                 onChange={(e) => {
                                   const value = e.target.value;
-                                  if (value === '' || (Number(value) >= 0 && Number(value) <= 100)) {
+                                  if (value === '' || Number(value) >= 0) {
                                     field.onChange(Number(value));
                                   }
                                 }}
@@ -432,7 +403,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
           <TabsContent value="templates" className="space-y-4">
             <StandardTasksManager 
               projectId={projectId}
-              phases={phases}
               onTasksCreated={() => {
                 // Rafraîchir les données des activités
                 // window.location.reload();

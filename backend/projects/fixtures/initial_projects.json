@@ -16,6 +16,7 @@
       "progress": 45,
       "budget": "25000.00",
       "client": 1,
+      "contract": 1,
       "created_by": 3,
       "tags": ["web", "responsive", "corporate"]
     }
@@ -37,6 +38,7 @@
       "progress": 20,
       "budget": "15000.00",
       "client": 2,
+      "contract": 2,
       "created_by": 2,
       "tags": ["print", "marketing", "lancement"]
     }
@@ -58,6 +60,7 @@
       "progress": 70,
       "budget": "30000.00",
       "client": 3,
+      "contract": 3,
       "created_by": 3,
       "tags": ["vidéo", "institutionnel", "corporate"]
     }
@@ -79,6 +82,7 @@
       "progress": 10,
       "budget": "5000.00",
       "client": 4,
+      "contract": 4,
       "created_by": 2,
       "tags": ["identité", "logo", "personnel"]
     }
@@ -100,6 +104,7 @@
       "progress": 90,
       "budget": "40000.00",
       "client": 5,
+      "contract": 5,
       "created_by": 3,
       "tags": ["e-commerce", "paiement", "web"]
     }

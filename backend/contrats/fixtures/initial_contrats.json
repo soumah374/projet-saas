@@ -1,0 +1,156 @@
+[
+  {
+    "model": "contrats.contrat",
+    "pk": 1,
+    "fields": {
+      "numero": "CONT-2024-001",
+      "client": 1,
+      "date_creation": "2024-01-15T00:00:00Z",
+      "date_debut": "2024-01-15",
+      "date_fin": "2024-06-30",
+      "statut": "actif",
+      "taux_tva": "18.00",
+      "appliquer_tva": true,
+      "taux_frais_agence": "15.00",
+      "appliquer_frais_agence": false,
+      "montant_ht": "25000.00",
+      "montant_tva": "4500.00",
+      "montant_frais_agence": "0.00",
+      "montant_ttc": "29500.00",
+      "conditions": "Paiement en 3 échéances : 30% à la commande, 40% à mi-parcours, 30% à la livraison",
+      "notes": "Contrat pour la refonte du site web corporate",
+      "echeances_contrat": [
+        {"type": "acompte", "pourcentage": 30, "delai": 0},
+        {"type": "tranche", "pourcentage": 40, "delai": 30},
+        {"type": "solde", "pourcentage": 30, "delai": 60}
+      ],
+      "contenu_personnalise": "",
+      "variables_personnalisees": {},
+      "created_at": "2024-01-15T00:00:00Z",
+      "updated_at": "2024-01-15T00:00:00Z"
+    }
+  },
+  {
+    "model": "contrats.contrat",
+    "pk": 2,
+    "fields": {
+      "numero": "CONT-2024-002",
+      "client": 2,
+      "date_creation": "2024-02-15T00:00:00Z",
+      "date_debut": "2024-03-01",
+      "date_fin": "2024-05-15",
+      "statut": "envoye",
+      "taux_tva": "18.00",
+      "appliquer_tva": true,
+      "taux_frais_agence": "10.00",
+      "appliquer_frais_agence": true,
+      "montant_ht": "15000.00",
+      "montant_tva": "2700.00",
+      "montant_frais_agence": "1500.00",
+      "montant_ttc": "19200.00",
+      "conditions": "Paiement en 2 échéances : 50% à la commande, 50% à la livraison",
+      "notes": "Contrat pour la campagne marketing print",
+      "echeances_contrat": [
+        {"type": "acompte", "pourcentage": 50, "delai": 0},
+        {"type": "solde", "pourcentage": 50, "delai": 30}
+      ],
+      "contenu_personnalise": "",
+      "variables_personnalisees": {},
+      "created_at": "2024-02-15T00:00:00Z",
+      "updated_at": "2024-02-15T00:00:00Z"
+    }
+  },
+  {
+    "model": "contrats.contrat",
+    "pk": 3,
+    "fields": {
+      "numero": "CONT-2024-003",
+      "client": 3,
+      "date_creation": "2024-01-30T00:00:00Z",
+      "date_debut": "2024-02-01",
+      "date_fin": "2024-04-30",
+      "statut": "signe",
+      "taux_tva": "18.00",
+      "appliquer_tva": true,
+      "taux_frais_agence": "12.00",
+      "appliquer_frais_agence": true,
+      "montant_ht": "30000.00",
+      "montant_tva": "5400.00",
+      "montant_frais_agence": "3600.00",
+      "montant_ttc": "39000.00",
+      "conditions": "Paiement en 4 échéances : 25% à la commande, 25% à mi-parcours, 25% à la livraison, 25% à la réception",
+      "notes": "Contrat pour la production vidéo institutionnelle",
+      "echeances_contrat": [
+        {"type": "acompte", "pourcentage": 25, "delai": 0},
+        {"type": "tranche", "pourcentage": 25, "delai": 30},
+        {"type": "tranche", "pourcentage": 25, "delai": 60},
+        {"type": "solde", "pourcentage": 25, "delai": 90}
+      ],
+      "contenu_personnalise": "",
+      "variables_personnalisees": {},
+      "created_at": "2024-01-30T00:00:00Z",
+      "updated_at": "2024-01-30T00:00:00Z"
+    }
+  },
+  {
+    "model": "contrats.contrat",
+    "pk": 4,
+    "fields": {
+      "numero": "CONT-2024-004",
+      "client": 4,
+      "date_creation": "2024-03-15T00:00:00Z",
+      "date_debut": "2024-04-01",
+      "date_fin": "2024-05-30",
+      "statut": "brouillon",
+      "taux_tva": "18.00",
+      "appliquer_tva": true,
+      "taux_frais_agence": "8.00",
+      "appliquer_frais_agence": false,
+      "montant_ht": "5000.00",
+      "montant_tva": "900.00",
+      "montant_frais_agence": "0.00",
+      "montant_ttc": "5900.00",
+      "conditions": "Paiement en 2 échéances : 60% à la commande, 40% à la livraison",
+      "notes": "Contrat pour l'identité visuelle personnelle",
+      "echeances_contrat": [
+        {"type": "acompte", "pourcentage": 60, "delai": 0},
+        {"type": "solde", "pourcentage": 40, "delai": 30}
+      ],
+      "contenu_personnalise": "",
+      "variables_personnalisees": {},
+      "created_at": "2024-03-15T00:00:00Z",
+      "updated_at": "2024-03-15T00:00:00Z"
+    }
+  },
+  {
+    "model": "contrats.contrat",
+    "pk": 5,
+    "fields": {
+      "numero": "CONT-2024-005",
+      "client": 5,
+      "date_creation": "2024-01-01T00:00:00Z",
+      "date_debut": "2024-01-01",
+      "date_fin": "2024-03-31",
+      "statut": "termine",
+      "taux_tva": "18.00",
+      "appliquer_tva": true,
+      "taux_frais_agence": "15.00",
+      "appliquer_frais_agence": true,
+      "montant_ht": "40000.00",
+      "montant_tva": "7200.00",
+      "montant_frais_agence": "6000.00",
+      "montant_ttc": "53200.00",
+      "conditions": "Paiement en 3 échéances : 40% à la commande, 30% à mi-parcours, 30% à la livraison",
+      "notes": "Contrat pour le développement du site e-commerce",
+      "echeances_contrat": [
+        {"type": "acompte", "pourcentage": 40, "delai": 0},
+        {"type": "tranche", "pourcentage": 30, "delai": 30},
+        {"type": "solde", "pourcentage": 30, "delai": 60}
+      ],
+      "contenu_personnalise": "",
+      "variables_personnalisees": {},
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  }
+] 

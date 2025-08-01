@@ -98,21 +98,11 @@ export interface ProjectMember {
   user: number;
 }
 
-export interface ProjectPhase {
-  id: number;
-  name: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  progress: number;
-  order: number;
-  project: string;
-}
+
 
 export interface ProjectTask {
   id: number;
   completion_percentage: string;
-  phase_name: string;
   assigned_to_name: string;
   title: string;
   description: string;
@@ -127,7 +117,6 @@ export interface ProjectTask {
   is_template: boolean;
   template_category?: string;
   project: string;
-  phase: number | null;
   assigned_to: number | null;
   is_standard_task: boolean | false;
 }
@@ -166,11 +155,11 @@ export interface Project {
   client: number | null;
   client_details?: ClientProfile;
   departments: string[];
-  contract: string;
+  contract: number | null;
+  contract_details?: Contrat;
   created_by: number;
   created_at: string;
   updated_at: string;
-  phases: ProjectPhase[];
   team_members: ProjectMember[];
   tasks: ProjectTask[];
   created_by_name: string;
@@ -254,7 +243,7 @@ export interface CreateProjectPayload {
   budget?: string;
   client: number | null;
   departments?: string[];
-  contract?: string;
+  contract?: number | null;
   tags?: string[];
 }
 
@@ -267,6 +256,7 @@ export interface ProjectFilters {
   type?: ProjectType;
   priority?: ProjectPriority;
   client?: number;
+  contract?: number;
   start_date?: string;
   end_date?: string;
   team_member?: number;
@@ -447,16 +437,7 @@ export interface Service {
   updated_at: string;
 }
 
-export interface Phase {
-  id: number;
-  name: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  progress: number;
-  order: number;
-  project: string;
-}
+
 
 export interface Category {
   id: number;
