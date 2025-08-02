@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Edit, Plus, Eye, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Phase, ProjectTask, UserList } from '@/lib/types';
+import { ProjectTask, UserList } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -227,6 +227,8 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode}: TaskMo
       toast.success('Activité supprimée avec succès');
       setOpen(false);
     } catch (error) {
+      console.log(error)
+      console.error(error)
       toast.error('Une erreur est survenue');
     }
   };

@@ -6,15 +6,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, Package, CheckSquare, Clock, Users, FileText } from 'lucide-react';
-import { useCategories, useServices, useServicesByCategory } from '@/hooks/use-services';
+import { Loader2, Package, CheckSquare, Clock, FileText } from 'lucide-react';
+import { useCategories } from '@/hooks/use-services';
 import { useCreateProjectTask } from '@/hooks/use-projects';
 import { useContratById } from '@/hooks/use-contrats';
 import { useDevisServicesByContract } from '@/hooks/use-devis';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Service, Category } from '@/lib/types';
+import { Category } from '@/lib/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
@@ -66,13 +67,14 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
 
   const { data: categories, isLoading: categoriesLoading } = useCategories();
   const createTaskMutation = useCreateProjectTask();
+  const queryClient = useQueryClient();
 
   
   // Récupérer les détails du contrat si disponible
   const { data: contractDetails, isLoading: contractLoading } = useContratById(contractId || 0);
 
   // Récupérer les services des devis liés au contrat
-  const { data: devisServicesData, isLoading: devisServicesLoading } = useDevisServicesByContract(contractId);
+  const { data: devisServicesData, isLoading: devisServicesLoading } = useDevisServicesByContract(contractId,projectId);
 
   // Extraire les activités et frais des devis liés au contrat
   const devisServices = useMemo(() => {
@@ -177,6 +179,19 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
     }
   }, [effectiveServices]);
 
+  // Rafraîchir les données quand le composant se monte ou quand les dépendances changent
+  useEffect(() => {
+    const refreshData = async () => {
+      await queryClient.invalidateQueries({ queryKey: ['projectTasks', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      if (contractId) {
+        await queryClient.invalidateQueries({ queryKey: ['devis-services-by-contract', contractId, projectId] });
+      }
+    };
+    
+    refreshData();
+  }, [projectId, contractId, queryClient]);
+
   const handleCategoryChange = (category: Category) => {
     setSelectedCategory(category);
   };
@@ -227,16 +242,32 @@ export function StandardTasksManager({ projectId, contractId, onTasksCreated }: 
             project: projectId,
             due_date: format(globalDueDate, 'yyyy-MM-dd'),
             is_standard_task: true,
+            ligne_devis: taskTemplate.id,
           }
         });
       }
       
       toast.success(`${tasksToCreate.length} activité(s) créée(s) avec succès`);
+      
+      // Réinitialiser l'état local
       setSelectedCategory(null);
       setGeneratedTasks([]);
       setSelectedTasks(new Set());
       setGlobalDueDate(undefined);
+      
+      // Appeler le callback parent
       onTasksCreated?.();
+      
+      // Rafraîchir toutes les données liées au projet
+      await queryClient.invalidateQueries({ queryKey: ['projectTasks', projectId] });
+      await queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      if (contractId) {
+        await queryClient.invalidateQueries({ queryKey: ['devis-services-by-contract', contractId, projectId] });
+      }
+      
+      // Forcer le rechargement des données
+      await queryClient.refetchQueries({ queryKey: ['projectTasks', projectId] });
+      
     } catch (error) {
       toast.error('Erreur lors de la création des activités');
       console.error('Error creating tasks:', error);

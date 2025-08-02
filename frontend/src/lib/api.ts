@@ -541,7 +541,7 @@ export const devisAPI = {
     }) => api.post(`/devis/devis/${id}/envoyer_email_pdf/`, data),
     
     // Endpoint pour récupérer les services des devis liés à un contrat
-    getServicesByContract: (contractId: number) => api.get(`/devis/devis/services_by_contract/?contract_id=${contractId}`),
+    getServicesByContract: (contractId: number, projectId: string) => api.get(`/devis/devis/services_by_contract/?contract_id=${contractId}&project_id=${projectId}`),
 };
 
 // Lignes de devis

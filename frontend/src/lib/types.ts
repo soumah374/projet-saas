@@ -119,6 +119,7 @@ export interface ProjectTask {
   project: string;
   assigned_to: number | null;
   is_standard_task: boolean | false;
+  ligne_devis?: number | null;
 }
 
 export interface TaskWithDeadline extends ProjectTask {

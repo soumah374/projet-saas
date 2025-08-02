@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
@@ -10,14 +9,10 @@ import { fr } from 'date-fns/locale';
 import { 
   AlertTriangle, 
   Clock, 
-  CheckCircle, 
   Users, 
   DollarSign, 
-  Calendar,
-  ArrowUpCircle,
   ArrowDownCircle,
-  Bell,
-  Filter
+  Bell
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { projectApi } from '@/lib/api';

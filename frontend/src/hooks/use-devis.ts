@@ -512,17 +512,17 @@ export interface DevisServicesResponse {
   }>;
 }
 
-export const useDevisServicesByContract = (contractId: number | null) => {
+export const useDevisServicesByContract = (contractId: number | null, projectId: string) => {
   return useQuery({
-    queryKey: ['devis-services-by-contract', contractId],
+    queryKey: ['devis-services-by-contract', contractId, projectId],
     queryFn: async (): Promise<DevisServicesResponse> => {
       if (!contractId) {
         throw new Error('Contract ID is required');
       }
       
-      const response = await devisAPI.getServicesByContract(contractId);
+      const response = await devisAPI.getServicesByContract(contractId,projectId);
       return response.data;
     },
-    enabled: !!contractId,
+    enabled: !!contractId && !!projectId,
   });
 }; 

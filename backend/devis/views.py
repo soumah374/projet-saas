@@ -12,6 +12,7 @@ import tempfile
 import os
 import logging
 from decimal import Decimal
+from projects.models import ProjectTask
 from .models import Devis, LigneDevis, LigneDevisIntervenant
 from .serializers import (
     DevisSerializer, DevisCreateSerializer,
@@ -303,6 +304,7 @@ class DevisViewSet(viewsets.ModelViewSet):
     def services_by_contract(self, request):
         """Récupérer les services associés aux devis liés à un contrat"""
         contract_id = request.query_params.get('contract_id')
+        project_id = request.query_params.get('project_id')
         
         if not contract_id:
             return Response(
@@ -322,10 +324,19 @@ class DevisViewSet(viewsets.ModelViewSet):
             if contrat.devis:
                 devis_ids.extend([devis.id for devis in contrat.devis.all()])
             
+            # Récupérer les IDs des lignes de devis déjà utilisées dans les tâches du projet
+            project_tasks_ligne_devis_ids = ProjectTask.objects.filter(
+                project_id=project_id, 
+                ligne_devis__isnull=False
+            ).values_list('ligne_devis_id', flat=True)
+            
             # Récupérer les lignes de devis avec activités et frais
+            # Exclure les lignes déjà utilisées dans les tâches du projet
             lignes_devis = LigneDevis.objects.filter(
                 devis_id__in=devis_ids,
                 type_ligne__in=['prestation', 'frais']
+            ).exclude(
+                id__in=project_tasks_ligne_devis_ids
             ).select_related('activity', 'frais_category', 'ligne_frais', 'unite', 'devis').prefetch_related('intervenants')
             
             # Organiser les activités et frais par devis

@@ -300,6 +300,9 @@ class ProjectTask(models.Model):
     is_template = models.BooleanField(default=False, help_text="Indique si cette tâche est un modèle")
     template_category = models.CharField(max_length=50, blank=True, help_text="Catégorie du modèle de tâche")
     
+    # Relations ligne de devis
+    ligne_devis = models.ForeignKey('devis.LigneDevis', on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks_ligne_devis')
+    
     class Meta:
         ordering = ['start_date', 'due_date', 'created_at']
         verbose_name = 'Tâche'
