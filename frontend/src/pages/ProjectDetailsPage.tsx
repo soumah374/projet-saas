@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ProjectPlanning } from '@/components/projects/ProjectPlanning';
 import { ProjectTimesheets } from '@/components/projects/ProjectTimesheets';
 import { ProjectTrackingAlerts } from '@/components/projects/ProjectTrackingAlerts';
+import { ProjectTrackingTable } from '@/components/projects/ProjectTrackingTable';
 import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { DocumentManager } from '@/components/DocumentManager';
 import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
@@ -13,13 +14,20 @@ import { useProject } from '@/hooks/use-projects';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { differenceInDays, format } from 'date-fns';
+import { useProjectAlerts } from '@/hooks/use-project-alerts';
 
 export function ProjectDetailsPage() {
+  // ...existing code...
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('planning');
+  const [activeTrackingTab, setActiveTrackingTab] = useState('tracking');
   
   const { data: project, isLoading, error } = useProject(projectId || '');
+  
+  // Récupération du nombre d'alertes
+  const { data: alerts = [] } = useProjectAlerts(projectId || '');
 
   if (isLoading) {
     return (
@@ -60,8 +68,47 @@ export function ProjectDetailsPage() {
           <p className="text-gray-600">{project.client_details?.nom_complet || 'Client non assigné'}</p>
         </div>
       </div>
-      
-      <ProjectTrackingAlerts projectId={projectId} />
+
+      <Tabs value={activeTrackingTab} onValueChange={setActiveTrackingTab} className="mb-6">
+        <TabsList className='grid w-full grid-cols-4'>
+          <TabsTrigger value="tracking">Tableau de suivi du projet</TabsTrigger>
+          <TabsTrigger value="tracking-alert">
+            Suivi alertes
+            {alerts.length > 0 && (
+              <span className="ml-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
+                {alerts.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="tracking">
+          {/* Affichage de la durée totale du projet */}
+          {(() => {
+            if (project.contract_details?.date_debut && project.contract_details?.date_fin) {
+              try {
+                const debut = new Date(project.contract_details.date_debut);
+                const fin = new Date(project.contract_details.date_fin);
+                const jours = differenceInDays(fin, debut);
+                if (jours > 0) {
+                  return (
+                    <div className="mb-4 text-base text-gray-700">
+                      <span className="font-semibold">Durée totale du projet :</span> {jours} jours
+                    </div>
+                  );
+                }
+              } catch (e) {
+                console.log(e)
+              }
+            }
+            return null;
+          })()}
+          <ProjectTrackingTable project={project} />
+        </TabsContent>
+        <TabsContent value="tracking-alert"> 
+          <ProjectTrackingAlerts projectId={projectId} />
+        </TabsContent>
+      </Tabs>
+      {/* Section Tableau de suivi */}
       
       {/* Informations client et contrat */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -76,7 +123,7 @@ export function ProjectDetailsPage() {
           />
         )}
       </div>
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="planning">Planification</TabsTrigger>
@@ -84,19 +131,19 @@ export function ProjectDetailsPage() {
           <TabsTrigger value="timesheets">Feuilles de temps</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="planning">
           <ProjectPlanning projectId={projectId} />
         </TabsContent>
-        
+
         <TabsContent value="calendar">
           <ProjectCalendar project={project} />
         </TabsContent>
-        
+
         <TabsContent value="timesheets">
           <ProjectTimesheets projectId={projectId} />
         </TabsContent>
-        
+
         <TabsContent value="documents">
           <DocumentManager projectId={projectId} />
         </TabsContent>
