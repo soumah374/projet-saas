@@ -181,32 +181,22 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
 class ProjectListSerializer(serializers.ModelSerializer):
     """Sérialiseur léger pour la liste des projets"""
     
-    phase_count = serializers.SerializerMethodField()
     team_count = serializers.SerializerMethodField()
-    current_phase = serializers.SerializerMethodField()
     client_details = ClientProfileSerializer(source='client', read_only=True)
     contract_details = ContratSerializer(source='contract', read_only=True)
-    
+    created_by_details = UserSerializer(source='created_by', read_only=True)
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'type', 'status', 'priority',
             'start_date', 'deadline', 'progress', 'client',
-            'client_details', 'contract', 'contract_details', 'phase_count', 'team_count', 'current_phase'
+            'client_details', 'contract', 'contract_details', 'team_count', 'created_by','created_by_details'
         ]
-    
-    @extend_schema_field(int)
-    def get_phase_count(self, obj):
-        return 0  # Phases supprimées
     
     @extend_schema_field(int)
     def get_team_count(self, obj):
         return obj.team_members.count()
     
-    @extend_schema_field(str)
-    def get_current_phase(self, obj):
-        return None  # Phases supprimées
-
 
 class ProjectDetailSerializer(serializers.ModelSerializer):
     """Sérialiseur complet pour les détails d'un projet"""
@@ -218,6 +208,8 @@ class ProjectDetailSerializer(serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     total_hours = serializers.SerializerMethodField()
     total_estimated_hours = serializers.SerializerMethodField()
+    created_by = UserSerializer(source='user', read_only=True)
+
     
     class Meta:
         model = Project

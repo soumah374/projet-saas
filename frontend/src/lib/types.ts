@@ -193,6 +193,7 @@ export interface ExtendedProject extends Omit<Project, 'created_by' | 'budget' |
   events?: ProjectEvent[];
   team_count?: string;
   client_details: ClientData;
+  created_by_details: User;
 }
 
 export interface ProjectList {
@@ -210,6 +211,7 @@ export interface ProjectList {
   days_remaining: string | null;
   is_overdue: string | null;
   created_at: string | null;
+  created_by_details: User;
 }
 
 export interface ProjectCreate {

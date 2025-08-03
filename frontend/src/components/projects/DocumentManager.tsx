@@ -15,7 +15,7 @@ import {
 import { useDocuments, useCreateDocument, useDeleteDocument } from '@/hooks/use-documents';
 import type { Document, DocumentType, DocumentCategory } from '@/lib/types';
 import { useToast } from '@/components/ui/use-toast';
-import { DocumentDetailsModal } from './DocumentDetailsModal';
+import { DocumentDetailsModal } from '../DocumentDetailsModal';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
@@ -286,7 +286,6 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="Tous">Tous</SelectItem>
-            <SelectItem value="contract">Contrats</SelectItem>
             <SelectItem value="proposal">Propositions</SelectItem>
             <SelectItem value="report">Rapports</SelectItem>
             <SelectItem value="presentation">Présentations</SelectItem>
@@ -357,7 +356,6 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
                     <SelectValue placeholder="Sélectionnez une catégorie" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="contract">Contrat</SelectItem>
                     <SelectItem value="proposal">Proposition</SelectItem>
                     <SelectItem value="report">Rapport</SelectItem>
                     <SelectItem value="presentation">Présentation</SelectItem>

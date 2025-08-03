@@ -34,7 +34,7 @@ const teamMemberSchema = z.object({
   project: z.string().min(1, 'Sélectionnez un projet'),
   user: z.string().min(1, 'Sélectionnez un utilisateur'),
   role: z.string().min(1, 'Sélectionnez un rôle'),
-  // allocation_percentage: z.number().min(0, { message: "L'allocation doit être supérieure ou égale à 0%" })
+  allocation_percentage: z.number().min(0, { message: "L'allocation doit être supérieure ou égale à 0%" })
 });
 
 const roleOptions = [
@@ -77,7 +77,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       project: projectId,
       user: '',
       role: '',
-      // allocation_percentage: 100
+      allocation_percentage: 100
     }
   });
   
@@ -270,6 +270,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                                 )}
 
                               </div>
+
                             </div>
                             <div className="flex gap-1">
 
@@ -387,6 +388,17 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                             </FormItem>
                           )}
                         />
+                        <FormField
+                          control={form.control}
+                          name="allocation_percentage"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Allocation</FormLabel>
+                              <Input type="number" {...field} />
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                         <Button type="submit" className="w-full">
                           Ajouter
                         </Button>
@@ -405,8 +417,14 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                           <div>
                             <p className="font-medium">
                               {member.user_details.first_name} {member.user_details.last_name}
+
                             </p>
-                            <p className="text-sm text-gray-500">{member.role}</p>
+                            <p className="text-sm text-gray-500">
+                              {member.role}
+                              <span className="text-xs text-gray-500 block">
+                                Allocation: {member.allocation_percentage}%
+                              </span>
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center space-x-4">

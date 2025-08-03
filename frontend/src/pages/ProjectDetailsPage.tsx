@@ -7,7 +7,7 @@ import { ProjectTimesheets } from '@/components/projects/ProjectTimesheets';
 import { ProjectTrackingAlerts } from '@/components/projects/ProjectTrackingAlerts';
 import { ProjectTrackingTable } from '@/components/projects/ProjectTrackingTable';
 import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
-import { DocumentManager } from '@/components/DocumentManager';
+import { DocumentManager } from '@/components/projects/DocumentManager';
 import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
 import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
 import { StartProjectModal } from '@/components/projects/StartProjectModal';

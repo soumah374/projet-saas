@@ -101,6 +101,11 @@ function App() {
                   <ProtectedRoute>
                     <ProjectCalendarPage />
                   </ProtectedRoute>
+                } /> 
+                <Route path="/projects/:projectId/documents" element={
+                  <ProtectedRoute>
+                    <DocumentsPage />
+                  </ProtectedRoute>
                 } />
                 <Route path="/teams" element={
                   <ProtectedRoute>

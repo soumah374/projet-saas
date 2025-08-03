@@ -85,7 +85,8 @@ const toProjectList = (project: ExtendedProject): ProjectList => ({
   days_remaining: project.days_remaining || null,
   is_overdue: project.is_overdue || null,
   created_at: project.created_at || null,
-  client_details: project.client_details
+  client_details: project.client_details,
+  created_by_details: project.created_by_details
 });
 
 export function ProjectManagement() {
@@ -265,17 +266,7 @@ export function ProjectManagement() {
         <Eye className="h-4 w-4 mr-1" />
         Détails
       </Button>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => navigate(`/projects/${project.id}/documents`)}
-        className="text-orange-600 hover:text-orange-700"
-      >
-        <FileText className="h-4 w-4 mr-1" />
-        Documents
-      </Button>
-      
+    
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
@@ -294,6 +285,10 @@ export function ProjectManagement() {
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/calendar`)}>
             <Calendar className="h-4 w-4 mr-2" />
             Calendrier
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/documents`)}>
+            <FileText className="h-4 w-4 mr-2" />
+            Documents
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-red-600">
@@ -609,7 +604,7 @@ export function ProjectManagement() {
                         <span className="font-medium">
                           {typeof project.created_by === 'object' 
                             ? `${project.created_by.first_name} ${project.created_by.last_name}`
-                            : `ID: ${project.created_by}`}
+                            : `ID: ${project.created_by_details.username}`}
                         </span>
                       </div>
 

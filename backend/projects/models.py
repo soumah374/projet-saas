@@ -121,131 +121,9 @@ class Project(models.Model):
         total_estimated_hours = sum(Decimal(task.estimated_hours or 0) for task in tasks)
         total_actual_hours = sum(Decimal(task.actual_hours or 0) for task in tasks)
         
-        # Calculer la progression basée sur les statuts des tâches avec pondération
-        progress_by_status = 0
-        total_weight = 0
-        
-        for task in tasks: 
-            # Pondération selon le statut
-            if task.status == 'Terminé':
-                weight = Decimal("1.0")  # 100% du poids
-                progress_by_status += weight
-            elif task.status == 'En cours':
-                # Calculer le pourcentage de progression basé sur les heures
-                if task.estimated_hours and task.estimated_hours > 0:
-                    completion_ratio = min(Decimal(task.actual_hours) / Decimal(task.estimated_hours), Decimal("1.0"))
-                    weight = Decimal("0.7")  # 70% du poids pour les tâches en cours
-                    progress_by_status += weight * completion_ratio
-                else:
-                    weight = Decimal("0.5")  # 50% du poids si pas d'heures estimées
-                    progress_by_status += weight
-            elif task.status == 'En pause':
-                weight = Decimal("0.3")  # 30% du poids pour les tâches en pause
-                progress_by_status += weight
-            elif task.status == 'À faire':
-                weight = Decimal("0.0")  # 0% du poids pour les tâches à faire
-                progress_by_status += weight
-            
-            total_weight += weight
-        
-        # Calculer la progression finale
-        if total_weight > 0:
-            status_progress = (progress_by_status / total_weight) * Decimal("100")
-        else:
-            status_progress = Decimal("0")
-        
-        # Calculer la progression basée sur les heures (si des heures sont estimées)
-        hours_progress = 0
-        if total_estimated_hours > 0:
-            hours_progress = min((Decimal(total_actual_hours) / Decimal(total_estimated_hours)) * Decimal("100"), Decimal("100"))
-        
-        # Combiner les deux calculs (70% statut + 30% heures)
-        if total_estimated_hours > 0:
-            final_progress = (Decimal(status_progress) * Decimal("0.7")) + (Decimal(hours_progress) * Decimal("0.3"))
-        else:
-            final_progress = status_progress
-        
-        # Mettre à jour la progression du projet
-        self.progress = int(final_progress)
-        self.save()
-        
-        # Calculs en jours
-        from datetime import date
-        today = date.today()
-        
-        # Jours totaux du projet
-        total_days = 0
-        if self.start_date and self.deadline:
-            total_days = (self.deadline - self.start_date).days
-        
-        # Jours écoulés depuis le début
-        days_elapsed = 0
-        if self.start_date:
-            days_elapsed = (today - self.start_date).days
-        
-        # Jours restants jusqu'à la deadline
-        days_remaining = 0
-        if self.deadline:
-            days_remaining = (self.deadline - today).days
-        
-        # Progression temporelle (en jours)
-        temporal_progress = 0
-        if total_days > 0:
-            temporal_progress = min((days_elapsed / total_days) * 100, 100)
-        
-        # Jours de travail estimés vs réels
-        estimated_work_days = 0
-        actual_work_days = 0
-        
-        if total_estimated_hours > 0:
-            # Estimation : 8 heures par jour de travail
-            estimated_work_days = Decimal(total_estimated_hours) / Decimal("8")
-            actual_work_days = Decimal(total_actual_hours) / Decimal("8")
-        
-        return {
-            'progress': self.progress,
-            'status_progress': int(status_progress),
-            'hours_progress': int(hours_progress),
-            'total_estimated_hours': float(total_estimated_hours),
-            'total_actual_hours': float(total_actual_hours),
-            'completed_tasks': tasks.filter(status='Terminé').count(),
-            'total_tasks': tasks.count(),
-            # Métriques en jours
-            'total_days': total_days,
-            'days_elapsed': days_elapsed,
-            'days_remaining': days_remaining,
-            'temporal_progress': int(temporal_progress),
-            'estimated_work_days': float(estimated_work_days),
-            'actual_work_days': float(actual_work_days),
-            'work_days_progress': int((actual_work_days / estimated_work_days * 100) if estimated_work_days > 0 else 0),
-            # Efficacité temporelle
-            'temporal_efficiency': int((final_progress / temporal_progress * 100) if temporal_progress > 0 else 0),
-            'is_ahead_schedule': final_progress > temporal_progress,
-            'is_behind_schedule': final_progress < temporal_progress
-        }
-    
-    def get_progress_details(self):
-        """Obtenir les détails de progression sans mettre à jour"""
-        tasks = self.tasks.all()
-        
-        if not tasks.exists():
-            return {
-                'progress': self.progress,
-                'status_progress': 0,
-                'hours_progress': 0,
-                'total_estimated_hours': 0,
-                'total_actual_hours': 0,
-                'completed_tasks': 0,
-                'total_tasks': 0
-            }
-        
-        # Calculer la progression basée sur les heures estimées et réelles
-        total_estimated_hours = sum(Decimal(task.estimated_hours or 0) for task in tasks)
-        total_actual_hours = sum(Decimal(task.actual_hours or 0) for task in tasks)
-        
-        # Calculer la progression basée sur les statuts des tâches avec pondération
-        progress_by_status = 0
-        total_weight = 0
+                # Calculer la progression basée sur les statuts des tâches avec pondération
+        progress_by_status = Decimal("0")
+        total_weight = Decimal("0")
         
         for task in tasks:
             # Pondération selon le statut
@@ -277,7 +155,129 @@ class Project(models.Model):
             status_progress = Decimal("0")
         
         # Calculer la progression basée sur les heures (si des heures sont estimées)
-        hours_progress = 0
+        hours_progress = Decimal("0")
+        if total_estimated_hours > 0:
+            hours_progress = min((Decimal(total_actual_hours) / Decimal(total_estimated_hours)) * Decimal("100"), Decimal("100"))
+        
+        # Combiner les deux calculs (70% statut + 30% heures)
+        if total_estimated_hours > 0:
+            final_progress = (Decimal(status_progress) * Decimal("0.7")) + (Decimal(hours_progress) * Decimal("0.3"))
+        else:
+            final_progress = status_progress
+        
+        # Mettre à jour la progression du projet
+        self.progress = int(final_progress)
+        self.save()
+        
+        # Calculs en jours
+        from datetime import date
+        today = date.today()
+        
+        # Jours totaux du projet
+        total_days = Decimal("0")
+        if self.start_date and self.deadline:
+            total_days = (self.deadline - self.start_date).days
+        
+        # Jours écoulés depuis le début
+        days_elapsed = Decimal("0")
+        if self.start_date:
+            days_elapsed = (today - self.start_date).days
+        
+        # Jours restants jusqu'à la deadline
+        days_remaining = Decimal("0")
+        if self.deadline:
+            days_remaining = (self.deadline - today).days
+        
+        # Progression temporelle (en jours)
+        temporal_progress = Decimal("0")
+        if total_days > 0:
+            temporal_progress = min((Decimal(days_elapsed) / Decimal(total_days)) * Decimal('100'), Decimal('100'))
+        
+        # Jours de travail estimés vs réels
+        estimated_work_days = Decimal("0")
+        actual_work_days = Decimal("0")
+        
+        if total_estimated_hours > 0:
+            # Estimation : 8 heures par jour de travail
+            estimated_work_days = Decimal(total_estimated_hours) / Decimal("8")
+            actual_work_days = Decimal(total_actual_hours) / Decimal("8")
+        
+        return {
+            'progress': self.progress,
+            'status_progress': int(status_progress),
+            'hours_progress': int(hours_progress),
+            'total_estimated_hours': float(total_estimated_hours),
+            'total_actual_hours': float(total_actual_hours),
+            'completed_tasks': tasks.filter(status='Terminé').count(),
+            'total_tasks': tasks.count(),
+            # Métriques en jours
+            'total_days': total_days,
+            'days_elapsed': days_elapsed,
+            'days_remaining': days_remaining,
+            'temporal_progress': int(temporal_progress),
+            'estimated_work_days': float(estimated_work_days),
+            'actual_work_days': float(actual_work_days),
+            'work_days_progress': int((actual_work_days / estimated_work_days * Decimal('100')) if estimated_work_days > 0 else 0),
+            # Efficacité temporelle
+            'temporal_efficiency': int((final_progress / temporal_progress * Decimal('100')) if temporal_progress > 0 else 0),
+            'is_ahead_schedule': final_progress > temporal_progress,
+            'is_behind_schedule': final_progress < temporal_progress
+        }
+    
+    def get_progress_details(self):
+        """Obtenir les détails de progression sans mettre à jour"""
+        tasks = self.tasks.all()
+        
+        if not tasks.exists():
+            return {
+                'progress': self.progress,
+                'status_progress': 0,
+                'hours_progress': 0,
+                'total_estimated_hours': 0,
+                'total_actual_hours': 0,
+                'completed_tasks': 0,
+                'total_tasks': 0
+            }
+        
+        # Calculer la progression basée sur les heures estimées et réelles
+        total_estimated_hours = sum(Decimal(task.estimated_hours or 0) for task in tasks)
+        total_actual_hours = sum(Decimal(task.actual_hours or 0) for task in tasks)
+        
+        # Calculer la progression basée sur les statuts des tâches avec pondération
+        progress_by_status = Decimal("0")
+        total_weight = Decimal("0")
+        
+        for task in tasks:
+            # Pondération selon le statut
+            if task.status == 'Terminé':
+                weight = Decimal("1.0")  # 100% du poids
+                progress_by_status += weight
+            elif task.status == 'En cours':
+                # Calculer le pourcentage de progression basé sur les heures
+                if task.estimated_hours and task.estimated_hours > 0:
+                    completion_ratio = min(Decimal(task.actual_hours) / Decimal(task.estimated_hours), Decimal("1.0"))
+                    weight = Decimal("0.7")  # 70% du poids pour les tâches en cours
+                    progress_by_status += weight * completion_ratio
+                else:
+                    weight = Decimal("0.5")  # 50% du poids si pas d'heures estimées
+                    progress_by_status += weight
+            elif task.status == 'En pause':
+                weight = Decimal("0.3")  # 30% du poids pour les tâches en pause
+                progress_by_status += weight
+            elif task.status == 'À faire':
+                weight = Decimal("0.0")  # 0% du poids pour les tâches à faire
+                progress_by_status += weight
+            
+            total_weight += weight
+        
+        # Calculer la progression finale
+        if total_weight > 0:
+            status_progress = (progress_by_status / total_weight) * Decimal("100")
+        else:
+            status_progress = Decimal("0")
+        
+        # Calculer la progression basée sur les heures (si des heures sont estimées)
+        hours_progress = Decimal("0")
         if total_estimated_hours > 0:
             hours_progress = min((Decimal(total_actual_hours) / Decimal(total_estimated_hours)) * Decimal("100"), Decimal("100"))
         
@@ -308,13 +308,13 @@ class Project(models.Model):
             days_remaining = (self.deadline - today).days
         
         # Progression temporelle (en jours)
-        temporal_progress = 0
+        temporal_progress = Decimal("0")
         if total_days > 0:
-            temporal_progress = min((days_elapsed / total_days) * 100, 100)
+            temporal_progress = min((days_elapsed / total_days) * Decimal('100'), Decimal('100'))
         
         # Jours de travail estimés vs réels
-        estimated_work_days = 0
-        actual_work_days = 0
+        estimated_work_days = Decimal("0")
+        actual_work_days = Decimal("0")
         
         if total_estimated_hours > 0:
             # Estimation : 8 heures par jour de travail
@@ -336,9 +336,9 @@ class Project(models.Model):
             'temporal_progress': int(temporal_progress),
             'estimated_work_days': Decimal(estimated_work_days),
             'actual_work_days': Decimal(actual_work_days),
-            'work_days_progress': int((actual_work_days / estimated_work_days * 100) if estimated_work_days > 0 else 0),
+            'work_days_progress': int((actual_work_days / estimated_work_days * Decimal('100')) if estimated_work_days > 0 else 0),
             # Efficacité temporelle
-            'temporal_efficiency': int((final_progress / temporal_progress * 100) if temporal_progress > 0 else 0),
+            'temporal_efficiency': int((final_progress / temporal_progress * Decimal('100')) if temporal_progress > 0 else 0),
             'is_ahead_schedule': final_progress > temporal_progress,
             'is_behind_schedule': final_progress < temporal_progress
         }
@@ -552,11 +552,17 @@ class ProjectTask(models.Model):
             return 0
         from decimal import Decimal
         estimated_hours_decimal = Decimal(str(self.estimated_hours))
-        return min(100, int((self.actual_hours / estimated_hours_decimal) * 100))
+        actual_hours_decimal = Decimal(str(self.actual_hours))
+        percentage = (actual_hours_decimal / estimated_hours_decimal) * Decimal('100')
+        return min(100, int(percentage))
     
     def update_actual_hours(self):
         """Mettre à jour les heures réelles basées sur les timesheets"""
         total_hours = self.timesheets.aggregate(total=Sum('hours'))['total'] or 0
+        print(total_hours)
+        print(total_hours)
+        print(total_hours)
+        print(total_hours)
         self.actual_hours = total_hours
         self.save()
 

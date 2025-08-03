@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CreateProjectModal } from '@/components/projects/CreateProjectModal';
 import { useProjects } from '@/hooks/use-projects';
-import type { Project, ProjectStatus, ProjectType, ProjectPriority } from '@/lib/types';
+import type { ProjectStatus, ProjectType, ProjectPriority } from '@/lib/types';
 import { Plus, Search, Calendar, Users, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -20,7 +20,6 @@ const projectTypes: { value: ProjectType; label: string }[] = [
 
 const projectStatuses: { value: ProjectStatus; label: string }[] = [
   { value: 'Prospection', label: 'Prospection' },
-  { value: 'Devis', label: 'Devis' },
   { value: 'Production', label: 'Production' },
   { value: 'Livraison', label: 'Livraison' },
   { value: 'Terminé', label: 'Terminé' }

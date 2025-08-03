@@ -10,7 +10,7 @@ import { StatsOverview } from '@/components/StatsOverview';
 import { UserSidebar } from '@/components/UserSidebar';
 import { CreateProjectModal } from '@/components/projects/CreateProjectModal';
 import { ProjectDetailsPage } from '@/pages/ProjectDetailsPage';
-import { DocumentManager } from '@/components/DocumentManager';
+import { DocumentManager } from '@/components/projects/DocumentManager';
 import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { useAuth } from '@/hooks/use-auth';
 
