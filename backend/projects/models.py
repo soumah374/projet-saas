@@ -18,10 +18,9 @@ class Project(models.Model):
     
     STATUS_CHOICES = [
         ('Prospection', 'Prospection'),
-        ('Devis', 'Devis'),
         ('Production', 'Production'),
         ('Livraison', 'Livraison'),
-        ('Terminé', 'Terminé'),
+        ('Terminé', 'Terminé')
     ]
     
     PRIORITY_CHOICES = [
@@ -134,7 +133,7 @@ class Project(models.Model):
             elif task.status == 'En cours':
                 # Calculer le pourcentage de progression basé sur les heures
                 if task.estimated_hours and task.estimated_hours > 0:
-                    completion_ratio = min(Decimal(task.actual_hours) / (Decimal(task.estimated_hours)/8), Decimal("1.0"))
+                    completion_ratio = min(Decimal(task.actual_hours) / Decimal(task.estimated_hours), Decimal("1.0"))
                     weight = Decimal("0.7")  # 70% du poids pour les tâches en cours
                     progress_by_status += weight * completion_ratio
                 else:

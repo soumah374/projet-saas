@@ -380,7 +380,6 @@ export interface CreateProjectForm {
   objectives?: string;
   type: ProjectType;
   category?: ProjectCategory;
-  status: ProjectStatus;
   priority: ProjectPriority;
   start_date?: string;
   deadline: string;

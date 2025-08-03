@@ -12,15 +12,11 @@ import { Edit, X, Plus, Users, DollarSign, FileText, Loader2, UserPlus } from 'l
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { 
-  Project,
   CreateProjectForm, 
   ProjectType, 
   ProjectCategory, 
-  ProjectStatus, 
   ProjectPriority, 
   ProjectMemberRole,
-  User,
-  Team
 } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useTeams } from '@/hooks/use-teams';
@@ -28,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
 import type { ExtendedProject } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/utils'; 
 
 interface EditProjectModalProps {
   children: React.ReactNode;
@@ -133,7 +129,6 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
     deadline: project.deadline ? parseISO(project.deadline) : undefined,
     startDate: project.start_date ? parseISO(project.start_date) : undefined,
     priority: project.priority as ProjectPriority,
-    status: project.status as ProjectStatus,
     category: project.category as ProjectCategory,
     tags: Array.isArray(project.tags) ? project.tags : []
   });
@@ -190,7 +185,6 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
         deadline: project.deadline ? parseISO(project.deadline) : undefined,
         startDate: project.start_date ? parseISO(project.start_date) : undefined,
         priority: project.priority as ProjectPriority,
-        status: project.status as ProjectStatus,
         category: project.category as ProjectCategory,
         tags: Array.isArray(project.tags) ? project.tags : []
       });
@@ -198,10 +192,10 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
       // Initialize team members
       const existingMembers: TeamMember[] = project.team_members?.map(member => ({
         id: member.id.toString(),
-        user_id: member.user.id,
-        name: `${member.user.first_name} ${member.user.last_name}`,
+        user_id: member.user_details.id,
+        name: `${member.user_details.first_name} ${member.user_details.last_name}`,
         role: member.role,
-        email: member.user.email
+        email: member.user_details.email
       })) || [];
       setTeamMembers(existingMembers);
     }
@@ -210,7 +204,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
   const addTeamMember = () => {
     if (!newMember.user_id || !newMember.role) return;
 
-    const selectedUser = users?.results?.find(user => user.id.toString() === newMember.user_id);
+    const selectedUser = users?.data?.results?.find(user => user.id.toString() === newMember.user_id);
     if (!selectedUser) return;
 
     // Check if user is already in team
@@ -290,7 +284,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
         return;
       }
       
-      if (!formData.client.trim()) {
+      if (!String(formData.client).trim()) {
         alert('Le client est requis');
         setCurrentStep(1);
         setIsLoading(false);
@@ -311,21 +305,20 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
         return;
       }
       
-      const totalBudget = formData.budget ? parseFloat(formData.budget) : calculateTotalBudget();
+      const totalBudget = formData.budget ? parseFloat(formData.budget.toString()) : calculateTotalBudget();
       
       // Format data for API
       const projectData: Partial<CreateProjectForm> = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         objectives: formData.objectives?.trim() || undefined,
-        type: formData.type || 'Communication',
+        type: formData.type || 'Externe',
         category: formData.category || undefined,
-        status: formData.status,
         priority: formData.priority,
         start_date: formData.startDate ? format(formData.startDate, 'yyyy-MM-dd') : undefined,
         deadline: formData.deadline ? format(formData.deadline, 'yyyy-MM-dd') : '',
         budget: totalBudget.toString(),
-        client: formData.client.trim(),
+        client: Number(formData.client.toString()),
         tags: formData.tags.length > 0 ? formData.tags : undefined,
         budget_details: {
           production: (parseFloat(formData.budgetDetails.production) || 0).toString(),
@@ -367,17 +360,16 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
         deadline: project.deadline ? parseISO(project.deadline) : undefined,
         startDate: project.start_date ? parseISO(project.start_date) : undefined,
         priority: project.priority as ProjectPriority,
-        status: project.status as ProjectStatus,
         category: project.category as ProjectCategory,
         tags: Array.isArray(project.tags) ? project.tags : []
       });
 
       const existingMembers: TeamMember[] = project.team_members?.map(member => ({
         id: member.id.toString(),
-        user_id: member.user.id,
-        name: `${member.user.first_name} ${member.user.last_name}`,
+        user_id: member.user_details.id,
+        name: `${member.user_details.first_name} ${member.user_details.last_name}`,
         role: member.role,
-        email: member.user.email
+        email: member.user_details.email
       })) || [];
       setTeamMembers(existingMembers);
     }
@@ -394,7 +386,7 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
     if (currentStep < 3) {
       // Validation avant de passer à l'étape suivante
       if (currentStep === 1) {
-        if (!formData.title.trim() || !formData.type || !formData.client.trim()) {
+        if (!formData.title.trim() || !formData.type || !String(formData.client).trim()) {
           alert('Veuillez remplir tous les champs obligatoires (*)');
           return;
         }
@@ -636,20 +628,6 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                   </SelectContent>
                 </Select>
               </div>
-
-              <div>
-                <Label htmlFor="status">Statut</Label>
-                <Select value={formData.status} onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as ProjectStatus }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {statuses.map(status => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
 
             <Separator />
@@ -783,12 +761,12 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           Chargement des équipes...
                         </div>
-                      ) : teams?.results?.length === 0 ? (
+                      ) : teams?.data?.results?.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                           Aucune équipe disponible
                         </div>
                       ) : (
-                        teams?.results?.map(team => (
+                        teams?.data?.results?.map(team => (
                           <SelectItem key={team.id} value={team.id.toString()}>
                             {team.name} ({team.member_count} membres)
                           </SelectItem>
@@ -827,12 +805,12 @@ export const EditProjectModal = ({ children, project, onProjectUpdate }: EditPro
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           Chargement des utilisateurs...
                         </div>
-                      ) : users?.results?.length === 0 ? (
+                      ) : users?.data?.results?.length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                           Aucun utilisateur disponible
                         </div>
                       ) : (
-                        users?.results?.map(user => (
+                        users?.data?.results?.map(user => (
                           <SelectItem key={user.id} value={user.id.toString()}>
                             {user.first_name} {user.last_name} ({user.email})
                           </SelectItem>

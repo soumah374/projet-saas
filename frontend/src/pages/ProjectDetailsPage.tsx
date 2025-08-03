@@ -10,15 +10,15 @@ import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { DocumentManager } from '@/components/DocumentManager';
 import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
 import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
+import { StartProjectModal } from '@/components/projects/StartProjectModal';
 import { useProject } from '@/hooks/use-projects';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { differenceInDays, format } from 'date-fns';
 import { useProjectAlerts } from '@/hooks/use-project-alerts';
 
 export function ProjectDetailsPage() {
-  // ...existing code...
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('planning');
@@ -28,6 +28,14 @@ export function ProjectDetailsPage() {
   
   // Récupération du nombre d'alertes
   const { data: alerts = [] } = useProjectAlerts(projectId || '');
+
+  const canStartProject = project && (
+    project.status === 'Prospection' || 
+    project.status === 'Devis' ||
+    (project.status === 'Production' && !project.start_date)
+  );
+
+  const isProjectStarted = project && project.status === 'Production' && project.start_date;
 
   if (isLoading) {
     return (
@@ -63,10 +71,24 @@ export function ProjectDetailsPage() {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour aux projets
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-3xl font-bold">{project.title}</h1>
           <p className="text-gray-600">{project.client_details?.nom_complet || 'Client non assigné'}</p>
         </div>
+        {canStartProject && (
+          <StartProjectModal project={project}>
+            <Button className="bg-green-600 hover:bg-green-700">
+              <Play className="w-4 h-4 mr-2" />
+              Démarrer le projet
+            </Button>
+          </StartProjectModal>
+        )}
+        {isProjectStarted && (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle className="w-5 h-5" />
+            <span className="font-medium">Projet démarré</span>
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTrackingTab} onValueChange={setActiveTrackingTab} className="mb-6">

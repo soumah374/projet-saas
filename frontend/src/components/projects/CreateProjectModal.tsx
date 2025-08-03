@@ -12,10 +12,9 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useCreateProject } from '@/hooks/use-projects';
-import { useClients } from '@/hooks/use-clients';
 import { useContrats } from '@/hooks/use-contrats';
 import { toast } from 'sonner';
-import type { CreateProjectPayload, ProjectType, ProjectStatus, ProjectPriority, Contrat } from '@/lib/types';
+import type { CreateProjectPayload, ProjectType, ProjectPriority, Contrat } from '@/lib/types';
 import { ClientAutocomplete } from '../ui/ClientAutocomplete';
 
 interface CreateProjectModalProps {
@@ -44,7 +43,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
   const [selectedContrat, setSelectedContrat] = useState<Contrat | null>(null);
 
   const createProject = useCreateProject();
-  const { data: clientsData } = useClients();
   const { data: contratsData, isLoading: contratsLoading } = useContrats({ client: selectedClient });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,7 +145,7 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
           </div>
 
           {/* Classification */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="type">Type de projet *</Label>
               <Select
@@ -160,25 +158,6 @@ export function CreateProjectModal({ isOpen, onClose, onSuccess }: CreateProject
                 <SelectContent>
                   <SelectItem value="Externe">Externe</SelectItem>
                   <SelectItem value="Interne">Interne</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="status">Statut *</Label>
-              <Select
-                value={formData.status}
-                onValueChange={(value: ProjectStatus) => handleInputChange('status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Prospection">Prospection</SelectItem>
-                  <SelectItem value="Devis">Devis</SelectItem>
-                  <SelectItem value="Production">Production</SelectItem>
-                  <SelectItem value="Livraison">Livraison</SelectItem>
-                  <SelectItem value="Terminé">Terminé</SelectItem>
                 </SelectContent>
               </Select>
             </div>

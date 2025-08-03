@@ -49,7 +49,7 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
     const startDate = project.start_date ? new Date(project.start_date) : null;
     const deadline = new Date(project.deadline);
     const today = new Date();
-    
+        
     const daysCalculated = startDate && deadline ? 
       Math.ceil((deadline.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
     
@@ -95,7 +95,7 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
       budgetPercentage,
       margin,
       marginPercentage,
-      temporalProgress // Nouvelle propriété
+      temporalProgress
     };
   }, [project]);
 

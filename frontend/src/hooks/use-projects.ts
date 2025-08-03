@@ -336,4 +336,23 @@ export function useUpdateTeamMember() {
   });
 }
 
+export function useStartProject() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, startDate }: { projectId: string; startDate: string }) =>
+      apiRequest<Project>(`/${projectId}/`, {
+        method: 'PATCH',
+        data: { 
+          status: 'Production',
+          start_date: startDate 
+        },
+      }),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+  });
+}
+
  
