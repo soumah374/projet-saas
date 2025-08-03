@@ -550,7 +550,9 @@ class ProjectTask(models.Model):
         """Calculer le pourcentage de complétion basé sur les heures"""
         if not self.estimated_hours or self.estimated_hours == 0:
             return 0
-        return min(100, int((self.actual_hours / self.estimated_hours) * 100))
+        from decimal import Decimal
+        estimated_hours_decimal = Decimal(str(self.estimated_hours))
+        return min(100, int((self.actual_hours / estimated_hours_decimal) * 100))
     
     def update_actual_hours(self):
         """Mettre à jour les heures réelles basées sur les timesheets"""
