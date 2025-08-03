@@ -52,21 +52,21 @@ services:
       - sakom_network
 
   # Frontend React
-  # frontend:
-  #   build: ./frontend
-  #   command: npm run dev
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - VITE_API_URL=http://localhost:8000/api/v1
-  #     - VITE_APP_NAME=SAKOM
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - sakom_network
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "8080:8080"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - VITE_APP_NAME=SAKOM
+    depends_on:
+      - backend
+    networks:
+      - sakom_network
 
   # Nginx (optionnel pour la production)
   nginx:

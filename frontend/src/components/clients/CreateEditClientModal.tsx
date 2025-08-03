@@ -263,9 +263,30 @@ export function CreateEditClientModal({
                   <Input name="rccm_nif" placeholder="RCCM ou NIF" value={form.rccm_nif} onChange={handleChange} />
                 </div>
               </div>
-              <div>
-                <Label className="text-sm font-medium">Contact</Label>
-                <Input name="contact" placeholder="Contact" value={form.contact} onChange={handleChange} />
+              <div className="space-y-4 border-t pt-4">
+                <h4 className="font-medium">Infos contact</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Prénom *</Label>
+                    <Input name="prenom" placeholder="Prénom" value={form.prenom} onChange={handleChange} required />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Nom *</Label>
+                    <Input name="nom" placeholder="Nom" value={form.nom} onChange={handleChange} required />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Email</Label>
+                    <Input name="email" type="email" placeholder="Email" value={form.email} onChange={handleChange} />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Téléphone</Label>
+                    <Input name="telephone" placeholder="Téléphone" value={form.telephone} onChange={handleChange} />
+                  </div>
+                </div>
+                {/* <Label className="text-sm font-medium">Contact</Label>
+                <Input name="contact" placeholder="Contact" value={form.contact} onChange={handleChange} /> */}
               </div>
             </div>
           )}
