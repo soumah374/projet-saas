@@ -201,11 +201,6 @@ export function ClientsPage() {
     setDetailOpen(true);
   };
 
-  const handleCloseDetail = () => {
-    setDetailOpen(false);
-    setDetailClient(null);
-  };
-
   // Générer les options uniques pour ville et pays
   const villes = Array.from(new Set(clients.map(c => c.ville).filter(Boolean))) as string[];
   const paysList = Array.from(new Set(clients.map(c => c.pays).filter(Boolean))) as string[];

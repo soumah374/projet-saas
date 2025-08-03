@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Plus, Edit, Trash2, UserPlus, History, Power, Search, ArrowUpDown } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'

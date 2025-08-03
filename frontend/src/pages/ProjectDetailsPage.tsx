@@ -145,7 +145,8 @@ export function ProjectDetailsPage() {
                 if (jours > 0) {
                   return (
                     <div className="mb-4 text-base text-gray-700">
-                      <span className="font-semibold">Durée totale du projet :</span> {jours} jours
+                      <span className="font-semibold">Durée totale du projet :</span> {jours} jours <br />
+                      <span className="font-semibold text-xs text-gray-500">Date de démarrage :</span> <span className="text-xs">{ project.start_date ? format(new Date(project.start_date), 'dd/MM/yyyy') : 'Non définie'}</span> <br />
                     </div>
                   );
                 }

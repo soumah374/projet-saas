@@ -17,7 +17,6 @@ import {
   useDeleteLigneDevis,
   useActivitesParService,
   useIntervenantsParActivite,
-  type Devis
 } from '@/hooks/use-devis';
 import { useCreateContratFromDevis } from '@/hooks/use-contrats';
 import { lignesDevisAPI } from '@/lib/api';
@@ -34,7 +33,7 @@ import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useServices } from '@/hooks/use-services';
 import { useUnitesStandards } from '@/hooks/use-unites';
-import { formatDate, formatMontant, formatMontantPDF } from '@/lib/formatters';
+import { formatMontant } from '@/lib/formatters';
 import { PDFExport } from '@/components/PDFExport';
 import { useFraisCategories } from '@/hooks/use-frais-categories';
 import { useLignesFraisByCategory } from '@/hooks/use-lignes-frais';

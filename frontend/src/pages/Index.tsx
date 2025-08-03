@@ -98,7 +98,7 @@ const Index = () => {
       case 'project-details':
         return (
           <ProjectDetailsPage 
-            project={selectedProject}
+            project={selectedProject as any}
             onBack={() => setCurrentView('dashboard')}
             onUpdateProject={handleProjectUpdate}
           />

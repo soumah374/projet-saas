@@ -14,8 +14,6 @@ import {
   useCreateDevisAvecLignes,
   useActivitesParService,
   useIntervenantsParActivite,
-  type LigneDevis,
-  type LigneDevisIntervenant
 } from '@/hooks/use-devis';
 import { useServices } from '@/hooks/use-services';
 import { useUnitesStandards } from '@/hooks/use-unites';
@@ -435,7 +433,7 @@ export function DevisCreatePage() {
         appliquer_frais_agence: form.appliquer_frais_agence,
         notes: form.notes,
         conditions: form.conditions,
-        lignes: lignesData,
+        lignes: lignesData as any,
       });
       toast.success('Devis créé avec succès');
       navigate('/devis');
