@@ -135,9 +135,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <List className="h-4 w-4" /> Catalogue des prestations
                   </Link>
-                  {/* <Link to="/activities" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    <Activity className="h-4 w-4" /> Activités
-                  </Link> */}
                   <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
                     <Currency className="h-4 w-4" /> Taux horaires GNF
                   </Link>
@@ -207,49 +204,13 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             </Link>
 
             {/* Projets accordéon */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => toggleMenu('projets')} 
-                className={cn(
-                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/projects') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <FolderOpen className="h-5 w-5" /> Projets
-                <span className="ml-auto flex items-center gap-2">
-                  {/* <Badge variant="secondary" className="bg-blue-100 text-blue-600">
-                    {statistics?.total_projects || 0}
-                  </Badge> */}
-                  {openMenus.projets ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </span>
-              </button>
-              {openMenus.projets && (
-                <div className="ml-8 space-y-1">
-                  <Link to="/projects" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
-                    <Target className="h-4 w-4" /> Tous les projets
-                  </Link>
-                  <Link to="/projects?status=en_cours" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
-                    <Clock className="h-4 w-4" /> Mes projets
-                    {/* <Badge variant="secondary" className={getStatusColor("En cours")}>
-                      {statistics?.active_projects || 0}
-                    </Badge> */}
-                  </Link>
-                  {/* <Link to="/projects?status=termine" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
-                    <CheckCircle2 className="h-4 w-4" /> Terminés
-                    <Badge variant="secondary" className={getStatusColor("Terminé")}>
-                      {statistics?.completed_projects || 0}
-                    </Badge>
-                  </Link>
-                  <Link to="/projects?status=retard" className="flex items-center gap-2 text-sm text-gray-600 h-8 hover:text-blue-600">
-                    <AlertCircle className="h-4 w-4" /> En retard
-                    <Badge variant="secondary" className={getStatusColor("En retard")}>
-                      {statistics?.overdue_projects || 0}
-                    </Badge>
-                  </Link> */}
-                </div>
-              )}
-            </div>
-
+            <Link to="/projects" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/projects') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+              <Target className="h-4 w-4" /> <span>Projets</span>
+            </Link>
+          
             {/* Planning accordéon */}
             {/* <div className="space-y-2">
               <button 

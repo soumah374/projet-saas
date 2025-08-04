@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -19,7 +19,6 @@ import {
   useCloturerContrat,
   useAnnulerContrat,
   useSuspendreContrat,
-  useDevisDisponibles,
   useArchiverContrat,
   type Contrat
 } from '@/hooks/use-contrats';
@@ -32,7 +31,6 @@ export function ContratsPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   
   // États pour les modals
@@ -46,7 +44,7 @@ export function ContratsPage() {
   const { data: contratsData, isLoading } = useContrats({
     search: searchTerm,
     statut: statusFilter === 'all' ? undefined : statusFilter,
-    page: currentPage,
+    page: 1,
     page_size: pageSize,
   });
   
@@ -93,6 +91,7 @@ export function ContratsPage() {
       setContratToEdit(null);
     } catch (err) {
       // Error handled by hook
+      console.log(err);
     }
   };
 
@@ -105,6 +104,7 @@ export function ContratsPage() {
       setContratToDelete(null);
     } catch (err) {
       // Error handled by hook
+      console.log(err);
     }
   };
 
@@ -129,6 +129,7 @@ export function ContratsPage() {
       }
     } catch (err) {
       // Error handled by hook
+      console.log(err);
     }
   };
 
@@ -306,7 +307,6 @@ export function ContratsPage() {
   }) => {
     try {
       await createContratMutation.mutateAsync({
-        client_id: data.client_id,
         devis_ids: data.devis_ids,
         devis_principal_id: data.devis_principal_id,
         date_debut: data.date_debut,
@@ -319,6 +319,7 @@ export function ContratsPage() {
       setCreateDialogOpen(false);
     } catch (err) {
       // Error handled by hook
+      console.log(err);
     }
   };
 

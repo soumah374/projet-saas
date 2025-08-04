@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Event, AgendaViewProps } from './types';
+import { AgendaViewProps } from './types';
 import { getEventTypeColor, getEventTypeIcon, getStatusColor } from './utils';
 
 export const AgendaView = ({ events, projects, onEventClick }: AgendaViewProps) => {
@@ -55,7 +55,7 @@ export const AgendaView = ({ events, projects, onEventClick }: AgendaViewProps) 
                     )}
                     {event.participants && (
                       <div className="text-sm text-gray-500 mt-1">
-                        Participants: {event.participants.join(', ')}
+                        Participants: { event.participants.join(', ')}
                       </div>
                     )}
                   </div>

@@ -7,7 +7,7 @@
       "description": "Refonte complète du site web corporate de l'entreprise avec une approche moderne et responsive",
       "objectives": "Améliorer l'expérience utilisateur, augmenter le taux de conversion, moderniser l'image de marque",
       "type": "Externe",
-      "status": "En cours",
+      "status": "Production",
       "priority": "Haute",
       "start_date": "2024-01-15",
       "deadline": "2024-06-30",
@@ -15,7 +15,8 @@
       "updated_at": "2024-01-15T00:00:00Z",
       "progress": 45,
       "budget": "25000.00",
-      "client": "Entreprise ABC",
+      "client": 1,
+      "contract": 1,
       "created_by": 3,
       "tags": ["web", "responsive", "corporate"]
     }
@@ -28,7 +29,7 @@
       "description": "Création d'une campagne marketing print pour le lancement d'un nouveau produit",
       "objectives": "Augmenter la notoriété de la marque, générer des leads qualifiés",
       "type": "Externe",
-      "status": "Planification",
+      "status": "Devis",
       "priority": "Normale",
       "start_date": "2024-03-01",
       "deadline": "2024-05-15",
@@ -36,7 +37,8 @@
       "updated_at": "2024-02-15T00:00:00Z",
       "progress": 20,
       "budget": "15000.00",
-      "client": "Startup XYZ",
+      "client": 2,
+      "contract": 2,
       "created_by": 2,
       "tags": ["print", "marketing", "lancement"]
     }
@@ -57,9 +59,54 @@
       "updated_at": "2024-01-30T00:00:00Z",
       "progress": 70,
       "budget": "30000.00",
-      "client": "Organisation DEF",
+      "client": 3,
+      "contract": 3,
       "created_by": 3,
       "tags": ["vidéo", "institutionnel", "corporate"]
+    }
+  },
+  {
+    "model": "projects.project",
+    "pk": "PROJ-2024-004",
+    "fields": {
+      "title": "Identité Visuelle Personnelle",
+      "description": "Création d'une identité visuelle complète pour un professionnel indépendant",
+      "objectives": "Créer une image de marque cohérente et professionnelle",
+      "type": "Externe",
+      "status": "Prospection",
+      "priority": "Basse",
+      "start_date": "2024-04-01",
+      "deadline": "2024-05-30",
+      "created_at": "2024-03-15T00:00:00Z",
+      "updated_at": "2024-03-15T00:00:00Z",
+      "progress": 10,
+      "budget": "5000.00",
+      "client": 4,
+      "contract": 4,
+      "created_by": 2,
+      "tags": ["identité", "logo", "personnel"]
+    }
+  },
+  {
+    "model": "projects.project",
+    "pk": "PROJ-2024-005",
+    "fields": {
+      "title": "Site E-commerce",
+      "description": "Développement d'un site e-commerce complet avec système de paiement",
+      "objectives": "Créer une plateforme de vente en ligne performante et sécurisée",
+      "type": "Externe",
+      "status": "Livraison",
+      "priority": "Haute",
+      "start_date": "2024-01-01",
+      "deadline": "2024-03-31",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z",
+      "progress": 90,
+      "budget": "40000.00",
+      "client": 5,
+      "contract": 5,
+      "created_by": 3,
+      "tags": ["e-commerce", "paiement", "web"]
     }
   },
   {
@@ -70,7 +117,8 @@
       "user": 3,
       "role": "Chef de projet",
       "joined_at": "2024-01-15T00:00:00Z",
-      "is_active": true
+      "is_active": true,
+      "allocation_percentage": 100
     }
   },
   {
@@ -81,7 +129,8 @@
       "user": 4,
       "role": "Designer",
       "joined_at": "2024-01-15T00:00:00Z",
-      "is_active": true
+      "is_active": true,
+      "allocation_percentage": 80
     }
   },
   {
@@ -92,7 +141,44 @@
       "user": 2,
       "role": "Chef de projet",
       "joined_at": "2024-02-15T00:00:00Z",
-      "is_active": true
+      "is_active": true,
+      "allocation_percentage": 100
+    }
+  },
+  {
+    "model": "projects.projectmember",
+    "pk": 4,
+    "fields": {
+      "project": "PROJ-2024-003",
+      "user": 3,
+      "role": "Chef de projet",
+      "joined_at": "2024-01-30T00:00:00Z",
+      "is_active": true,
+      "allocation_percentage": 100
+    }
+  },
+  {
+    "model": "projects.projectmember",
+    "pk": 5,
+    "fields": {
+      "project": "PROJ-2024-004",
+      "user": 2,
+      "role": "Designer",
+      "joined_at": "2024-03-15T00:00:00Z",
+      "is_active": true,
+      "allocation_percentage": 100
+    }
+  },
+  {
+    "model": "projects.projectmember",
+    "pk": 6,
+    "fields": {
+      "project": "PROJ-2024-005",
+      "user": 3,
+      "role": "Chef de projet",
+      "joined_at": "2024-01-01T00:00:00Z",
+      "is_active": true,
+      "allocation_percentage": 100
     }
   },
   {
@@ -118,6 +204,39 @@
     }
   },
   {
+    "model": "projects.projectbudget",
+    "pk": 3,
+    "fields": {
+      "project": "PROJ-2024-003",
+      "production": "20000.00",
+      "personnel": "8000.00",
+      "marketing": "1500.00",
+      "other": "500.00"
+    }
+  },
+  {
+    "model": "projects.projectbudget",
+    "pk": 4,
+    "fields": {
+      "project": "PROJ-2024-004",
+      "production": "3000.00",
+      "personnel": "1500.00",
+      "marketing": "300.00",
+      "other": "200.00"
+    }
+  },
+  {
+    "model": "projects.projectbudget",
+    "pk": 5,
+    "fields": {
+      "project": "PROJ-2024-005",
+      "production": "25000.00",
+      "personnel": "12000.00",
+      "marketing": "2000.00",
+      "other": "1000.00"
+    }
+  },
+  {
     "model": "projects.projecttask",
     "pk": 1,
     "fields": {
@@ -128,7 +247,9 @@
       "assigned_to": 3,
       "due_date": "2024-01-30",
       "created_at": "2024-01-15T00:00:00Z",
-      "updated_at": "2024-01-30T00:00:00Z"
+      "updated_at": "2024-01-30T00:00:00Z",
+      "estimated_hours": 16.0,
+      "actual_hours": 15.5
     }
   },
   {
@@ -142,7 +263,57 @@
       "assigned_to": 4,
       "due_date": "2024-03-15",
       "created_at": "2024-01-30T00:00:00Z",
-      "updated_at": "2024-01-30T00:00:00Z"
+      "updated_at": "2024-01-30T00:00:00Z",
+      "estimated_hours": 40.0,
+      "actual_hours": 25.0
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": 3,
+    "fields": {
+      "project": "PROJ-2024-001",
+      "title": "Développement frontend",
+      "description": "Développer l'interface utilisateur responsive",
+      "status": "À faire",
+      "assigned_to": 3,
+      "due_date": "2024-04-30",
+      "created_at": "2024-02-01T00:00:00Z",
+      "updated_at": "2024-02-01T00:00:00Z",
+      "estimated_hours": 80.0,
+      "actual_hours": 0.0
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": 4,
+    "fields": {
+      "project": "PROJ-2024-002",
+      "title": "Création des visuels",
+      "description": "Créer les visuels pour la campagne print",
+      "status": "En cours",
+      "assigned_to": 4,
+      "due_date": "2024-04-01",
+      "created_at": "2024-02-15T00:00:00Z",
+      "updated_at": "2024-02-15T00:00:00Z",
+      "estimated_hours": 32.0,
+      "actual_hours": 20.0
+    }
+  },
+  {
+    "model": "projects.projecttask",
+    "pk": 5,
+    "fields": {
+      "project": "PROJ-2024-003",
+      "title": "Scénarisation",
+      "description": "Écrire le scénario de la vidéo institutionnelle",
+      "status": "Terminé",
+      "assigned_to": 3,
+      "due_date": "2024-02-15",
+      "created_at": "2024-01-30T00:00:00Z",
+      "updated_at": "2024-02-15T00:00:00Z",
+      "estimated_hours": 16.0,
+      "actual_hours": 18.0
     }
   }
 ] 

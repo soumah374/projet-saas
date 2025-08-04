@@ -38,7 +38,7 @@ import {
   LayoutGrid,
   List
 } from "lucide-react";
-import { projectsAPI, usersAPI } from '@/lib/api';
+import { projectTeamAPI, usersAPI } from '@/lib/api';
 import type { Project, User, ProjectMemberRole, ProjectMemberUpdate } from '@/lib/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -89,7 +89,7 @@ export function ProjectTeamPage() {
   // Mutations
   const addMemberMutation = useMutation({
     mutationFn: ({ projectId, userId, role }: { projectId: string; userId: number; role: ProjectMemberRole }) =>
-      projectsAPI.addMember(projectId, { user_id: userId, role }),
+      projectTeamAPI.addTeamMember(projectId, { user: userId.toString(), role, allocation_percentage: 100 }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -106,7 +106,7 @@ export function ProjectTeamPage() {
 
   const removeMemberMutation = useMutation({
     mutationFn: ({ projectId, memberId }: { projectId: string; memberId: number }) =>
-      projectsAPI.removeMember(projectId, memberId),
+      projectTeamAPI.removeTeamMember(projectId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -120,7 +120,7 @@ export function ProjectTeamPage() {
 
   const updateMemberMutation = useMutation({
     mutationFn: ({ projectId, memberId, data }: { projectId: string; memberId: number; data: ProjectMemberUpdate }) =>
-      projectsAPI.updateMember(projectId, memberId, data),
+      projectTeamAPI.updateTeamMember(projectId, memberId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -143,9 +143,8 @@ export function ProjectTeamPage() {
   const loadProjectTeam = async () => {
     try {
       setIsLoading(true);
-      const projectData = await projectsAPI.getProject(projectId!);
-      setProject(projectData);
-      setTeamMembers(projectData.team_members || []);
+      const projectData = await projectTeamAPI.getProjectTeam(projectId!);
+      setTeamMembers(Array.isArray(projectData.data) ? projectData.data : []);
     } catch (err) {
       setError('Erreur lors du chargement de l\'équipe du projet');
       console.error('Error loading project team:', err);
@@ -244,11 +243,11 @@ export function ProjectTeamPage() {
   });
 
   // Filtrer les utilisateurs qui ne sont pas déjà dans l'équipe
-  const availableUsers = users?.results?.filter(user => 
+  const availableUsers = users?.data?.results?.filter(user => 
     !teamMembers.some(member => member.user.id === user.id)
   ) || [];
 
-  const roles: ProjectMemberRole[] = ['Managing Director', 'Chef de projet', 'Directeur de production', 'Responsable communication', 'Administrateur financier', 'Assistant', 'Consultant'];
+  const roles: ProjectMemberRole[] = ['Chef de projet', 'Assistant', 'Consultant'];
 
   if (isLoading) {
     return (

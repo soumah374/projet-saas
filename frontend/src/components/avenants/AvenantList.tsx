@@ -9,6 +9,7 @@ import { Plus, FileText, MoreHorizontal, Edit, Trash2, Send, Download, CheckCirc
 import { useAvenantsByContrat, useDeleteAvenant, useEnvoyerAvenant, useDownloadAvenantPDF, useAnnulerAvenant } from '@/hooks/use-avenants';
 import { CreateAvenantModal } from './CreateAvenantModal';
 import { EditAvenantModal } from './EditAvenantModal';
+import { SignerAvenantModal } from './SignerAvenantModal';
 import { Avenant } from '@/hooks/use-avenants';
 import { toast } from 'sonner';
 
@@ -26,9 +27,13 @@ export const AvenantList: React.FC<AvenantListProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showSendModal, setShowSendModal] = useState(false);
+  const [showSignModal, setShowSignModal] = useState(false);
   const [selectedAvenant, setSelectedAvenant] = useState<Avenant | null>(null);
   const [avenantToDelete, setAvenantToDelete] = useState<Avenant | null>(null);
   const [avenantToCancel, setAvenantToCancel] = useState<Avenant | null>(null);
+  const [avenantToSend, setAvenantToSend] = useState<Avenant | null>(null);
+  const [avenantToSign, setAvenantToSign] = useState<Avenant | null>(null);
   const [avenantDetails, setAvenantDetails] = useState<Avenant | null>(null);
   const { data: avenants, isLoading, error } = useAvenantsByContrat(contratId);
   const avenantsArray = Array.isArray(avenants) ? avenants : [];
@@ -66,16 +71,30 @@ export const AvenantList: React.FC<AvenantListProps> = ({
     setAvenantToDelete(null);
   };
 
-  const handleEnvoyer = async (avenant: Avenant) => {
+  const handleEnvoyer = (avenant: Avenant) => {
+    setAvenantToSend(avenant);
+    setShowSendModal(true);
+  };
+
+  const confirmSend = async () => {
+    if (!avenantToSend) return;
+    
     try {
       await envoyerAvenantMutation.mutateAsync({ 
-        id: avenant.id 
+        id: avenantToSend.id 
       });
       toast.success('Avenant envoyé avec succès');
+      setShowSendModal(false);
+      setAvenantToSend(null);
     } catch (error: any) {
       console.error('Erreur lors de l\'envoi:', error);
       toast.error(error.response?.data?.error || 'Erreur lors de l\'envoi de l\'avenant');
     }
+  };
+
+  const cancelSend = () => {
+    setShowSendModal(false);
+    setAvenantToSend(null);
   };
 
   const handleDownload = async (avenant: Avenant) => {
@@ -133,6 +152,16 @@ export const AvenantList: React.FC<AvenantListProps> = ({
   const handleCloseEditModal = () => {
     setShowEditModal(false);
     setSelectedAvenant(null);
+  };
+
+  const handleSign = (avenant: Avenant) => {
+    setAvenantToSign(avenant);
+    setShowSignModal(true);
+  };
+
+  const handleCloseSignModal = () => {
+    setShowSignModal(false);
+    setAvenantToSign(null);
   };
 
   if (isLoading) {
@@ -246,13 +275,19 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                       )}
                       
                       {avenant.statut === 'envoye' && (
-                        <DropdownMenuItem 
-                          onClick={() => handleAnnuler(avenant)}
-                          disabled={annulerAvenantMutation.isPending}
-                        >
-                          <X className="h-4 w-4 mr-2" />
-                          {annulerAvenantMutation.isPending ? 'Annulation...' : 'Annuler'}
-                        </DropdownMenuItem>
+                        <>
+                          <DropdownMenuItem onClick={() => handleSign(avenant)}>
+                            <FileEdit className="h-4 w-4 mr-2" />
+                            Signer
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleAnnuler(avenant)}
+                            disabled={annulerAvenantMutation.isPending}
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            {annulerAvenantMutation.isPending ? 'Annulation...' : 'Annuler'}
+                          </DropdownMenuItem>
+                        </>
                       )}
                       
                       {avenant.statut === 'signe' && (
@@ -385,6 +420,55 @@ export const AvenantList: React.FC<AvenantListProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal d'envoi */}
+      <Dialog open={showSendModal} onOpenChange={setShowSendModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-blue-600" />
+              Confirmer l'envoi
+            </DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir envoyer l'avenant "{avenantToSend?.intitule_avenant}" ?
+              <br />
+              <span className="text-blue-600 font-medium">
+                Une fois envoyé, l'avenant ne pourra plus être modifié.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={cancelSend} disabled={envoyerAvenantMutation.isPending}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={confirmSend}
+              disabled={envoyerAvenantMutation.isPending}
+            >
+              {envoyerAvenantMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Envoi...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-2" />
+                  Envoyer l'avenant
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de signature */}
+      {avenantToSign && (
+        <SignerAvenantModal
+          isOpen={showSignModal}
+          onClose={handleCloseSignModal}
+          avenant={avenantToSign}
+        />
+      )}
 
       {/* Modal de détails */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>

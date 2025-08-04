@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectPhasesAPI, projectTeamAPI, projectTasksAPI, servicesAPI, projectApi } from '@/lib/api';
-import { ProjectPhase, Service, TeamMember } from '@/lib/types';
+import { projectTeamAPI, projectTasksAPI, servicesAPI, projectApi } from '@/lib/api';
+import { Service, TeamMember } from '@/lib/types';
 
 interface UseProjectLifecycle {
-  phases: ProjectPhase[];
   teamMembers: TeamMember[];
   loading: boolean;
   error: any;
@@ -11,10 +10,6 @@ interface UseProjectLifecycle {
   removeTeamMember: (memberId: number) => Promise<void>;
   updateTeamMember: (memberId: number, data: any) => Promise<void>;
   applyTaskTemplate: (category: string) => Promise<void>;
-  createPhase: (data: Omit<ProjectPhase, 'id'>) => Promise<void>;
-  updatePhase: (phaseId: number, data: Partial<ProjectPhase>) => Promise<void>;
-  deletePhase: (phaseId: number) => Promise<void>;
-  reorderPhase: (phaseId: number, newOrder: number) => Promise<void>;
   checkUserAllocation: (userId: string) => Promise<number>;
   services: Service[];
   updateTaskStatus: (taskId: number, status: 'À faire' | 'En cours' | 'Terminé' | 'En pause') => Promise<void>;
@@ -23,19 +18,7 @@ interface UseProjectLifecycle {
 export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
   const queryClient = useQueryClient();
 
-  // Fetch phases
-  const { 
-    data: phasesData,
-    isLoading: phasesLoading,
-    error: phasesError
-  } = useQuery({
-    queryKey: ['project-phases', projectId],
-    queryFn: async () => {
-      const response = await projectPhasesAPI.getProjectPhases(projectId);
-      return response.data;
-    },
-    enabled: !!projectId
-  });
+
 
   // Fetch services
   const { 
@@ -64,38 +47,7 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     enabled: !!projectId
   });
 
-  // Phase mutations
-  const createPhaseMutation = useMutation({
-    mutationFn: (data: Omit<ProjectPhase, 'id'>) => 
-      projectPhasesAPI.createProjectPhase(projectId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-    }
-  });
 
-  const updatePhaseMutation = useMutation({
-    mutationFn: ({ phaseId, data }: { phaseId: number; data: Partial<ProjectPhase> }) => 
-      projectPhasesAPI.updateProjectPhase(projectId, phaseId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-    }
-  });
-
-  const deletePhaseMutation = useMutation({
-    mutationFn: (phaseId: number) => 
-      projectPhasesAPI.deleteProjectPhase(projectId, phaseId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-    }
-  });
-
-  const reorderPhaseMutation = useMutation({
-    mutationFn: ({ phaseId, newOrder }: { phaseId: number; newOrder: number }) => 
-      projectPhasesAPI.reorderProjectPhase(projectId, phaseId, newOrder),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-phases', projectId] });
-    }
-  });
 
   // Team member mutations
   const addTeamMemberMutation = useMutation({
@@ -139,24 +91,9 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     }
   });
 
-  // Action handlers
-  const createPhase = async (data: Omit<ProjectPhase, 'id'>) => {
-    await createPhaseMutation.mutateAsync(data);
-  };
 
-  const updatePhase = async (phaseId: number, data: Partial<ProjectPhase>) => {
-    await updatePhaseMutation.mutateAsync({ phaseId, data });
-  };
 
-  const deletePhase = async (phaseId: number) => {
-    await deletePhaseMutation.mutateAsync(phaseId);
-  };
-
-  const reorderPhase = async (phaseId: number, newOrder: number) => {
-    await reorderPhaseMutation.mutateAsync({ phaseId, newOrder });
-  };
-
-  // Check user's current allocation
+  // Check user's current allocation for this project
   const checkUserAllocation = async (userId: string) => {
     try {
       const response = await projectTeamAPI.getUserAllocation(userId);
@@ -169,12 +106,6 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
 
   // Modify addTeamMember to check allocation first
   const addTeamMember = async (data: any) => {
-    const currentAllocation = await checkUserAllocation(data.user);
-    const newAllocation = parseInt(data.allocation_percentage);
-    if (currentAllocation + newAllocation > 100) {
-      throw new Error(`L'allocation totale (${currentAllocation + newAllocation}%) ne peut pas dépasser 100%`);
-    }
-    
     await addTeamMemberMutation.mutateAsync(data);
   };
 
@@ -196,14 +127,9 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
 
     
   return {
-    phases: phasesData?.results || [],
     teamMembers: Array.isArray(teamData) ? teamData : [],
-    loading: phasesLoading || teamLoading,
-    error: phasesError || teamError,
-    createPhase,
-    updatePhase, 
-    deletePhase,
-    reorderPhase,
+    loading: teamLoading,
+    error: teamError,
     addTeamMember,
     removeTeamMember,
     updateTeamMember,

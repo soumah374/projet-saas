@@ -44,7 +44,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import { CreateProjectModal } from "@/components/CreateProjectModal";
+import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 import { useProjects, useCreateProject, useUpdateProject } from "@/hooks/use-projects";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import type { 
@@ -84,7 +84,9 @@ const toProjectList = (project: ExtendedProject): ProjectList => ({
   team_count: project.team_count || '0',
   days_remaining: project.days_remaining || null,
   is_overdue: project.is_overdue || null,
-  created_at: project.created_at || null
+  created_at: project.created_at || null,
+  client_details: project.client_details,
+  created_by_details: project.created_by_details
 });
 
 export function ProjectManagement() {
@@ -264,17 +266,7 @@ export function ProjectManagement() {
         <Eye className="h-4 w-4 mr-1" />
         Détails
       </Button>
-      
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => navigate(`/projects/${project.id}/documents`)}
-        className="text-orange-600 hover:text-orange-700"
-      >
-        <FileText className="h-4 w-4 mr-1" />
-        Documents
-      </Button>
-      
+    
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
@@ -293,6 +285,10 @@ export function ProjectManagement() {
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/calendar`)}>
             <Calendar className="h-4 w-4 mr-2" />
             Calendrier
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/documents`)}>
+            <FileText className="h-4 w-4 mr-2" />
+            Documents
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="text-red-600">
@@ -321,7 +317,6 @@ export function ProjectManagement() {
       <CreateProjectModal 
         isOpen={showCreateModal} 
         onClose={() => setShowCreateModal(false)}
-        onProjectCreate={handleProjectCreate}
       />
 
       {/* Statistics Cards */}
@@ -486,7 +481,7 @@ export function ProjectManagement() {
                   {projects.map((project) => (
                     <TableRow key={project.id}>
                       <TableCell className="font-medium">{project.title}</TableCell>
-                      <TableCell>{project.client}</TableCell>
+                      <TableCell>{project.client_details.nom_complet}</TableCell>
                       <TableCell>{project.type}</TableCell>
                       <TableCell>
                         <Badge className={getStatusColor(project.status)}>
@@ -609,7 +604,7 @@ export function ProjectManagement() {
                         <span className="font-medium">
                           {typeof project.created_by === 'object' 
                             ? `${project.created_by.first_name} ${project.created_by.last_name}`
-                            : `ID: ${project.created_by}`}
+                            : `ID: ${project.created_by_details.username}`}
                         </span>
                       </div>
 

@@ -6,28 +6,22 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CreateProjectModal } from '@/components/CreateProjectModal';
+import { CreateProjectModal } from '@/components/projects/CreateProjectModal';
 import { useProjects } from '@/hooks/use-projects';
-import type { Project, ProjectStatus, ProjectType, ProjectPriority } from '@/lib/types';
+import type { ProjectStatus, ProjectType, ProjectPriority } from '@/lib/types';
 import { Plus, Search, Calendar, Users, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 const projectTypes: { value: ProjectType; label: string }[] = [
-  { value: 'event', label: 'Événementiel' },
-  { value: 'communication', label: 'Communication' },
-  { value: 'audiovisual', label: 'Audiovisuel' },
-  { value: 'production', label: 'Production' },
-  { value: 'digital', label: 'Digital' },
-  { value: 'consulting', label: 'Conseil' }
+  { value: 'Externe', label: 'Externe' },
+  { value: 'Interne', label: 'Interne' }
 ];
 
 const projectStatuses: { value: ProjectStatus; label: string }[] = [
   { value: 'Prospection', label: 'Prospection' },
-  { value: 'Planification', label: 'Planification' },
-  { value: 'En cours', label: 'En cours' },
   { value: 'Production', label: 'Production' },
-  { value: 'En pause', label: 'En pause' },
+  { value: 'Livraison', label: 'Livraison' },
   { value: 'Terminé', label: 'Terminé' }
 ];
 
@@ -50,20 +44,20 @@ export function ProjectsPage() {
 
   const { data: projects, isLoading } = useProjects(filters);
 
-  const filteredProjects = projects?.filter(project =>
+  const filteredProjects = projects?.results?.filter(project =>
     project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.client.toLowerCase().includes(searchTerm.toLowerCase())
+    project.client_details?.nom_complet.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getStatusColor = (status: ProjectStatus) => {
     switch (status) {
       case 'Terminé':
         return 'bg-green-100 text-green-800';
-      case 'En cours':
+      case 'Production':
         return 'bg-blue-100 text-blue-600';
-      case 'En pause':
+      case 'Livraison':
         return 'bg-yellow-100 text-yellow-800';
-      case 'Planification':
+      case 'Devis':
         return 'bg-purple-100 text-purple-800';
       case 'Prospection':
         return 'bg-gray-100 text-gray-800';
@@ -198,7 +192,7 @@ export function ProjectsPage() {
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <CardTitle className="text-lg">{project.title}</CardTitle>
-                  <p className="text-sm text-gray-500">{project.client}</p>
+                  <p className="text-sm text-gray-500">{project.client_details?.nom_complet || 'Client non assigné'}</p>
                 </div>
                 <Badge className={getStatusColor(project.status)}>
                   {project.status}

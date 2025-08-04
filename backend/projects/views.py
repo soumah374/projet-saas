@@ -10,11 +10,11 @@ from django.http import HttpResponse
 from rest_framework import serializers
 
 from .models import (
-    Project, ProjectMember, ProjectPhase, ProjectTask, ProjectEvent, TimeSheet, Department
+    Project, ProjectMember, ProjectTask, ProjectEvent, TimeSheet, Department
 )
 from .serializers import (
     ProjectListSerializer, ProjectDetailSerializer, ProjectCreateSerializer,
-    ProjectUpdateSerializer, ProjectMemberSerializer, ProjectPhaseSerializer,
+    ProjectUpdateSerializer, ProjectMemberSerializer,
     ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer
 )
 from notifications.serializers import NotificationSerializer
@@ -28,8 +28,8 @@ class ProjectViewSet(viewsets.ModelViewSet):
     queryset = Project.objects.all()
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['status', 'type', 'priority']
-    search_fields = ['title', 'description', 'client', 'id']
+    filterset_fields = ['status', 'type', 'priority', 'client', 'contract']
+    search_fields = ['title', 'description', 'client__nom_complet', 'contract__numero', 'id']
     ordering_fields = ['created_at', 'deadline', 'progress', 'title']
     ordering = ['-created_at']
     
@@ -68,63 +68,21 @@ class ProjectViewSet(viewsets.ModelViewSet):
         )
         
         if serializer.is_valid():
-            # Vérifier l'allocation totale
-            total_allocation = project.get_total_allocated_time()
-            new_allocation = serializer.validated_data.get('allocation_percentage', 100)
-            
-            if total_allocation + new_allocation > 100:
-                return Response(
-                    {'error': "L'allocation totale ne peut pas dépasser 100%"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
             serializer.save(project=project)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    @action(detail=True, methods=['post'])
-    def update_phase(self, request, pk=None):
-        """Mettre à jour la phase d'un projet"""
-        project = self.get_object()
-        new_status = request.data.get('status')
-        
-        status_choices = dict(Project.STATUS_CHOICES)
-        if new_status not in status_choices:
-            return Response(
-                {'error': 'Statut invalide'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Vérifier la transition de phase
-        current_idx = [s[0] for s in Project.STATUS_CHOICES].index(project.status)
-        new_idx = [s[0] for s in Project.STATUS_CHOICES].index(new_status)
-        
-        # Empêcher le retour en arrière sauf cas particuliers
-        if new_idx < current_idx and new_status not in ['Production', 'Devis']:
-            return Response(
-                {'error': 'Impossible de revenir à une phase précédente'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        project.status = new_status
-        project.save()
-        
-        return Response({'status': new_status})
+
     
     @action(detail=True)
     def timeline(self, request, pk=None):
         """Obtenir les données pour le diagramme de Gantt"""
         project = self.get_object()
         
-        # Récupérer les phases
-        phases = project.phases.all().values(
-            'id', 'name', 'start_date', 'end_date', 'progress'
-        )
-        
         # Récupérer les tâches
         tasks = project.tasks.all().values(
             'id', 'title', 'start_date', 'due_date', 'status',
-            'phase', 'assigned_to', 'estimated_hours', 'actual_hours'
+            'assigned_to', 'estimated_hours', 'actual_hours'
         )
         
         # Calculer la durée et le retard pour chaque tâche
@@ -137,7 +95,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     task['delay'] = 0
         
         return Response({
-            'phases': phases,
             'tasks': tasks
         })
     
@@ -250,58 +207,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
 
 
-class ProjectPhaseViewSet(viewsets.ModelViewSet):
-    """ViewSet pour la gestion des phases de projet"""
-    
-    serializer_class = ProjectPhaseSerializer
-    permission_classes = [IsAuthenticated]
-    filter_backends = [filters.OrderingFilter]
-    ordering_fields = ['order', 'start_date']
-    ordering = ['order', 'start_date']
-    
-    def get_queryset(self):
-        """Filtrer selon le projet"""
-        project_id = self.kwargs.get('project_pk')
-        if project_id:
-            return ProjectPhase.objects.filter(project_id=project_id)
-        return ProjectPhase.objects.none()
-    
-    def perform_create(self, serializer):
-        """Créer une phase avec le projet"""
-        project_id = self.kwargs.get('project_pk')
-        if project_id:
-            serializer.save(project_id=project_id)
-    
-    @action(detail=True, methods=['post'])
-    def reorder(self, request, project_pk=None, pk=None):
-        """Réorganiser les phases"""
-        phase = self.get_object()
-        new_order = request.data.get('order')
-        
-        if new_order is None:
-            return Response(
-                {'error': 'Ordre requis'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Mettre à jour l'ordre des autres phases
-        if new_order > phase.order:
-            ProjectPhase.objects.filter(
-                project_id=project_pk,
-                order__gt=phase.order,
-                order__lte=new_order
-            ).update(order=F('order') - 1)
-        else:
-            ProjectPhase.objects.filter(
-                project_id=project_pk,
-                order__lt=phase.order,
-                order__gte=new_order
-            ).update(order=F('order') + 1)
-        
-        phase.order = new_order
-        phase.save()
-        
-        return Response({'order': new_order})
+
 
 
 class TimeSheetViewSet(viewsets.ModelViewSet):
@@ -414,7 +320,7 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectTaskSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['status', 'assigned_to', 'phase']
+    filterset_fields = ['status', 'assigned_to']
     ordering_fields = ['due_date', 'created_at', 'title']
     ordering = ['due_date', 'created_at']
     
@@ -495,7 +401,6 @@ class ProjectTaskViewSet(viewsets.ModelViewSet):
             title=template.title,
             description=template.description,
             estimated_hours=template.estimated_hours,
-            phase_id=request.data.get('phase_id'),
             start_date=request.data.get('start_date'),
             due_date=request.data.get('due_date')
         )

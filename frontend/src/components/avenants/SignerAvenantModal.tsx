@@ -70,7 +70,6 @@ export const SignerAvenantModal: React.FC<SignerAvenantModalProps> = ({
 
     try {
       await signerAvenantMutation.mutateAsync({
-        contratId: avenant.contrat.id,
         id: avenant.id,
         fichier_signe: selectedFile,
       });
@@ -179,20 +178,7 @@ export const SignerAvenantModal: React.FC<SignerAvenantModalProps> = ({
               }}
               className="hidden"
             />
-          </div>
-
-          {/* Instructions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Instructions</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-600 space-y-2">
-              <p>• Formats acceptés: PDF, JPG, JPEG, PNG</p>
-              <p>• Taille maximale: 10 MB</p>
-              <p>• Assurez-vous que le fichier est lisible et complet</p>
-            </CardContent>
-          </Card>
-
+          </div>         
           {/* Actions */}
           <div className="flex justify-end space-x-2">
             <Button type="button" variant="outline" onClick={handleClose}>

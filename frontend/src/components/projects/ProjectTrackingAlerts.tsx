@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
@@ -10,18 +9,13 @@ import { fr } from 'date-fns/locale';
 import { 
   AlertTriangle, 
   Clock, 
-  CheckCircle, 
   Users, 
   DollarSign, 
-  Calendar,
-  ArrowUpCircle,
   ArrowDownCircle,
-  Bell,
-  Filter
+  Bell
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { projectApi } from '@/lib/api';
 import { useNotifications } from '@/hooks/use-notifications';
+import { useProjectAlerts } from '@/hooks/use-project-alerts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Notification } from '@/lib/types';
 
@@ -41,15 +35,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
   const [selectedSeverity, setSelectedSeverity] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [selectedType, setSelectedType] = useState<string>('all');
   
-  const { data: alerts = [], isLoading: alertsLoading } = useQuery({
-    queryKey: ['project-alerts', projectId],
-    queryFn: async () => {
-      const response = await projectApi.getProjectAlerts(projectId);
-      return response.data as ProjectAlert[];
-    },
-    enabled: !!projectId,
-    staleTime: 1 * 60 * 1000, // 1 minute
-  });
+  const { data: alerts = [], isLoading: alertsLoading } = useProjectAlerts(projectId);
   
   const { notifications } = useNotifications();
   

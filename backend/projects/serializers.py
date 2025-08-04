@@ -4,16 +4,38 @@ from django.utils import timezone
 from django.db import models
 from drf_spectacular.utils import extend_schema_field
 from .models import (
-    Project, ProjectMember, ProjectPhase, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget
+    Project, ProjectMember, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget
 )
 from users.serializers import UserSerializer  # Import UserSerializer from users app
+from users.models import ClientProfile
+from contrats.models import Contrat
 
 
-class ProjectPhaseSerializer(serializers.ModelSerializer):
+class ClientProfileSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les détails du client"""
+    
     class Meta:
-        model = ProjectPhase
-        fields = ['id', 'project', 'name', 'description', 'start_date', 'end_date', 'progress', 'order']
-        read_only_fields = ['id']
+        model = ClientProfile
+        fields = [
+            'id', 'nom', 'prenom', 'email', 'telephone', 'type_client', 
+            'statut_commercial', 'raison_sociale', 'rccm_nif', 'contact',
+            'adresse_complete', 'adresse', 'ville', 'code_postal', 'pays',
+            'nom_complet', 'is_active', 'date_inscription'
+        ]
+        read_only_fields = ['id', 'nom_complet', 'date_inscription']
+
+
+class ContratSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les détails du contrat"""
+    
+    class Meta:
+        model = Contrat
+        fields = [
+            'id', 'numero', 'date_creation', 'date_debut', 'date_fin', 
+            'statut', 'montant_ht', 'montant_tva', 'montant_ttc',
+            'taux_tva', 'appliquer_tva', 'taux_frais_agence', 'appliquer_frais_agence'
+        ]
+        read_only_fields = ['id', 'numero', 'date_creation']
 
 
 class TimeSheetSerializer(serializers.ModelSerializer):
@@ -113,25 +135,20 @@ class TimeSheetSerializer(serializers.ModelSerializer):
 
 class ProjectTaskSerializer(serializers.ModelSerializer):
     completion_percentage = serializers.SerializerMethodField()
-    phase_name = serializers.SerializerMethodField()
     assigned_to_name = serializers.SerializerMethodField()
     class Meta:
         model = ProjectTask
         fields = [
-            'id', 'project', 'phase', 'title', 'description', 'status',
+            'id', 'project', 'title', 'description', 'status',
             'assigned_to', 'start_date', 'due_date', 'estimated_hours',
             'actual_hours', 'is_template', 'template_category',
-            'completion_percentage', 'phase_name', 'assigned_to_name','created_at'
+            'completion_percentage', 'assigned_to_name', 'ligne_devis', 'created_at'
         ]
         read_only_fields = ['id', 'actual_hours']
     
     @extend_schema_field(int)
     def get_completion_percentage(self, obj):
         return obj.get_completion_percentage()
-    
-    @extend_schema_field(str)
-    def get_phase_name(self, obj):
-        return obj.phase.name if obj.phase else None
     
     @extend_schema_field(str)
     def get_assigned_to_name(self, obj):
@@ -154,19 +171,9 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
         )['total'] or 0
     
     def validate_allocation_percentage(self, value):
-        """Valider que l'allocation ne dépasse pas 100%"""
-        if value <= 0:
-            raise serializers.ValidationError("L'allocation doit être supérieure à 0")
-        
-        user = self.context['request'].user
-        current_allocation = user.project_roles.exclude(
-            id=self.instance.id if self.instance else None
-        ).aggregate(total=models.Sum('allocation_percentage'))['total'] or 0
-        
-        if current_allocation + value > 100:
-            raise serializers.ValidationError(
-                f"L'allocation totale ({current_allocation + value}%) ne peut pas dépasser 100%"
-            )
+        """Valider que l'allocation est positive"""
+        if value < 0:
+            raise serializers.ValidationError("L'allocation doit être supérieure ou égale à 0")
         
         return value
 
@@ -174,44 +181,35 @@ class ProjectMemberSerializer(serializers.ModelSerializer):
 class ProjectListSerializer(serializers.ModelSerializer):
     """Sérialiseur léger pour la liste des projets"""
     
-    phase_count = serializers.SerializerMethodField()
     team_count = serializers.SerializerMethodField()
-    current_phase = serializers.SerializerMethodField()
-    
+    client_details = ClientProfileSerializer(source='client', read_only=True)
+    contract_details = ContratSerializer(source='contract', read_only=True)
+    created_by_details = UserSerializer(source='created_by', read_only=True)
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'type', 'status', 'priority',
             'start_date', 'deadline', 'progress', 'client',
-            'phase_count', 'team_count', 'current_phase'
+            'client_details', 'contract', 'contract_details', 'team_count', 'created_by','created_by_details'
         ]
-    
-    @extend_schema_field(int)
-    def get_phase_count(self, obj):
-        return obj.phases.count()
     
     @extend_schema_field(int)
     def get_team_count(self, obj):
         return obj.team_members.count()
     
-    @extend_schema_field(str)
-    def get_current_phase(self, obj):
-        current_phase = obj.phases.filter(
-            start_date__lte=timezone.now().date(),
-            end_date__gte=timezone.now().date()
-        ).first()
-        return current_phase.name if current_phase else None
-
 
 class ProjectDetailSerializer(serializers.ModelSerializer):
     """Sérialiseur complet pour les détails d'un projet"""
     
-    phases = ProjectPhaseSerializer(many=True, read_only=True)
     team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
     tasks = ProjectTaskSerializer(many=True, read_only=True)
+    client_details = ClientProfileSerializer(source='client', read_only=True)
+    contract_details = ContratSerializer(source='contract', read_only=True)
     created_by_name = serializers.SerializerMethodField()
     total_hours = serializers.SerializerMethodField()
     total_estimated_hours = serializers.SerializerMethodField()
+    created_by = UserSerializer(source='user', read_only=True)
+
     
     class Meta:
         model = Project
@@ -242,6 +240,8 @@ class ProjectCreateSerializer(serializers.ModelSerializer):
             'status', 'priority', 'start_date', 'deadline',
             'budget', 'client', 'departments', 'contract'
         ]
+        
+        read_only_fields = ['created_by', 'created_at', 'updated_at','departments']
     
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
@@ -259,6 +259,8 @@ class ProjectUpdateSerializer(serializers.ModelSerializer):
             'progress', 'budget', 'client', 'departments',
             'contract'
         ]
+        
+        read_only_fields = ['created_by', 'created_at', 'updated_at','departments']
     
     def validate_status(self, value):
         """Valider les transitions de statut"""
@@ -335,17 +337,18 @@ class TimeSheetSerializer(serializers.ModelSerializer):
         
 
 class ProjectSerializer(serializers.ModelSerializer):
-    phases = ProjectPhaseSerializer(many=True, read_only=True)
     team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
     budget_details = ProjectBudgetSerializer(read_only=True)
+    client_details = ClientProfileSerializer(source='client', read_only=True)
+    contract_details = ContratSerializer(source='contract', read_only=True)
     
     class Meta:
         model = Project
         fields = [
             'id', 'title', 'description', 'objectives', 'type',
             'status', 'priority', 'start_date', 'deadline',
-            'progress', 'budget', 'client', 'created_by',
-            'contract', 'tags', 'phases', 'team_members',
+            'progress', 'budget', 'client', 'client_details', 'created_by',
+            'contract', 'contract_details', 'tags', 'team_members',
             'budget_details', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at'] 

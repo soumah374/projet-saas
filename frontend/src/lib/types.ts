@@ -98,21 +98,11 @@ export interface ProjectMember {
   user: number;
 }
 
-export interface ProjectPhase {
-  id: number;
-  name: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  progress: number;
-  order: number;
-  project: string;
-}
+
 
 export interface ProjectTask {
   id: number;
   completion_percentage: string;
-  phase_name: string;
   assigned_to_name: string;
   title: string;
   description: string;
@@ -127,9 +117,9 @@ export interface ProjectTask {
   is_template: boolean;
   template_category?: string;
   project: string;
-  phase: number | null;
   assigned_to: number | null;
   is_standard_task: boolean | false;
+  ligne_devis?: number | null;
 }
 
 export interface TaskWithDeadline extends ProjectTask {
@@ -163,19 +153,31 @@ export interface Project {
   deadline: string;
   progress: number;
   budget: string | null;
-  client: string;
+  client: number | null;
+  client_details?: ClientProfile;
   departments: string[];
-  contract: string;
+  contract: number | null;
+  contract_details?: Contrat;
   created_by: number;
   created_at: string;
   updated_at: string;
-  phases: ProjectPhase[];
   team_members: ProjectMember[];
   tasks: ProjectTask[];
   created_by_name: string;
   total_hours: string;
   total_estimated_hours: string;
   tags?: string[];
+}
+
+export interface ClientData {
+  id: number;
+  nom_complet: string;
+  email: string;
+  telephone: string;
+  adresse: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ExtendedProject extends Omit<Project, 'created_by' | 'budget' | 'team_members' | 'tasks'> {
@@ -190,6 +192,8 @@ export interface ExtendedProject extends Omit<Project, 'created_by' | 'budget' |
   is_overdue?: string | null;
   events?: ProjectEvent[];
   team_count?: string;
+  client_details: ClientData;
+  created_by_details: User;
 }
 
 export interface ProjectList {
@@ -200,12 +204,14 @@ export interface ProjectList {
   priority: ProjectPriority;
   progress: number;
   deadline: string | null;
-  client: string;
+  client: number | null;
+  client_details?: ClientProfile;
   created_by: User | number;
   team_count: string;
   days_remaining: string | null;
   is_overdue: string | null;
   created_at: string | null;
+  created_by_details: User;
 }
 
 export interface ProjectCreate {
@@ -219,7 +225,7 @@ export interface ProjectCreate {
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   tags?: any;
   budget_details?: ProjectBudget;
 }
@@ -235,7 +241,7 @@ export interface ProjectUpdate {
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   tags?: any;
   budget_details?: ProjectBudget;
 }
@@ -250,9 +256,9 @@ export interface CreateProjectPayload {
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   departments?: string[];
-  contract?: string;
+  contract?: number | null;
   tags?: string[];
 }
 
@@ -264,7 +270,8 @@ export interface ProjectFilters {
   status?: ProjectStatus;
   type?: ProjectType;
   priority?: ProjectPriority;
-  client?: string;
+  client?: number;
+  contract?: number;
   start_date?: string;
   end_date?: string;
   team_member?: number;
@@ -375,12 +382,11 @@ export interface CreateProjectForm {
   objectives?: string;
   type: ProjectType;
   category?: ProjectCategory;
-  status: ProjectStatus;
   priority: ProjectPriority;
   start_date?: string;
   deadline: string;
   budget?: string;
-  client: string;
+  client: number | null;
   tags?: string[];
   budget_details?: {
     production: string;
@@ -445,16 +451,7 @@ export interface Service {
   updated_at: string;
 }
 
-export interface Phase {
-  id: number;
-  name: string;
-  description: string;
-  start_date: string;
-  end_date: string;
-  progress: number;
-  order: number;
-  project: string;
-}
+
 
 export interface Category {
   id: number;

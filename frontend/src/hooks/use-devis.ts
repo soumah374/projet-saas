@@ -183,6 +183,10 @@ export const useCreateDevisAvecLignes = () => {
               temps_intervenant: number;
               taux_horaire: number;
             }>;
+            service: {
+              id: number;
+              name: string;
+            }
           }
         | {
             type_ligne: 'frais';
@@ -452,3 +456,73 @@ export const useDeleteIntervenantLigne = () => {
 }; 
 
 import { formatDate, formatMontantPDF } from '@/lib/formatters'; 
+
+export interface DevisService {
+  id: number;
+  type_ligne: 'prestation' | 'frais';
+  description: string;
+  quantite: number;
+  unite: {
+    id: number;
+    intitule: string;
+    code: string;
+  };
+  prix_unitaire_ht: number;
+  montant_ht: number;
+  intervenants: Array<{
+    id: number;
+    intitule: string;
+    temps_intervenant: number;
+    taux_horaire: number;
+    montant_intervenant: number;
+  }>;
+  activity?: {
+    id: number;
+    name: string;
+    duree_standard: number;
+    service:{
+      id: number,
+      name: string
+    }
+  };
+  type_frais?: string;
+  frais_category?: {
+    id: number;
+    name: string;
+  };
+  ligne_frais?: {
+    id: number;
+    description: string;
+    type_frais: string;
+  };
+}
+
+export interface DevisServicesResponse {
+  contract_id: string;
+  contract_numero: string;
+  devis_services: Array<{
+    devis: {
+      id: number;
+      numero: string;
+      date_creation: string;
+      statut: string;
+    };
+    activities: DevisService[];
+    frais: DevisService[];
+  }>;
+}
+
+export const useDevisServicesByContract = (contractId: number | null, projectId: string) => {
+  return useQuery({
+    queryKey: ['devis-services-by-contract', contractId, projectId],
+    queryFn: async (): Promise<DevisServicesResponse> => {
+      if (!contractId) {
+        throw new Error('Contract ID is required');
+      }
+      
+      const response = await devisAPI.getServicesByContract(contractId,projectId);
+      return response.data;
+    },
+    enabled: !!contractId && !!projectId,
+  });
+}; 

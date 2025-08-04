@@ -9,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Loader2, Edit, Plus, Eye, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Phase, ProjectTask, UserList } from '@/lib/types';
+import { ProjectTask, UserList } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -29,7 +29,6 @@ interface TaskModalProps {
   projectId: string;
   onTaskSave?: (taskData: CreateTaskData | UpdateTaskData) => void;
   mode: 'create' | 'edit' | 'view';
-  phases: Phase[];
 }
 
 export interface CreateTaskData {
@@ -39,7 +38,6 @@ export interface CreateTaskData {
   due_date: string;
   project: string;
   estimated_hours?: number;
-  phase?: number | null;
 }
 
 export interface ExecuteTaskData extends CreateTaskData {
@@ -93,7 +91,7 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(style);
 }
 
-export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}: TaskModalProps) => {
+export const TaskModal = ({ children, task, projectId, onTaskSave, mode}: TaskModalProps) => {
   const [open, setOpen] = useState(false);
   const [formKey, setFormKey] = useState(0);
   const [deadlineOpen, setDeadlineOpen] = useState(false);
@@ -103,8 +101,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
     assigned_to: null,
     due_date: undefined as Date | undefined,
     project: projectId,
-    estimated_hours: 1,
-    phase: null,
+          estimated_hours: 1,
   });
 
   const { data: usersResponse, isLoading: usersLoading } = useUsers({
@@ -125,7 +122,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       due_date: task.due_date,
       project: projectId,
       estimated_hours: task.estimated_hours || 1,
-      phase: task.phase || null,
     } : {
       title: '',
       description: '',
@@ -133,7 +129,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       due_date: '',
       project: projectId,
       estimated_hours: 1,
-      phase: null,
     }
   });
 
@@ -146,7 +141,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
         due_date: task?.due_date ? new Date(task.due_date) : undefined,
         project: projectId,
         estimated_hours: task?.estimated_hours || 1,
-        phase: task?.phase || null,
+
       });
       setFormKey(prev => prev + 1);
     }
@@ -187,7 +182,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       due_date: format(formData.due_date, 'yyyy-MM-dd'),
       project: projectId,
       estimated_hours: formData.estimated_hours,
-      phase: formData.phase,
+
     };
 
     if (mode === 'edit' && task) {
@@ -210,7 +205,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       due_date: undefined,
       project: projectId,
       estimated_hours: 1,
-      phase: null,
     });
   };
 
@@ -223,7 +217,6 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       due_date: undefined,
       project: projectId,
       estimated_hours: 1,
-      phase: null,
     });
   };
 
@@ -234,6 +227,8 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
       toast.success('Activité supprimée avec succès');
       setOpen(false);
     } catch (error) {
+      console.log(error)
+      console.error(error)
       toast.error('Une erreur est survenue');
     }
   };
@@ -451,36 +446,7 @@ export const TaskModal = ({ children, task, projectId, onTaskSave, mode, phases}
                     </PopoverContent>
                   </Popover>
                 </div>
-                <div>
-                  <Label htmlFor="assigned_to">Phase</Label>
-                  <Select 
-                    value={formData.phase?.toString() || ''} 
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, phase: parseInt(value) }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner une phase" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {phases.length > 0 ? (
-                        phases.map((phase: Phase) => (
-                          <SelectItem key={phase.id} value={phase.id.toString()}>
-                            {phase.name}
-                          </SelectItem>
-                        ))
-                      ) : phases.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
-                          Aucune phase disponible
-                        </div>
-                      ) : (
-                          phases.map((phase: Phase) => (
-                          <SelectItem key={phase.id} value={phase.id.toString()}>
-                            {phase.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
+
               </div>
             </div>
 

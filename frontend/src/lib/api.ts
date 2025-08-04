@@ -6,7 +6,6 @@ import type {
     ProjectStatus, 
     ProjectPriority,
     TeamMember,
-    ProjectPhase,
     ClientCategory
 } from './types';
 
@@ -72,7 +71,6 @@ export interface Project {
 export interface ProjectTask {
     id: number;
     project: string;
-    phase: number | null;
     title: string;
     description: string;
     status: 'À faire' | 'En cours' | 'Terminé' | 'En pause';
@@ -128,18 +126,7 @@ export const projectApi = {
     updateProject: (id: string, data: Partial<Project>) => api.patch<Project>(`/projects/${id}/`, data),
     deleteProject: (id: string) => api.delete(`/projects/${id}/`),
     
-    // Phases
-    getProjectPhases: (projectId: string) => api.get<PaginatedResponse<ProjectPhase>>(`/projects/${projectId}/phases/`),
-    getProjectPhase: (projectId: string, phaseId: number) => 
-        api.get<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/`),
-    createProjectPhase: (projectId: string, data: Partial<ProjectPhase>) => 
-        api.post<ProjectPhase>(`/projects/${projectId}/phases/`, data),
-    updateProjectPhase: (projectId: string, phaseId: number, data: Partial<ProjectPhase>) => 
-        api.patch<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/`, data),
-    deleteProjectPhase: (projectId: string, phaseId: number) => 
-        api.delete(`/projects/${projectId}/phases/${phaseId}/`),
-    reorderPhase: (projectId: string, phaseId: number, order: number) =>
-        api.post(`/projects/${projectId}/phases/${phaseId}/reorder/`, { order }),
+
     
     // Activités
     getProjectTasks: (projectId: string) => api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
@@ -160,7 +147,6 @@ export const projectApi = {
     getTaskTemplates: (projectId: string) => 
         api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/templates/`),
     createTaskFromTemplate: (projectId: string, templateId: number, data: {
-        phase_id?: number;
         start_date?: string;
         due_date?: string;
     }) => api.post<ProjectTask>(
@@ -482,25 +468,7 @@ export const fetchUpcomingEvents = () => api.get('/events/upcoming/');
 
 export default api; 
 
-export const projectPhasesAPI = {
-    getProjectPhases: (projectId: string) => 
-        api.get<PaginatedResponse<ProjectPhase>>(`/projects/${projectId}/phases/`),
-    
-    createProjectPhase: (projectId: string, data: Omit<ProjectPhase, 'id'>) => 
-        api.post<ProjectPhase>(`/projects/${projectId}/phases/`, {
-            ...data,
-            project: projectId
-        }),
-    
-    updateProjectPhase: (projectId: string, phaseId: number, data: Partial<ProjectPhase>) => 
-        api.patch<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/`, data),
-    
-    deleteProjectPhase: (projectId: string, phaseId: number) => 
-        api.delete(`/projects/${projectId}/phases/${phaseId}/`),
-    
-    reorderProjectPhase: (projectId: string, phaseId: number, order: number) =>
-        api.post<ProjectPhase>(`/projects/${projectId}/phases/${phaseId}/reorder/`, { order }),
-};
+
 
 export const projectTeamAPI = {
     getProjectTeam: (projectId: string) => 
@@ -571,6 +539,9 @@ export const devisAPI = {
         message: string;
         pdf_data: string;
     }) => api.post(`/devis/devis/${id}/envoyer_email_pdf/`, data),
+    
+    // Endpoint pour récupérer les services des devis liés à un contrat
+    getServicesByContract: (contractId: number, projectId: string) => api.get(`/devis/devis/services_by_contract/?contract_id=${contractId}&project_id=${projectId}`),
 };
 
 // Lignes de devis

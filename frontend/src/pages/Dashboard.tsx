@@ -1,17 +1,10 @@
-import { useState } from 'react';
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { 
-  Users, 
   FolderOpen, 
-  Calendar, 
-  TrendingUp, 
-  Clock, 
   CheckCircle,
-  AlertCircle,
-  BarChart3,
   Activity,
   Loader2,
   AlertTriangle
