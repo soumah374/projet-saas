@@ -1,0 +1,395 @@
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { 
+  Search, 
+  Filter, 
+  Plus, 
+  Settings, 
+  Download,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  FileText,
+  TrendingUp,
+  RefreshCw
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+import { useFactures, type Facture } from '@/hooks/use-factures';
+import { FactureCard } from '@/components/billings/FactureCard';
+import { PaiementModal } from '@/components/billings/PaiementModal';
+import { StatistiquesFacturation } from '@/components/billings/StatistiquesFacturation';
+import { ConfigurationFacturationModal } from '@/components/billings/ConfigurationFacturationModal';
+import { FactureDetailModal } from '@/components/billings/FactureDetailModal';
+
+const formatMontant = (montant: number) => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'GNF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(montant);
+};
+
+export const FacturesPage: React.FC = () => {
+  const {
+    factures,
+    loading,
+    error,
+    fetchFactures,
+    enregistrerPaiement,
+    genererPDF,
+    fetchStatistiques,
+    fetchFacturesEnRetard,
+    fetchFacturesAVenir,
+  } = useFactures();
+
+  const [statistiques, setStatistiques] = useState<any>(null);
+  const [facturesEnRetard, setFacturesEnRetard] = useState<Facture[]>([]);
+  const [facturesAVenir, setFacturesAVenir] = useState<Facture[]>([]);
+  const [selectedFacture, setSelectedFacture] = useState<Facture | null>(null);
+  const [showPaiementModal, setShowPaiementModal] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Filtres
+  const [filtres, setFiltres] = useState({
+    statut: '',
+    mode_paiement: '',
+    search: '',
+  });
+
+  useEffect(() => {
+    fetchFactures();
+    loadStatistiques();
+    loadFacturesEnRetard();
+    loadFacturesAVenir();
+  }, []);
+
+  const loadStatistiques = async () => {
+    const stats = await fetchStatistiques();
+    if (stats) {
+      setStatistiques(stats);
+    }
+  };
+
+  const loadFacturesEnRetard = async () => {
+    const factures = await fetchFacturesEnRetard();
+    setFacturesEnRetard(factures);
+  };
+
+  const loadFacturesAVenir = async () => {
+    const factures = await fetchFacturesAVenir();
+    setFacturesAVenir(factures);
+  };
+
+  const handlePaiement = (facture: Facture) => {
+    setSelectedFacture(facture);
+    setShowPaiementModal(true);
+  };
+
+  const handleViewDetails = (facture: Facture) => {
+    setSelectedFacture(facture);
+    setShowDetailModal(true);
+  };
+
+  const handleEnregistrerPaiement = async (data: {
+    montant: number;
+    date_paiement: string;
+    mode_paiement: string;
+    reference_paiement?: string;
+    notes?: string;
+  }) => {
+    if (!selectedFacture) return;
+
+    const result = await enregistrerPaiement(selectedFacture.id, data);
+    if (result) {
+      setShowPaiementModal(false);
+      setSelectedFacture(null);
+      // Recharger les données
+      fetchFactures();
+      loadStatistiques();
+      loadFacturesEnRetard();
+    }
+  };
+
+  const handleGenererPDF = async (facture: Facture) => {
+    await genererPDF(facture.id);
+  };
+
+  const handleRefresh = () => {
+    fetchFactures(filtres);
+    loadStatistiques();
+    loadFacturesEnRetard();
+    loadFacturesAVenir();
+  };
+
+  const filteredFactures = (factures || []).filter(facture => {
+    if (filtres.statut && filtres.statut !== 'all' && facture.statut !== filtres.statut) return false;
+    if (filtres.mode_paiement && filtres.mode_paiement !== 'all' && facture.mode_paiement !== filtres.mode_paiement) return false;
+    if (filtres.search) {
+      const searchLower = filtres.search.toLowerCase();
+      return (
+        facture.numero.toLowerCase().includes(searchLower) ||
+        facture.client_nom.toLowerCase().includes(searchLower) ||
+        facture.contrat_numero.toLowerCase().includes(searchLower)
+      );
+    }
+    return true;
+  });
+
+  // Vérification de sécurité pour les données
+  if (!Array.isArray(factures)) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto p-6 space-y-6">
+      {/* En-tête */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Facturation</h1>
+          <p className="text-muted-foreground">
+            Gestion des factures et suivi des paiements
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowConfigModal(true)}
+          >
+            <Settings className="h-4 w-4 mr-2" />
+            Configuration
+          </Button>
+          <Button onClick={handleRefresh} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </div>
+      </div>
+
+      {/* Statistiques */}
+      {statistiques && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Statistiques</h2>
+          <StatistiquesFacturation statistiques={statistiques} loading={loading} />
+        </div>
+      )}
+
+      {/* Alertes */}
+      {(facturesEnRetard.length > 0 || facturesAVenir.length > 0) && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Alertes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {facturesEnRetard.length > 0 && (
+              <Card className="border-red-200 bg-red-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center space-x-2 text-red-800">
+                    <AlertTriangle className="h-5 w-5" />
+                    <span>Factures en retard</span>
+                    <Badge variant="destructive">{facturesEnRetard.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-red-700">
+                    {facturesEnRetard.length} facture(s) en retard de paiement
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {facturesAVenir.length > 0 && (
+              <Card className="border-yellow-200 bg-yellow-50">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center space-x-2 text-yellow-800">
+                    <Clock className="h-5 w-5" />
+                    <span>Échéances à venir</span>
+                    <Badge variant="secondary">{facturesAVenir.length}</Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-yellow-700">
+                    {facturesAVenir.length} facture(s) à échéance dans les 30 jours
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Filtres */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Filter className="h-5 w-5" />
+            <span>Filtres</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="search">Recherche</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Numéro, client, contrat..."
+                  value={filtres.search}
+                  onChange={(e) => setFiltres(prev => ({ ...prev, search: e.target.value }))}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="statut">Statut</Label>
+              <Select
+                value={filtres.statut}
+                onValueChange={(value) => setFiltres(prev => ({ ...prev, statut: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Tous les statuts" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="emise">Émise</SelectItem>
+                  <SelectItem value="envoyee">Envoyée</SelectItem>
+                  <SelectItem value="payee">Payée</SelectItem>
+                  <SelectItem value="en_retard">En retard</SelectItem>
+                  <SelectItem value="partiellement_payee">Partiellement payée</SelectItem>
+                  <SelectItem value="annulee">Annulée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mode_paiement">Mode de paiement</Label>
+              <Select
+                value={filtres.mode_paiement}
+                onValueChange={(value) => setFiltres(prev => ({ ...prev, mode_paiement: value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Tous les modes" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les modes</SelectItem>
+                  <SelectItem value="virement">Virement bancaire</SelectItem>
+                  <SelectItem value="cheque">Chèque</SelectItem>
+                  <SelectItem value="especes">Espèces</SelectItem>
+                  <SelectItem value="carte">Carte bancaire</SelectItem>
+                  <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Liste des factures */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">
+            Factures ({filteredFactures.length})
+          </h2>
+                     <div className="flex items-center space-x-2">
+             <Badge variant="outline">
+               {(factures || []).filter(f => f.statut === 'payee').length} payées
+             </Badge>
+             <Badge variant="outline">
+               {(factures || []).filter(f => f.statut === 'en_retard').length} en retard
+             </Badge>
+           </div>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="pb-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : error ? (
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-red-600">{error}</p>
+            </CardContent>
+          </Card>
+        ) : filteredFactures.length === 0 ? (
+          <Card>
+            <CardContent className="p-6 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground">Aucune facture trouvée</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredFactures.map((facture) => (
+               <FactureCard
+                 key={facture.id}
+                 facture={facture}
+                 onView={handleViewDetails}
+                 onPaiement={handlePaiement}
+                 onPDF={handleGenererPDF}
+               />
+             ))}
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      <PaiementModal
+        facture={selectedFacture}
+        isOpen={showPaiementModal}
+        onClose={() => {
+          setShowPaiementModal(false);
+          setSelectedFacture(null);
+        }}
+        onSubmit={handleEnregistrerPaiement}
+        loading={loading}
+      />
+
+      <ConfigurationFacturationModal
+        isOpen={showConfigModal}
+        onClose={() => setShowConfigModal(false)}
+      />
+
+      <FactureDetailModal
+        facture={selectedFacture}
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedFacture(null);
+        }}
+        onPaiement={handlePaiement}
+        onPDF={handleGenererPDF}
+      />
+    </div>
+  );
+}; 

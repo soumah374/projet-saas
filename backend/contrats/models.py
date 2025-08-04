@@ -676,6 +676,12 @@ class EcheancierContrat(models.Model):
         self.alerte_envoyee = True
         self.save()
 
+    @property
+    def factures(self):
+        """Retourne les factures liées à cette échéance"""
+        from billings.models import Facture
+        return Facture.objects.filter(echeance=self)
+
 
 class LigneContrat(models.Model):
     """Modèle pour les lignes de contrat (basées sur les lignes de devis)"""

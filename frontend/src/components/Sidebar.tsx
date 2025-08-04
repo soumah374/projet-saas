@@ -25,7 +25,9 @@ import {
   DollarSign,
   Wrench,
   FileCheck,
-  FileEdit
+  FileEdit,
+  CreditCard,
+  FileSpreadsheet
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -201,6 +203,24 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               )}>
                 <FileCheck className="h-5 w-5" />
                 <span>Contrats</span>
+            </Link>
+
+            {/* Facturation */}
+            <Link to="/factures" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+                <CreditCard className="h-5 w-5" />
+                <span>Facturation</span>
+            </Link>
+
+            {/* Génération de factures */}
+            <Link to="/generation-factures" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/generation-factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+                <FileSpreadsheet className="h-5 w-5" />
+                <span>Génération Factures</span>
             </Link>
 
             {/* Projets accordéon */}

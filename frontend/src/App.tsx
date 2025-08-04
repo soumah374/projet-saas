@@ -37,6 +37,8 @@ import LignesFraisPage from './pages/LignesFraisPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { CategoryDetailsPage } from './pages/CategoryDetailsPage';
 import { AvenantsPage } from './pages/AvenantsPage';
+import { FacturesPage } from './pages/FacturesPage';
+import { GenerationFacturesPage } from './pages/GenerationFacturesPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -225,6 +227,16 @@ function App() {
                 <Route path="/avenants" element={
                   <ProtectedRoute>
                     <AvenantsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/factures" element={
+                  <ProtectedRoute>
+                    <FacturesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/generation-factures" element={
+                  <ProtectedRoute>
+                    <GenerationFacturesPage />
                   </ProtectedRoute>
                 } />
                 

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'departments',
     'devis',
     'contrats',
+    'billings',
 ]
 
 MIDDLEWARE = [

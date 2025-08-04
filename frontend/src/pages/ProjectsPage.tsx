@@ -131,7 +131,7 @@ export function ProjectsPage() {
                 <SelectValue placeholder="Statut" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={undefined}>Tous les statuts</SelectItem>
+                <SelectItem value="all">Tous les statuts</SelectItem>
                 {projectStatuses.map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
@@ -150,7 +150,7 @@ export function ProjectsPage() {
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={undefined}>Tous les types</SelectItem>
+                <SelectItem value="all">Tous les types</SelectItem>
                 {projectTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value}>
                     {type.label}
@@ -169,7 +169,7 @@ export function ProjectsPage() {
                 <SelectValue placeholder="Priorité" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={undefined}>Toutes les priorités</SelectItem>
+                <SelectItem value="all">Toutes les priorités</SelectItem>
                 {projectPriorities.map((priority) => (
                   <SelectItem key={priority.value} value={priority.value}>
                     {priority.label}

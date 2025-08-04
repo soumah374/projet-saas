@@ -57,6 +57,7 @@ import { statutContrat } from '@/lib/utils';
 import { AvenantList } from '@/components/avenants/AvenantList';
 import { DevisSelectionModal } from '@/components/contrats/DevisSelectionModal';
 import { Input } from '@/components/ui/input';
+import { useContratsFacturation } from '@/hooks/use-factures';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -101,6 +102,9 @@ export function ContratDetailPage() {
     marquerPaye,
     envoyerAlerte
   } = useEcheances(contratId);
+  
+  // Hook pour la facturation
+  const { genererFacturesContrat } = useContratsFacturation();
 
   // Fonction pour filtrer et trier les échéances
   const getFilteredAndSortedEcheances = () => {
@@ -282,6 +286,21 @@ export function ContratDetailPage() {
       await envoyerAlerte(echeanceId);
     } catch (err) {
       console.error('Erreur lors de l\'envoi de l\'alerte:', err);
+    }
+  };
+
+  const handleGenererFactures = async () => {
+    if (!contrat) return;
+    
+    try {
+      const result = await genererFacturesContrat(contrat.id);
+      if (result) {
+        // Recharger les échéances pour voir les factures générées
+        // Note: Il faudrait ajouter une fonction de refresh dans useEcheances
+        console.log('Factures générées:', result);
+      }
+    } catch (err) {
+      console.error('Erreur lors de la génération des factures:', err);
     }
   };
 
@@ -891,7 +910,7 @@ export function ContratDetailPage() {
                   </div>
                 )}
 
-                {/* Boutons de génération d'échéancier */}
+                {/* Boutons de génération d'échéancier et factures */}
                 {contrat.statut !== 'termine' && (
                 <div className="flex gap-2">
                   <Button 
@@ -902,6 +921,18 @@ export function ContratDetailPage() {
                     <Plus size={16} className="mr-2" />
                     Générer échéancier
                   </Button>
+                  
+                  {echeances && Array.isArray(echeances) && echeances.length > 0 && (
+                    <Button 
+                      variant="outline" 
+                      onClick={handleGenererFactures}
+                      disabled={isLoadingEcheances}
+                      className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                    >
+                      <FileText size={16} className="mr-2" />
+                      Générer factures
+                    </Button>
+                  )}
                 </div>
                 )}
 
@@ -1065,6 +1096,8 @@ export function ContratDetailPage() {
                     </div>
                   </div>
                 )}
+
+
               </div>
             </CardContent>
           </Card>
