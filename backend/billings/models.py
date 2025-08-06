@@ -177,10 +177,66 @@ class Facture(models.Model):
             mode_paiement=self.mode_paiement
         )
     
-    def generer_pdf(self):
+    def generer_pdf(self, save_to_model=False):
         """Génère le PDF de la facture"""
-        # Implémentation de la génération PDF
-        pass
+        from django.template.loader import render_to_string
+        from weasyprint import HTML, CSS
+        from weasyprint.text.fonts import FontConfiguration
+        import tempfile
+        import os
+        
+        try:
+            # Rendre le template HTML
+            html_string = render_to_string('billings/print_billing.html', {
+                'facture': self
+            })
+            
+            # Configuration des polices
+            font_config = FontConfiguration()
+            
+            # Créer le PDF avec WeasyPrint
+            html_doc = HTML(string=html_string)
+            css = CSS(string='''
+                @page { size: A4; margin: 2cm; }
+                body { font-family: Arial, sans-serif; }
+            ''', font_config=font_config)
+            
+            # Générer le PDF
+            pdf = html_doc.write_pdf(stylesheets=[css], font_config=font_config)
+            
+            # Créer le nom de fichier
+            filename = f"facture_{self.numero}.pdf"
+            
+            if save_to_model:
+                # Créer un fichier temporaire
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                    tmp_file.write(pdf)
+                    tmp_file_path = tmp_file.name
+                
+                # Sauvegarder dans le modèle
+                with open(tmp_file_path, 'rb') as f:
+                    self.fichier_pdf.save(filename, f, save=True)
+                
+                # Nettoyer le fichier temporaire
+                os.unlink(tmp_file_path)
+                
+                return {
+                    'success': True,
+                    'filename': filename,
+                    'download_url': self.fichier_pdf.url if self.fichier_pdf else None
+                }
+            else:
+                return {
+                    'success': True,
+                    'pdf_content': pdf,
+                    'filename': filename
+                }
+                
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
 
 
 class PaiementFacture(models.Model):

@@ -33,6 +33,15 @@ import { PaiementModal } from '@/components/billings/PaiementModal';
 import { StatistiquesFacturation } from '@/components/billings/StatistiquesFacturation';
 import { ConfigurationFacturationModal } from '@/components/billings/ConfigurationFacturationModal';
 import { FactureDetailModal } from '@/components/billings/FactureDetailModal';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const formatMontant = (montant: number) => {
   return new Intl.NumberFormat('fr-FR', {
@@ -48,6 +57,7 @@ export const FacturesPage: React.FC = () => {
     factures,
     loading,
     error,
+    pagination,
     fetchFactures,
     enregistrerPaiement,
     genererPDF,
@@ -71,12 +81,30 @@ export const FacturesPage: React.FC = () => {
     search: '',
   });
 
+  // État de pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   useEffect(() => {
-    fetchFactures();
+    fetchFactures({
+      ...filtres,
+      page: currentPage,
+      page_size: pageSize,
+    });
     loadStatistiques();
     loadFacturesEnRetard();
     loadFacturesAVenir();
-  }, []);
+  }, [currentPage, pageSize]);
+
+  // Effet pour recharger les factures quand les filtres changent
+  useEffect(() => {
+    setCurrentPage(1); // Reset à la première page
+    fetchFactures({
+      ...filtres,
+      page: 1,
+      page_size: pageSize,
+    });
+  }, [filtres]);
 
   const loadStatistiques = async () => {
     const stats = await fetchStatistiques();
@@ -130,30 +158,29 @@ export const FacturesPage: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    fetchFactures(filtres);
+    fetchFactures({
+      ...filtres,
+      page: currentPage,
+      page_size: pageSize,
+    });
     loadStatistiques();
     loadFacturesEnRetard();
     loadFacturesAVenir();
   };
 
-  const filteredFactures = (factures || []).filter(facture => {
-    if (filtres.statut && filtres.statut !== 'all' && facture.statut !== filtres.statut) return false;
-    if (filtres.mode_paiement && filtres.mode_paiement !== 'all' && facture.mode_paiement !== filtres.mode_paiement) return false;
-    if (filtres.search) {
-      const searchLower = filtres.search.toLowerCase();
-      return (
-        facture.numero.toLowerCase().includes(searchLower) ||
-        facture.client_nom.toLowerCase().includes(searchLower) ||
-        facture.contrat_numero.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1); // Reset à la première page
+  };
 
   // Vérification de sécurité pour les données
   if (!Array.isArray(factures)) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="max-w-8xl mx-auto space-y-8">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
         </div>
@@ -162,7 +189,7 @@ export const FacturesPage: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="max-w-8xl mx-auto space-y-8">
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
@@ -300,6 +327,24 @@ export const FacturesPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="page_size">Éléments par page</Label>
+              <Select
+                value={pageSize.toString()}
+                onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -308,9 +353,9 @@ export const FacturesPage: React.FC = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">
-            Factures ({filteredFactures.length})
+            Factures ({pagination.count})
           </h2>
-                     <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
              <Badge variant="outline">
                {(factures || []).filter(f => f.statut === 'payee').length} payées
              </Badge>
@@ -341,7 +386,7 @@ export const FacturesPage: React.FC = () => {
               <p className="text-red-600">{error}</p>
             </CardContent>
           </Card>
-        ) : filteredFactures.length === 0 ? (
+        ) : factures.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -349,17 +394,221 @@ export const FacturesPage: React.FC = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredFactures.map((facture) => (
-               <FactureCard
-                 key={facture.id}
-                 facture={facture}
-                 onView={handleViewDetails}
-                 onPaiement={handlePaiement}
-                 onPDF={handleGenererPDF}
-               />
-             ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {factures.map((facture) => (
+                 <FactureCard
+                   key={facture.id}
+                   facture={facture}
+                   onView={handleViewDetails}
+                   onPaiement={handlePaiement}
+                   onPDF={handleGenererPDF}
+                 />
+               ))}
+            </div>
+
+            {/* Informations de pagination */}
+            {pagination.count > 0 && (
+              <div className="flex items-center justify-between mt-6">
+                <div className="text-sm text-gray-600">
+                  Affichage de {((currentPage - 1) * pageSize) + 1} à {Math.min(currentPage * pageSize, pagination.count)} sur {pagination.count} factures
+                </div>
+
+                {/* Contrôles de pagination */}
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (pagination.previous) {
+                            handlePageChange(currentPage - 1);
+                          }
+                        }}
+                        className={!pagination.previous ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+
+                    {/* Pages numérotées */}
+                    {(() => {
+                      const totalPages = Math.ceil(pagination.count / pageSize);
+                      const pages = [];
+                      const maxVisiblePages = 5;
+                      
+                      if (totalPages <= maxVisiblePages) {
+                        // Afficher toutes les pages
+                        for (let i = 1; i <= totalPages; i++) {
+                          pages.push(
+                            <PaginationItem key={i}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(i);
+                                }}
+                                isActive={currentPage === i}
+                              >
+                                {i}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                      } else {
+                        // Logique pour afficher les pages avec ellipsis
+                        if (currentPage <= 3) {
+                          // Début
+                          for (let i = 1; i <= 3; i++) {
+                            pages.push(
+                              <PaginationItem key={i}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handlePageChange(i);
+                                  }}
+                                  isActive={currentPage === i}
+                                >
+                                  {i}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          pages.push(
+                            <PaginationItem key="ellipsis1">
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                          pages.push(
+                            <PaginationItem key={totalPages}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(totalPages);
+                                }}
+                                isActive={currentPage === totalPages}
+                              >
+                                {totalPages}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        } else if (currentPage >= totalPages - 2) {
+                          // Fin
+                          pages.push(
+                            <PaginationItem key={1}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(1);
+                                }}
+                                isActive={currentPage === 1}
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                          pages.push(
+                            <PaginationItem key="ellipsis2">
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                          for (let i = totalPages - 2; i <= totalPages; i++) {
+                            pages.push(
+                              <PaginationItem key={i}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handlePageChange(i);
+                                  }}
+                                  isActive={currentPage === i}
+                                >
+                                  {i}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                        } else {
+                          // Milieu
+                          pages.push(
+                            <PaginationItem key={1}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(1);
+                                }}
+                                isActive={currentPage === 1}
+                              >
+                                1
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                          pages.push(
+                            <PaginationItem key="ellipsis3">
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                            pages.push(
+                              <PaginationItem key={i}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handlePageChange(i);
+                                  }}
+                                  isActive={currentPage === i}
+                                >
+                                  {i}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
+                          pages.push(
+                            <PaginationItem key="ellipsis4">
+                              <PaginationEllipsis />
+                            </PaginationItem>
+                          );
+                          pages.push(
+                            <PaginationItem key={totalPages}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handlePageChange(totalPages);
+                                }}
+                                isActive={currentPage === totalPages}
+                              >
+                                {totalPages}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        }
+                      }
+                      
+                      return pages;
+                    })()}
+
+                    <PaginationItem>
+                      <PaginationNext 
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          if (pagination.next) {
+                            handlePageChange(currentPage + 1);
+                          }
+                        }}
+                        className={!pagination.next ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
       </div>
 

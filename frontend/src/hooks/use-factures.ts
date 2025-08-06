@@ -137,6 +137,13 @@ export const useFactures = () => {
   const [factures, setFactures] = useState<Facture[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({
+    count: 0,
+    next: null as string | null,
+    previous: null as string | null,
+    currentPage: 1,
+    pageSize: 10,
+  });
   const { toast } = useToast();
 
   // Récupérer toutes les factures
@@ -146,14 +153,25 @@ export const useFactures = () => {
     client?: number;
     mode_paiement?: string;
     search?: string;
+    page?: number;
+    page_size?: number;
   }) => {
     setLoading(true);
     setError(null);
     try {
       const response = await api.get('/billings/factures/', { params });
       // S'assurer que les données sont un tableau
-      const data = Array.isArray(response.data) ? response.data : [];
+      const data = Array.isArray(response.data.results) ? response.data.results : [];
       setFactures(data);
+      
+      // Mettre à jour la pagination
+      setPagination({
+        count: response.data.count || 0,
+        next: response.data.next,
+        previous: response.data.previous,
+        currentPage: params?.page || 1,
+        pageSize: params?.page_size || 10,
+      });
     } catch (err) {
       setError('Erreur lors du chargement des factures');
       console.error('Erreur fetchFactures:', err);
@@ -288,16 +306,38 @@ export const useFactures = () => {
   }, [fetchFactures, toast]);
 
   // Générer le PDF d'une facture
-  const genererPDF = useCallback(async (factureId: number) => {
+  const genererPDF = useCallback(async (factureId: number, saveToModel = false) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post(`/billings/factures/${factureId}/generer_pdf/`);
-      toast({
-        title: 'Succès',
-        description: 'PDF généré avec succès',
+      const response = await api.post(`/billings/factures/${factureId}/generer_pdf/`, {
+        save: saveToModel
       });
-      return response.data;
+      
+      if (saveToModel) {
+        toast({
+          title: 'Succès',
+          description: response.data.message,
+        });
+        return response.data;
+      } else {
+        // Créer un blob et télécharger le PDF
+        const blob = new Blob([response.data], { type: 'application/pdf' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `facture_${factureId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast({
+          title: 'Succès',
+          description: 'PDF téléchargé avec succès',
+        });
+        return { success: true };
+      }
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erreur lors de la génération du PDF';
       setError(message);
@@ -364,6 +404,7 @@ export const useFactures = () => {
     factures,
     loading,
     error,
+    pagination,
     fetchFactures,
     fetchFacture,
     createFacture,

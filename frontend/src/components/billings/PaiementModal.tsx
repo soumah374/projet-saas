@@ -18,15 +18,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { CalendarIcon } from 'lucide-react';
 import { Facture } from '@/hooks/use-factures';
+import { cn } from '@/lib/utils';
 
 interface PaiementModalProps {
   facture: Facture | null;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: {
+    facture: number;
     montant: number;
     date_paiement: string;
     mode_paiement: string;
@@ -53,7 +62,7 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
   loading = false,
 }) => {
   const [montant, setMontant] = useState('');
-  const [datePaiement, setDatePaiement] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [datePaiement, setDatePaiement] = useState<Date>(new Date());
   const [modePaiement, setModePaiement] = useState('virement');
   const [referencePaiement, setReferencePaiement] = useState('');
   const [notes, setNotes] = useState('');
@@ -74,8 +83,9 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
     }
 
     onSubmit({
+      facture: facture.id,
       montant: montantNum,
-      date_paiement: datePaiement,
+      date_paiement: format(datePaiement, 'yyyy-MM-dd'),
       mode_paiement: modePaiement,
       reference_paiement: referencePaiement || undefined,
       notes: notes || undefined,
@@ -83,7 +93,7 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
 
     // Reset form
     setMontant('');
-    setDatePaiement(format(new Date(), 'yyyy-MM-dd'));
+    setDatePaiement(new Date());
     setModePaiement('virement');
     setReferencePaiement('');
     setNotes('');
@@ -93,7 +103,7 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
     onClose();
     // Reset form
     setMontant('');
-    setDatePaiement(format(new Date(), 'yyyy-MM-dd'));
+    setDatePaiement(new Date());
     setModePaiement('virement');
     setReferencePaiement('');
     setNotes('');
@@ -103,7 +113,7 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Enregistrer un paiement</DialogTitle>
           <DialogDescription>
@@ -160,13 +170,29 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
           {/* Date de paiement */}
           <div className="space-y-2">
             <Label htmlFor="date_paiement">Date de paiement *</Label>
-            <Input
-              id="date_paiement"
-              type="date"
-              value={datePaiement}
-              onChange={(e) => setDatePaiement(e.target.value)}
-              required
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !datePaiement && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {datePaiement ? format(datePaiement, "PPP", { locale: fr }) : <span>Sélectionner une date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={datePaiement}
+                  onSelect={(date) => date && setDatePaiement(date)}
+                  initialFocus
+                  disabled={(date) => date > new Date()}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Mode de paiement */}

@@ -205,30 +205,21 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 <span>Contrats</span>
             </Link>
 
-            {/* Facturation */}
-            <Link to="/factures" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <CreditCard className="h-5 w-5" />
-                <span>Facturation</span>
-            </Link>
-
-            {/* Génération de factures */}
-            <Link to="/generation-factures" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/generation-factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <FileSpreadsheet className="h-5 w-5" />
-                <span>Génération Factures</span>
-            </Link>
-
             {/* Projets accordéon */}
             <Link to="/projects" className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
                 location.pathname.startsWith('/projects') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
               )}>
               <Target className="h-4 w-4" /> <span>Projets</span>
+            </Link>
+
+             {/* Facturation */}
+             <Link to="/factures" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+                <CreditCard className="h-5 w-5" />
+                <span>Facturation</span>
             </Link>
           
             {/* Planning accordéon */}

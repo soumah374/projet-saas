@@ -6,6 +6,12 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Sum, Count
 from datetime import date, timedelta
 from decimal import Decimal
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
+import tempfile
+import os
 
 from .models import Facture, PaiementFacture, LigneFacture, ConfigurationFacturation
 from .serializers import (
@@ -65,9 +71,52 @@ class FactureViewSet(viewsets.ModelViewSet):
         """Génère le PDF de la facture"""
         facture = self.get_object()
         try:
-            # Ici on pourrait implémenter la génération PDF
-            # Pour l'instant, on retourne juste un succès
-            return Response({'message': 'PDF généré avec succès'}, status=status.HTTP_200_OK)
+            # Rendre le template HTML
+            html_string = render_to_string('billings/print_billing.html', {
+                'facture': facture
+            })
+            
+            # Configuration des polices
+            font_config = FontConfiguration()
+            
+            # Créer le PDF avec WeasyPrint
+            html_doc = HTML(string=html_string)
+            css = CSS(string='''
+                @page { size: A4; margin: 2cm; }
+                body { font-family: Arial, sans-serif; }
+            ''', font_config=font_config)
+            
+            # Générer le PDF
+            pdf = html_doc.write_pdf(stylesheets=[css], font_config=font_config)
+            
+            # Créer le nom de fichier
+            filename = f"facture_{facture.numero}.pdf"
+            
+            # Sauvegarder le PDF dans le modèle si demandé
+            if request.data.get('save', False):
+                # Créer un fichier temporaire
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+                    tmp_file.write(pdf)
+                    tmp_file_path = tmp_file.name
+                
+                # Sauvegarder dans le modèle
+                with open(tmp_file_path, 'rb') as f:
+                    facture.fichier_pdf.save(filename, f, save=True)
+                
+                # Nettoyer le fichier temporaire
+                os.unlink(tmp_file_path)
+                
+                return Response({
+                    'message': 'PDF généré et sauvegardé avec succès',
+                    'filename': filename,
+                    'download_url': facture.fichier_pdf.url if facture.fichier_pdf else None
+                }, status=status.HTTP_200_OK)
+            else:
+                # Retourner le PDF directement
+                response = HttpResponse(pdf, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                return response
+                
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
