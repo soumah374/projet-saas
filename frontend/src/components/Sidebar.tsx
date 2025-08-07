@@ -27,7 +27,8 @@ import {
   FileCheck,
   FileEdit,
   CreditCard,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Shield
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -334,6 +335,18 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 )}
               > 
                 <Users className="h-5 w-5" /> Utilisateurs 
+              </Link>
+            )}
+
+            {user?.is_staff && (
+              <Link 
+                to="/permissions" 
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+                  location.pathname === '/permissions' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                )}
+              > 
+                <Shield className="h-5 w-5" /> Permissions 
               </Link>
             )}
 
