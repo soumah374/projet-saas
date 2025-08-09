@@ -16,6 +16,12 @@ interface RolePermissions {
   };
 }
 
+interface RoleObjectUpdate {
+  id: number;
+  name: string;
+  user_count: number;
+}
+
 export const usePermissionManager = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
@@ -91,46 +97,42 @@ export const usePermissionManager = () => {
 
   // Mettre à jour les permissions d'un rôle
   const updateRolePermissions = useCallback(async (
+    roleId: number,
     roleName: string, 
     moduleName: string, 
     permissionType: string, 
     value: boolean
   ): Promise<boolean> => {
-    try {
+    try { 
+      // D'abord récupérer les permissions actuelles du rôle
       const rolePermissionsRes = await api.get('/auth/permissions/role_permissions/');
       const rolePermissions = rolePermissionsRes.data.role_permissions || [];
       const rolePerm = rolePermissions.find((rp: RolePermissions) => rp.role === roleName);
       
-      if (!rolePerm) return false;
-
+      // Créer la structure complète des permissions en gardant les existantes
+      const currentModulePermissions = rolePerm ? rolePerm.module_permissions : {};
+      
+      // Mettre à jour seulement la permission spécifique
       const updatedModulePermissions = {
-        ...rolePerm.module_permissions,
+        ...currentModulePermissions,
         [moduleName]: {
-          ...rolePerm.module_permissions[moduleName],
+          view: false,
+          add: false,
+          change: false,
+          delete: false,
+          ...currentModulePermissions[moduleName],
           [permissionType]: value
         }
       };
 
-      // D'abord, récupérer l'ID du rôle
-      const rolesRes = await api.get('/auth/permissions/roles/');
-      const role = rolesRes.data.roles.find((r: any) => r.name === roleName);
-      
-      if (!role) {
-        toast({
-          title: "Erreur",
-          description: "Rôle non trouvé",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      await api.put(`/auth/permissions/${role.id}/update-permissions/`, {
+      // Mettre à jour les permissions du rôle avec toutes les permissions
+      await api.put(`/auth/permissions/${roleId}/update-permissions/`, {
         module_permissions: updatedModulePermissions
       });
 
       toast({
         title: "Succès",
-        description: "Permissions mises à jour"
+        description: `Permission ${permissionType} ${value ? 'activée' : 'désactivée'} pour ${moduleName}`
       });
       return true;
     } catch (error) {
@@ -144,24 +146,11 @@ export const usePermissionManager = () => {
   }, [toast]);
 
   // Supprimer un rôle
-  const deleteRole = useCallback(async (roleName: string): Promise<boolean> => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer le rôle "${roleName}" ?`)) return false;
+  const deleteRole = useCallback(async (roleId: number): Promise<boolean> => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer le rôle "${roleId}" ?`)) return false;
 
     try {
-      // D'abord, récupérer l'ID du rôle
-      const rolesRes = await api.get('/auth/permissions/roles/');
-      const role = rolesRes.data.roles.find((r: any) => r.name === roleName);
-      
-      if (!role) {
-        toast({
-          title: "Erreur",
-          description: "Rôle non trouvé",
-          variant: "destructive"
-        });
-        return false;
-      }
-      
-      await api.delete(`/auth/permissions/${role.id}/`);
+      await api.delete(`/auth/permissions/${roleId}/delete_role/`);
       toast({
         title: "Succès",
         description: "Rôle supprimé avec succès"
@@ -294,6 +283,26 @@ export const usePermissionManager = () => {
     }
   }, [toast]);
 
+  const updateRole = useCallback(async (roleId: number, roleName: string): Promise<boolean> => {
+    if (!roleName.trim()) return false;
+
+    try {
+      await api.put(`/auth/permissions/${roleId}/update_role/`, { name: roleName });
+      toast({
+        title: "Succès",
+        description: "Rôle mise à jour avec succès"
+      });
+      return true;
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de mittre à jour le rôle",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }, [toast]);
+
   return {
     isLoading,
     loadPermissionData,
@@ -304,6 +313,7 @@ export const usePermissionManager = () => {
     deletePermission,
     getRoleUsers,
     assignUserToRole,
-    removeUserFromRole
+    removeUserFromRole,
+    updateRole
   };
 }; 

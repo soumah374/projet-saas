@@ -1,25 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import { 
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
 import { 
   Dialog, 
   DialogContent, 
@@ -29,27 +21,10 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+
 import { useToast } from '@/hooks/use-toast';
 import { usePermissionManager } from '@/hooks/use-permission-manager';
 import { Permission, Role } from '@/hooks/use-permissions';
-
-interface PermissionGroup {
-  module: string;
-  permissions: {
-    view: boolean;
-    add: boolean;
-    change: boolean;
-    delete: boolean;
-  };
-}
-
 interface PermissionObject {
   id: number;
   name: string;
@@ -79,6 +54,7 @@ interface RolePermissions {
 }
 
 export default function PermissionManagerPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const {
     isLoading,
@@ -87,7 +63,8 @@ export default function PermissionManagerPage() {
     createPermission: createPermissionAPI,
     updateRolePermissions: updateRolePermissionsAPI,
     deleteRole: deleteRoleAPI,
-    deletePermission: deletePermissionAPI
+    deletePermission: deletePermissionAPI,
+    updateRole: updateRoleAPI,
   } = usePermissionManager();
   
   const [roles, setRoles] = useState<(Role | RoleObject)[]>([]);
@@ -124,46 +101,25 @@ export default function PermissionManagerPage() {
     }
   };
 
-  // Éditer un rôle existant
-  const editRole = async (oldRoleName: string, newRoleName: string) => {
-    try {
-      // Pour l'instant, on supprime l'ancien et on crée le nouveau
-      // TODO: Implémenter une vraie fonction d'édition côté backend
-      const deleteSuccess = await deleteRoleAPI(oldRoleName);
-      if (deleteSuccess) {
-        const createSuccess = await createRoleAPI(newRoleName);
-        if (createSuccess) {
-          loadData();
-          return true;
-        }
-      }
-      return false;
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier le rôle",
-        variant: "destructive"
-      });
-      return false;
-    }
-  };
-
+  const [roleEditId, setRoleEditId] = useState<number>(null)
   // Ouvrir le dialogue d'édition d'un rôle
-  const openEditRoleDialog = (roleName: string) => {
+  const openEditRoleDialog = (roleId: number,roleName: string) => {
     setEditingRole(roleName);
     setEditRoleName(roleName);
     setIsEditRoleDialogOpen(true);
+    setRoleEditId(roleId)
   };
 
   // Sauvegarder les modifications d'un rôle
-  const saveRoleEdit = async () => {
+  const saveRoleEdit = async (roleId: number) => {
     if (!editingRole || !editRoleName.trim()) return;
 
-    const success = await editRole(editingRole, editRoleName);
+    const success = await updateRoleAPI(roleId,editRoleName);
     if (success) {
       setEditingRole(null);
       setEditRoleName('');
       setIsEditRoleDialogOpen(false);
+      loadData()
     }
   };
 
@@ -178,16 +134,16 @@ export default function PermissionManagerPage() {
   };
 
   // Mettre à jour les permissions d'un rôle
-  const updateRolePermissions = async (roleName: string, moduleName: string, permissionType: string, value: boolean) => {
-    const success = await updateRolePermissionsAPI(roleName, moduleName, permissionType, value);
+  const updateRolePermissions = async (roleId: number,roleName: string, moduleName: string, permissionType: string, value: boolean) => {
+    const success = await updateRolePermissionsAPI(roleId,roleName, moduleName, permissionType, value);
     if (success) {
-      loadData();
+      // loadData();
     }
   };
 
   // Supprimer un rôle
-  const handleDeleteRole = async (roleName: string) => {
-    const success = await deleteRoleAPI(roleName);
+  const handleDeleteRole = async (roleId: number) => {
+    const success = await deleteRoleAPI(roleId);
     if (success) {
       loadData();
     }
@@ -230,7 +186,6 @@ export default function PermissionManagerPage() {
         <TabsList>
           <TabsTrigger value="roles">Rôles</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
-          <TabsTrigger value="assignments">Attributions</TabsTrigger>
         </TabsList>
 
         <TabsContent value="roles" className="space-y-6">
@@ -298,7 +253,7 @@ export default function PermissionManagerPage() {
                       <Button variant="outline" onClick={() => setIsEditRoleDialogOpen(false)}>
                         Annuler
                       </Button>
-                      <Button onClick={saveRoleEdit}>Sauvegarder</Button>
+                      <Button onClick={()=>saveRoleEdit(roleEditId)}>Sauvegarder</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -350,18 +305,24 @@ export default function PermissionManagerPage() {
                           <Badge variant="secondary">{totalPermissions}</Badge>
                         </div>
                         <div className="flex space-x-2 pt-2">
-                         
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => navigate(`/permissions/role/${roleId}`)}
+                          >
+                            Permissions
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => openEditRoleDialog(roleName)}
+                            onClick={() => openEditRoleDialog((role as RoleObject).id,roleName)}
                           >
                             Éditer
                           </Button>
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleDeleteRole(roleName)}
+                            onClick={() => handleDeleteRole((role as RoleObject).id)}
                           >
                             Supprimer
                           </Button>
@@ -493,118 +454,6 @@ export default function PermissionManagerPage() {
                   ));
                 })()}
               </Accordion>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="assignments" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Attribution des Permissions</CardTitle>
-              <CardDescription>
-                Configurez les permissions pour chaque rôle
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="roleSelect">Sélectionner un rôle</Label>
-                  <Select value={selectedRole} onValueChange={setSelectedRole}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choisir un rôle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.map((role, index) => {
-                        // Gérer le cas où role peut être un objet ou une chaîne
-                        let roleName: string;
-                        let roleId: string | number;
-                        
-                        if (typeof role === 'string') {
-                          roleName = role;
-                          roleId = role;
-                        } else if (role && typeof role === 'object' && 'name' in role) {
-                          roleName = (role as RoleObject).name;
-                          roleId = (role as RoleObject).id;
-                        } else {
-                          roleName = String(role);
-                          roleId = roleName;
-                        }
-                        
-                        return (
-                          <SelectItem key={`select-role-${roleId}-${index}`} value={roleName}>
-                            {roleName}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {selectedRole && (
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-semibold">Permissions pour {selectedRole}</h3>
-                    <div className="grid gap-4">
-                      {modules.map((module, index) => {
-                        const rolePerm = rolePermissions.find(rp => rp.role === selectedRole);
-                        const modulePerms = rolePerm?.module_permissions[module] || {
-                          view: false,
-                          add: false,
-                          change: false,
-                          delete: false
-                        };
-
-                        return (
-                          <Card key={`module-${module}-${index}`}>
-                            <CardHeader>
-                              <CardTitle className="text-lg capitalize">{module}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    checked={modulePerms.view}
-                                    onCheckedChange={(checked) => 
-                                      updateRolePermissions(selectedRole, module, 'view', checked)
-                                    }
-                                  />
-                                  <Label>Voir</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    checked={modulePerms.add}
-                                    onCheckedChange={(checked) => 
-                                      updateRolePermissions(selectedRole, module, 'add', checked)
-                                    }
-                                  />
-                                  <Label>Créer</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    checked={modulePerms.change}
-                                    onCheckedChange={(checked) => 
-                                      updateRolePermissions(selectedRole, module, 'change', checked)
-                                    }
-                                  />
-                                  <Label>Modifier</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    checked={modulePerms.delete}
-                                    onCheckedChange={(checked) => 
-                                      updateRolePermissions(selectedRole, module, 'delete', checked)
-                                    }
-                                  />
-                                  <Label>Supprimer</Label>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

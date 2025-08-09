@@ -327,6 +327,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             </Link> */}
 
             {user?.is_staff && (
+              
               <Link 
                 to="/users" 
                 className={cn(

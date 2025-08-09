@@ -528,6 +528,26 @@ class PermissionManagerViewSet(viewsets.ViewSet):
             'message': 'Rôle créé avec succès'
         }, status=status.HTTP_201_CREATED)
     
+    @action(detail=True, methods=['put'])
+    def update_role(self, request, pk=None):
+        try:
+            role = Group.objects.get(pk=pk)
+            role_name = request.data.get('name')
+            if not role_name:
+                return Response(
+                    {'error': 'Le nom du rôle est requis'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            role.name = role_name
+            role.save()
+            
+            return Response({'success':'Role mise à jour avec succès.'},status=status.HTTP_201_CREATED)
+        
+        except Group.DoesNotExist:
+            return Response(
+                {'error': 'Rôle non trouvé'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
     @action(detail=True, methods=['delete'])
     def delete_role(self, request, pk=None):
         """Supprimer un rôle"""
@@ -550,6 +570,25 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 {'error': 'Rôle non trouvé'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+    
+    @action(detail=False, methods=['get'])
+    def content_types(self, request):
+        """Obtenir tous les ContentTypes disponibles pour debug"""
+        content_types = ContentType.objects.all().order_by('app_label', 'model')
+        ct_data = []
+        
+        for ct in content_types:
+            ct_data.append({
+                'id': ct.id,
+                'app_label': ct.app_label,
+                'model': ct.model,
+                'name': str(ct)
+            })
+        
+        return Response({
+            'content_types': ct_data,
+            'total_count': len(ct_data)
+        })
     
     @action(detail=False, methods=['get'])
     def permissions(self, request):
@@ -713,18 +752,46 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                             )
                             group.permissions.add(permission)
                         except Permission.DoesNotExist:
-                            # Si la permission n'existe pas, la créer
+                            # Si la permission n'existe pas, essayer de la créer
                             try:
-                                content_type = ContentType.objects.get(app_label=module, model='user')
+                                # Mapping des modules vers les vrais apps/modèles Django
+                                # Basé sur INSTALLED_APPS: projects, users, documents, teams, notifications, catalog, departments, devis, contrats, billings
+                                app_model_mappings = {
+                                    'users': ('users', 'userprofile'),
+                                    'projects': ('projects', 'project'),
+                                    'teams': ('teams', 'team'),
+                                    'departments': ('departments', 'department'),
+                                    'clients': ('users', 'clientprofile'),  # Les clients sont dans l'app users
+                                    'devis': ('devis', 'devis'),
+                                    'contrats': ('contrats', 'contrat'),
+                                    'billings': ('billings', 'billing'),
+                                    'catalog': ('catalog', 'catalog'),
+                                    'documents': ('documents', 'document'),
+                                    'notifications': ('notifications', 'notification'),
+                                    # Modules qui n'ont pas d'app dédiée - utiliser users comme fallback
+                                    'reports': ('users', 'userprofile'),
+                                    'calendar': ('users', 'userprofile'),
+                                    'timesheets': ('users', 'userprofile')
+                                }
+                                
+                                app_label, model_name = app_model_mappings.get(module, ('users', 'userprofile'))
+                                
+                                # Essayer de récupérer le ContentType
+                                try:
+                                    content_type = ContentType.objects.get(app_label=app_label, model=model_name)
+                                except ContentType.DoesNotExist:
+                                    # Fallback vers le ContentType de UserProfile si pas trouvé
+                                    content_type = ContentType.objects.get(app_label='users', model='userprofile')
+                                
                                 permission = Permission.objects.create(
                                     name=f"Can {perm_type} {module}",
                                     codename=f"{perm_type}_{module}",
                                     content_type=content_type
                                 )
                                 group.permissions.add(permission)
-                            except ContentType.DoesNotExist:
+                                
+                            except Exception as e:
                                 continue
-            
             return Response({
                 'message': 'Permissions mises à jour avec succès',
                 'role': group.name
@@ -785,7 +852,7 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 return Response({
                     'message': 'Utilisateur assigné au rôle avec succès',
                     'user_id': user_id,
-                    'role_name': role_name
+                    'role_name': group.name
                 })
                 
             except User.DoesNotExist:
@@ -812,7 +879,7 @@ class PermissionManagerViewSet(viewsets.ViewSet):
             return Response({
                 'message': 'Utilisateur retiré du rôle avec succès',
                 'user_id': user_id,
-                'role_name': role_name
+                'role_name': group.name
             })
             
         except (Group.DoesNotExist, User.DoesNotExist):

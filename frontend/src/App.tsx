@@ -39,6 +39,7 @@ import { CategoryDetailsPage } from './pages/CategoryDetailsPage';
 import { AvenantsPage } from './pages/AvenantsPage';
 import { FacturesPage } from './pages/FacturesPage';
 import PermissionManagerPage from './pages/PermissionManagerPage';
+import RoleDetailsPage from './pages/RoleDetailsPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -237,6 +238,11 @@ function App() {
                 <Route path="/permissions" element={
                   <ProtectedRoute>
                     <PermissionManagerPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/permissions/role/:roleId" element={
+                  <ProtectedRoute>
+                    <RoleDetailsPage />
                   </ProtectedRoute>
                 } />
                 
