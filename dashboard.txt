@@ -1,0 +1,118 @@
+## �� **INDICATEURS DISPONIBLES POUR LE TABLEAU DE BORD**
+
+### **1. PROJETS** 🎯
+- **Total des projets** : Nombre total de projets
+- **Projets actifs** : Projets en cours (Prospection, Production, Livraison)
+- **Projets terminés** : Projets avec statut "Terminé"
+- **Projets en retard** : Projets dépassant leur deadline
+- **Progression moyenne** : Pourcentage d'avancement global des projets
+- **Répartition par type** : Externe vs Interne
+- **Répartition par statut** : Prospection, Production, Livraison, Terminé
+- **Répartition par priorité** : Basse, Normale, Haute, Urgente
+- **Taux de réussite** : Projets livrés à temps
+
+### **2. FINANCIER & FACTURATION** 💰
+- **Total des devis** : Nombre de devis créés
+- **Devis acceptés** : Devis avec statut "Accepté"
+- **Devis refusés** : Devis avec statut "Refusé"
+- **Taux de conversion** : Devis acceptés / Total devis
+- **Total des contrats** : Nombre de contrats actifs
+- **Montant total facturé** : Somme des montants TTC
+- **Montant total payé** : Somme des paiements reçus
+- **Montant en retard** : Factures en retard de paiement
+- **Factures du mois** : Nombre et montant des factures du mois en cours
+- **Échéances à venir** : Prochaines échéances de paiement (30 jours)
+
+### **3. CLIENTS** 👥
+- **Total des clients** : Nombre de clients enregistrés
+- **Clients actifs** : Clients avec statut "Actif"
+- **Clients prospects** : Clients avec statut "Prospect"
+- **Répartition par type** : Personne physique vs Personne morale
+- **Répartition par catégorie** : Catégories de clients
+- **Clients par département** : Répartition géographique
+
+### **4. ÉQUIPES & RESSOURCES HUMAINES** 👨‍💼
+- **Total des membres** : Nombre total d'utilisateurs
+- **Leaders/Chefs de projet** : Utilisateurs avec rôle "Chef de projet"
+- **Membres actifs** : Utilisateurs participant à des projets
+- **Consultants** : Utilisateurs avec rôle "Consultant"
+- **Productivité moyenne** : Taux de productivité de l'équipe
+- **Répartition par département** : Membres par département
+
+### **5. TÂCHES & ACTIVITÉS** ✅
+- **Total des tâches** : Nombre total de tâches
+- **Tâches terminées** : Tâches avec statut "Terminé"
+- **Tâches en cours** : Tâches en cours d'exécution
+- **Tâches en retard** : Tâches dépassant leur échéance
+- **Taux de complétion** : Pourcentage de tâches terminées
+- **Répartition par statut** : À faire, En cours, Terminé, En pause
+
+### **6. SUIVI DU TEMPS** ⏰
+- **Heures totales** : Somme des heures travaillées
+- **Heures validées** : Heures approuvées par les managers
+- **Heures en attente** : Heures en attente de validation
+- **Temps par projet** : Répartition des heures par projet
+- **Temps par utilisateur** : Heures travaillées par membre
+- **Temps par tâche** : Heures allouées par tâche
+- **Efficacité** : Heures estimées vs Heures réelles
+
+### **7. CALENDRIER & ÉVÉNEMENTS** ��
+- **Total des événements** : Nombre total d'événements
+- **Événements cette semaine** : Événements dans les 7 jours
+- **Événements ce mois** : Événements du mois en cours
+- **Réunions** : Nombre de réunions planifiées
+- **Échéances** : Deadlines à venir
+- **Jalons** : Milestones du projet
+- **Événements en retard** : Événements dépassés
+
+### **8. DOCUMENTS** 📄
+- **Total des documents** : Nombre de documents stockés
+- **Documents par projet** : Répartition par projet
+- **Types de documents** : PDF, Word, Excel, etc.
+- **Documents par catégorie** : Contrats, Rapports, Designs, etc.
+
+### **9. DÉPARTEMENTS** 🏢
+- **Total des départements** : Nombre de départements
+- **Managers par département** : Responsables de départements
+- **Projets par département** : Répartition des projets
+- **Membres par département** : Effectifs par département
+
+### **10. MÉTRIQUES DE PERFORMANCE** 📈
+- **Taux de livraison à temps** : Projets livrés dans les délais
+- **Satisfaction client** : Indicateurs de satisfaction
+- **Rentabilité** : Marge bénéficiaire des projets
+- **Utilisation des ressources** : Taux d'occupation des équipes
+- **Qualité** : Taux de rework/retour
+
+### **11. ALERTES & NOTIFICATIONS** 🚨
+- **Projets en retard** : Alertes de délais dépassés
+- **Factures en retard** : Alertes de paiements
+- **Tâches en retard** : Alertes de tâches dépassées
+- **Échéances urgentes** : Échéances dans les 7 jours
+
+### **12. ÉVOLUTION TEMPORELLE** ��
+- **Tendances mensuelles** : Évolution des indicateurs
+- **Comparaison périodes** : Cette année vs Année précédente
+- **Prévisions** : Estimations basées sur les tendances
+
+## **STRUCTURE RECOMMANDÉE DU TABLEAU DE BORD**
+
+### **Section 1 : Vue d'ensemble (KPIs principaux)**
+- Projets actifs, Taux de réussite, Montant facturé, Heures travaillées
+
+### **Section 2 : Performance des projets**
+- Graphiques de progression, Statuts, Priorités, Deadlines
+
+### **Section 3 : Financier**
+- Devis, Contrats, Factures, Paiements, Trésorerie
+
+### **Section 4 : Ressources humaines**
+- Équipes, Productivité, Répartition des charges
+
+### **Section 5 : Calendrier & Planning**
+- Événements, Réunions, Jalons, Échéances
+
+### **Section 6 : Alertes & Actions**
+- Projets en retard, Factures en retard, Tâches urgentes
+
+Ces indicateurs couvrent tous les aspects opérationnels et stratégiques de SAKOM, permettant une vision complète de la performance de l'entreprise et de ses projets.

@@ -25,9 +25,7 @@ import {
   DollarSign,
   Wrench,
   FileCheck,
-  FileEdit,
   CreditCard,
-  FileSpreadsheet,
   Shield
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -38,11 +36,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/hooks/use-auth"
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible"
+
 
 interface User {
   id: number;
@@ -70,7 +64,8 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
     rapports: false,
     documents: false,
     prestations: false,
-    clients: false
+    clients: false,
+    administration: false
   });
 
   const toggleMenu = (key: string) => setOpenMenus(m => ({ ...m, [key]: !m[key] }));
@@ -103,13 +98,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div>
-          {/* Logo header */}
-          {/* <div className="mb-6 flex items-center justify-center">
-            <Link to="/" className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-lg">
-              <Logo size="md" showText={true} className="text-white" linkTo="" />
-            </Link>
-          </div> */}
-          
           <div className="mb-8">
             <span className="block text-xs text-gray-400 mb-2">Rôle actuel</span>
             <div className="rounded-lg border px-3 py-2 text-sm font-medium bg-gray-50 flex items-center justify-between">
@@ -232,64 +220,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 <span>Facturation</span>
             </Link>
           
-            {/* Planning accordéon */}
-            {/* <div className="space-y-2">
-              <button 
-                onClick={() => toggleMenu('planning')} 
-                className={cn(
-                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/calendar') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <Calendar className="h-5 w-5" /> Planning
-                <span className="ml-auto">
-                  {openMenus.planning ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </span>
-              </button>
-              {openMenus.planning && (
-                <div className="ml-8 space-y-1">
-                  <Link to="/calendar" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Vue globale
-                  </Link>
-                  <Link to="/calendar?view=month" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Vue mensuelle
-                  </Link>
-                  <Link to="/calendar?view=week" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Vue hebdomadaire
-                  </Link>
-                </div>
-              )}
-            </div> */}
-
-            {/* Rapports accordéon */}
-            {/* <div className="space-y-2">
-              <button 
-                onClick={() => toggleMenu('rapports')} 
-                className={cn(
-                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/reports') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <BarChart3 className="h-5 w-5" /> Rapports
-                <span className="ml-auto">
-                  {openMenus.rapports ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </span>
-              </button>
-              {openMenus.rapports && (
-                <div className="ml-8 space-y-1">
-                  <Link to="/reports" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Vue d'ensemble
-                  </Link>
-                  <Link to="/reports?type=performance" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Performance
-                  </Link>
-                  <Link to="/reports?type=budget" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Budget
-                  </Link>
-                </div>
-              )}
-            </div> */}
-
             {/* Documents accordéon */}
             <div className="space-y-2">
               <button 
@@ -329,100 +259,52 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
             {/* Menu Administration */}
             {user?.is_staff && (
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "w-full justify-between px-3 py-2 h-auto text-sm font-medium transition-colors",
-                      (location.pathname === '/users' || location.pathname === '/permissions') 
-                        ? "bg-blue-50 text-blue-600" 
-                        : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Settings className="h-5 w-5" />
-                      Administration
-                    </div>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1 pl-6">
-                  <Link 
-                    to="/users" 
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                      location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                    )}
-                  > 
-                    <Users className="h-4 w-4" /> Utilisateurs 
-                  </Link>
-                  
-                  <Link 
-                    to="/permissions" 
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                      location.pathname === '/permissions' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                    )}
-                  > 
-                    <Shield className="h-4 w-4" /> Permissions 
-                  </Link>
-                </CollapsibleContent>
-              </Collapsible>
+              <div className="space-y-2">
+                <button 
+                  onClick={() => toggleMenu('administration')} 
+                  className={cn(
+                    "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    (location.pathname === '/users' || location.pathname === '/permissions') 
+                      ? "bg-blue-50 text-blue-600" 
+                      : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                  )}
+                >
+                  <Settings className="h-5 w-5" /> Administration
+                  <span className="ml-auto">
+                    {openMenus.administration ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </span>
+                </button>
+                {openMenus.administration && (
+                  <div className="ml-6 space-y-1">
+                    <Link 
+                      to="/users" 
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+                        location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      )}
+                    > 
+                      <Users className="h-4 w-4" /> Utilisateurs 
+                    </Link>
+                    
+                    <Link 
+                      to="/permissions" 
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+                        location.pathname === '/permissions' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      )}
+                    > 
+                      <Shield className="h-4 w-4" /> Permissions 
+                    </Link>
+                  </div>
+                )}
+              </div>
             )}
 
-            {/* <Link to="/services" className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-              location.pathname === '/services' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-            )}> 
-              <FolderOpen className="h-5 w-5" />
-              <span>Prestations</span>
-            </Link> */}
-
-            
-
-            {/* <Link to="/activities" className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-              location.pathname === '/activities' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-            )}> 
-              <Activity className="h-5 w-5" />
-              <span>Activités</span>
-            </Link> */}
-
-             
+        
           </nav>
         </div>
 
         <div className="space-y-2">
-          <div className="mb-2">
-            {/* <span className="block text-xs text-gray-400 mb-2">Actions rapides</span> */}
-            <div className="grid gap-2">
-              {/* <button 
-                onClick={() => navigate('/projects/new')}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-600 transition-colors h-8"
-              >
-                <Plus className="w-4 h-4" /> Nouveau projet
-              </button> */}
-              {/* <button 
-                onClick={() => navigate('/reports')}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"
-              >
-                <PieChart className="w-4 h-4" /> Rapports
-              </button> */}
-              {/* <button 
-                onClick={() => navigate('/documents')}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"
-              >
-                <DocIcon className="w-4 h-4" /> Documents
-              </button>
-              <button 
-                onClick={() => navigate('/settings')}
-                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"
-              >
-                <Settings className="w-4 h-4" /> Paramètres
-              </button> */}
-            </div>
-          </div>
           <div className="border-t border-gray-200 pt-4 flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-blue-600">
