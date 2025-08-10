@@ -1,4 +1,4 @@
-## �� **INDICATEURS DISPONIBLES POUR LE TABLEAU DE BORD**
+## **INDICATEURS DISPONIBLES POUR LE TABLEAU DE BORD**
 
 ### **1. PROJETS** 🎯
 - **Total des projets** : Nombre total de projets

@@ -40,6 +40,7 @@ import { AvenantsPage } from './pages/AvenantsPage';
 import { FacturesPage } from './pages/FacturesPage';
 import PermissionManagerPage from './pages/PermissionManagerPage';
 import RoleDetailsPage from './pages/RoleDetailsPage';
+import DashboardPage from './pages/DashboardPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -77,7 +78,7 @@ function App() {
               <Routes>
                 <Route path="/" element={
                   <ProtectedRoute>
-                    <Dashboard user={user} />
+                    <DashboardPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/projects" element={

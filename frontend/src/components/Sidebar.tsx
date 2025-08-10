@@ -70,18 +70,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
   const toggleMenu = (key: string) => setOpenMenus(m => ({ ...m, [key]: !m[key] }));
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "En cours":
-        return "bg-blue-100 text-blue-600";
-      case "En retard":
-        return "bg-red-100 text-red-800";
-      case "Terminé":
-        return "bg-green-100 text-green-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
 
   return (
     <>
@@ -220,35 +208,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 <span>Facturation</span>
             </Link>
           
-            {/* Documents accordéon */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => toggleMenu('documents')} 
-                className={cn(
-                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.includes('/documents') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <FileText className="h-5 w-5" /> Documents
-                <span className="ml-auto">
-                  {openMenus.documents ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </span>
-              </button>
-              {openMenus.documents && (
-                <div className="ml-8 space-y-1">
-                  <Link to="/documents" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Tous les documents
-                  </Link>
-                  <Link to="/documents?type=contract" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Contrats
-                  </Link>
-                  <Link to="/documents?type=report" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    Rapports
-                  </Link>
-                </div>
-              )}
-            </div>
-
             {/* Départements */}
             <Link to="/departments" className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
@@ -299,6 +258,35 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 )}
               </div>
             )}
+            {/* Documents accordéon */}
+            <div className="space-y-2">
+              <button 
+                onClick={() => toggleMenu('documents')} 
+                className={cn(
+                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  location.pathname.includes('/documents') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
+                )}
+              >
+                <FileText className="h-5 w-5" /> Documents
+                <span className="ml-auto">
+                  {openMenus.documents ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                </span>
+              </button>
+              {openMenus.documents && (
+                <div className="ml-8 space-y-1">
+                  <Link to="/documents" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                    Tous les documents
+                  </Link>
+                  <Link to="/documents?type=contract" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                    Contrats
+                  </Link>
+                  <Link to="/documents?type=report" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                    Rapports
+                  </Link>
+                </div>
+              )}
+            </div>
+
 
         
           </nav>

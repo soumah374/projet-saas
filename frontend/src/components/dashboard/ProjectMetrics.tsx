@@ -1,0 +1,174 @@
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Target, AlertTriangle, TrendingUp, Users } from 'lucide-react';
+
+interface ProjectMetricsProps {
+  data?: {
+    status_distribution: Record<string, number>;
+    progress_distribution: Array<{
+      range: string;
+      count: number;
+    }>;
+    recent_projects: Array<{
+      id: number;
+      name: string;
+      status: string;
+      progress: number;
+      created_at: string;
+    }>;
+    overdue_projects: Array<{
+      id: number;
+      name: string;
+      deadline: string;
+      days_overdue: number;
+    }>;
+    team_performance: Array<{
+      team_name: string;
+      project_count: number;
+      avg_progress: number;
+    }>;
+  };
+  period: string;
+}
+
+export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) => {
+  if (!data) return null;
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'en cours':
+        return 'bg-blue-100 text-blue-800';
+      case 'terminé':
+        return 'bg-green-100 text-green-800';
+      case 'en attente':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'annulé':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Distribution par statut */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Distribution par Statut
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Object.entries(data.status_distribution || {}).map(([status, count]) => (
+              <div key={status} className="text-center">
+                <div className="text-2xl font-bold text-gray-900">{count}</div>
+                <Badge variant="secondary" className={getStatusColor(status)}>
+                  {status}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Projets récents */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            Projets Récents
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {data.recent_projects?.slice(0, 5).map((project) => (
+              <div key={project.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{project.name}</h4>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className={getStatusColor(project.status)}>
+                      {project.status}
+                    </Badge>
+                    <span className="text-sm text-gray-500">
+                      {new Date(project.created_at).toLocaleDateString('fr-FR')}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-900">{project.progress}%</div>
+                  <Progress value={project.progress} className="w-20 mt-1" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Projets en retard */}
+      {data.overdue_projects && data.overdue_projects.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Projets en Retard
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {data.overdue_projects.slice(0, 5).map((project) => (
+                <div key={project.id} className="flex items-center justify-between p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div>
+                    <h4 className="font-medium text-gray-900">{project.name}</h4>
+                    <p className="text-sm text-red-600">
+                      En retard de {Math.abs(project.days_overdue)} jours
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500">
+                      Échéance: {new Date(project.deadline).toLocaleDateString('fr-FR')}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Performance des équipes */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Performance des Équipes
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {data.team_performance?.map((team) => (
+              <div key={team.team_name} className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{team.team_name}</h4>
+                  <p className="text-sm text-gray-500">{team.project_count} projets</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-gray-900">
+                    {team.avg_progress?.toFixed(1) || 0}%
+                  </div>
+                  <Progress 
+                    value={team.avg_progress || 0} 
+                    className="w-20 mt-1" 
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}; 

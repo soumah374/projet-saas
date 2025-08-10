@@ -1,0 +1,15 @@
+from django.apps import AppConfig
+
+
+class DashboardConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'dashboard'
+    verbose_name = 'Tableau de Bord'
+    
+    def ready(self):
+        """Appelé quand l'application est prête"""
+        try:
+            # Importer les signaux si nécessaire
+            import dashboard.signals
+        except ImportError:
+            pass 

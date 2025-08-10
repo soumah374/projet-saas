@@ -82,7 +82,7 @@ clean:
 # Backend Commands
 makemigrations:
 	@echo "Creating Django migrations..."
-	docker compose exec backend python manage.py makemigrations users teams projects documents notifications catalog devis contrats billings
+	docker compose exec backend python manage.py makemigrations users teams projects documents notifications catalog devis contrats billings dashboard
 
 makemigrations-users:
 	@echo "Creating migrations for users app..."

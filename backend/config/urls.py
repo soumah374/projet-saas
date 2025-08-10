@@ -31,6 +31,7 @@ urlpatterns = [
         path('devis/', include('devis.urls')),
         path('contrats/', include('contrats.urls')),
         path('billings/', include('billings.urls')),
+        path('dashboard/', include('dashboard.urls')),
     ])),
 ]
 
