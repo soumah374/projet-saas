@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { ProjectPlanning } from '@/components/projects/ProjectPlanning';
 import { ProjectTimesheets } from '@/components/projects/ProjectTimesheets';
 import { ProjectTrackingAlerts } from '@/components/projects/ProjectTrackingAlerts';
@@ -10,10 +11,28 @@ import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { DocumentManager } from '@/components/projects/DocumentManager';
 import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
 import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
-import { useProject } from '@/hooks/use-projects';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { useProject, useStartProject, useUpdateProject } from '@/hooks/use-projects';
+import { ArrowLeft, Loader2, Edit, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
+import { EditProjectModal } from '@/components/EditProjectModal';
+import type { CreateProjectForm } from '@/lib/types';
+import { ProjectActionModals } from '@/components/projects/ProjectActionModals';
+
+const getStatusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'Prospection':
+      return 'bg-indigo-100 text-indigo-800';
+    case 'Production':
+      return 'bg-blue-100 text-blue-800';
+    case 'Livraison':
+      return 'bg-orange-100 text-orange-800';
+    case 'Terminé':
+      return 'bg-green-100 text-green-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
+};
 
 export function ProjectDetailsPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -21,6 +40,47 @@ export function ProjectDetailsPage() {
   const [activeTab, setActiveTab] = useState('planning');
   
   const { data: project, isLoading, error } = useProject(projectId || '');
+  const startProjectMutation = useStartProject();
+  const updateProjectMutation = useUpdateProject();
+
+  const isProjectStarted = project && project.status === 'Production' && project.start_date;
+
+  const handleProjectUpdate = async (id: string, data: Partial<CreateProjectForm>) => {
+    try {
+      await updateProjectMutation.mutateAsync({ projectId: id, data });
+    } catch (e) {
+      console.error('Erreur lors de la mise à jour du projet:', e);
+    }
+  };
+
+  const handleStartProject = async () => {
+    if (!projectId) return;
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      await startProjectMutation.mutateAsync({ projectId, startDate: today });
+    } catch (e) {
+      // Optionally: handle error UI
+      console.error('Erreur lors du lancement du projet:', e);
+    }
+  };
+
+  const handleMoveToLivraison = async () => {
+    if (!projectId) return;
+    try {
+      await updateProjectMutation.mutateAsync({ projectId, data: { status: 'Livraison' } });
+    } catch (e) {
+      console.error('Erreur lors du passage en Livraison:', e);
+    }
+  };
+
+  const handleCompleteProject = async () => {
+    if (!projectId) return;
+    try {
+      await updateProjectMutation.mutateAsync({ projectId, data: { status: 'Terminé' } });
+    } catch (e) {
+      console.error('Erreur lors de la finalisation du projet:', e);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -51,14 +111,48 @@ export function ProjectDetailsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="outline" onClick={() => navigate('/projects')}>
+      <div className="flex items-center gap-4 justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" onClick={() => navigate('/projects')}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour aux projets
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold">{project.title}</h1>
-          <p className="text-gray-600">{project.client_details?.nom_complet || 'Client non assigné'}</p>
+          </Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-bold">{project.title}</h1>
+              <Badge variant="secondary" className={getStatusBadgeClass(project.status)}>
+                {project.status}
+              </Badge>
+            </div>
+            <p className="text-gray-600">{project.client_details?.nom_complet || 'Client non assigné'}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isProjectStarted && (
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-medium">Projet démarré</span>
+            </div>
+          )}
+          {project.status !== 'Terminé' && (
+            <EditProjectModal 
+              project={project as any} 
+              onProjectUpdate={handleProjectUpdate}
+            >
+              <Button variant="outline">
+                <Edit className="w-4 h-4 mr-2" />
+                Modifier
+              </Button>
+            </EditProjectModal>
+          )}
+          <ProjectActionModals
+            status={project.status}
+            isStarting={startProjectMutation.isPending}
+            isUpdating={updateProjectMutation.isPending}
+            onStart={handleStartProject}
+            onMoveToLivraison={handleMoveToLivraison}
+              onComplete={handleCompleteProject}
+            />
         </div>
       </div>
       

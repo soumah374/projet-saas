@@ -230,7 +230,8 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                         },
                         full_name: task.assigned_to_name,
                         project_count: '0',
-                        is_active: true
+                        is_active: true,
+                        groups: []
                       } : null
                     };
                     
@@ -505,7 +506,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                 </SelectTrigger>
                 <SelectContent>
                   {loading ? (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="loading" disabled>
                       <div className="flex items-center gap-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Chargement des membres...
@@ -524,7 +525,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                     </SelectItem>
                   ))
                   ) : (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="no-members" disabled>
                       Aucun membre disponible
                     </SelectItem>
                   )}

@@ -121,6 +121,15 @@ export function useProjectTasks(projectId: string) {
   });
 }
 
+// Completed tasks for a project
+export function useCompletedProjectTasks(projectId: string) {
+  return useQuery({
+    queryKey: ['project-tasks', projectId, 'completed'],
+    queryFn: () => apiRequest<PaginatedResponse<ProjectTask>>(`/${projectId}/tasks/?status=${encodeURIComponent('Terminé')}`),
+    enabled: !!projectId,
+  });
+}
+
 export function useCreateTask() {
   const queryClient = useQueryClient();
 

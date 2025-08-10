@@ -324,6 +324,7 @@ export const usersAPI = {
         is_active?: boolean;
         ordering?: string;
         page?: number;
+        page_size?: number;
     }) => api.get('/auth/users/', { params }),
     getCurrentUser: () => api.get('/auth/users/me/'),
     getUser: (id: number) => api.get(`/auth/users/${id}/`),

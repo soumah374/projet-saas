@@ -9,6 +9,7 @@ export interface UsersParams {
   is_active?: boolean;
   ordering?: string;
   page?: number;
+  page_size?: number;
 }
 
 export const useUsers = (params: UsersParams = {}) => {

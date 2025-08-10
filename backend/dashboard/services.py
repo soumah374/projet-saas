@@ -28,6 +28,7 @@ class DashboardMetricsService:
                 created_at__gte=start_date,
                 created_at__lte=end_date
             )
+           
             
             # Distribution par statut
             status_distribution = dict(
@@ -35,7 +36,6 @@ class DashboardMetricsService:
                     count=Count('id')
                 ).values_list('status', 'count')
             )
-            
             # Projets récents
             recent_projects_qs = projects_in_period.order_by('-created_at')[:10].values(
                 'id', 'title', 'status', 'progress', 'created_at'
@@ -68,8 +68,8 @@ class DashboardMetricsService:
             
             # Performance des équipes
             team_performance = Team.objects.annotate(
-                project_count=Count('projects'),
-                avg_progress=Avg('projects__progress')
+                project_count=Count('team_members__user__projects', distinct=True),
+                avg_progress=Avg('team_members__user__projects__progress')
             ).filter(project_count__gt=0).annotate(
                 team_name=F('name')
             ).values(
@@ -185,8 +185,12 @@ class DashboardMetricsService:
         try:
             # Performance des équipes
             team_productivity = Team.objects.annotate(
-                total_tasks=Count('projects__tasks'),
-                completed_tasks=Count('projects__tasks', filter=Q(projects__tasks__status='Terminé'))
+                total_tasks=Count('team_members__user__projects__tasks', distinct=True),
+                completed_tasks=Count(
+                    'team_members__user__projects__tasks',
+                    filter=Q(team_members__user__projects__tasks__status='Terminé'),
+                    distinct=True
+                )
             ).filter(total_tasks__gt=0).annotate(
                 completion_rate=Coalesce(
                     F('completed_tasks') * 100.0 / F('total_tasks'), 0

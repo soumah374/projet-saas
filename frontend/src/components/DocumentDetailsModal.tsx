@@ -93,7 +93,7 @@ export const DocumentDetailsModal = ({ document, open, onOpenChange }: DocumentD
               </div>
             </div>
             <Button variant="outline" size="sm" className="shrink-0" asChild>
-              <a href={document.file} download>
+              <a href={document.file} download target="_blank">
                 <Download className="w-4 h-4 mr-2" />
                 Télécharger
               </a>

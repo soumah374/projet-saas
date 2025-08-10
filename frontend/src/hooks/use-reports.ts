@@ -56,10 +56,10 @@ export interface ProjectReportData {
 }
 
 export interface ReportFilters {
-  start_date?: string;
-  end_date?: string;
-  project_type?: string;
-  project_status?: string;
+  startDate?: string;
+  endDate?: string;
+  status?: string;
+  type?: string;
   team?: string;
 }
 
@@ -69,10 +69,10 @@ export const useProjectReports = (filters?: ReportFilters) => {
     queryFn: async () => {
       const params = new URLSearchParams();
       
-      if (filters?.start_date) params.append('start_date', filters.start_date);
-      if (filters?.end_date) params.append('end_date', filters.end_date);
-      if (filters?.project_status) params.append('status', filters.project_status);
-      if (filters?.project_type) params.append('type', filters.project_type);
+      if (filters?.startDate) params.append('start_date', filters.startDate);
+      if (filters?.endDate) params.append('end_date', filters.endDate);
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.type) params.append('type', filters.type);
       if (filters?.team) params.append('team', filters.team);
 
       const response = await apiRequest<any>(`/projects/reports/?${params.toString()}`);
@@ -87,10 +87,10 @@ export const useExportReport = () => {
     mutationFn: async (filters: ReportFilters) => {
       const params = new URLSearchParams();
       
-      if (filters.start_date) params.append('start_date', filters.start_date);
-      if (filters.end_date) params.append('end_date', filters.end_date);
-      if (filters.project_status) params.append('status', filters.project_status);
-      if (filters.project_type) params.append('type', filters.project_type);
+      if (filters.startDate) params.append('start_date', filters.startDate);
+      if (filters.endDate) params.append('end_date', filters.endDate);
+      if (filters.status) params.append('status', filters.status);
+      if (filters.type) params.append('type', filters.type);
       if (filters.team) params.append('team', filters.team);
 
       const response = await fetch(`${config.api.baseUrl}/projects/reports/export/?${params.toString()}`, {
@@ -103,7 +103,7 @@ export const useExportReport = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', 'project_report.xlsx');
+      link.setAttribute('download', 'project_report.csv');
       document.body.appendChild(link);
       link.click();
       link.remove();
