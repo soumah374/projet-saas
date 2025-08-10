@@ -1,1 +1,1 @@
-# Commands package 
+# Commandes de gestion des utilisateurs 

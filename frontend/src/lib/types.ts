@@ -42,7 +42,6 @@ export interface User {
 }
 
 export interface UserProfile {
-  role?: UserProfileRole;
   phone?: string;
   avatar?: string;
   bio?: string;
@@ -59,6 +58,7 @@ export interface UserList extends User {
   full_name: string;
   project_count: string;
   is_active: boolean;
+  groups: Array<{id: number; name: string}>;
 }
 
 export interface UserCreate {
@@ -66,6 +66,9 @@ export interface UserCreate {
   first_name?: string;
   last_name?: string;
   email: string;
+  password: string;
+  password_confirm: string;
+  groups?: number[];
   profile?: UserProfile;
 }
 

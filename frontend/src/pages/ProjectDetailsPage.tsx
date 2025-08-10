@@ -85,7 +85,7 @@ export function ProjectDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="mx-auto py-6 space-y-6 max-w-8xl">
       <div className="flex items-center gap-4">
         <Button variant="outline" onClick={() => navigate('/projects')}>
           <ArrowLeft className="w-4 h-4 mr-2" />

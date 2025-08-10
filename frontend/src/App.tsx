@@ -37,6 +37,9 @@ import LignesFraisPage from './pages/LignesFraisPage';
 import { CategoriesPage } from './pages/CategoriesPage';
 import { CategoryDetailsPage } from './pages/CategoryDetailsPage';
 import { AvenantsPage } from './pages/AvenantsPage';
+import { FacturesPage } from './pages/FacturesPage';
+import PermissionManagerPage from './pages/PermissionManagerPage';
+import RoleDetailsPage from './pages/RoleDetailsPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -113,7 +116,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/users" element={
-                  <ProtectedRoute requireStaff>
+                  <ProtectedRoute>
                     <UsersPage />
                   </ProtectedRoute>
                 } />
@@ -227,6 +230,21 @@ function App() {
                     <AvenantsPage />
                   </ProtectedRoute>
                 } />
+                <Route path="/factures" element={
+                  <ProtectedRoute>
+                    <FacturesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/permissions" element={
+                  <ProtectedRoute>
+                    <PermissionManagerPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/permissions/role/:roleId" element={
+                  <ProtectedRoute>
+                    <RoleDetailsPage />
+                  </ProtectedRoute>
+                } />
                 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
@@ -235,11 +253,7 @@ function App() {
         </div>
       ) : (
         <Routes>
-          <Route path="/login" element={
-            <ProtectedRoute requireAuth={false}>
-              <LoginPage />
-            </ProtectedRoute>
-          } />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       )}

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Facture {{ facture.numero }}</title>
+    <style>
+      body {
+        font-family: "Arial", sans-serif;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #333;
+        margin: 0;
+        padding: 0;
+      }
+
+      .header {
+        border-bottom: 2px solid #2563eb;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+      }
+
+      .company-info {
+        float: left;
+        width: 50%;
+      }
+
+      .invoice-info {
+        float: right;
+        width: 45%;
+        text-align: right;
+      }
+
+      .company-name {
+        font-size: 24px;
+        font-weight: bold;
+        color: #2563eb;
+        margin-bottom: 5px;
+      }
+
+      .invoice-title {
+        font-size: 28px;
+        font-weight: bold;
+        color: #2563eb;
+        margin-bottom: 10px;
+      }
+
+      .invoice-number {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+        margin-bottom: 5px;
+      }
+
+      .clear {
+        clear: both;
+      }
+
+      .client-section {
+        margin-bottom: 30px;
+      }
+
+      .client-info {
+        float: left;
+        width: 50%;
+      }
+
+      .invoice-details {
+        float: right;
+        width: 45%;
+        text-align: right;
+      }
+
+      .section-title {
+        font-size: 14px;
+        font-weight: bold;
+        color: #2563eb;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 5px;
+      }
+
+      .items-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+      }
+
+      .items-table th {
+        background-color: #f8fafc;
+        border: 1px solid #e5e7eb;
+        padding: 10px;
+        text-align: left;
+        font-weight: bold;
+        font-size: 11px;
+      }
+
+      .items-table td {
+        border: 1px solid #e5e7eb;
+        padding: 10px;
+        font-size: 11px;
+      }
+
+      .items-table .description {
+        width: 40%;
+      }
+
+      .items-table .quantity {
+        width: 10%;
+        text-align: center;
+      }
+
+      .items-table .unit-price,
+      .items-table .amount {
+        width: 15%;
+        text-align: right;
+      }
+
+      .totals-section {
+        float: right;
+        width: 300px;
+        margin-top: 20px;
+      }
+
+      .total-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .total-row.final {
+        font-weight: bold;
+        font-size: 14px;
+        color: #2563eb;
+        border-bottom: 2px solid #2563eb;
+      }
+
+      .payment-info {
+        margin-top: 40px;
+        padding: 20px;
+        background-color: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 5px;
+      }
+
+      .payment-info h3 {
+        color: #2563eb;
+        margin-bottom: 15px;
+      }
+
+      .bank-details {
+        margin-top: 20px;
+      }
+
+      .footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        font-size: 10px;
+        color: #6b7280;
+      }
+
+      .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 10px;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+
+      .status-emise {
+        background-color: #dbeafe;
+        color: #1e40af;
+      }
+      .status-payee {
+        background-color: #dcfce7;
+        color: #166534;
+      }
+      .status-en_retard {
+        background-color: #fef2f2;
+        color: #dc2626;
+      }
+
+      .notes {
+        margin-top: 30px;
+        padding: 15px;
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
+      }
+
+      .conditions {
+        margin-top: 20px;
+        font-size: 10px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- En-tête -->
+    <div class="header">
+      <div class="company-info">
+        <div class="company-name">saKom</div>
+        <div>Agence de Communication</div>
+        <div>Conakry, Guinée</div>
+        <div>Tél: +224 123 456 789</div>
+        <div>Email: contact@sakom.com</div>
+      </div>
+
+      <div class="invoice-info">
+        <div class="invoice-title">FACTURE</div>
+        <div class="invoice-number">{{ facture.numero }}</div>
+        <div>Date d'émission: {{ facture.date_emission|date:"d/m/Y" }}</div>
+        <div>Date d'échéance: {{ facture.date_echeance|date:"d/m/Y" }}</div>
+        <div class="status-badge status-{{ facture.statut }}">
+          {{ facture.get_statut_display }}
+        </div>
+      </div>
+      <div class="clear"></div>
+    </div>
+
+    <!-- Informations client et facture -->
+    <div class="client-section">
+      <div class="client-info">
+        <div class="section-title">FACTURER À</div>
+        <div><strong>{{ facture.client.nom_complet }}</strong></div>
+
+        {% if facture.client.email %}
+        <div>{{ facture.client.email }}</div>
+        {% endif %} {% if facture.client.telephone %}
+        <div>Tél: {{ facture.client.telephone }}</div>
+        {% endif %} {% if facture.client.adresse %}
+        <div>{{ facture.client.adresse }}</div>
+        {% endif %} {% if facture.client.ville %}
+        <div>{{ facture.client.ville }}</div>
+        {% endif %}
+      </div>
+
+      <div class="invoice-details">
+        <div class="section-title">DÉTAILS DE LA FACTURE</div>
+        <div><strong>Contrat:</strong> {{ facture.contrat.numero }}</div>
+        {% if facture.echeance %}
+        <div>
+          <strong>Échéance:</strong> {{ facture.echeance.numero_echeance }}
+        </div>
+        {% endif %}
+        <div>
+          <strong>Mode de paiement:</strong> {{
+          facture.get_mode_paiement_display }}
+        </div>
+      </div>
+      <div class="clear"></div>
+    </div>
+
+    <!-- Tableau des articles -->
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th class="description">Description</th>
+          <th class="quantity">Quantité</th>
+          <th class="unit-price">Prix unitaire HT</th>
+          <th class="amount">Montant HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in facture.lignes.all %}
+        <tr>
+          <td class="description">{{ ligne.description }}</td>
+          <td class="quantity">{{ ligne.quantite }}</td>
+          <td class="unit-price">
+            {{ ligne.prix_unitaire_ht|floatformat:0 }} GNF
+          </td>
+          <td class="amount">{{ ligne.montant_ht|floatformat:0 }} GNF</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td
+            colspan="4"
+            style="text-align: center; padding: 20px; color: #6b7280"
+          >
+            Aucune ligne de facture
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- Totaux -->
+    <div class="totals-section">
+      <div class="total-row">
+        <span>Montant HT:</span>
+        <span>{{ facture.montant_ht|floatformat:0 }} GNF</span>
+      </div>
+
+      {% if facture.appliquer_tva and facture.montant_tva > 0 %}
+      <div class="total-row">
+        <span>TVA ({{ facture.taux_tva }}%) :</span>
+        <span>{{ facture.montant_tva|floatformat:0 }} GNF</span>
+      </div>
+      {% endif %} {% if facture.appliquer_frais_agence and
+      facture.montant_frais_agence > 0 %}
+      <div class="total-row">
+        <span>Frais d'agence ({{ facture.taux_frais_agence }}%) :</span>
+        <span>{{ facture.montant_frais_agence|floatformat:0 }} GNF</span>
+      </div>
+      {% endif %}
+      <span></span>
+
+      <div class="total-row final">
+        <span>Montant TTC:</span>
+        <span>{{ facture.montant_ttc|floatformat:0 }} GNF</span>
+      </div>
+
+      {% if facture.montant_paye > 0 %}
+      <div class="total-row">
+        <span>Déjà payé:</span>
+        <span>{{ facture.montant_paye|floatformat:0 }} GNF</span>
+      </div>
+      <div class="total-row final">
+        <span>Reste à payer:</span>
+        <span>{{ facture.montant_restant|floatformat:0 }} GNF</span>
+      </div>
+      {% endif %}
+    </div>
+    <div class="clear"></div>
+
+    <!-- Informations de paiement -->
+    <div class="payment-info">
+      <h3>Informations de paiement</h3>
+
+      {% if facture.iban or facture.bic or facture.compte_bancaire %}
+      <div class="bank-details">
+        <div><strong>Coordonnées bancaires :</strong></div>
+
+        {% if facture.iban %}
+        <div>IBAN: {{ facture.iban }}</div>
+        {% endif %} {% if facture.bic %}
+        <div>BIC: {{ facture.bic }}</div>
+        {% endif %} {% if facture.compte_bancaire %}
+        <div>Compte: {{ facture.compte_bancaire }}</div>
+        {% endif %}
+      </div>
+      {% endif %} {% if facture.conditions_paiement %}
+      <div class="conditions">
+        <strong>Conditions de paiement :</strong><br />
+        {{ facture.conditions_paiement|linebreaks }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Notes -->
+    {% if facture.notes %}
+    <div class="notes">
+      <strong>Notes :</strong><br />
+      {{ facture.notes|linebreaks }}
+    </div>
+    {% endif %}
+
+    <!-- Pied de page -->
+    <div class="footer">
+      <div style="text-align: center">
+        <strong>saKom</strong> - Agence de Communication<br />
+        Conakry, Guinée | Tél: +224 123 456 789 | Email: contact@sakom.com<br />
+        Facture générée le {{ facture.created_at|date:"d/m/Y à H:i" }}
+      </div>
+    </div>
+  </body>
+</html>

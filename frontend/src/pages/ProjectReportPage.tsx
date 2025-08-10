@@ -45,7 +45,8 @@ export function ProjectReportPage() {
 
   const projectReport = projectReports.find(p => p.id === projectId);
 
-  const { exportPDF, exportExcel } = useExportReport();
+  const { mutate: exportPDF, isPending: isExportingPDF } = useExportReport();
+  const { mutate: exportExcel, isPending: isExportingExcel } = useExportReport();
 
   const handleExportPDF = async () => {
     try {

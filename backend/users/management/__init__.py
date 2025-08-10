@@ -1,1 +1,1 @@
-# Management package 
+# Module de gestion des utilisateurs 

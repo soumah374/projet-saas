@@ -1,7 +1,6 @@
 import random
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.models import User, Group
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.mail import send_mail
 from django.conf import settings
@@ -14,7 +13,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = [
-            'role', 'phone', 'avatar', 'bio', 'department', 
+            'phone', 'avatar', 'bio', 'department', 
             'position', 'hire_date', 'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
@@ -42,16 +41,22 @@ class UserSerializer(serializers.ModelSerializer):
 class UserCreateSerializer(serializers.ModelSerializer):
     """Sérialiseur pour la création d'utilisateurs"""
     
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True)
     password_confirm = serializers.CharField(write_only=True)
     profile = UserProfileSerializer(required=False)
+    groups = serializers.PrimaryKeyRelatedField(
+        many=True, 
+        queryset=Group.objects.all(), 
+        required=False
+    )
     
     class Meta:
         model = User
         fields = [
             'username', 'first_name', 'last_name', 'email', 
-            'password', 'password_confirm', 'profile'
+            'password', 'password_confirm', 'profile', 'groups'
         ]
+        read_only_fields = ['id']
     
     def validate(self, attrs):
         """Valider que les mots de passe correspondent"""
@@ -63,8 +68,13 @@ class UserCreateSerializer(serializers.ModelSerializer):
         """Créer un utilisateur avec son profil"""
         password_confirm = validated_data.pop('password_confirm')
         profile_data = validated_data.pop('profile', {})
+        groups = validated_data.pop('groups', [])
         
         user = User.objects.create_user(**validated_data)
+        
+        # Assigner l'utilisateur aux groupes
+        if groups:
+            user.groups.set(groups)
         
         # Mettre à jour le profil si des données sont fournies
         if profile_data:
@@ -104,7 +114,7 @@ class ChangePasswordSerializer(serializers.Serializer):
     """Sérialiseur pour changer le mot de passe"""
     
     old_password = serializers.CharField(required=True)
-    new_password = serializers.CharField(required=True, validators=[validate_password])
+    new_password = serializers.CharField(required=True)
     new_password_confirm = serializers.CharField(required=True)
     
     def validate(self, attrs):
@@ -149,12 +159,13 @@ class UserListSerializer(serializers.ModelSerializer):
     profile = UserProfileSerializer(read_only=True)
     full_name = serializers.SerializerMethodField()
     project_count = serializers.SerializerMethodField()
+    groups = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = [
             'id', 'username', 'first_name', 'last_name', 'email',
-            'profile', 'full_name', 'project_count', 'is_active'
+            'profile', 'full_name', 'project_count', 'is_active', 'groups'
         ]
         read_only_fields = ['id']
     
@@ -165,6 +176,10 @@ class UserListSerializer(serializers.ModelSerializer):
     def get_project_count(self, obj):
         """Compter le nombre de projets de l'utilisateur"""
         return obj.created_projects.count()
+    
+    def get_groups(self, obj):
+        """Obtenir les noms des groupes de l'utilisateur"""
+        return [{'id': group.id, 'name': group.name} for group in obj.groups.all()]
 
 
 class LoginRequestSerializer(serializers.Serializer):

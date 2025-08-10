@@ -1,17 +1,19 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   FolderOpen, 
   CheckCircle,
   Activity,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Users
 } from "lucide-react";
 import { useProjects } from '@/hooks/use-projects';
 import { useNavigate } from 'react-router-dom';
 import { BudgetChart } from '@/components/BudgetChart';
+import { CanView, CanManage, IsManagingDirector } from '@/components/PermissionGuard';
+import { ManageProjectsButton, ManageUsersButton, ViewReportsButton } from '@/components/PermissionButton';
 
 interface User {
   id: number;
@@ -93,10 +95,28 @@ export function Dashboard({ user }: DashboardProps) {
             Bonjour {user.first_name}, voici un aperçu de vos activités
           </p>
         </div>
-        <Button onClick={() => navigate('/reports')}>
-          <Activity className="w-4 h-4 mr-2" />
-          Voir les rapports
-        </Button>
+        <div className="flex gap-2">
+          <CanView module="reports">
+            <ViewReportsButton onClick={() => navigate('/reports')}>
+              <Activity className="w-4 h-4 mr-2" />
+              Voir les rapports
+            </ViewReportsButton>
+          </CanView>
+          
+          <CanManage module="projects">
+            <ManageProjectsButton onClick={() => navigate('/projects')}>
+              <FolderOpen className="w-4 h-4 mr-2" />
+              Gérer les projets
+            </ManageProjectsButton>
+          </CanManage>
+          
+          <IsManagingDirector>
+            <ManageUsersButton onClick={() => navigate('/users')}>
+              <Users className="w-4 h-4 mr-2" />
+              Gérer les utilisateurs
+            </ManageUsersButton>
+          </IsManagingDirector>
+        </div>
       </div>
 
       {/* Statistiques */}

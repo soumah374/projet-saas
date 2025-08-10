@@ -12,6 +12,8 @@ class EcheancierContratSerializer(serializers.ModelSerializer):
     jours_restants = serializers.ReadOnlyField()
     est_en_retard = serializers.ReadOnlyField()
     doit_alerter = serializers.ReadOnlyField()
+    factures_count = serializers.SerializerMethodField()
+    derniere_facture = serializers.SerializerMethodField()
     
     class Meta:
         model = EcheancierContrat
@@ -20,9 +22,17 @@ class EcheancierContratSerializer(serializers.ModelSerializer):
             'montant_ht', 'montant_tva', 'montant_ttc', 'pourcentage',
             'date_echeance', 'date_paiement', 'statut', 'commentaire',
             'alerte_envoyee', 'jours_restants', 'est_en_retard', 'doit_alerter',
-            'created_at', 'updated_at'
+            'factures_count', 'derniere_facture', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+    def get_factures_count(self, obj):
+        """Retourne le nombre de factures pour cette échéance"""
+        return getattr(obj, 'factures_count', 0)
+
+    def get_derniere_facture(self, obj):
+        """Retourne la dernière facture pour cette échéance"""
+        return getattr(obj, 'derniere_facture', None)
 
 
 class EcheancierContratCreateSerializer(serializers.ModelSerializer):

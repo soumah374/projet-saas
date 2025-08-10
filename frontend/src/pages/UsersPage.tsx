@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Users, 
   Search, 
@@ -18,10 +18,6 @@ import {
   Edit,
   Trash2,
   Eye,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
   Building,
   UserPlus,
   Download,
@@ -33,16 +29,23 @@ import {
   AlertCircle,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  UserCheck,
+  UserX,
+  Key,
+  Lock
 } from "lucide-react";
 import { useUsers } from '@/hooks/use-users';
-import { CreateUserModal } from '@/components/CreateUserModal';
+import { usePermissionManager } from '@/hooks/use-permission-manager';
+import { usePermissions } from '@/hooks/use-permissions';
+import { CreateUserModal } from '@/components/users/CreateUserModal';
 import { EditUserModal } from '@/components/EditUserModal';
-import { UserDetailsModal } from '@/components/UserDetailsModal';
+import { UserDetailsModal } from '@/components/users/UserDetailsModal';
 import { DeleteUserModal } from '@/components/DeleteUserModal';
-import type { UserList, UserProfileRole } from '@/lib/types';
+import type { UserList } from '@/lib/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useToast } from '@/components/ui/use-toast';
 
 export const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,27 +65,69 @@ export const UsersPage = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserList | null>(null);
 
+  // Role management state
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+  const [isRolesLoading, setIsRolesLoading] = useState(true);
+  const [isRoleManagementOpen, setIsRoleManagementOpen] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState<UserList | null>(null);
+  const [isAssignRoleDialogOpen, setIsAssignRoleDialogOpen] = useState(false);
+  const [isRemoveRoleDialogOpen, setIsRemoveRoleDialogOpen] = useState(false);
+  const [roleToRemove, setRoleToRemove] = useState<string>('');
+
+  // Hooks
+  const { toast } = useToast();
+  const { canManageUsers, hasPermission } = usePermissions();
+  const {
+    loadPermissionData,
+    assignUserToRole,
+    removeUserFromRole,
+    getAllUsers,
+    getRoleUsers,
+    isLoading: isPermissionLoading
+  } = usePermissionManager();
+
   // Fetch users with filters
-  const { data: usersData, isLoading, error, refetch } = useUsers({
+  const { data: usersData, isLoading, error, refetch, toggleUserActive, isToggling } = useUsers({
     search: searchTerm || undefined,
-    profile__role: selectedRole && selectedRole !== 'all' ? selectedRole : undefined,
     profile__department: selectedDepartment && selectedDepartment !== 'all' ? selectedDepartment : undefined,
     is_active: selectedStatus === 'active' ? true : selectedStatus === 'inactive' ? false : undefined,
     ordering: sortOrder === 'desc' ? `-${sortBy}` : sortBy,
     page: currentPage
   });
 
-  const users = usersData?.results || [];
-  const totalUsers = usersData?.count || 0;
+  // Load roles from backend
+  useEffect(() => {
+    const loadRoles = async () => {
+      setIsRolesLoading(true);
+      try {
+        const data = await loadPermissionData();
+        setAvailableRoles(data.roles || []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des rôles:', error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les rôles depuis le backend",
+          variant: "destructive"
+        });
+      } finally {
+        setIsRolesLoading(false);
+      }
+    };
+    
+    // Charger les rôles pour tous les utilisateurs (nécessaire pour le filtrage)
+    loadRoles();
+  }, [loadPermissionData, toast]);
+
+  const users = usersData?.data?.results || [];
+  const totalUsers = usersData?.data?.count || 0;
   const totalPages = Math.ceil(totalUsers / 20); // Assuming 20 users per page
 
-  // Available filter options
-  const roles: UserProfileRole[] = ['Managing Director', 'Chef de projet', 'Directeur de production', 'Responsable communication', 'Administrateur financier', 'Assistant', 'Consultant'];
   const departments = ['Développement', 'Design', 'Marketing', 'Commercial', 'Finance', 'RH', 'Direction'];
   const statuses = [
     { value: 'active', label: 'Actif', color: 'bg-green-100 text-green-800' },
     { value: 'inactive', label: 'Inactif', color: 'bg-red-100 text-red-800' }
   ];
+
 
   const handleUserSelect = (userId: number) => {
     setSelectedUsers(prev => 
@@ -115,12 +160,73 @@ export const UsersPage = () => {
     setDeleteModalOpen(true);
   };
 
+  const handleToggleActive = (user: UserList) => {
+    if (user.id) {
+      toggleUserActive(user.id);
+    }
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
     setSelectedRole('all');
     setSelectedDepartment('all');
     setSelectedStatus('all');
     setCurrentPage(1);
+  };
+
+  // Role management functions
+  const handleAssignRole = async (userId: number, roleName: string) => {
+    try {
+      const success = await assignUserToRole(userId, roleName);
+      if (success) {
+        toast({
+          title: "Succès",
+          description: `Utilisateur assigné au rôle "${roleName}" avec succès`
+        });
+        refetch(); // Recharger la liste des utilisateurs
+        setIsAssignRoleDialogOpen(false);
+        setSelectedUserForRole(null);
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'assigner le rôle à l'utilisateur",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveRole = async (userId: number, roleName: string) => {
+    try {
+      const success = await removeUserFromRole(userId, roleName);
+      if (success) {
+        toast({
+          title: "Succès",
+          description: `Rôle "${roleName}" retiré de l'utilisateur avec succès`
+        });
+        refetch(); // Recharger la liste des utilisateurs
+        setIsRemoveRoleDialogOpen(false);
+        setSelectedUserForRole(null);
+        setRoleToRemove('');
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de retirer le rôle de l'utilisateur",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const openAssignRoleDialog = (user: UserList) => {
+    setSelectedUserForRole(user);
+    setIsAssignRoleDialogOpen(true);
+  };
+
+  const openRemoveRoleDialog = (user: UserList, roleName: string) => {
+    setSelectedUserForRole(user);
+    setRoleToRemove(roleName);
+    setIsRemoveRoleDialogOpen(true);
   };
 
   const getStatusBadge = (isActive: boolean) => {
@@ -156,6 +262,24 @@ export const UsersPage = () => {
     );
   };
 
+  const getGroupsDisplay = (groups: Array<{id: number; name: string}>) => {
+    if (!groups || groups.length === 0) {
+      return (
+        <span className="text-sm text-gray-400 italic">Aucun groupe</span>
+      );
+    }
+    
+    return (
+      <div className="flex flex-wrap gap-1">
+        {groups.map((group) => (
+          <Badge key={group.id} variant="outline" className="text-xs">
+            {group.name}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
   if (error) {
     return (
       <div className="p-6">
@@ -182,6 +306,12 @@ export const UsersPage = () => {
           <p className="text-gray-600">Gérez les utilisateurs, leurs rôles et permissions</p>
         </div>
         <div className="flex gap-2">
+          {hasPermission('users.manage_roles') && (
+            <Button variant="outline" size="sm" onClick={() => setIsRoleManagementOpen(true)}>
+              <Shield className="w-4 h-4 mr-2" />
+              Gestion des rôles
+            </Button>
+          )}
           <Button variant="outline" size="sm">
             <Download className="w-4 h-4 mr-2" />
             Exporter
@@ -204,58 +334,6 @@ export const UsersPage = () => {
             </Button>
           </CreateUserModal>
         </div>
-      </div>
-
-      {/* Statistics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Utilisateurs</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalUsers}</div>
-            <p className="text-xs text-muted-foreground">
-              +2 depuis le mois dernier
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Utilisateurs Actifs</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{users.filter(u => u.is_active).length}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((users.filter(u => u.is_active).length / totalUsers) * 100)}% du total
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Nouveaux ce mois</CardTitle>
-            <UserPlus className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">5</div>
-            <p className="text-xs text-muted-foreground">
-              +25% par rapport au mois dernier
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Projets Moyens</CardTitle>
-            <Activity className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2.4</div>
-            <p className="text-xs text-muted-foreground">
-              Projets par utilisateur
-            </p>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters and Search */}
@@ -285,9 +363,20 @@ export const UsersPage = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tous les rôles</SelectItem>
-                {roles.map(role => (
-                  <SelectItem key={role} value={role}>{role}</SelectItem>
-                ))}
+                {isRolesLoading ? (
+                  <SelectItem value="loading" disabled>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Chargement des rôles...
+                  </SelectItem>
+                ) : availableRoles.length > 0 ? (
+                  availableRoles.map(role => (
+                    <SelectItem key={role.id} value={role.name}>
+                      {role.name} ({role.user_count || 0})
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-roles" disabled>Aucun rôle disponible</SelectItem>
+                )}
               </SelectContent>
             </Select>
             <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
@@ -332,7 +421,7 @@ export const UsersPage = () => {
                 <SelectContent>
                   <SelectItem value="first_name">Nom</SelectItem>
                   <SelectItem value="email">Email</SelectItem>
-                  <SelectItem value="profile__role">Rôle</SelectItem>
+                  <SelectItem value="groups__name">Groupe</SelectItem>
                   <SelectItem value="profile__department">Département</SelectItem>
                   <SelectItem value="profile__created_at">Date de création</SelectItem>
                 </SelectContent>
@@ -391,7 +480,7 @@ export const UsersPage = () => {
                       />
                     </TableHead>
                     <TableHead>Utilisateur</TableHead>
-                    <TableHead>Rôle</TableHead>
+                    <TableHead>Groupes</TableHead>
                     <TableHead>Département</TableHead>
                     <TableHead>Projets</TableHead>
                     <TableHead>Statut</TableHead>
@@ -425,7 +514,7 @@ export const UsersPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {user.profile.role && getRoleBadge(user.profile.role)}
+                        {getGroupsDisplay(user.groups)}
                       </TableCell>
                       <TableCell>
                         <span className="text-sm text-gray-600">
@@ -465,6 +554,25 @@ export const UsersPage = () => {
                               <Edit className="w-4 h-4 mr-2" />
                               Modifier
                             </DropdownMenuItem>
+                            {hasPermission('users.manage_roles') && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuLabel>Gestion des rôles</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => openAssignRoleDialog(user)}>
+                                  <UserCheck className="w-4 h-4 mr-2" />
+                                  Assigner un rôle
+                                </DropdownMenuItem>
+                                {user.profile.role && (
+                                  <DropdownMenuItem 
+                                    onClick={() => openRemoveRoleDialog(user, user.profile.role)}
+                                    className="text-orange-600"
+                                  >
+                                    <UserX className="w-4 h-4 mr-2" />
+                                    Retirer le rôle
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => handleDelete(user)}
@@ -472,6 +580,21 @@ export const UsersPage = () => {
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Supprimer
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleToggleActive(user)}
+                              className={`${user.is_active ? 'text-orange-600' : 'text-green-600'}`}
+                              disabled={isToggling}
+                            >
+                              {isToggling ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : user.is_active ? (
+                                <XCircle className="w-4 h-4 mr-2" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                              )}
+                              {isToggling ? 'Traitement...' : (user.is_active ? 'Désactiver' : 'Activer')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -516,6 +639,21 @@ export const UsersPage = () => {
                             <Trash2 className="w-4 h-4 mr-2" />
                             Supprimer
                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleToggleActive(user)}
+                              className={`${user.is_active ? 'text-orange-600' : 'text-green-600'}`}
+                              disabled={isToggling}
+                            >
+                              {isToggling ? (
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              ) : user.is_active ? (
+                                <XCircle className="w-4 h-4 mr-2" />
+                              ) : (
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                              )}
+                              {isToggling ? 'Traitement...' : (user.is_active ? 'Désactiver' : 'Activer')}
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -523,7 +661,6 @@ export const UsersPage = () => {
                       <h3 className="font-medium text-gray-900">{user.full_name}</h3>
                       <p className="text-sm text-gray-500">{user.email}</p>
                       <div className="flex items-center justify-between">
-                        {user.profile.role && getRoleBadge(user.profile.role)}
                         {getStatusBadge(user.is_active)}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -533,6 +670,10 @@ export const UsersPage = () => {
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Activity className="w-4 h-4" />
                         {user.project_count} projet{parseInt(user.project_count) > 1 ? 's' : ''}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Shield className="w-4 h-4" />
+                        {getGroupsDisplay(user.groups)}
                       </div>
                     </div>
                   </CardContent>
@@ -600,6 +741,118 @@ export const UsersPage = () => {
           />
         </>
       )}
+
+      {/* Role Management Modals */}
+      <Dialog open={isAssignRoleDialogOpen} onOpenChange={setIsAssignRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assigner un rôle</DialogTitle>
+            <DialogDescription>
+              Sélectionnez un rôle à assigner à {selectedUserForRole?.full_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2">
+              {availableRoles.map((role) => (
+                <Button
+                  key={role.id}
+                  variant="outline"
+                  onClick={() => handleAssignRole(selectedUserForRole?.id!, role.name)}
+                  className="justify-start"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  {role.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignRoleDialogOpen(false)}>
+              Annuler
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRemoveRoleDialogOpen} onOpenChange={setIsRemoveRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Retirer le rôle</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir retirer le rôle "{roleToRemove}" de {selectedUserForRole?.full_name} ?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRemoveRoleDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => handleRemoveRole(selectedUserForRole?.id!, roleToRemove)}
+            >
+              Retirer le rôle
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Role Management Overview Modal */}
+      <Dialog open={isRoleManagementOpen} onOpenChange={setIsRoleManagementOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Gestion des rôles et permissions
+            </DialogTitle>
+            <DialogDescription>
+              Vue d'ensemble des rôles, de leurs utilisateurs et permissions
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6">
+            {availableRoles.map((role) => (
+              <Card key={role.id}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <Key className="w-4 h-4" />
+                        {role.name}
+                      </CardTitle>
+                      <CardDescription>
+                        {role.user_count || 0} utilisateur{role.user_count !== 1 ? 's' : ''} assigné{role.user_count !== 1 ? 's' : ''}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="secondary">
+                      ID: {role.id}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Lock className="w-4 h-4" />
+                      <span className="font-medium">Permissions :</span>
+                      <span>Gestion complète des utilisateurs et rôles</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <Users className="w-4 h-4" />
+                      <span className="font-medium">Utilisateurs :</span>
+                      <span>{role.user_count || 0} membre{role.user_count !== 1 ? 's' : ''}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRoleManagementOpen(false)}>
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }; 

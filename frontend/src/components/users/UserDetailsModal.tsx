@@ -1,16 +1,14 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { 
   User, 
   Mail, 
   Phone, 
   Building, 
   Calendar, 
-  MapPin,
   Activity,
   Clock,
   Edit,
@@ -93,7 +91,7 @@ export const UserDetailsModal = ({ open, onOpenChange, user }: UserDetailsModalP
                   <h2 className="text-2xl font-bold text-gray-900">{user.full_name}</h2>
                   <p className="text-gray-600 text-lg">@{user.username}</p>
                   <div className="flex items-center gap-3 mt-3">
-                    {user.profile.role && getRoleBadge(user.profile.role)}
+                    {user.groups && getRoleBadge(user.groups.map(group => group.name).join(', '))}
                     {getStatusBadge(user.is_active)}
                     <Badge variant="outline" className="flex items-center gap-1">
                       <FolderOpen className="w-3 h-3" />
@@ -156,14 +154,14 @@ export const UserDetailsModal = ({ open, onOpenChange, user }: UserDetailsModalP
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {user.profile.role && (
+                {user.groups && (
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
                       <Shield className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Rôle</p>
-                      <p className="font-medium">{user.profile.role}</p>
+                      <p className="text-sm text-gray-500">Groupes/Rôles</p>
+                      <p className="font-medium">{user.groups.map(group => group.name).join(', ')}</p>
                     </div>
                   </div>
                 )}
@@ -269,33 +267,6 @@ export const UserDetailsModal = ({ open, onOpenChange, user }: UserDetailsModalP
                   <span className="text-gray-500">Nom d'utilisateur:</span>
                   <p className="font-medium">@{user.username}</p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Quick Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions rapides</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Envoyer un email
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Modifier le profil
-                </Button>
-                <Button variant="outline" size="sm">
-                  <FolderOpen className="w-4 h-4 mr-2" />
-                  Voir les projets
-                </Button>
-                <Button variant="outline" size="sm">
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Profil complet
-                </Button>
               </div>
             </CardContent>
           </Card>
