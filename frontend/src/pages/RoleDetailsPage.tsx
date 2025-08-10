@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -72,9 +72,10 @@ export default function RoleDetailsPage() {
     updateRolePermissions,
     updateRole,
     deleteRole,
-    getRoleUsers,
     assignUserToRole,
-    removeUserFromRole
+    removeUserFromRole,
+    getAllUsers,
+    getUsersByGroup
   } = usePermissionManager();
 
   const [role, setRole] = useState<RoleDetails | null>(null);
@@ -86,10 +87,12 @@ export default function RoleDetailsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignUserDialogOpen, setIsAssignUserDialogOpen] = useState(false);
+  const [isRemoveUserDialogOpen, setIsRemoveUserDialogOpen] = useState(false);
   
   // États pour l'édition
   const [editRoleName, setEditRoleName] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [userToRemove, setUserToRemove] = useState<RoleUser | null>(null);
 
   const modules = [
     'users', 'projects', 'teams', 'departments', 'clients', 
@@ -100,16 +103,17 @@ export default function RoleDetailsPage() {
   useEffect(() => {
     if (roleId) {
       loadRoleDetails();
+      loadAllUsers();
     }
   }, [roleId]);
 
-  const loadRoleDetails = async () => {
+    const loadRoleDetails = async () => {
     if (!roleId) return;
 
     try {
       // Charger les données de permissions pour obtenir les rôles
       const data = await loadPermissionData();
-      
+            
       // Trouver le rôle spécifique
       const roleData = data.roles.find((r: any) => r.id === parseInt(roleId));
       if (!roleData) {
@@ -118,7 +122,7 @@ export default function RoleDetailsPage() {
           description: "Rôle non trouvé",
           variant: "destructive"
         });
-        navigate('/permissions');
+        // navigate('/permissions');
         return;
       }
       
@@ -129,14 +133,54 @@ export default function RoleDetailsPage() {
       const rolePerms = data.rolePermissions.find((rp: any) => rp.role === roleData.name);
       setRolePermissions(rolePerms || null);
       
-             // Charger les utilisateurs du rôle
-       const users = await getRoleUsers(roleId);
-       setRoleUsers(users);
+      // Charger les utilisateurs du groupe/rôle
+      const users = await getUsersByGroup(parseInt(roleId));
+      setRoleUsers(users);
       
     } catch (error) {
       toast({
         title: "Erreur",
         description: "Impossible de charger les détails du rôle",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadAllUsers = async () => {
+    try {
+      const users = await getAllUsers();
+      // Filtrer les utilisateurs qui ne sont pas déjà assignés au rôle
+      // S'assurer que roleUsers est un tableau avant d'utiliser some
+      const currentRoleUsers = Array.isArray(roleUsers) ? roleUsers : [];
+      const availableUsers = users.filter(user => 
+        !currentRoleUsers.some(roleUser => roleUser.id === user.id)
+      );
+      
+      setAllUsers(availableUsers);
+    } catch (error) {
+      console.error('Erreur lors du chargement des utilisateurs:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger la liste des utilisateurs",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const loadUsersByGroup = async () => {
+    if (!roleId) return;
+    try {
+      const users = await getUsersByGroup(parseInt(roleId));
+      setRoleUsers(users);
+      toast({
+        title: "Succès",
+        description: "Liste des utilisateurs du groupe actualisée"
+      });
+    } catch (error) {
+      console.error('Erreur lors du chargement des utilisateurs du groupe:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les utilisateurs du groupe",
         variant: "destructive"
       });
     }
@@ -215,23 +259,56 @@ export default function RoleDetailsPage() {
   };
 
   const handleAssignUser = async () => {
-    if (!selectedUserId || !role) return;
+    if (!selectedUserId || !role || selectedUserId === 'no-users-available') return;
 
-         const success = await assignUserToRole(parseInt(selectedUserId), role.name);
-     if (success) {
-       setSelectedUserId('');
-       setIsAssignUserDialogOpen(false);
-       loadRoleDetails();
-     }
-   };
-
-   const handleRemoveUser = async (userId: number) => {
-     if (!role) return;
-
-     const success = await removeUserFromRole(userId, role.name);
+    const success = await assignUserToRole(parseInt(selectedUserId), role.name);
+   
     if (success) {
+      setSelectedUserId('');
+      setIsAssignUserDialogOpen(false);
+      loadUsersByGroup();
+      loadAllUsers();
       loadRoleDetails();
+
+      toast({
+        title: "Succès",
+        description: "Utilisateur assigné au groupe avec succès"
+      });
     }
+  };
+
+  const handleRemoveUser = async (userId: number) => {
+    if (!role) return;
+
+    // Trouver l'utilisateur pour afficher son nom dans la confirmation
+    const currentRoleUsers = Array.isArray(roleUsers) ? roleUsers : [];
+    const user = currentRoleUsers.find(u => u.id === userId);
+    
+    if (user) {
+      setUserToRemove(user);
+      setIsRemoveUserDialogOpen(true);
+      loadAllUsers();
+    }
+  };
+
+  const confirmRemoveUser = async () => {
+    if (!userToRemove || !role) return;
+
+    const success = await removeUserFromRole(userToRemove.id, role.name);
+    if (success) {
+      loadUsersByGroup();
+      loadAllUsers();
+      loadRoleDetails();
+
+      toast({
+        title: "Succès",
+        description: `${userToRemove.first_name} ${userToRemove.last_name} retiré du groupe avec succès`
+      });
+    }
+
+    // Fermer le modal et réinitialiser
+    setIsRemoveUserDialogOpen(false);
+    setUserToRemove(null);
   };
 
   if (isLoading || !role) {
@@ -407,16 +484,23 @@ export default function RoleDetailsPage() {
                 <div>
                   <CardTitle>Utilisateurs du Rôle</CardTitle>
                   <CardDescription>
-                    Gérez les utilisateurs assignés à ce rôle
+                    Gérez les utilisateurs assignés à ce groupe ({Array.isArray(roleUsers) ? roleUsers.length : 0} utilisateur{(Array.isArray(roleUsers) ? roleUsers.length : 0) !== 1 ? 's' : ''})
                   </CardDescription>
                 </div>
-                <Button onClick={() => setIsAssignUserDialogOpen(true)}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Assigner Utilisateur
-                </Button>
+                <div className="flex space-x-2">
+                  <Button onClick={() => {
+                    setIsAssignUserDialogOpen(true);
+                    loadAllUsers(); // Recharger les utilisateurs disponibles
+                  }}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assigner Utilisateur
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
+
+              
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -427,15 +511,22 @@ export default function RoleDetailsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {roleUsers.map((user) => (
+                  {Array.isArray(roleUsers) && roleUsers.length > 0 ? roleUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">
-                            {user.first_name} {user.last_name}
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-blue-600">
+                              {user.first_name?.charAt(0)}{user.last_name?.charAt(0)}
+                            </span>
                           </div>
-                          <div className="text-sm text-muted-foreground">
-                            @{user.username}
+                          <div>
+                            <div className="font-medium">
+                              {user.first_name} {user.last_name}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              @{user.username}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -455,15 +546,15 @@ export default function RoleDetailsPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                        Aucun utilisateur assigné à ce groupe
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
-              
-              {roleUsers.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  Aucun utilisateur assigné à ce rôle
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -525,7 +616,7 @@ export default function RoleDetailsPage() {
           <DialogHeader>
             <DialogTitle>Assigner un Utilisateur</DialogTitle>
             <DialogDescription>
-              Sélectionnez un utilisateur à assigner à ce rôle
+              Sélectionnez un utilisateur à assigner à ce groupe
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -536,11 +627,17 @@ export default function RoleDetailsPage() {
                   <SelectValue placeholder="Choisir un utilisateur" />
                 </SelectTrigger>
                 <SelectContent>
-                  {allUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.first_name} {user.last_name} (@{user.username})
+                  {allUsers.length > 0 ? (
+                    allUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id.toString()}>
+                        {user.first_name} {user.last_name} (@{user.username})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-users-available" disabled>
+                      Aucun utilisateur disponible
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -550,6 +647,30 @@ export default function RoleDetailsPage() {
               Annuler
             </Button>
             <Button onClick={handleAssignUser}>Assigner</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue de suppression d'utilisateur */}
+      <Dialog open={isRemoveUserDialogOpen} onOpenChange={setIsRemoveUserDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Retirer l'Utilisateur</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir retirer {userToRemove?.first_name} {userToRemove?.last_name} du groupe "{role?.name}" ?
+              Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsRemoveUserDialogOpen(false);
+              setUserToRemove(null);
+            }}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={confirmRemoveUser}>
+              Retirer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

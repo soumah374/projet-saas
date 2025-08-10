@@ -333,6 +333,7 @@ export const usersAPI = {
     getUserProfile: (id: number) => api.get(`/auth/users/${id}/profile/`),
     updateUserProfile: (id: number, data: any) => api.patch(`/auth/users/${id}/profile/`, data),
     getStatistics: () => api.get('/auth/users/statistics/'),
+    toggleUserActive: (id: number) => api.post(`/auth/users/${id}/toggle_active/`),
 };
 
 export const clientsAPI = {

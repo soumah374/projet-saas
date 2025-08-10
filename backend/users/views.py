@@ -64,7 +64,11 @@ class AuthViewSet(viewsets.ViewSet):
             # Ajouter des informations personnalisées au token
             access_token['user_id'] = user.id
             access_token['email'] = user.email
-            access_token['role'] = getattr(user.profile, 'role', '')
+            
+            # Récupérer le premier groupe de l'utilisateur comme "rôle" principal
+            user_groups = list(user.groups.values_list('name', flat=True))
+            primary_role = user_groups[0] if user_groups else ''
+            access_token['role'] = primary_role
             
             return Response({
                 'access': str(access_token),
@@ -75,7 +79,7 @@ class AuthViewSet(viewsets.ViewSet):
                     'first_name': user.first_name,
                     'last_name': user.last_name,
                     'email': user.email,
-                    'role': getattr(user.profile, 'role', ''),
+                    'role': primary_role,
                     'is_staff': user.is_staff,
                 }
             })
@@ -105,7 +109,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des utilisateurs"""
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['is_active', 'profile__role', 'profile__department']
+    filterset_fields = ['is_active', 'profile__department']
     search_fields = ['username', 'first_name', 'last_name', 'email']
     ordering_fields = ['username', 'first_name', 'last_name', 'date_joined']
     ordering = ['username']
@@ -177,10 +181,10 @@ class UserViewSet(viewsets.ModelViewSet):
         active_users = User.objects.filter(is_active=True).count()
         staff_users = User.objects.filter(is_staff=True).count()
         
-        # Utilisateurs par rôle
-        users_by_role = UserProfile.objects.values('role').annotate(
-            count=Count('user')
-        ).order_by('-count')
+        # Utilisateurs par groupe
+        users_by_group = User.objects.values('groups__name').annotate(
+            count=Count('id')
+        ).filter(groups__name__isnull=False).order_by('-count')
         
         # Utilisateurs par département
         users_by_department = UserProfile.objects.values('department').annotate(
@@ -198,7 +202,7 @@ class UserViewSet(viewsets.ModelViewSet):
             'active_users': active_users,
             'staff_users': staff_users,
             'new_users_this_month': new_users_this_month,
-            'users_by_role': list(users_by_role),
+            'users_by_group': list(users_by_group),
             'users_by_department': list(users_by_department),
         })
     
@@ -208,6 +212,49 @@ class UserViewSet(viewsets.ModelViewSet):
         users = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
         serializer = UserListSerializer(users, many=True)
         return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def toggle_active(self, request, pk=None):
+        """Activer/désactiver un utilisateur"""
+        if not request.user.is_staff:
+            return Response(
+                {'error': 'Permission refusée'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            user = self.get_object()
+            
+            # Empêcher l'utilisateur de se désactiver lui-même
+            if user == request.user:
+                return Response(
+                    {'error': 'Vous ne pouvez pas vous désactiver vous-même'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Basculer le statut actif
+            user.is_active = not user.is_active
+            user.save()
+            
+            # Mettre à jour aussi le profil si nécessaire
+            if hasattr(user, 'profile'):
+                user.profile.is_active = user.is_active
+                user.profile.save()
+            
+            action = "activé" if user.is_active else "désactivé"
+            
+            return Response({
+                'message': f'Utilisateur {action} avec succès',
+                'user_id': user.id,
+                'is_active': user.is_active,
+                'username': user.username
+            })
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la modification du statut: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=False)
     def permissions_summary(self, request):
@@ -248,13 +295,9 @@ class UserViewSet(viewsets.ModelViewSet):
                 'delete': delete_perm in user_permissions,
             }
         
-        # Récupérer le rôle depuis le profil
-        user_role = getattr(user.profile, 'role', '') if hasattr(user, 'profile') else ''
-        
         summary = {
             'user_id': user.id,
             'user_name': user.get_full_name() or user.username,
-            'user_role': user_role,
             'groups': group_names,
             'permissions': list(user_permissions),
             'is_staff': user.is_staff,
@@ -887,5 +930,44 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 {'error': 'Rôle ou utilisateur non trouvé'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
-
-    
+    @action(detail=True, methods=['get'], url_path='users-by-group')
+    def user_by_group(self, request, pk=None):
+        """Obtenir tous les utilisateurs d'un groupe spécifique"""
+        try:
+            # Récupérer le groupe par son ID
+            group = Group.objects.get(id=pk)
+            
+            # Récupérer tous les utilisateurs de ce groupe
+            users = group.user_set.all().order_by('first_name', 'last_name')
+            
+            users_data = []
+            for user in users:
+                users_data.append({
+                    'id': user.id,
+                    'username': user.username,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'email': user.email,
+                    'is_active': user.is_active,
+                    'date_joined': user.date_joined.isoformat() if user.date_joined else None,
+                    'last_login': user.last_login.isoformat() if user.last_login else None
+                })
+            
+            return Response({
+                'group_id': group.id,
+                'group_name': group.name,
+                'users': users_data,
+                'total_count': len(users_data)
+            })
+            
+        except Group.DoesNotExist:
+            return Response(
+                {'error': 'Groupe non trouvé'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la récupération des utilisateurs: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        

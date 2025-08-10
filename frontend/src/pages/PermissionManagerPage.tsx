@@ -75,9 +75,11 @@ export default function PermissionManagerPage() {
   const [newPermissionName, setNewPermissionName] = useState('');
   const [isCreateRoleDialogOpen, setIsCreateRoleDialogOpen] = useState(false);
   const [isCreatePermissionDialogOpen, setIsCreatePermissionDialogOpen] = useState(false);
+  const [isDeleteRoleDialogOpen, setIsDeleteRoleDialogOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<string | null>(null);
   const [editRoleName, setEditRoleName] = useState('');
   const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<RoleObject | null>(null);
 
   // Charger les données
   useEffect(() => {
@@ -142,11 +144,27 @@ export default function PermissionManagerPage() {
   };
 
   // Supprimer un rôle
-  const handleDeleteRole = async (roleId: number) => {
-    const success = await deleteRoleAPI(roleId);
+  const handleDeleteRole = async (role: RoleObject) => {
+    setRoleToDelete(role);
+    setIsDeleteRoleDialogOpen(true);
+  };
+
+  // Confirmer la suppression du rôle
+  const confirmDeleteRole = async () => {
+    if (!roleToDelete) return;
+
+    const success = await deleteRoleAPI(roleToDelete.id);
     if (success) {
       loadData();
+      toast({
+        title: "Succès",
+        description: `Rôle "${roleToDelete.name}" supprimé avec succès`
+      });
     }
+
+    // Fermer le modal et réinitialiser
+    setIsDeleteRoleDialogOpen(false);
+    setRoleToDelete(null);
   };
 
   // Supprimer une permission
@@ -322,7 +340,7 @@ export default function PermissionManagerPage() {
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => handleDeleteRole((role as RoleObject).id)}
+                            onClick={() => handleDeleteRole((role as RoleObject))}
                           >
                             Supprimer
                           </Button>
@@ -458,6 +476,36 @@ export default function PermissionManagerPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialogue de suppression de rôle */}
+      <Dialog open={isDeleteRoleDialogOpen} onOpenChange={setIsDeleteRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer le rôle</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le rôle "{roleToDelete?.name}" ?
+              <br />
+              <span className="text-red-600 font-medium">
+                Cette action supprimera définitivement le rôle et toutes ses permissions associées.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeleteRoleDialogOpen(false);
+                setRoleToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteRole}>
+              Supprimer définitivement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

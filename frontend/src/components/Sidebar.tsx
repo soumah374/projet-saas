@@ -34,6 +34,15 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Logo } from './Logo';
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useAuth } from "@/hooks/use-auth"
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"
 
 interface User {
   id: number;
@@ -318,37 +327,48 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
               <Building2 className="h-5 w-5" /> Départements
             </Link>
 
-            {/* Équipes */}
-            {/* <Link to="/teams" className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              location.pathname.includes('/teams') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-            )}>
-              <Users className="h-5 w-5" /> Équipes
-            </Link> */}
-
+            {/* Menu Administration */}
             {user?.is_staff && (
-              
-              <Link 
-                to="/users" 
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                  location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                )}
-              > 
-                <Users className="h-5 w-5" /> Utilisateurs 
-              </Link>
-            )}
-
-            {user?.is_staff && (
-              <Link 
-                to="/permissions" 
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                  location.pathname === '/permissions' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                )}
-              > 
-                <Shield className="h-5 w-5" /> Permissions 
-              </Link>
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-between px-3 py-2 h-auto text-sm font-medium transition-colors",
+                      (location.pathname === '/users' || location.pathname === '/permissions') 
+                        ? "bg-blue-50 text-blue-600" 
+                        : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Settings className="h-5 w-5" />
+                      Administration
+                    </div>
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-1 pl-6">
+                  <Link 
+                    to="/users" 
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+                      location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    )}
+                  > 
+                    <Users className="h-4 w-4" /> Utilisateurs 
+                  </Link>
+                  
+                  <Link 
+                    to="/permissions" 
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+                      location.pathname === '/permissions' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                    )}
+                  > 
+                    <Shield className="h-4 w-4" /> Permissions 
+                  </Link>
+                </CollapsibleContent>
+              </Collapsible>
             )}
 
             {/* <Link to="/services" className={cn(
@@ -375,21 +395,21 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
         <div className="space-y-2">
           <div className="mb-2">
-            <span className="block text-xs text-gray-400 mb-2">Actions rapides</span>
+            {/* <span className="block text-xs text-gray-400 mb-2">Actions rapides</span> */}
             <div className="grid gap-2">
-              <button 
+              {/* <button 
                 onClick={() => navigate('/projects/new')}
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-600 transition-colors h-8"
               >
                 <Plus className="w-4 h-4" /> Nouveau projet
-              </button>
+              </button> */}
               {/* <button 
                 onClick={() => navigate('/reports')}
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"
               >
                 <PieChart className="w-4 h-4" /> Rapports
               </button> */}
-              <button 
+              {/* <button 
                 onClick={() => navigate('/documents')}
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"
               >
@@ -400,7 +420,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 className="flex items-center gap-2 w-full px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 font-medium hover:bg-gray-50 transition-colors h-8"
               >
                 <Settings className="w-4 h-4" /> Paramètres
-              </button>
+              </button> */}
             </div>
           </div>
           <div className="border-t border-gray-200 pt-4 flex items-center gap-3">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,14 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { UserPlus, Loader2, Upload, User, Mail, Phone, Building, MapPin, Calendar } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarIcon } from '@/components/ui/calendar';
+import { UserPlus, Loader2, User, Mail, Phone, Building, Calendar } from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import type { UserCreate, UserProfileRole } from '@/lib/types';
+import type { UserCreate } from '@/lib/types';
+import { usePermissionManager } from '@/hooks/use-permission-manager';
+import { useDepartments } from '@/hooks/use-departments';
 
 interface CreateUserModalProps {
   children: React.ReactNode;
@@ -28,8 +33,10 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
     first_name: '',
     last_name: '',
     email: '',
+    password: '',
+    password_confirm: '',
+    groups: [] as number[],
     profile: {
-      role: undefined as UserProfileRole | undefined,
       phone: '',
       bio: '',
       department: '',
@@ -40,6 +47,32 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
   });
 
   const queryClient = useQueryClient();
+
+  // Hooks pour récupérer les données depuis la base de données
+  const { loadPermissionData } = usePermissionManager();
+  const { departments: departmentsData, loading: isDepartmentsLoading } = useDepartments();
+
+  // États pour les données dynamiques
+  const [availableRoles, setAvailableRoles] = useState<any[]>([]);
+  const [isRolesLoading, setIsRolesLoading] = useState(true);
+
+  // Charger les groupes depuis le backend
+  useEffect(() => {
+    const loadRoles = async () => {
+      setIsRolesLoading(true);
+      try {
+        const data = await loadPermissionData();
+        setAvailableRoles(data.roles || []);
+      } catch (error) {
+        console.error('Erreur lors du chargement des groupes:', error);
+        toast.error('Impossible de charger les groupes depuis le backend');
+      } finally {
+        setIsRolesLoading(false);
+      }
+    };
+
+    loadRoles();
+  }, [loadPermissionData]);
 
   const createUserMutation = useMutation({
     mutationFn: (userData: UserCreate) => usersAPI.createUser(userData),
@@ -61,8 +94,10 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
       first_name: '',
       last_name: '',
       email: '',
+      password: '',
+      password_confirm: '',
+      groups: [],
       profile: {
-        role: undefined,
         phone: '',
         bio: '',
         department: '',
@@ -97,6 +132,22 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
       return;
     }
 
+    // Password validation
+    if (!formData.password.trim()) {
+      toast.error('Le mot de passe est requis');
+      return;
+    }
+
+    if (formData.password.length < 8) {
+      toast.error('Le mot de passe doit contenir au moins 8 caractères');
+      return;
+    }
+
+    if (formData.password !== formData.password_confirm) {
+      toast.error('Les mots de passe ne correspondent pas');
+      return;
+    }
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
@@ -109,8 +160,10 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
       first_name: formData.first_name.trim(),
       last_name: formData.last_name.trim(),
       email: formData.email.trim(),
+      password: formData.password,
+      password_confirm: formData.password_confirm,
+      groups: formData.groups,
       profile: {
-        role: formData.profile.role,
         phone: formData.profile.phone.trim() || undefined,
         bio: formData.profile.bio.trim() || undefined,
         department: formData.profile.department.trim() || undefined,
@@ -125,25 +178,7 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
     createUserMutation.mutate(userData);
   };
 
-  const roles: UserProfileRole[] = [
-    "Managing Director",
-    "Chef de projet",
-    "Directeur de production",
-    "Responsable communication",
-    "Administrateur financier",
-    "Assistant",
-    "Consultant"
-  ];
 
-  const departments = [
-    'Développement',
-    'Design', 
-    'Marketing',
-    'Commercial',
-    'Finance',
-    'RH',
-    'Direction'
-  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -224,6 +259,34 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="password">Mot de passe *</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Minimum 8 caractères
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="password_confirm">Confirmer le mot de passe *</Label>
+                  <Input
+                    id="password_confirm"
+                    type="password"
+                    value={formData.password_confirm}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password_confirm: e.target.value }))}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+              </div>
+
               <div>
                 <Label htmlFor="phone">Téléphone</Label>
                 <div className="relative">
@@ -268,24 +331,61 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="role">Rôle</Label>
+                  <Label htmlFor="groups">Groupes/Rôles</Label>
                   <Select 
-                    value={formData.profile.role || 'none'} 
-                    onValueChange={(value) => setFormData(prev => ({ 
-                      ...prev, 
-                      profile: { ...prev.profile, role: value === 'none' ? undefined : value as UserProfileRole }
-                    }))}
+                    value={formData.groups.length > 0 ? formData.groups[0].toString() : 'none'} 
+                    onValueChange={(value) => {
+                      if (value === 'none') {
+                        setFormData(prev => ({ ...prev, groups: [] }));
+                      } else {
+                        const groupId = parseInt(value);
+                        if (!formData.groups.includes(groupId)) {
+                          setFormData(prev => ({ ...prev, groups: [...prev.groups, groupId] }));
+                        }
+                      }
+                    }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un rôle" />
+                      <SelectValue placeholder="Sélectionner un groupe" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun rôle</SelectItem>
-                      {roles.map(role => (
-                        <SelectItem key={role} value={role}>{role}</SelectItem>
-                      ))}
+                      <SelectItem value="none">Aucun groupe</SelectItem>
+                      {isRolesLoading ? (
+                        <SelectItem value="loading" disabled>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Chargement des groupes...
+                        </SelectItem>
+                      ) : availableRoles.length > 0 ? (
+                        availableRoles.map((role: any) => (
+                          <SelectItem key={role.id} value={role.id.toString()}>{role.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-roles" disabled>Aucun groupe disponible</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
+                  {formData.groups.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {formData.groups.map((groupId) => {
+                        const group = availableRoles.find(r => r.id === groupId);
+                        return group ? (
+                          <div key={groupId} className="flex items-center gap-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-md text-sm">
+                            <span>{group.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ 
+                                ...prev, 
+                                groups: prev.groups.filter(id => id !== groupId) 
+                              }))}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -302,9 +402,18 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Aucun département</SelectItem>
-                      {departments.map(dept => (
-                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                      ))}
+                      {isDepartmentsLoading ? (
+                        <SelectItem value="loading" disabled>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Chargement des départements...
+                        </SelectItem>
+                      ) : departmentsData && departmentsData.length > 0 ? (
+                        departmentsData.map((dept: any) => (
+                          <SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-depts" disabled>Aucun département disponible</SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
@@ -325,19 +434,34 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
 
               <div>
                 <Label htmlFor="hire_date">Date d'embauche</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    id="hire_date"
-                    type="date"
-                    value={formData.profile.hire_date}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      profile: { ...prev.profile, hire_date: e.target.value }
-                    }))}
-                    className="pl-10"
-                  />
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {formData.profile.hire_date ? (
+                        format(new Date(formData.profile.hire_date), 'PPP', { locale: fr })
+                      ) : (
+                        <span className="text-muted-foreground">Sélectionner une date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarIcon
+                      mode="single"
+                      selected={formData.profile.hire_date ? new Date(formData.profile.hire_date) : undefined}
+                      onSelect={(date) => setFormData(prev => ({ 
+                        ...prev, 
+                        profile: { ...prev.profile, hire_date: date ? date.toISOString().split('T')[0] : '' }
+                      }))}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                      locale={fr}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <Separator />

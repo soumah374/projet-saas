@@ -16,6 +16,15 @@ interface RolePermissions {
   };
 }
 
+interface RoleUser {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  is_active: boolean;
+}
+
 interface RoleObjectUpdate {
   id: number;
   name: string;
@@ -203,15 +212,13 @@ export const usePermissionManager = () => {
   // Obtenir les utilisateurs d'un rôle
   const getRoleUsers = useCallback(async (roleName: string) => {
     try {
-      // D'abord, récupérer l'ID du rôle
       const rolesRes = await api.get('/auth/permissions/roles/');
       const role = rolesRes.data.roles.find((r: any) => r.name === roleName);
       
       if (!role) {
         return [];
       }
-      
-      const response = await api.get(`/auth/permissions/${role.id}/users/`);
+      const response = await api.get(`/auth/permissions/${role.id}/users-by-group/`);
       return response.data.users || [];
     } catch (error) {
       console.error('Erreur lors de la récupération des utilisateurs du rôle:', error);
@@ -222,7 +229,6 @@ export const usePermissionManager = () => {
   // Assigner un utilisateur à un rôle
   const assignUserToRole = useCallback(async (userId: number, roleName: string): Promise<boolean> => {
     try {
-      // D'abord, récupérer l'ID du rôle
       const rolesRes = await api.get('/auth/permissions/roles/');
       const role = rolesRes.data.roles.find((r: any) => r.name === roleName);
       
@@ -303,6 +309,27 @@ export const usePermissionManager = () => {
     }
   }, [toast]);
 
+  // Charger tous les utilisateurs disponibles
+  const getAllUsers = useCallback(async (): Promise<RoleUser[]> => {
+    try {
+      const response = await api.get('/auth/users/team_members/');
+      return response.data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des utilisateurs:', error);
+      return [];
+    }
+  }, []);
+
+  const getUsersByGroup = useCallback(async (groupId: number): Promise<RoleUser[]> => {
+    try {
+      const response = await api.get(`/auth/permissions/${groupId}/users-by-group/`);
+      return response.data.users || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des utilisateurs:', error);
+      return [];
+    }
+  }, []); 
+
   return {
     isLoading,
     loadPermissionData,
@@ -314,6 +341,8 @@ export const usePermissionManager = () => {
     getRoleUsers,
     assignUserToRole,
     removeUserFromRole,
-    updateRole
+    updateRole,
+    getAllUsers, 
+    getUsersByGroup 
   };
 }; 

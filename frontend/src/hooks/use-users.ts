@@ -1,22 +1,56 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { usersAPI, authAPI } from '@/lib/api';
+import { useToast } from '@/components/ui/use-toast';
 import type { UserCreate, UserUpdate } from '@/lib/types';
-import { toast } from 'sonner';
 
-// ===== UTILISATEURS =====
-
-export const useUsers = (params?: {
+export interface UsersParams {
   search?: string;
+  profile__department?: string;
+  is_active?: boolean;
   ordering?: string;
   page?: number;
-  is_active?: boolean;
-  profile__role?: string;
-  profile__department?: string;
-}) => {
-  return useQuery({
-    queryKey: ['users', params],
+}
+
+export const useUsers = (params: UsersParams = {}) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
+  const queryKey = ['users', params];
+  
+  const query = useQuery({
+    queryKey,
     queryFn: () => usersAPI.getUsers(params),
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  const toggleUserActiveMutation = useMutation({
+    mutationFn: (userId: number) => usersAPI.toggleUserActive(userId),
+    onSuccess: (data: any) => {
+      toast({
+        title: "Succès",
+        description: data.data?.message || "Statut de l'utilisateur modifié avec succès",
+      });
+      // Invalider le cache pour recharger la liste
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Erreur",
+        description: error.response?.data?.error || "Erreur lors de la modification du statut",
+        variant: "destructive"
+      });
+    },
+  });
+
+  const toggleUserActive = (userId: number) => {
+    toggleUserActiveMutation.mutate(userId);
+  };
+
+  return {
+    ...query,
+    toggleUserActive,
+    isToggling: toggleUserActiveMutation.isPending,
+  };
 };
 
 export const useUser = (id: number) => {
@@ -113,17 +147,25 @@ export const useCurrentUser = () => {
 // Hook pour mettre à jour le profil de l'utilisateur connecté
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UserUpdate }) => usersAPI.updateUserProfile(id, data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['user', id] });
-      toast.success('Profil mis à jour avec succès');
+      toast({
+        title: "Succès",
+        description: "Profil mis à jour avec succès"
+      });
     },
     onError: (error) => {
       console.error('Erreur lors de la mise à jour du profil:', error);
-      toast.error('Erreur lors de la mise à jour du profil');
+      toast({
+        title: "Erreur",
+        description: "Erreur lors de la mise à jour du profil",
+        variant: "destructive"
+      });
     },
   });
 }; 

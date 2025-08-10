@@ -64,8 +64,8 @@ def test_permission_system():
     # 4. Tester les permissions spécifiques
     print("\n4. Test des permissions spécifiques...")
     
-    # Trouver un utilisateur avec un rôle spécifique
-    managing_director = User.objects.filter(profile__role='Managing Director').first()
+    # Trouver un utilisateur avec un groupe spécifique
+    managing_director = User.objects.filter(groups__name='Managing Director').first()
     if managing_director:
         print(f"\n  Test avec {managing_director.get_full_name()} (Managing Director):")
         
