@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { MetricsOverview } from '@/components/dashboard/MetricsOverview';
 import { ProjectMetrics } from '@/components/dashboard/ProjectMetrics';
@@ -39,6 +39,14 @@ const DashboardPage: React.FC = () => {
       default: return `${days} jours`;
     }
   };
+
+  const revenueChange = useMemo(() => {
+    const trend = data?.financial?.revenue_trend || [];
+    if (trend.length < 2) return 0;
+    const last = trend[trend.length - 1]?.revenue || 0;
+    const prev = trend[trend.length - 2]?.revenue || 0;
+    return prev > 0 ? ((last - prev) / prev) * 100 : 0;
+  }, [data?.financial?.revenue_trend]);
 
   if (loading) {
     return (
@@ -208,7 +216,7 @@ const DashboardPage: React.FC = () => {
                 total_revenue: data?.financial?.cash_flow?.income || 0,
                 urgent_deadlines: data?.calendar?.upcoming_deadlines?.filter(d => d.days_until_deadline <= 3).length || 0,
                 overdue_projects: data?.projects?.overdue_projects?.length || 0,
-                revenue_change: 5.2, // Exemple de données
+                revenue_change: revenueChange,
                 projects_change: 2.1,
               }}
               period={getPeriodLabel(period)}
@@ -220,12 +228,12 @@ const DashboardPage: React.FC = () => {
                 total_projects: data?.projects?.total_projects || 0,
                 active_projects: data?.projects?.active_projects || 0,
                 total_users: data?.calendar?.resource_utilization?.total_users || 0,
-                total_clients: 0, // À implémenter
-                total_contracts: 0, // À implémenter
+                total_clients: data?.calendar?.resource_utilization?.total_clients || 0,
+                total_contracts: data?.calendar?.resource_utilization?.total_contracts || 0,
                 total_revenue: data?.financial?.cash_flow?.income || 0,
-                pending_tasks: 0, // À implémenter
-                overdue_tasks: data?.projects?.overdue_projects?.length || 0,
-                revenue_change: 5.2, // Exemple de données
+                pending_tasks: data?.performance?.pending_tasks || 0,
+                overdue_tasks: data?.performance?.overdue_tasks || 0,
+                revenue_change: revenueChange,
                 projects_change: 2.1,
                 users_change: 0.8,
               }}
@@ -238,14 +246,10 @@ const DashboardPage: React.FC = () => {
                 revenue_trend: data?.financial?.revenue_trend,
                 project_status_distribution: data?.projects?.status_distribution,
                 team_performance: data?.projects?.team_performance,
-                monthly_projects: [
-                  { month: '2024-01', count: 12 },
-                  { month: '2024-02', count: 15 },
-                  { month: '2024-03', count: 18 },
-                  { month: '2024-04', count: 22 },
-                  { month: '2024-05', count: 25 },
-                  { month: '2024-06', count: 28 },
-                ],
+                monthly_projects: (data?.projects?.monthly_projects || []).map((m: any) => ({
+                  month: m.month,
+                  count: m.count
+                })),
               }}
               period={getPeriodLabel(period)}
             />

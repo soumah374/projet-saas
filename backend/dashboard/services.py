@@ -3,9 +3,10 @@ from django.utils import timezone
 from django.db.models.functions import TruncMonth, Coalesce
 from datetime import timedelta
 import logging
+from django.db.models import Value, DecimalField, FloatField
 
 from projects.models import Project, ProjectTask
-from users.models import User
+from users.models import User, ClientProfile
 from teams.models import Team
 from contrats.models import Contrat
 from devis.models import Devis
@@ -28,8 +29,6 @@ class DashboardMetricsService:
                 created_at__gte=start_date,
                 created_at__lte=end_date
             )
-           
-            
             # Distribution par statut
             status_distribution = dict(
                 projects_in_period.values('status').annotate(
@@ -54,7 +53,7 @@ class DashboardMetricsService:
             # Projets en retard
             overdue_qs = Project.objects.filter(
                 deadline__lt=self.now,
-                status__in=['Production', 'Livraison']
+                status__in=['Production', 'Livraison','Terminé']
             ).values('id', 'title', 'deadline')[:10]
             overdue_projects = []
             for p in overdue_qs:
@@ -75,12 +74,27 @@ class DashboardMetricsService:
             ).values(
                 'team_name', 'project_count', 'avg_progress'
             )[:5]
+
+            # Projets par mois (dans la période)
+            monthly_projects_qs = projects_in_period.annotate(
+                month=TruncMonth('created_at')
+            ).values('month').annotate(count=Count('id')).order_by('month')
+            monthly_projects = [
+                {
+                    'month': mp['month'].strftime('%Y-%m') if mp['month'] else '',
+                    'count': mp['count']
+                }
+                for mp in monthly_projects_qs
+            ]
             
             return {
+                'total_projects': projects_in_period.count(),
+                'active_projects': projects_in_period.filter(status__in=['Production', 'Livraison']).count(),
                 'status_distribution': status_distribution,
                 'recent_projects': list(recent_projects),
                 'overdue_projects': list(overdue_projects),
-                'team_performance': list(team_performance)
+                'team_performance': list(team_performance),
+                'monthly_projects': monthly_projects,
             }
             
         except Exception as e:
@@ -102,7 +116,10 @@ class DashboardMetricsService:
                     date_emission__lte=month_end,
                     statut='payee'
                 ).aggregate(
-                    total=Coalesce(Sum('montant_ht'), 0)
+                    total=Coalesce(
+                        Sum('montant_ht'),
+                        Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                    )
                 )['total'] or 0
                 
                 revenue_trend.append({
@@ -135,11 +152,14 @@ class DashboardMetricsService:
             
             # Flux de trésorerie
             income = Facture.objects.filter(
-                date_emission__gte=start_date,
-                date_emission__lte=end_date,
+                created_at__gte=start_date,
+                created_at__lte=end_date,
                 statut='payee'
             ).aggregate(
-                total=Coalesce(Sum('montant_ht'), 0)
+                total=Coalesce(
+                    Sum('montant_ht'),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                )
             )['total'] or 0
             
             expenses = 0  # À implémenter selon votre modèle de dépenses
@@ -147,10 +167,10 @@ class DashboardMetricsService:
             
             # Top clients
             raw_top_clients = Contrat.objects.filter(
-                date_signature__gte=start_date,
-                date_signature__lte=end_date
+                date_creation__gte=start_date,
+                date_creation__lte=end_date
             ).values('client__nom').annotate(
-                revenue=Sum('montant_total')
+                revenue=Sum('montant_ttc')
             ).order_by('-revenue')[:5]
             top_clients = [
                 {
@@ -193,7 +213,8 @@ class DashboardMetricsService:
                 )
             ).filter(total_tasks__gt=0).annotate(
                 completion_rate=Coalesce(
-                    F('completed_tasks') * 100.0 / F('total_tasks'), 0
+                    F('completed_tasks') * 100.0 / F('total_tasks'),
+                    Value(0.0, output_field=FloatField())
                 ),
                 team_name=F('name')
             ).values('team_name', 'total_tasks', 'completed_tasks', 'completion_rate')[:5]
@@ -204,7 +225,8 @@ class DashboardMetricsService:
                 completed_tasks=Count('assigned_tasks', filter=Q(assigned_tasks__status='Terminé'))
             ).filter(total_tasks__gt=0).annotate(
                 completion_rate=Coalesce(
-                    F('completed_tasks') * 100.0 / F('total_tasks'), 0
+                    F('completed_tasks') * 100.0 / F('total_tasks'),
+                    Value(0.0, output_field=FloatField())
                 )
             ).values('username', 'total_tasks', 'completed_tasks', 'completion_rate')[:10]
             
@@ -219,16 +241,27 @@ class DashboardMetricsService:
                 created_at__lte=end_date,
                 status='Terminé'
             ).count()
-            
+
+            pending_tasks_count = ProjectTask.objects.filter(
+                created_at__gte=start_date,
+                created_at__lte=end_date,
+                status__in=['À faire', 'En cours']
+            ).count()
+
+            overdue_tasks_count = ProjectTask.objects.filter(
+                due_date__lt=self.now,
+                status__in=['À faire', 'En cours']
+            ).count()
+
             global_completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
             
             # Métriques d'efficacité
             avg_completion_time = ProjectTask.objects.filter(
                 status='Terminé',
-                executed_at__gte=start_date,
-                executed_at__lte=end_date
+                created_at__gte=start_date,
+                created_at__lte=end_date
             ).aggregate(
-                avg_time=Avg(F('executed_at') - F('start_date'))
+                avg_time=Avg(F('executed_at') - F('created_at'))
             )['avg_time']
             
             avg_completion_days = avg_completion_time.days if avg_completion_time else 0
@@ -244,7 +277,9 @@ class DashboardMetricsService:
                 'efficiency_metrics': {
                     'avg_completion_time_days': avg_completion_days,
                     'total_completed_tasks': completed_tasks
-                }
+                },
+                'pending_tasks': pending_tasks_count,
+                'overdue_tasks': overdue_tasks_count,
             }
             
         except Exception as e:
@@ -264,7 +299,7 @@ class DashboardMetricsService:
             ).values('id', 'title', 'deadline')[:10]
             
             for project in project_deadlines:
-                days_until = (project['deadline'] - self.now).days
+                days_until = (project['deadline'] - self.now.date()).days
                 upcoming_deadlines.append({
                     'id': project['id'],
                     'title': f"Fin du projet: {project['title']}",
@@ -281,7 +316,7 @@ class DashboardMetricsService:
             ).values('id', 'title', 'due_date', 'project__title')[:10]
             
             for task in task_deadlines:
-                days_until = (task['due_date'] - self.now).days
+                days_until = (task['due_date'] - self.now.date()).days
                 upcoming_deadlines.append({
                     'id': task['id'],
                     'title': f"Tâche: {task['title']}",
@@ -304,16 +339,18 @@ class DashboardMetricsService:
                     created_at__lte=end_date
                 ).count(),
                 'contrats': Contrat.objects.filter(
-                    date_signature__gte=start_date,
-                    date_signature__lte=end_date
+                    date_creation__gte=start_date,
+                    date_creation__lte=end_date
                 ).count()
             }
             
-            # Utilisation des ressources
+            # Utilisation des ressources et entités
             total_users = User.objects.count()
             active_users = User.objects.filter(
                 last_login__gte=self.now - timedelta(days=7)
             ).count()
+            total_clients = ClientProfile.objects.count()
+            total_contracts = Contrat.objects.count()
             
             utilization_rate = (active_users / total_users * 100) if total_users > 0 else 0
             
@@ -323,7 +360,9 @@ class DashboardMetricsService:
                 'resource_utilization': {
                     'total_users': total_users,
                     'active_users': active_users,
-                    'utilization_rate': round(utilization_rate, 1)
+                    'utilization_rate': round(utilization_rate, 1),
+                    'total_clients': total_clients,
+                    'total_contracts': total_contracts,
                 }
             }
             

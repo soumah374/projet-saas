@@ -28,6 +28,10 @@ export interface DashboardMetrics {
       project_count: number;
       avg_progress: number;
     }>;
+    monthly_projects?: Array<{
+      month: string;
+      count: number;
+    }>;
   };
   financial?: {
     revenue_trend: Array<{
@@ -72,6 +76,8 @@ export interface DashboardMetrics {
       avg_completion_time_days: number;
       total_completed_tasks: number;
     };
+    pending_tasks?: number;
+    overdue_tasks?: number;
   };
   calendar?: {
     upcoming_deadlines: Array<{
@@ -90,6 +96,8 @@ export interface DashboardMetrics {
       total_users: number;
       active_users: number;
       utilization_rate: number;
+      total_clients?: number;
+      total_contracts?: number;
     };
   };
   last_updated?: string;

@@ -12,7 +12,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({
 }) => {
   return (
     <div className={cn(
-      "grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6",
+      "grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-1 gap-6",
       "auto-rows-min",
       className
     )}>
