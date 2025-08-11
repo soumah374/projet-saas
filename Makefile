@@ -163,6 +163,7 @@ load-fixtures:
 	docker compose exec backend python manage.py loaddata initial_frais_categories
 	docker compose exec backend python manage.py loaddata initial_lignes_frais
 
+	docker compose exec backend python manage.py init_permissions
 	
 
 load-fixtures-clean:

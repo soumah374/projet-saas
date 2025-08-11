@@ -27,7 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { GUINEA_CITIES } from '@/lib/guinea-cities';
 
 const EVENT_TYPE_OPTIONS = [
   { label: 'Réunion', value: 'meeting' },
@@ -65,8 +64,6 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isLocationOpen, setIsLocationOpen] = useState(false);
-  const [locationQuery, setLocationQuery] = useState('');
   
   const [formData, setFormData] = useState<EventFormData>(event ? {
     ...event as any,
@@ -263,98 +260,12 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
 
               <div className="space-y-2">
                 <label htmlFor="location" className="text-sm font-medium">Lieu</label>
-                <Popover open={isLocationOpen} onOpenChange={setIsLocationOpen}>
-                  <PopoverTrigger asChild>
-                    <Input
-                      id="location"
-                      placeholder="Commencez à taper pour rechercher une ville..."
-                      value={formData.location}
-                      onFocus={() => setIsLocationOpen(true)}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setFormData(prev => ({ ...prev, location: value }));
-                        setLocationQuery(value);
-                        if (!isLocationOpen) setIsLocationOpen(true);
-                      }}
-                      // onKeyDown={(e) => {
-                      //   if (e.key === 'Enter') {
-                      //     e.preventDefault();
-                      //     const value = (e.target as HTMLInputElement).value.trim();
-                      //     if (value) {
-                      //       setFormData(prev => ({ ...prev, location: value }));
-                      //     }
-                      //     setIsLocationOpen(false);
-                      //   }
-                      //   if (e.key === 'Escape') {
-                      //     setIsLocationOpen(false);
-                      //   }
-                      // }}
-                      // autoComplete="off"
-                    />
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" style={{ zIndex: 9999, pointerEvents: 'auto' }}>
-                    <Command>
-                      <CommandList>
-                        <CommandEmpty>
-                          Aucune ville trouvée.
-                          {locationQuery?.trim() ? (
-                            <div className="p-2">
-                              <Button
-                                className="w-full"
-                                type="button"
-                                onClick={() => {
-                                  const custom = locationQuery.trim();
-                                  if (!custom) return;
-                                  setFormData(prev => ({ ...prev, location: custom }));
-                                  setIsLocationOpen(false);
-                                  setLocationQuery('');
-                                }}
-                              >
-                                Utiliser "{locationQuery.trim()}"
-                              </Button>
-                            </div>
-                          ) : null}
-                        </CommandEmpty>
-                        <CommandGroup>
-                          {GUINEA_CITIES.filter(city =>
-                            !locationQuery?.trim() || city.toLowerCase().includes(locationQuery.trim().toLowerCase())
-                          ).map((city) => (
-                            <CommandItem
-                              key={city}
-                              value={city}
-                              onSelect={() => {
-                                setFormData(prev => ({ ...prev, location: city }));
-                                setIsLocationOpen(false);
-                                setLocationQuery('');
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  formData.location === city ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {city}
-                            </CommandItem>
-                          ))}
-                          {locationQuery?.trim() && !GUINEA_CITIES.some(c => c.toLowerCase() === locationQuery.trim().toLowerCase()) ? (
-                            <CommandItem
-                              value={`add:${locationQuery.trim()}`}
-                              onSelect={() => {
-                                const custom = locationQuery.trim();
-                                setFormData(prev => ({ ...prev, location: custom }));
-                                setIsLocationOpen(false);
-                                setLocationQuery('');
-                              }}
-                            >
-                              Utiliser "{locationQuery.trim()}"
-                            </CommandItem>
-                          ) : null}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <Input
+                  id="location"
+                  placeholder="Lieu de l'événement"
+                  value={formData.location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                />
               </div>
             </div>
 
