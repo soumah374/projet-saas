@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
 import { 
   Table, 
   TableBody, 
@@ -30,7 +29,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { ArrowLeft, Users, Shield, Edit, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, Users, Shield, Edit, Trash2, UserPlus, ChevronRight, ChevronLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissionManager } from '@/hooks/use-permission-manager';
 
@@ -75,13 +74,20 @@ export default function RoleDetailsPage() {
     assignUserToRole,
     removeUserFromRole,
     getAllUsers,
-    getUsersByGroup
+    getUsersByGroup,
+    assignPermissionToRole,
+    removePermissionFromRole
   } = usePermissionManager();
 
   const [role, setRole] = useState<RoleDetails | null>(null);
   const [roleUsers, setRoleUsers] = useState<RoleUser[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermissions | null>(null);
   const [allUsers, setAllUsers] = useState<RoleUser[]>([]);
+  const [allPermissions, setAllPermissions] = useState<any[]>([]);
+  const [availableFilter, setAvailableFilter] = useState('');
+  const [chosenFilter, setChosenFilter] = useState('');
+  const [selectedAvailable, setSelectedAvailable] = useState<string[]>([]);
+  const [selectedChosen, setSelectedChosen] = useState<string[]>([]);
   
   // États pour les modales
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -94,11 +100,6 @@ export default function RoleDetailsPage() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [userToRemove, setUserToRemove] = useState<RoleUser | null>(null);
 
-  const modules = [
-    'users', 'projects', 'teams', 'departments', 'clients', 
-    'devis', 'contrats', 'billings', 'catalog', 'documents', 
-    'reports', 'calendar', 'timesheets'
-  ];
 
   useEffect(() => {
     if (roleId) {
@@ -128,6 +129,7 @@ export default function RoleDetailsPage() {
       
       setRole(roleData);
       setEditRoleName(roleData.name);
+      setAllPermissions(data.permissions || []);
       
       // Trouver les permissions du rôle
       const rolePerms = data.rolePermissions.find((rp: any) => rp.role === roleData.name);
@@ -213,50 +215,6 @@ export default function RoleDetailsPage() {
     }
   };
 
-  const handleUpdatePermission = async (moduleName: string, permissionType: string, value: boolean) => {
-    if (!role) return;
-
-    const success = await updateRolePermissions(role.id, role.name, moduleName, permissionType, value);
-    if (success) {
-      // Mettre à jour l'état local des permissions au lieu de recharger tout
-      if (rolePermissions) {
-        const updatedRolePermissions = {
-          ...rolePermissions,
-          module_permissions: {
-            ...rolePermissions.module_permissions,
-            [moduleName]: {
-              view: false,
-              add: false,
-              change: false,
-              delete: false,
-              ...rolePermissions.module_permissions[moduleName],
-              [permissionType]: value
-            }
-          }
-        };
-        setRolePermissions(updatedRolePermissions);
-      } else {
-        // Si pas de permissions existantes, créer la structure
-        setRolePermissions({
-          role: role.name,
-          permissions: [],
-          module_permissions: {
-            [moduleName]: {
-              view: permissionType === 'view' ? value : false,
-              add: permissionType === 'add' ? value : false,
-              change: permissionType === 'change' ? value : false,
-              delete: permissionType === 'delete' ? value : false
-            }
-          }
-        });
-      }
-      
-      toast({
-        title: "Succès",
-        description: `Permission ${permissionType} ${value ? 'activée' : 'désactivée'} pour ${moduleName}`
-      });
-    }
-  };
 
   const handleAssignUser = async () => {
     if (!selectedUserId || !role || selectedUserId === 'no-users-available') return;
@@ -309,6 +267,60 @@ export default function RoleDetailsPage() {
     // Fermer le modal et réinitialiser
     setIsRemoveUserDialogOpen(false);
     setUserToRemove(null);
+  };
+
+  const chosenFullNames = rolePermissions?.permissions || [];
+
+  const displayLabel = (p: any) => {
+    const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+    return `${cap(p.app_label)} | ${cap(p.model)} | ${p.name}`;
+  };
+
+  const filteredAvailable = allPermissions
+    .filter((p) => !chosenFullNames.includes(p.full_name))
+    .filter((p) => displayLabel(p).toLowerCase().includes(availableFilter.toLowerCase()));
+
+  const filteredChosen = allPermissions
+    .filter((p) => chosenFullNames.includes(p.full_name))
+    .filter((p) => displayLabel(p).toLowerCase().includes(chosenFilter.toLowerCase()));
+
+  const addSelectedPermissions = async () => {
+    if (!role) return;
+    const toAdd = selectedAvailable;
+    if (toAdd.length === 0) return;
+    await Promise.all(toAdd.map((fullName) => assignPermissionToRole(role.id, fullName)));
+    setSelectedAvailable([]);
+    await loadRoleDetails();
+  };
+
+  const removeSelectedPermissions = async () => {
+    if (!role) return;
+    const toRemoveFullNames = selectedChosen;
+    if (toRemoveFullNames.length === 0) return;
+    const idByFullName: Record<string, number> = {};
+    allPermissions.forEach((p: any) => { idByFullName[p.full_name] = p.id; });
+    const toRemoveIds = toRemoveFullNames.map((fn) => idByFullName[fn]).filter(Boolean);
+    await Promise.all(toRemoveIds.map((pid) => removePermissionFromRole(role.id, pid)));
+    setSelectedChosen([]);
+    await loadRoleDetails();
+  };
+
+  const addAll = async () => {
+    if (!role) return;
+    const toAdd = filteredAvailable.map((p) => p.full_name);
+    await Promise.all(toAdd.map((fullName) => assignPermissionToRole(role.id, fullName)));
+    setSelectedAvailable([]);
+    await loadRoleDetails();
+  };
+
+  const removeAll = async () => {
+    if (!role) return;
+    const idByFullName: Record<string, number> = {};
+    allPermissions.forEach((p: any) => { idByFullName[p.full_name] = p.id; });
+    const toRemoveIds = filteredChosen.map((p) => idByFullName[p.full_name]).filter(Boolean);
+    await Promise.all(toRemoveIds.map((pid) => removePermissionFromRole(role.id, pid)));
+    setSelectedChosen([]);
+    await loadRoleDetails();
   };
 
   if (isLoading || !role) {
@@ -411,67 +423,74 @@ export default function RoleDetailsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {modules.map((module) => {
-                  const modulePerms = rolePermissions?.module_permissions[module] || {
-                    view: false,
-                    add: false,
-                    change: false,
-                    delete: false
-                  };
+                {/* Gestion style "double liste" */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 border rounded bg-muted/20">
+                  <div className="lg:col-span-1">
+                    <Label>permissions disponible(s)</Label>
+                    <Input
+                      placeholder="Filtrer"
+                      className="my-2"
+                      value={availableFilter}
+                      onChange={(e) => setAvailableFilter(e.target.value)}
+                    />
+                    <select
+                      multiple
+                      className="w-full h-64 p-2 bg-background border rounded"
+                      value={selectedAvailable}
+                      onChange={(e) => {
+                        const values = Array.from(e.target.selectedOptions).map((o) => o.value);
+                        setSelectedAvailable(values);
+                      }}
+                    >
+                      {filteredAvailable.map((p: any) => (
+                        <option key={`avail-${p.id}`} value={p.full_name}>
+                          {displayLabel(p)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                  return (
-                    <Card key={module} className="border-l-4 border-l-blue-200">
-                      <CardHeader>
-                        <CardTitle className="text-lg capitalize flex items-center justify-between">
-                          {module}
-                          <Badge variant="outline">
-                            {Object.values(modulePerms).filter(Boolean).length}/4
-                          </Badge>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={modulePerms.view}
-                              onCheckedChange={(checked) => 
-                                handleUpdatePermission(module, 'view', checked)
-                              }
-                            />
-                            <Label>Voir</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={modulePerms.add}
-                              onCheckedChange={(checked) => 
-                                handleUpdatePermission(module, 'add', checked)
-                              }
-                            />
-                            <Label>Créer</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={modulePerms.change}
-                              onCheckedChange={(checked) => 
-                                handleUpdatePermission(module, 'change', checked)
-                              }
-                            />
-                            <Label>Modifier</Label>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Switch
-                              checked={modulePerms.delete}
-                              onCheckedChange={(checked) => 
-                                handleUpdatePermission(module, 'delete', checked)
-                              }
-                            />
-                            <Label>Supprimer</Label>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <Button variant="secondary" onClick={addSelectedPermissions} disabled={selectedAvailable.length === 0}>
+                      <ChevronRight className="w-4 h-4 mr-2" />
+                      Ajouter
+                    </Button>
+                    <Button variant="secondary" onClick={removeSelectedPermissions} disabled={selectedChosen.length === 0}>
+                      <ChevronLeft className="w-4 h-4 mr-2" />
+                      Retirer
+                    </Button>
+                  </div>
+
+                  <div className="lg:col-span-1">
+                    <Label>Choix des « permissions »</Label>
+                    <Input
+                      placeholder="Filtrer"
+                      className="my-2"
+                      value={chosenFilter}
+                      onChange={(e) => setChosenFilter(e.target.value)}
+                    />
+                    <select
+                      multiple
+                      className="w-full h-64 p-2 bg-background border rounded"
+                      value={selectedChosen}
+                      onChange={(e) => {
+                        const values = Array.from(e.target.selectedOptions).map((o) => o.value);
+                        setSelectedChosen(values);
+                      }}
+                    >
+                      {filteredChosen.map((p: any) => (
+                        <option key={`chosen-${p.id}`} value={p.full_name}>
+                          {displayLabel(p)}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground mt-2">
+                      <Button variant="ghost" size="sm" onClick={addAll}>Tout choisir</Button>
+                      <Button variant="ghost" size="sm" onClick={removeAll}>Tout enlever</Button>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </CardContent>
           </Card>

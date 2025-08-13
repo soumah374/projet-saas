@@ -25,6 +25,14 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { usePermissionManager } from '@/hooks/use-permission-manager';
 import { Permission, Role } from '@/hooks/use-permissions';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { Trash2 } from 'lucide-react';
 interface PermissionObject {
   id: number;
   name: string;
@@ -65,6 +73,7 @@ export default function PermissionManagerPage() {
     deleteRole: deleteRoleAPI,
     deletePermission: deletePermissionAPI,
     updateRole: updateRoleAPI,
+    assignPermissionToRole,
   } = usePermissionManager();
   
   const [roles, setRoles] = useState<(Role | RoleObject)[]>([]);
@@ -80,6 +89,9 @@ export default function PermissionManagerPage() {
   const [editRoleName, setEditRoleName] = useState('');
   const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<RoleObject | null>(null);
+  const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
+  const [isDeletePermissionDialogOpen, setIsDeletePermissionDialogOpen] = useState(false);
+  const [selectedRoleForPermission, setSelectedRoleForPermission] = useState<Record<string, string>>({});
 
   // Charger les données
   useEffect(() => {
@@ -168,11 +180,23 @@ export default function PermissionManagerPage() {
   };
 
   // Supprimer une permission
-  const handleDeletePermission = async (permissionName: string) => {
-    const success = await deletePermissionAPI(permissionName);
+  const handleDeletePermission = (permissionName: string) => {
+    setPermissionToDelete(permissionName);
+    setIsDeletePermissionDialogOpen(true);
+  };
+
+  const confirmDeletePermission = async () => {
+    if (!permissionToDelete) return;
+    const success = await deletePermissionAPI(permissionToDelete);
     if (success) {
       loadData();
+      toast({
+        title: "Succès",
+        description: `Permission "${permissionToDelete}" supprimée avec succès`
+      });
     }
+    setIsDeletePermissionDialogOpen(false);
+    setPermissionToDelete(null);
   };
 
   const modules = [
@@ -457,11 +481,12 @@ export default function PermissionManagerPage() {
                                   <Badge variant="outline">{displayModuleName}</Badge>
                                 </div>
                                 <Button
-                                  variant="destructive"
+                                  variant="outline"
                                   size="sm"
+                                  className="outline-none"
                                   onClick={() => handleDeletePermission(permissionName)}
                                 >
-                                  Supprimer
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
                             );
@@ -502,6 +527,36 @@ export default function PermissionManagerPage() {
             </Button>
             <Button variant="destructive" onClick={confirmDeleteRole}>
               Supprimer définitivement
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialogue de suppression de permission */}
+      <Dialog open={isDeletePermissionDialogOpen} onOpenChange={setIsDeletePermissionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la permission</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer la permission "{permissionToDelete}" ?
+              <br />
+              <span className="text-red-600 font-medium">
+                Cette action est irréversible.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsDeletePermissionDialogOpen(false);
+                setPermissionToDelete(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={confirmDeletePermission}>
+              Supprimer
             </Button>
           </DialogFooter>
         </DialogContent>

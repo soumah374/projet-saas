@@ -44,3 +44,24 @@ export function statutContrat(statut: string) {
       return statut;
   }
 }
+
+export function statusFacture(statut: string) {
+  switch (statut) {
+    case 'payee':
+      return 'Payée';
+    case 'en_attente':
+      return 'En attente';
+    case 'en_retard':
+      return 'En retard';
+    case 'annulee':
+      return 'Annulée';
+    case 'emise':
+      return 'Emise';
+    case 'envoyee':
+      return 'Envoyée';
+    case 'partiellement_payee':
+      return 'Partiellement payée';
+    default:
+      return statut;
+  }
+}

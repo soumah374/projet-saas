@@ -41,6 +41,8 @@ import { FacturesPage } from './pages/FacturesPage';
 import PermissionManagerPage from './pages/PermissionManagerPage';
 import RoleDetailsPage from './pages/RoleDetailsPage';
 import DashboardPage from './pages/DashboardPage';
+import ProfilePage from './pages/ProfilePage';
+import SearchPage from './pages/SearchPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -79,6 +81,16 @@ function App() {
                 <Route path="/" element={
                   <ProtectedRoute>
                     <DashboardPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/search" element={
+                  <ProtectedRoute>
+                    <SearchPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/projects" element={

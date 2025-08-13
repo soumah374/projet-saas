@@ -29,7 +29,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority', 'client', 'contract']
-    search_fields = ['title', 'description', 'client__nom_complet', 'contract__numero', 'id']
+    search_fields = ['title', 'description', 'client__nom', 'client__prenom', 'client__raison_sociale', 'contract__numero', 'id']
     ordering_fields = ['created_at', 'deadline', 'progress', 'title']
     ordering = ['-created_at']
     

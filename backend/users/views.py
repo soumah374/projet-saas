@@ -686,7 +686,22 @@ class PermissionManagerViewSet(viewsets.ViewSet):
         
         # Créer la permission
         try:
-            content_type = ContentType.objects.get(app_label=app_label, model='user')
+            # Mapping app -> (app_label, model) pour ContentType
+            app_model_mappings = {
+                'users': ('users', 'userprofile'),
+                'projects': ('projects', 'project'),
+                'teams': ('teams', 'team'),
+                'departments': ('departments', 'department'),
+                'clients': ('users', 'clientprofile'),
+                'devis': ('devis', 'devis'),
+                'contrats': ('contrats', 'contrat'),
+                'billings': ('billings', 'facture'),
+                'catalog': ('catalog', 'service'),
+                'documents': ('documents', 'document'),
+                'notifications': ('notifications', 'notification'),
+            }
+            mapped_app, mapped_model = app_model_mappings.get(app_label, ('users', 'userprofile'))
+            content_type = ContentType.objects.get(app_label=mapped_app, model=mapped_model)
             permission = Permission.objects.create(
                 name=f"Can {codename}",
                 codename=codename,
@@ -723,6 +738,25 @@ class PermissionManagerViewSet(viewsets.ViewSet):
             permission.delete()
             return Response({'message': 'Permission supprimée avec succès'})
             
+        except Permission.DoesNotExist:
+            return Response(
+                {'error': 'Permission non trouvée'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    def destroy(self, request, pk=None):
+        """Supprimer une permission via la route RESTful /permissions/{pk}/"""
+        try:
+            permission = Permission.objects.get(id=pk)
+            
+            if permission.group_set.exists() or permission.user_set.exists():
+                return Response(
+                    {'error': 'Impossible de supprimer cette permission car elle est utilisée'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            permission.delete()
+            return Response({'message': 'Permission supprimée avec succès'})
         except Permission.DoesNotExist:
             return Response(
                 {'error': 'Permission non trouvée'}, 
@@ -807,8 +841,8 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                                     'clients': ('users', 'clientprofile'),  # Les clients sont dans l'app users
                                     'devis': ('devis', 'devis'),
                                     'contrats': ('contrats', 'contrat'),
-                                    'billings': ('billings', 'billing'),
-                                    'catalog': ('catalog', 'catalog'),
+                                    'billings': ('billings', 'facture'),
+                                    'catalog': ('catalog', 'service'),
                                     'documents': ('documents', 'document'),
                                     'notifications': ('notifications', 'notification'),
                                     # Modules qui n'ont pas d'app dédiée - utiliser users comme fallback
@@ -845,7 +879,48 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 {'error': 'Rôle non trouvé'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
-    
+
+    @action(detail=True, methods=['post'], url_path='add-permission')
+    def add_permission_to_role(self, request, pk=None):
+        """Associer une permission existante à un rôle (groupe).
+        Accepte permission_id ou full_name (app_label.codename)."""
+        try:
+            group = Group.objects.get(id=pk)
+        except Group.DoesNotExist:
+            return Response({'error': 'Rôle non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
+        permission_id = request.data.get('permission_id')
+        full_name = request.data.get('full_name')
+
+        try:
+            if permission_id:
+                permission = Permission.objects.get(id=permission_id)
+            elif full_name and '.' in full_name:
+                app_label, codename = full_name.split('.', 1)
+                permission = Permission.objects.get(content_type__app_label=app_label, codename=codename)
+            else:
+                return Response({'error': 'permission_id ou full_name requis'}, status=status.HTTP_400_BAD_REQUEST)
+
+            group.permissions.add(permission)
+            return Response({'message': 'Permission associée au rôle avec succès'})
+        except Permission.DoesNotExist:
+            return Response({'error': 'Permission non trouvée'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['delete'], url_path='remove-permission/(?P<permission_id>[^/.]+)')
+    def remove_permission_from_role(self, request, pk=None, permission_id=None):
+        """Retirer une permission d'un rôle (groupe) par ID de permission."""
+        try:
+            group = Group.objects.get(id=pk)
+        except Group.DoesNotExist:
+            return Response({'error': 'Rôle non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            permission = Permission.objects.get(id=permission_id)
+            group.permissions.remove(permission)
+            return Response({'message': 'Permission retirée du rôle avec succès'})
+        except Permission.DoesNotExist:
+            return Response({'error': 'Permission non trouvée'}, status=status.HTTP_404_NOT_FOUND)
+ 
     @action(detail=True, methods=['get'], url_path='users')
     def role_users(self, request, pk=None):
         """Obtenir les utilisateurs d'un rôle"""
