@@ -94,42 +94,42 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/projects" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="projects">
                     <ProjectManagement />
                   </ProtectedRoute>
                 } />
                 <Route path="/projects/:projectId" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="projects">
                     <ProjectDetailsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/projects/:id/reports" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="projects">
                     <ProjectReportPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/projects/:projectId/team" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="projects">
                     <ProjectTeamPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/projects/:projectId/calendar" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="projects">
                     <ProjectCalendarPage />
                   </ProtectedRoute>
                 } /> 
                 <Route path="/projects/:projectId/documents" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="documents">
                     <DocumentsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/teams" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="teams">
                     <TeamsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/users" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="users">
                     <UsersPage />
                   </ProtectedRoute>
                 } />
@@ -139,12 +139,12 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/reports" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="projects">
                     <ReportsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/documents" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="documents">
                     <DocumentsPage />
                   </ProtectedRoute>
                 } />
@@ -154,107 +154,107 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/categories-services" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <CategoriesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/categories-services/:categoryId" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <CategoryDetailsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/services" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <ServicesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/services/:serviceId" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <ServiceDetailsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/clients" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="clients">
                     <ClientsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/departments" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="departments">
                     <DepartmentsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/activities" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <ActivitiesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/taux-horaires" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <TauxHorairesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/unites-standards" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <UnitesStandardsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/devis" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="devis">
                     <DevisPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/devis/create" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute permission="devis.create">
                     <DevisCreatePage />
                   </ProtectedRoute>
                 } />
                 <Route path="/devis/:id" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="devis">
                     <DevisDetailPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/categories-clients" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="clients">
                     <ClientCategoriesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/frais-categories" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <FraisCategoriesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/lignes-frais" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="catalog">
                     <LignesFraisPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/contrats" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="contrats">
                     <ContratsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/contrats/:id" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="contrats">
                     <ContratDetailPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/avenants" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="contrats">
                     <AvenantsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/factures" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute module="billings">
                     <FacturesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/permissions" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute roles={["Managing Director", "Finance/Admin",'Super Admin']}>
                     <PermissionManagerPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/permissions/role/:roleId" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute roles={["Managing Director", "Finance/Admin",'Super Admin']}>
                     <RoleDetailsPage />
                   </ProtectedRoute>
                 } />

@@ -59,17 +59,41 @@ export const usePermissions = () => {
     }
   }, [isAuthenticated, user, fetchUserPermissions]);
 
+  // Helpers
+  const isSuperAdmin = useCallback((): boolean => {
+    if (!userPermissions) return false;
+    return Boolean(userPermissions.is_superuser) || (userPermissions.groups || []).includes('Super Admin');
+  }, [userPermissions]);
+
   // Vérifier si l'utilisateur a une permission spécifique
   const hasPermission = useCallback((permission: Permission): boolean => {
     if (!userPermissions) return false;
     
-    // Les super utilisateurs ont tous les droits
-    if (userPermissions.is_superuser) return true;
+    // Super admin a tous les droits
+    if (userPermissions.is_superuser || (userPermissions.groups || []).includes('Super Admin')) return true;
     
-    // Les staff ont accès limité selon leur rôle
+    // Les staff ont accès limité selon leur rôle (comportement conservé)
     if (userPermissions.is_staff) return true;
     
-    // Vérifier si la permission existe dans la liste des permissions de l'utilisateur
+    // Support des permissions abstraites: module.action
+    // action: view | create | edit | delete
+    const parts = String(permission).split('.');
+    if (parts.length === 2) {
+      const [module, action] = parts as [string, string];
+      const actionMap: Record<string, keyof UserPermissions['module_permissions'][string]> = {
+        view: 'view',
+        create: 'add',
+        edit: 'change',
+        delete: 'delete',
+      };
+      const mapped = actionMap[action];
+      if (mapped) {
+        const modulePerms = userPermissions.module_permissions[module];
+        return modulePerms ? Boolean(modulePerms[mapped]) : false;
+      }
+    }
+
+    // Fallback: vérifier la présence exacte de la permission complète (ex: app_label.codename)
     return userPermissions.permissions.includes(permission);
   }, [userPermissions]);
 
@@ -77,8 +101,8 @@ export const usePermissions = () => {
   const hasModuleAccess = useCallback((module: string): boolean => {
     if (!userPermissions) return false;
     
-    // Les super utilisateurs ont accès à tout
-    if (userPermissions.is_superuser) return true;
+    // Super admin a accès à tout
+    if (userPermissions.is_superuser || (userPermissions.groups || []).includes('Super Admin')) return true;
     
     // Les staff ont accès limité selon leur rôle
     if (userPermissions.is_staff) return true;
@@ -90,14 +114,18 @@ export const usePermissions = () => {
   // Vérifier si l'utilisateur a un rôle spécifique
   const hasRole = useCallback((role: Role): boolean => {
     if (!userPermissions) return false;
-    return userPermissions.user_role === role;
-  }, [userPermissions]);
+    if (role === 'Super Admin') {
+      return isSuperAdmin();
+    }
+    return (userPermissions.user_role === role) || (userPermissions.groups || []).includes(role);
+  }, [userPermissions, isSuperAdmin]);
 
   // Vérifier si l'utilisateur a un des rôles spécifiés
   const hasAnyRole = useCallback((roles: Role[]): boolean => {
     if (!userPermissions) return false;
-    return roles.includes(userPermissions.user_role as Role);
-  }, [userPermissions]);
+    if (roles.includes('Super Admin') && isSuperAdmin()) return true;
+    return roles.some((r) => (userPermissions.user_role === r) || (userPermissions.groups || []).includes(r));
+  }, [userPermissions, isSuperAdmin]);
 
   // Obtenir toutes les permissions de l'utilisateur
   const getUserPermissions = useCallback((): Permission[] => {
@@ -117,13 +145,14 @@ export const usePermissions = () => {
   // Obtenir le rôle de l'utilisateur
   const getUserRole = useCallback((): Role | null => {
     if (!userPermissions) return null;
-    return userPermissions.user_role as Role;
+    if ((userPermissions.groups || []).includes('Super Admin') || userPermissions.is_superuser) return 'Super Admin';
+    return (userPermissions.user_role as Role) || null;
   }, [userPermissions]);
 
   // Obtenir toutes les permissions disponibles depuis la base de données
   const getAvailablePermissions = useCallback(async (): Promise<Permission[]> => {
     try {
-      const response = await api.get('/auth/permissions/');
+      const response = await api.get('/auth/permissions/permissions/');
       return response.data.permissions || [];
     } catch (err: any) {
       console.error('Erreur lors de la récupération des permissions disponibles:', err);
@@ -134,7 +163,7 @@ export const usePermissions = () => {
   // Obtenir tous les rôles disponibles depuis la base de données
   const getAvailableRoles = useCallback(async (): Promise<Role[]> => {
     try {
-      const response = await api.get('/auth/roles/');
+      const response = await api.get('/auth/permissions/roles/');
       return response.data.roles || [];
     } catch (err: any) {
       console.error('Erreur lors de la récupération des rôles disponibles:', err);
@@ -156,7 +185,7 @@ export const usePermissions = () => {
   }, [hasPermission]);
 
   const canViewReports = useCallback((): boolean => {
-    return hasPermission('reports.view');
+    return hasPermission('projects.view');
   }, [hasPermission]);
 
   const canManageTeams = useCallback((): boolean => {
@@ -198,6 +227,7 @@ export const usePermissions = () => {
     hasModuleAccess,
     hasRole,
     hasAnyRole,
+    isSuperAdmin,
     
     // Permissions spécifiques
     canManageUsers,

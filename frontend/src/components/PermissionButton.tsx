@@ -156,6 +156,19 @@ export const ManageButton = ({
 );
 
 // Composants pour les rôles spécifiques
+export const SuperAdminButton = ({ 
+  children, 
+  fallback, 
+  ...props 
+}: { 
+  children: ReactNode; 
+  fallback?: ReactNode;
+} & Omit<PermissionButtonProps, 'children' | 'fallback'>) => (
+  <PermissionButton userRole="Super Admin" fallback={fallback} {...props}>
+    {children}
+  </PermissionButton>
+);
+
 export const ManagingDirectorButton = ({ 
   children, 
   fallback, 

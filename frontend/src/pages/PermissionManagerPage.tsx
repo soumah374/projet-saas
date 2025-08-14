@@ -32,7 +32,6 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { Trash2 } from 'lucide-react';
 interface PermissionObject {
   id: number;
   name: string;
@@ -480,22 +479,58 @@ export default function PermissionManagerPage() {
                                   <span className="font-medium">{permissionName}</span>
                                   <Badge variant="outline">{displayModuleName}</Badge>
                                 </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="outline-none"
-                                  onClick={() => handleDeletePermission(permissionName)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                  {/* <Select
+                                    value={selectedRoleForPermission[permissionName] || ''}
+                                    onValueChange={(value) => setSelectedRoleForPermission((prev) => ({ ...prev, [permissionName]: value }))}
+                                  >
+                                    <SelectTrigger className="w-[180px]">
+                                      <SelectValue placeholder="Sélectionner un rôle" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {roles.map((r) => {
+                                        const rObj = r as RoleObject;
+                                        return (
+                                          <SelectItem key={`role-opt-${rObj.id}`} value={String(rObj.id)}>
+                                            {rObj.name}
+                                          </SelectItem>
+                                        );
+                                      })}
+                                    </SelectContent>
+                                  </Select> */}
+                                  {/* <Button
+                                    size="sm"
+                                    onClick={async () => {
+                                      const roleIdStr = selectedRoleForPermission[permissionName];
+                                      if (!roleIdStr) return;
+                                      const roleId = parseInt(roleIdStr);
+                                      const ok = await assignPermissionToRole(roleId, permissionName);
+                                      if (ok) {
+                                        toast({ title: 'Succès', description: 'Permission associée au rôle' });
+                                      }
+                                    }}
+                                  >
+                                    Associer
+                                  </Button> */}
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleDeletePermission(permissionName)}
+                                  >
+                                    Supprimer
+                                  </Button>
+                                </div>
                               </div>
                             );
+
                           })}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
                   ));
+                  
                 })()}
+
               </Accordion>
             </CardContent>
           </Card>

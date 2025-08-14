@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
 import { 
   Table, 
   TableBody, 
@@ -99,7 +100,14 @@ export default function RoleDetailsPage() {
   const [editRoleName, setEditRoleName] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [userToRemove, setUserToRemove] = useState<RoleUser | null>(null);
+  const [newPermissionFullName, setNewPermissionFullName] = useState('');
+  const [permissionRemoveId, setPermissionRemoveId] = useState('');
 
+  const modules = [
+    'users', 'projects', 'teams', 'departments', 'clients', 
+    'devis', 'contrats', 'billings', 'catalog', 'documents', 
+    'reports', 'calendar', 'timesheets'
+  ];
 
   useEffect(() => {
     if (roleId) {
@@ -215,6 +223,50 @@ export default function RoleDetailsPage() {
     }
   };
 
+  const handleUpdatePermission = async (moduleName: string, permissionType: string, value: boolean) => {
+    if (!role) return;
+
+    const success = await updateRolePermissions(role.id, role.name, moduleName, permissionType, value);
+    if (success) {
+      // Mettre à jour l'état local des permissions au lieu de recharger tout
+      if (rolePermissions) {
+        const updatedRolePermissions = {
+          ...rolePermissions,
+          module_permissions: {
+            ...rolePermissions.module_permissions,
+            [moduleName]: {
+              view: false,
+              add: false,
+              change: false,
+              delete: false,
+              ...rolePermissions.module_permissions[moduleName],
+              [permissionType]: value
+            }
+          }
+        };
+        setRolePermissions(updatedRolePermissions);
+      } else {
+        // Si pas de permissions existantes, créer la structure
+        setRolePermissions({
+          role: role.name,
+          permissions: [],
+          module_permissions: {
+            [moduleName]: {
+              view: permissionType === 'view' ? value : false,
+              add: permissionType === 'add' ? value : false,
+              change: permissionType === 'change' ? value : false,
+              delete: permissionType === 'delete' ? value : false
+            }
+          }
+        });
+      }
+      
+      toast({
+        title: "Succès",
+        description: `Permission ${permissionType} ${value ? 'activée' : 'désactivée'} pour ${moduleName}`
+      });
+    }
+  };
 
   const handleAssignUser = async () => {
     if (!selectedUserId || !role || selectedUserId === 'no-users-available') return;
@@ -491,6 +543,67 @@ export default function RoleDetailsPage() {
                   </div>
                 </div>
 
+                {/* {modules.map((module) => {
+                  const modulePerms = rolePermissions?.module_permissions[module] || {
+                    view: false,
+                    add: false,
+                    change: false,
+                    delete: false
+                  };
+
+                  return (
+                    <Card key={module} className="border-l-4 border-l-blue-200">
+                      <CardHeader>
+                        <CardTitle className="text-lg capitalize flex items-center justify-between">
+                          {module}
+                          <Badge variant="outline">
+                            {Object.values(modulePerms).filter(Boolean).length}/4
+                          </Badge>
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={modulePerms.view}
+                              onCheckedChange={(checked) => 
+                                handleUpdatePermission(module, 'view', checked)
+                              }
+                            />
+                            <Label>Voir</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={modulePerms.add}
+                              onCheckedChange={(checked) => 
+                                handleUpdatePermission(module, 'add', checked)
+                              }
+                            />
+                            <Label>Créer</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={modulePerms.change}
+                              onCheckedChange={(checked) => 
+                                handleUpdatePermission(module, 'change', checked)
+                              }
+                            />
+                            <Label>Modifier</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Switch
+                              checked={modulePerms.delete}
+                              onCheckedChange={(checked) => 
+                                handleUpdatePermission(module, 'delete', checked)
+                              }
+                            />
+                            <Label>Supprimer</Label>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })} */}
               </div>
             </CardContent>
           </Card>

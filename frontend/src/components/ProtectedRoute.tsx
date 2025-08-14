@@ -136,6 +136,20 @@ export const RequireAnyRole = ({
 );
 
 // Composants pour les rôles spécifiques
+export const RequireSuperAdmin = ({ 
+  children, 
+  fallback, 
+  redirectTo 
+}: { 
+  children: ReactNode; 
+  fallback?: ReactNode;
+  redirectTo?: string;
+}) => (
+  <RequireRole role="Super Admin" fallback={fallback} redirectTo={redirectTo}>
+    {children}
+  </RequireRole>
+);
+
 export const RequireManagingDirector = ({ 
   children, 
   fallback, 

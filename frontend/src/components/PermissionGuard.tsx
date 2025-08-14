@@ -107,6 +107,12 @@ export const IsAnyRole = ({ children, roles, fallback }: { children: ReactNode; 
 );
 
 // Composants pour les rôles spécifiques
+export const IsSuperAdmin = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
+  <IsRole role="Super Admin" fallback={fallback}>
+    {children}
+  </IsRole>
+);
+
 export const IsManagingDirector = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
   <IsRole role="Managing Director" fallback={fallback}>
     {children}
@@ -127,9 +133,13 @@ export const IsProjectManager = ({ children, fallback }: { children: ReactNode; 
 
 export const IsStaff = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
   <PermissionGuard 
-    role="Managing Director" 
+    role="Super Admin" 
     fallback={
-      <PermissionGuard role="Finance/Admin" fallback={fallback}>
+      <PermissionGuard role="Managing Director" fallback={
+        <PermissionGuard role="Finance/Admin" fallback={fallback}>
+          {children}
+        </PermissionGuard>
+      }>
         {children}
       </PermissionGuard>
     }
