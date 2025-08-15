@@ -134,7 +134,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
           </TabsList>
           
           <TabsContent value="alerts">
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-[200px]">
               <div className="space-y-4">
                 {alertsLoading ? (
                   <div className="flex items-center justify-center py-8">
@@ -248,7 +248,7 @@ export const ProjectTrackingAlerts = ({ projectId }: ProjectTrackingAlertsProps)
           </TabsContent>
           
           <TabsContent value="notifications">
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-[200px]">
               <div className="space-y-4">
                 {projectNotifications.length > 0 ? (
                   projectNotifications.map((notification: Notification) => (

@@ -34,6 +34,7 @@ export const PermissionButton = ({
 }: PermissionButtonProps) => {
   const { hasPermission, hasModuleAccess, hasRole, hasAnyRole, isLoading } = usePermissions();
 
+  console.log("permission",hasPermission)
   // Afficher un loader pendant le chargement des permissions
   if (isLoading) {
     return (
@@ -63,6 +64,10 @@ export const PermissionButton = ({
   if (showIfNoPermission) {
     hasAccess = !hasAccess;
   }
+
+  console.log("hasAccess",hasAccess) 
+  console.log("permission",permission) 
+  console.log("hasAccess",hasAccess) 
 
   if (hasAccess) {
     return (
@@ -156,6 +161,19 @@ export const ManageButton = ({
 );
 
 // Composants pour les rôles spécifiques
+export const SuperAdminButton = ({ 
+  children, 
+  fallback, 
+  ...props 
+}: { 
+  children: ReactNode; 
+  fallback?: ReactNode;
+} & Omit<PermissionButtonProps, 'children' | 'fallback'>) => (
+  <PermissionButton userRole="Super Admin" fallback={fallback} {...props}>
+    {children}
+  </PermissionButton>
+);
+
 export const ManagingDirectorButton = ({ 
   children, 
   fallback, 

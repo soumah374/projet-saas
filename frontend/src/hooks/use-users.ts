@@ -9,6 +9,7 @@ export interface UsersParams {
   is_active?: boolean;
   ordering?: string;
   page?: number;
+  page_size?: number;
 }
 
 export const useUsers = (params: UsersParams = {}) => {
@@ -150,7 +151,7 @@ export const useUpdateProfile = () => {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UserUpdate }) => usersAPI.updateUserProfile(id, data),
+    mutationFn: ({ data }: { id?: number; data: UserUpdate }) => usersAPI.updateMe(data),
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
       queryClient.invalidateQueries({ queryKey: ['user', id] });

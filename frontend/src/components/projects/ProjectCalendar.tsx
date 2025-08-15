@@ -143,28 +143,49 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
       });
 
     // Add events
-    eventsData.results.forEach((event: ProjectEvent) => {
-      const startTime = new Date(`${event.date}T${event.start_time}`);
-      const endTime = new Date(`${event.date}T${event.end_time}`);
+    eventsData.results.forEach((event: any) => {
+      const hasDateTime = Boolean(event?.start_date) && Boolean(event?.end_date);
+      const start = hasDateTime
+        ? new Date(event.start_date)
+        : new Date(`${event.date}T${event.start_time}`);
+      const end = hasDateTime
+        ? new Date(event.end_date)
+        : new Date(`${event.date}T${event.end_time}`);
+
       const durationInMinutes = Math.max(
-        (endTime.getTime() - startTime.getTime()) / (1000 * 60),
-        30 // minimum duration of 30 minutes
+        (end.getTime() - start.getTime()) / (1000 * 60),
+        30
       );
-      
+
+      const rawType = (event?.event_type ?? event?.type ?? 'other').toString();
+      const participantsNames = Array.isArray(event?.participants)
+        ? event.participants
+            .map((p: any) => {
+              if (!p) return '';
+              if (typeof p === 'object') {
+                const name = `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim();
+                return name || p.username || '';
+              }
+              return '';
+            })
+            .filter((v: string) => Boolean(v))
+        : [];
+
       eventsList.push({
         id: `event-${event.id}`,
         title: event.title,
-        type: event.type.toLowerCase() as EventType,
-        date: new Date(event.date),
-        time: event.start_time,
+        type: rawType.toLowerCase() as EventType,
+        date: start,
+        time: `${start.getHours().toString().padStart(2, '0')}:${start
+          .getMinutes()
+          .toString()
+          .padStart(2, '0')}`,
         project: project.id,
         status: 'upcoming',
-        participants: event.participants.map(p => 
-          `${p.first_name} ${p.last_name}`.trim() || p.username
-        ),
+        participants: participantsNames,
         duration: durationInMinutes,
         location: event.location,
-        description: event.description
+        description: event.description,
       });
     });
 

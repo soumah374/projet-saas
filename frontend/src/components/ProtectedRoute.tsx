@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/use-auth';
 import { usePermissions } from '../hooks/use-permissions';
@@ -24,8 +24,16 @@ export const ProtectedRoute = ({
   redirectTo = '/unauthorized',
 }: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const { hasPermission, hasModuleAccess, hasRole, hasAnyRole, isLoading: permLoading } = usePermissions();
+  const { hasPermission, hasModuleAccess, hasRole, hasAnyRole, isLoading: permLoading, error: permError } = usePermissions();
   const location = useLocation();
+
+  // Persister l'URL courante pour éviter la perte de la page lors du rechargement
+  useEffect(() => {
+    if (isAuthenticated && !authLoading && !permLoading) {
+      // Sauvegarder l'URL courante dans le localStorage
+      localStorage.setItem('lastVisitedUrl', location.pathname + location.search);
+    }
+  }, [isAuthenticated, authLoading, permLoading, location]);
 
   // Afficher un loader pendant le chargement
   if (authLoading || permLoading) {
@@ -39,7 +47,41 @@ export const ProtectedRoute = ({
 
   // Vérifier l'authentification
   if (!isAuthenticated) {
+    // Sauvegarder l'URL actuelle pour la restaurer après connexion
+    const currentUrl = location.pathname + location.search;
+    if (currentUrl !== '/') {
+      localStorage.setItem('lastVisitedUrl', currentUrl);
+    }
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Si les permissions ne sont pas encore chargées, attendre
+  // Cela évite les redirections prématurées lors du rechargement
+  if (permLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2">Vérification des permissions...</span>
+      </div>
+    );
+  }
+
+  // Gérer les erreurs de chargement des permissions
+  if (permError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Erreur de chargement</h1>
+          <p className="text-gray-600 mb-6">Impossible de charger vos permissions. Veuillez rafraîchir la page.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
+            Rafraîchir
+          </button>
+        </div>
+      </div>
+    );
   }
 
   // Vérifier les permissions
@@ -136,6 +178,20 @@ export const RequireAnyRole = ({
 );
 
 // Composants pour les rôles spécifiques
+export const RequireSuperAdmin = ({ 
+  children, 
+  fallback, 
+  redirectTo 
+}: { 
+  children: ReactNode; 
+  fallback?: ReactNode;
+  redirectTo?: string;
+}) => (
+  <RequireRole role="Super Admin" fallback={fallback} redirectTo={redirectTo}>
+    {children}
+  </RequireRole>
+);
+
 export const RequireManagingDirector = ({ 
   children, 
   fallback, 

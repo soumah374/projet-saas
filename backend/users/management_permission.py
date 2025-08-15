@@ -2,6 +2,8 @@ from django.contrib.auth.models import Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth import get_user_model
 from .models import UserProfile
+from projects.models import Project
+from billings.models import Facture
 
 User = get_user_model()
 
@@ -141,6 +143,11 @@ def create_role_groups():
         
         print(f"Groupe '{role_name}' créé avec {group.permissions.count()} permissions")
 
+    # Créer/mettre à jour le groupe Super Admin avec toutes les permissions
+    super_admin_group, _ = Group.objects.get_or_create(name='Super Admin')
+    super_admin_group.permissions.set(Permission.objects.all())
+    print(f"Groupe 'Super Admin' créé/mis à jour avec {super_admin_group.permissions.count()} permissions")
+
 
 def assign_users_to_groups():
     """Assigner les utilisateurs aux groupes selon leur rôle"""
@@ -155,7 +162,7 @@ def assign_users_to_groups():
             role_groups = Group.objects.filter(
                 name__in=[
                     'Managing Director', 'Finance/Admin', 'Chef de projet',
-                    'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant'
+                    'Designer', 'Développeur', 'Rédacteur', 'Consultant', 'Assistant', 'Super Admin'
                 ]
             )
             user.groups.remove(*role_groups)
@@ -173,7 +180,10 @@ def create_custom_permissions():
     """Créer des permissions personnalisées pour l'application"""
     
     # Permissions pour les projets
-    project_ct = ContentType.objects.get_for_model('projects.Project')
+    try:
+        project_ct = ContentType.objects.get_for_model(Project)
+    except Exception:
+        project_ct = ContentType.objects.get(app_label='projects', model='project')
     custom_permissions = [
         ('can_manage_project_members', 'Can manage project members'),
         ('can_view_project_reports', 'Can view project reports'),
@@ -188,7 +198,10 @@ def create_custom_permissions():
         )
     
     # Permissions pour les facturations
-    billing_ct = ContentType.objects.get_for_model('billings.Billing')
+    try:
+        billing_ct = ContentType.objects.get_for_model(Facture)
+    except Exception:
+        billing_ct = ContentType.objects.get(app_label='billings', model='facture')
     billing_permissions = [
         ('can_approve_billing', 'Can approve billing'),
         ('can_generate_invoice', 'Can generate invoice'),

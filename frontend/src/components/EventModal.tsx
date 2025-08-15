@@ -28,6 +28,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+const EVENT_TYPE_OPTIONS = [
+  { label: 'Réunion', value: 'meeting' },
+  { label: 'Échéance', value: 'deadline' },
+  { label: 'Jalon', value: 'milestone' },
+  { label: 'Revue', value: 'review' },
+  { label: 'Autre', value: 'other' },
+] as const;
+
 interface EventModalProps {
   projectId: string;
   event?: ProjectEvent;
@@ -38,12 +46,13 @@ interface EventModalProps {
 interface EventFormData {
   title: string;
   description: string;
-  type: 'Réunion' | 'Présentation' | 'Atelier' | 'Livraison' | 'Autre';
+  type: 'meeting' | 'deadline' | 'milestone' | 'review' | 'other';
   date: Date;
   start_time: string;
   end_time: string;
   location: string;
   participant_ids: string[];
+  project?: string;
 }
 
 interface UsersResponse {
@@ -57,23 +66,25 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   
   const [formData, setFormData] = useState<EventFormData>(event ? {
-    ...event,
-    date: new Date(event.date),
-    start_time: event.start_time,
-    end_time: event.end_time,
-    participant_ids: event.participants?.map((p: any) => p.id.toString()) || []
+    ...event as any,
+    date: new Date((event as any).start_date || (event as any).date),
+    start_time: event && (event as any).start_date ? format(new Date((event as any).start_date), 'HH:mm') : (event as any).start_time,
+    end_time: event && (event as any).end_date ? format(new Date((event as any).end_date), 'HH:mm') : (event as any).end_time,
+    type: (event as any).event_type || 'meeting',
+    participant_ids: (event as any).participants?.map((p: any) => p.id?.toString?.() ?? p?.toString?.()) || []
   } : {
     title: '',
     description: '',
-    type: 'Réunion',
+    type: 'meeting',
     date: new Date(),
     start_time: '09:00',
     end_time: '10:00',
     location: '',
-    participant_ids: []
+    participant_ids: [],
+    project: projectId
   });
 
-  const { data: usersData } = useUsers() as { data: UsersResponse };
+  const { data: usersData, isLoading: usersLoading } = useUsers({ page: 1, page_size: 1000, ordering: 'first_name' });
 
   useEffect(() => {
     if (usersData) {
@@ -88,28 +99,38 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const eventData = {
-        ...formData,
-        date: format(formData.date, 'yyyy-MM-dd')
+      const eventDateStr = format(formData.date, 'yyyy-MM-dd');
+      const startDateTime = `${eventDateStr}T${formData.start_time}:00`;
+      const endDateTime = `${eventDateStr}T${formData.end_time}:00`;
+
+      const payload: any = {
+        project: projectId,
+        title: formData.title,
+        description: formData.description,
+        event_type: formData.type,
+        start_date: startDateTime,
+        end_date: endDateTime,
+        location: formData.location,
+        participants: (formData.participant_ids || []).map((id) => Number(id)),
       };
 
       if (event) {
         await updateEvent.mutateAsync({
           projectId,
-          eventId: event.id,
-          data: eventData
+          eventId: (event as any).id,
+          data: payload
         });
       } else {
         await createEvent.mutateAsync({
           projectId,
-          data: eventData
+          data: payload
         });
       }
       onClose();
       setFormData({
         title: '',
         description: '',
-        type: 'Réunion',
+        type: 'meeting',
         date: new Date(),
         start_time: '09:00',
         end_time: '10:00',
@@ -118,6 +139,7 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
       });
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de l\'événement:', error);
+      toast.error("Erreur lors de la sauvegarde de l'événement");
     }
   };
 
@@ -135,7 +157,7 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
     try {
       await deleteEvent.mutateAsync({
         projectId,
-        eventId: event.id
+        eventId: (event as any).id
       });
       toast.success("Événement supprimé avec succès");
       onClose();
@@ -198,11 +220,9 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
                   <SelectValue placeholder="Sélectionner un type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Réunion">Réunion</SelectItem>
-                  <SelectItem value="Présentation">Présentation</SelectItem>
-                  <SelectItem value="Atelier">Atelier</SelectItem>
-                  <SelectItem value="Livraison">Livraison</SelectItem>
-                  <SelectItem value="Autre">Autre</SelectItem>
+                  {EVENT_TYPE_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -241,9 +261,10 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
               <div className="space-y-2">
                 <label htmlFor="location" className="text-sm font-medium">Lieu</label>
                 <Input
+                  id="location"
+                  placeholder="Lieu de l'événement"
                   value={formData.location}
                   onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Lieu de l'événement"
                 />
               </div>
             </div>
@@ -280,7 +301,7 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
                     variant="outline"
                     role="combobox"
                     aria-expanded={isParticipantsOpen}
-                    className="w-full justify-between"
+                    className="w-full justify-between h-auto min-h-10 py-3"
                     type="button"
                   >
                     <div className="flex gap-1 flex-wrap">
@@ -288,10 +309,10 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
                         <span className="text-muted-foreground">Sélectionner les participants</span>
                       ) : (
                         formData.participant_ids.map(id => {
-                          const user = usersData?.results?.find((u: User) => u.id.toString() === id);
+                          const user = usersData?.data?.results?.find((u: User) => u.id.toString() === id);
                           return user ? (
-                            <Badge variant="secondary" key={id}>
-                              {user.first_name} {user.last_name}
+                            <Badge variant="secondary" key={id} title={user.email}>
+                              {user.first_name} {user.last_name} ({user.email})
                             </Badge>
                           ) : null;
                         })
@@ -309,18 +330,15 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
                   <CommandList>
                   <CommandEmpty>Aucun participant trouvé.</CommandEmpty>
                   <CommandGroup>
-                    {isLoading ? (
+                    {usersLoading ? (
                       <CommandItem disabled>Chargement...</CommandItem>
                     ) : (
-                      usersData?.results?.map((user: User) => (
+                      usersData?.data?.results?.map((user: User) => (
                         <CommandItem
                           key={user.id}
                           value={user.id.toString()}
                           onSelect={() => {
                             toggleParticipant(user.id.toString());
-                            requestAnimationFrame(() => {
-                              setIsParticipantsOpen(false);
-                            });
                           }}
                         >
                           <Check
@@ -329,13 +347,31 @@ export const EventModal = ({ projectId, event, isOpen, onClose }: EventModalProp
                               formData.participant_ids.includes(user.id.toString()) ? "opacity-100" : "opacity-0"
                             )}
                           />
-                          {user.first_name} {user.last_name}
+                          <div className="flex flex-col">
+                            <span>{user.first_name} {user.last_name}</span>
+                            <span className="text-xs text-muted-foreground">{user.email}</span>
+                          </div>
                         </CommandItem>
                       ))
                     )}
                   </CommandGroup>
                   </CommandList>
                 </Command>
+                <div className="border-t p-2 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setFormData(prev => ({ ...prev, participant_ids: [] }))}
+                  >
+                    Effacer
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setIsParticipantsOpen(false)}
+                  >
+                    Terminer
+                  </Button>
+                </div>
                 </PopoverContent>
               </Popover>
             </div>

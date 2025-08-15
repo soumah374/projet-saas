@@ -82,7 +82,7 @@ clean:
 # Backend Commands
 makemigrations:
 	@echo "Creating Django migrations..."
-	docker compose exec backend python manage.py makemigrations users teams projects documents notifications catalog devis contrats billings
+	docker compose exec backend python manage.py makemigrations users teams projects documents notifications catalog devis contrats billings dashboard
 
 makemigrations-users:
 	@echo "Creating migrations for users app..."
@@ -163,6 +163,7 @@ load-fixtures:
 	docker compose exec backend python manage.py loaddata initial_frais_categories
 	docker compose exec backend python manage.py loaddata initial_lignes_frais
 
+	docker compose exec backend python manage.py init_permissions
 	
 
 load-fixtures-clean:

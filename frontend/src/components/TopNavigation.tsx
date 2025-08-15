@@ -88,27 +88,6 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
       </div>
 
       <div className="flex items-center gap-4 min-w-0">
-        {/* Bouton Nouveau */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="hidden md:flex">
-              <Plus className="h-4 w-4 mr-2" />
-              Nouveau
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => navigate('/projects/new')}>
-              Nouveau projet
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/documents/new')}>
-              Nouveau document
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate('/teams/new')}>
-              Nouvelle équipe
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* Notifications */}
         <NotificationDropdown />
 

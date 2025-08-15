@@ -30,21 +30,16 @@ export const ReportFilters = ({
 
   const projectStatuses = [
     { value: 'all', label: 'Tous les statuts' },
-    { value: 'planning', label: 'Planification' },
-    { value: 'in_progress', label: 'En cours' },
-    { value: 'production', label: 'Production' },
-    { value: 'paused', label: 'En pause' },
-    { value: 'completed', label: 'Terminé' }
+    { value: 'Prospection', label: 'Prospection' },
+    { value: 'Production', label: 'Production' },
+    { value: 'Livraison', label: 'Livraison' },
+    { value: 'Terminé', label: 'Terminé' }
   ];
 
   const projectTypes = [
     { value: 'all', label: 'Tous les types' },
-    { value: 'event', label: 'Événementiel' },
-    { value: 'communication', label: 'Communication' },
-    { value: 'audiovisual', label: 'Audiovisuel' },
-    { value: 'production', label: 'Production' },
-    { value: 'digital', label: 'Digital' },
-    { value: 'consulting', label: 'Conseil' }
+    { value: 'Externe', label: 'Externe' },
+    { value: 'Interne', label: 'Interne' },
   ];
 
   const handleDateChange = (field: 'startDate' | 'endDate', date: Date | undefined) => {

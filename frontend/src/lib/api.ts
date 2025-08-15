@@ -324,6 +324,7 @@ export const usersAPI = {
         is_active?: boolean;
         ordering?: string;
         page?: number;
+        page_size?: number;
     }) => api.get('/auth/users/', { params }),
     getCurrentUser: () => api.get('/auth/users/me/'),
     getUser: (id: number) => api.get(`/auth/users/${id}/`),
@@ -332,6 +333,7 @@ export const usersAPI = {
     deleteUser: (id: number) => api.delete(`/auth/users/${id}/`),
     getUserProfile: (id: number) => api.get(`/auth/users/${id}/profile/`),
     updateUserProfile: (id: number, data: any) => api.patch(`/auth/users/${id}/profile/`, data),
+    updateMe: (data: any) => api.patch('/auth/users/update_me/', data),
     getStatistics: () => api.get('/auth/users/statistics/'),
     toggleUserActive: (id: number) => api.post(`/auth/users/${id}/toggle_active/`),
 };

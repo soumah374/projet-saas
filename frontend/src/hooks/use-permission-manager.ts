@@ -156,8 +156,6 @@ export const usePermissionManager = () => {
 
   // Supprimer un rôle
   const deleteRole = useCallback(async (roleId: number): Promise<boolean> => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer le rôle "${roleId}" ?`)) return false;
-
     try {
       await api.delete(`/auth/permissions/${roleId}/delete_role/`);
       toast({
@@ -177,8 +175,6 @@ export const usePermissionManager = () => {
 
   // Supprimer une permission
   const deletePermission = useCallback(async (permissionName: string): Promise<boolean> => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer la permission "${permissionName}" ?`)) return false;
-
     try {
       // D'abord, récupérer l'ID de la permission
       const permissionsRes = await api.get('/auth/permissions/permissions/');
@@ -289,6 +285,44 @@ export const usePermissionManager = () => {
     }
   }, [toast]);
 
+  // Associer une permission à un rôle (via full_name app_label.codename)
+  const assignPermissionToRole = useCallback(async (roleId: number, permissionFullName: string): Promise<boolean> => {
+    try {
+      await api.post(`/auth/permissions/${roleId}/add-permission/`, { full_name: permissionFullName });
+      toast({
+        title: "Succès",
+        description: "Permission associée au rôle avec succès"
+      });
+      return true;
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'associer la permission au rôle",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }, [toast]);
+
+  // Retirer une permission d'un rôle par ID de permission
+  const removePermissionFromRole = useCallback(async (roleId: number, permissionId: number): Promise<boolean> => {
+    try {
+      await api.delete(`/auth/permissions/${roleId}/remove-permission/${permissionId}/`);
+      toast({
+        title: "Succès",
+        description: "Permission retirée du rôle avec succès"
+      });
+      return true;
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de retirer la permission du rôle",
+        variant: "destructive"
+      });
+      return false;
+    }
+  }, [toast]);
+
   const updateRole = useCallback(async (roleId: number, roleName: string): Promise<boolean> => {
     if (!roleName.trim()) return false;
 
@@ -341,6 +375,8 @@ export const usePermissionManager = () => {
     getRoleUsers,
     assignUserToRole,
     removeUserFromRole,
+    assignPermissionToRole,
+    removePermissionFromRole,
     updateRole,
     getAllUsers, 
     getUsersByGroup 

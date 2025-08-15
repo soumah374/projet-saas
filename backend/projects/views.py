@@ -29,7 +29,7 @@ class ProjectViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'type', 'priority', 'client', 'contract']
-    search_fields = ['title', 'description', 'client__nom_complet', 'contract__numero', 'id']
+    search_fields = ['title', 'description', 'client__nom', 'client__prenom', 'client__raison_sociale', 'contract__numero', 'id']
     ordering_fields = ['created_at', 'deadline', 'progress', 'title']
     ordering = ['-created_at']
     
@@ -58,6 +58,279 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Créer un projet avec l'utilisateur connecté"""
         serializer.save(created_by=self.request.user)
     
+    @action(detail=False, methods=['get'], url_path='reports')
+    def reports(self, request):
+        """Rapport agrégé pour la page Rapports (projets, timeline, équipe)."""
+        try:
+            params = request.GET
+            start_date_str = params.get('start_date')
+            end_date_str = params.get('end_date')
+            status_param = params.get('status')
+            type_param = params.get('type')
+            team_param = params.get('team')
+
+            # Build base queryset with permissions
+            projects_qs = self.get_queryset()
+
+            # Date range filter on created_at by default
+            if start_date_str:
+                try:
+                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                    projects_qs = projects_qs.filter(created_at__date__gte=start_date)
+                except Exception:
+                    pass
+            if end_date_str:
+                try:
+                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                    projects_qs = projects_qs.filter(created_at__date__lte=end_date)
+                except Exception:
+                    pass
+
+            if status_param:
+                projects_qs = projects_qs.filter(status__iexact=status_param)
+            if type_param:
+                projects_qs = projects_qs.filter(type__iexact(type_param))
+            if team_param:
+                try:
+                    projects_qs = projects_qs.filter(team_members__id=int(team_param))
+                except Exception:
+                    projects_qs = projects_qs.none() if team_param and team_param != '' else projects_qs
+
+            projects_qs = projects_qs.distinct()
+
+            # Collect project details
+            today = timezone.now().date()
+            projects = []
+            for p in projects_qs.select_related('created_by').prefetch_related('team_members', 'tasks'):
+                tasks_total = p.tasks.count()
+                tasks_completed = p.tasks.filter(status='Terminé').count()
+                tasks_pending = p.tasks.exclude(status='Terminé').count()
+                tasks_overdue = p.tasks.filter(due_date__lt=today).exclude(status='Terminé').count()
+
+                manager_user = p.created_by
+                manager = {
+                    'id': str(manager_user.id) if manager_user else None,
+                    'first_name': getattr(manager_user, 'first_name', '') if manager_user else '',
+                    'last_name': getattr(manager_user, 'last_name', '') if manager_user else '',
+                    'email': getattr(manager_user, 'email', '') if manager_user else '',
+                }
+
+                projects.append({
+                    'id': p.id,
+                    'title': p.title,
+                    'status': p.status,
+                    'priority': p.priority,
+                    'progress': p.progress,
+                    'start_date': p.start_date.isoformat() if p.start_date else None,
+                    'deadline': p.deadline.isoformat() if p.deadline else None,
+                    'budget': str(p.budget or 0),
+                    'team_members_count': p.team_members.count(),
+                    'tasks_total': tasks_total,
+                    'tasks_completed': tasks_completed,
+                    'tasks_pending': tasks_pending,
+                    'tasks_overdue': tasks_overdue,
+                    'manager': manager,
+                })
+
+            # Timeline metrics (monthly aggregation within range or last 6 months by default)
+            # Determine timeline range
+            if start_date_str and end_date_str:
+                try:
+                    start_d = datetime.strptime(start_date_str, '%Y-%m-%d').date().replace(day=1)
+                    end_d = datetime.strptime(end_date_str, '%Y-%m-%d').date().replace(day=1)
+                except Exception:
+                    start_d = (timezone.now().date().replace(day=1) - timedelta(days=5*30))
+                    end_d = timezone.now().date().replace(day=1)
+            else:
+                end_d = timezone.now().date().replace(day=1)
+                start_d = end_d - timedelta(days=5*30)
+
+            # Build month labels
+            labels = []
+            cursor = start_d
+            while cursor <= end_d:
+                labels.append(cursor.strftime('%Y-%m'))
+                # advance one month safely
+                if cursor.month == 12:
+                    cursor = cursor.replace(year=cursor.year + 1, month=1)
+                else:
+                    cursor = cursor.replace(month=cursor.month + 1)
+
+            # Projects completed per month (use updated_at month)
+            projects_completed_by_month = {label: 0 for label in labels}
+            completed_projects = projects_qs.filter(status='Terminé').values('updated_at')
+            for item in completed_projects:
+                dt = item['updated_at']
+                if not dt:
+                    continue
+                label = dt.strftime('%Y-%m')
+                if label in projects_completed_by_month:
+                    projects_completed_by_month[label] += 1
+
+            # Tasks completed per month (use executed_at or updated_at)
+            tasks_completed_by_month = {label: 0 for label in labels}
+            completed_tasks_qs = ProjectTask.objects.filter(
+                project__in=projects_qs, status='Terminé'
+            ).values('executed_at', 'updated_at')
+            for item in completed_tasks_qs:
+                dt = item['executed_at'] or item['updated_at']
+                if not dt:
+                    continue
+                label = dt.strftime('%Y-%m')
+                if label in tasks_completed_by_month:
+                    tasks_completed_by_month[label] += 1
+
+            timeline = {
+                'labels': labels,
+                'projects_completed': [projects_completed_by_month[l] for l in labels],
+                'tasks_completed': [tasks_completed_by_month[l] for l in labels],
+            }
+
+            # Team performance metrics (aggregate across filtered projects)
+            total_tasks = ProjectTask.objects.filter(project__in=projects_qs).count()
+            completed_tasks = ProjectTask.objects.filter(project__in=projects_qs, status='Terminé').count()
+            active_projects = projects_qs.exclude(status='Terminé').count()
+            avg_productivity = int(round((completed_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
+
+            # Members performance
+            members_qs = ProjectMember.objects.filter(project__in=projects_qs, is_active=True).select_related('user')
+            member_stats = {}
+            for pm in members_qs:
+                user = pm.user
+                if not user:
+                    continue
+                if user.id not in member_stats:
+                    member_stats[user.id] = {
+                        'id': user.id,
+                        'name': f"{getattr(user, 'first_name', '')} {getattr(user, 'last_name', '')}".strip(),
+                        'role': pm.role,
+                        'tasks_completed': 0,
+                        'tasks_assigned': 0,
+                        'projects_set': set(),
+                    }
+                stat = member_stats[user.id]
+                stat['projects_set'].add(pm.project_id)
+
+            # Compute task assignments per user
+            tasks_assigned = ProjectTask.objects.filter(project__in=projects_qs, assigned_to__isnull=False).values('assigned_to_id', 'status')
+            for t in tasks_assigned:
+                uid = t['assigned_to_id']
+                if uid in member_stats:
+                    member_stats[uid]['tasks_assigned'] += 1
+                    if t['status'] == 'Terminé':
+                        member_stats[uid]['tasks_completed'] += 1
+
+            members_list = []
+            for stat in member_stats.values():
+                assigned = stat['tasks_assigned']
+                productivity = int(round((stat['tasks_completed'] / assigned) * 100)) if assigned > 0 else 0
+                members_list.append({
+                    'id': stat['id'],
+                    'name': stat['name'],
+                    'role': stat['role'],
+                    'productivity': productivity,
+                    'tasks_completed': stat['tasks_completed'],
+                    'projects_involved': len(stat['projects_set']),
+                })
+
+            top_performers = sorted(members_list, key=lambda m: (-m['productivity'], -m['tasks_completed']))[:5]
+
+            data = {
+                'projects': projects,
+                'timeline': timeline,
+                'team': {
+                    'avg_productivity': avg_productivity,
+                },
+                'team_members': members_list,
+                'top_performers': top_performers,
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'active_projects': active_projects,
+            }
+
+            return Response(data)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=['get'], url_path='reports/export')
+    def reports_export(self, request):
+        """Export CSV des rapports de projets selon les filtres."""
+        import csv
+        from io import StringIO
+
+        params = request.GET
+        start_date_str = params.get('start_date')
+        end_date_str = params.get('end_date')
+        status_param = params.get('status')
+        type_param = params.get('type')
+        team_param = params.get('team')
+
+        projects_qs = self.get_queryset()
+
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
+                projects_qs = projects_qs.filter(created_at__date__gte=start_date)
+            except Exception:
+                pass
+        if end_date_str:
+            try:
+                end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+                projects_qs = projects_qs.filter(created_at__date__lte=end_date)
+            except Exception:
+                pass
+        if status_param:
+            projects_qs = projects_qs.filter(status__iexact=status_param)
+        if type_param:
+            projects_qs = projects_qs.filter(type__iexact(type_param)
+            )
+        if team_param:
+            try:
+                projects_qs = projects_qs.filter(team_members__id=int(team_param))
+            except Exception:
+                projects_qs = projects_qs.none() if team_param and team_param != '' else projects_qs
+
+        projects_qs = projects_qs.distinct()
+
+        # Prepare CSV
+        output = StringIO()
+        writer = csv.writer(output)
+        headers = [
+            'ID', 'Titre', 'Statut', 'Priorité', 'Progression', 'Date de début', 'Échéance',
+            'Budget', "Membres d'équipe", 'Total activités', 'Activités terminées',
+            'Activités en cours/en attente', 'Activités en retard', 'Chef de projet', 'Email chef de projet'
+        ]
+        writer.writerow(headers)
+
+        today = timezone.now().date()
+        for p in projects_qs.select_related('created_by'):
+            tasks_total = p.tasks.count()
+            tasks_completed = p.tasks.filter(status='Terminé').count()
+            tasks_pending = p.tasks.exclude(status='Terminé').count()
+            tasks_overdue = p.tasks.filter(due_date__lt=today).exclude(status='Terminé').count()
+            manager_user = p.created_by
+            writer.writerow([
+                p.id,
+                p.title,
+                p.status,
+                p.priority,
+                p.progress,
+                p.start_date.isoformat() if p.start_date else '',
+                p.deadline.isoformat() if p.deadline else '',
+                str(p.budget or 0),
+                p.team_members.count(),
+                tasks_total,
+                tasks_completed,
+                tasks_pending,
+                tasks_overdue,
+                f"{getattr(manager_user, 'first_name', '')} {getattr(manager_user, 'last_name', '')}".strip(),
+                getattr(manager_user, 'email', ''),
+            ])
+
+        response = HttpResponse(output.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="project_report.csv"'
+        return response
+
     @action(detail=True, methods=['post'])
     def add_member(self, request, pk=None):
         """Ajouter un membre à un projet"""

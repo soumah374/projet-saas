@@ -61,8 +61,8 @@ def create_event_notification(sender, instance, created, **kwargs):
     if created:
         # Créer une notification pour chaque participant
         content_type = ContentType.objects.get_for_model(instance)
-        event_type = dict(instance.EVENT_TYPES).get(instance.type, instance.type)
-        
+        event_type_label = instance.get_event_type_display()
+
         for participant in instance.participants.all():
             if participant != instance.created_by:  # Ne pas notifier le créateur
                 Notification.objects.create(
@@ -70,14 +70,16 @@ def create_event_notification(sender, instance, created, **kwargs):
                     type='event_created',
                     content_type=content_type,
                     object_id=str(instance.id),
-                    message=f"Vous avez été invité à l'événement {event_type} : {instance.title} "
-                           f"le {instance.date.strftime('%d/%m/%Y')} "
-                           f"de {instance.start_time.strftime('%H:%M')} "
-                           f"à {instance.end_time.strftime('%H:%M')}",
+                    message=(
+                        f"Vous avez été invité à l'événement {event_type_label} : {instance.title} "
+                        f"le {instance.start_date.strftime('%d/%m/%Y')} "
+                        f"de {instance.start_date.strftime('%H:%M')} "
+                        f"à {instance.end_date.strftime('%H:%M')}"
+                    ),
                     metadata={
                         'project_id': str(instance.project.id),
                         'project_title': instance.project.title,
-                        'event_type': instance.type,
+                        'event_type': instance.event_type,
                         'location': instance.location or 'Non spécifié'
                     }
                 ) 

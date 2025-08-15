@@ -298,13 +298,13 @@
         <span>TVA ({{ facture.taux_tva }}%) :</span>
         <span>{{ facture.montant_tva|floatformat:0 }} GNF</span>
       </div>
-      {% endif %} {% if facture.appliquer_frais_agence and
-      facture.montant_frais_agence > 0 %}
+      {% endif %} {% comment %} {% if facture.appliquer_frais_agence and
+      facture.montant_frais_agence > 0 %} {% endcomment %}
       <div class="total-row">
         <span>Frais d'agence ({{ facture.taux_frais_agence }}%) :</span>
         <span>{{ facture.montant_frais_agence|floatformat:0 }} GNF</span>
       </div>
-      {% endif %}
+      {% comment %} {% endif %} {% endcomment %}
       <span></span>
 
       <div class="total-row final">

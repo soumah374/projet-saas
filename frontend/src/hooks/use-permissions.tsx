@@ -29,7 +29,7 @@ interface UserPermissions {
 export const usePermissions = () => {
   const { user, isAuthenticated } = useAuth();
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Commencer avec true pour éviter les vérifications prématurées
   const [error, setError] = useState<string | null>(null);
 
   // Récupérer les permissions de l'utilisateur depuis le backend
@@ -54,35 +54,65 @@ export const usePermissions = () => {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchUserPermissions();
-    } else {
+    } else if (!isAuthenticated) {
+      // Si l'utilisateur n'est pas authentifié, arrêter le chargement
       setUserPermissions(null);
+      setIsLoading(false);
     }
   }, [isAuthenticated, user, fetchUserPermissions]);
+
+  // Helpers
+  const isSuperAdmin = useCallback((): boolean => {
+    if (!userPermissions) return false;
+    return Boolean(userPermissions.is_superuser) || (userPermissions.groups || []).includes('Super Admin');
+  }, [userPermissions]);
 
   // Vérifier si l'utilisateur a une permission spécifique
   const hasPermission = useCallback((permission: Permission): boolean => {
     if (!userPermissions) return false;
     
-    // Les super utilisateurs ont tous les droits
-    if (userPermissions.is_superuser) return true;
+    // Super admin a tous les droits
+    if (userPermissions.is_superuser || (userPermissions.groups || []).includes('Super Admin')) return true;
     
-    // Les staff ont accès limité selon leur rôle
+    // Les staff ont accès limité selon leur rôle (comportement conservé)
     if (userPermissions.is_staff) return true;
     
-    // Vérifier si la permission existe dans la liste des permissions de l'utilisateur
+    // Support des permissions abstraites: module.action
+    // action: view | create | edit | delete
+    const parts = String(permission).split('.');
+    if (parts.length === 2) {
+      const [module, action] = parts as [string, string];
+      const actionMap: Record<string, keyof UserPermissions['module_permissions'][string]> = {
+        view: 'view',
+        create: 'add',
+        edit: 'change',
+        delete: 'delete',
+      };
+      const mapped = actionMap[action];
+      if (mapped) {
+        const modulePerms = userPermissions.module_permissions[module];
+        return modulePerms ? Boolean(modulePerms[mapped]) : false;
+      }
+    }
+
+    // Fallback: vérifier la présence exacte de la permission complète (ex: app_label.codename)
     return userPermissions.permissions.includes(permission);
   }, [userPermissions]);
 
   // Vérifier si l'utilisateur a accès à un module
   const hasModuleAccess = useCallback((module: string): boolean => {
+   
     if (!userPermissions) return false;
     
-    // Les super utilisateurs ont accès à tout
-    if (userPermissions.is_superuser) return true;
+    // Super admin a accès à tout
+    if (userPermissions.is_superuser || (userPermissions.groups || []).includes('Super Admin')) return true;
     
     // Les staff ont accès limité selon leur rôle
     if (userPermissions.is_staff) return true;
-    
+    if(module === 'projects'){
+      console.log("userPermissions",userPermissions.permissions)
+      console.log("userPermissions hasModuleAccess =====",userPermissions.permissions.includes('projects.add_project'))
+    }
     const modulePerms = userPermissions.module_permissions[module];
     return modulePerms ? (modulePerms.view || modulePerms.add || modulePerms.change || modulePerms.delete) : false;
   }, [userPermissions]);
@@ -90,14 +120,18 @@ export const usePermissions = () => {
   // Vérifier si l'utilisateur a un rôle spécifique
   const hasRole = useCallback((role: Role): boolean => {
     if (!userPermissions) return false;
-    return userPermissions.user_role === role;
-  }, [userPermissions]);
+    if (role === 'Super Admin') {
+      return isSuperAdmin();
+    }
+    return (userPermissions.user_role === role) || (userPermissions.groups || []).includes(role);
+  }, [userPermissions, isSuperAdmin]);
 
   // Vérifier si l'utilisateur a un des rôles spécifiés
   const hasAnyRole = useCallback((roles: Role[]): boolean => {
     if (!userPermissions) return false;
-    return roles.includes(userPermissions.user_role as Role);
-  }, [userPermissions]);
+    if (roles.includes('Super Admin') && isSuperAdmin()) return true;
+    return roles.some((r) => (userPermissions.user_role === r) || (userPermissions.groups || []).includes(r));
+  }, [userPermissions, isSuperAdmin]);
 
   // Obtenir toutes les permissions de l'utilisateur
   const getUserPermissions = useCallback((): Permission[] => {
@@ -117,13 +151,14 @@ export const usePermissions = () => {
   // Obtenir le rôle de l'utilisateur
   const getUserRole = useCallback((): Role | null => {
     if (!userPermissions) return null;
-    return userPermissions.user_role as Role;
+    if ((userPermissions.groups || []).includes('Super Admin') || userPermissions.is_superuser) return 'Super Admin';
+    return (userPermissions.user_role as Role) || null;
   }, [userPermissions]);
 
   // Obtenir toutes les permissions disponibles depuis la base de données
   const getAvailablePermissions = useCallback(async (): Promise<Permission[]> => {
     try {
-      const response = await api.get('/auth/permissions/');
+      const response = await api.get('/auth/permissions/permissions/');
       return response.data.permissions || [];
     } catch (err: any) {
       console.error('Erreur lors de la récupération des permissions disponibles:', err);
@@ -134,7 +169,7 @@ export const usePermissions = () => {
   // Obtenir tous les rôles disponibles depuis la base de données
   const getAvailableRoles = useCallback(async (): Promise<Role[]> => {
     try {
-      const response = await api.get('/auth/roles/');
+      const response = await api.get('/auth/permissions/roles/');
       return response.data.roles || [];
     } catch (err: any) {
       console.error('Erreur lors de la récupération des rôles disponibles:', err);
@@ -156,7 +191,7 @@ export const usePermissions = () => {
   }, [hasPermission]);
 
   const canViewReports = useCallback((): boolean => {
-    return hasPermission('reports.view');
+    return hasPermission('projects.view');
   }, [hasPermission]);
 
   const canManageTeams = useCallback((): boolean => {
@@ -164,7 +199,97 @@ export const usePermissions = () => {
   }, [hasPermission]);
 
   const canManageClients = useCallback((): boolean => {
-    return hasPermission('clients.create') || hasPermission('clients.edit') || hasPermission('clients.delete');
+    return hasPermission('clients.add') || hasPermission('clients.edit') || hasPermission('clients.delete') || hasPermission('clients.can_approve_client') || hasPermission('clients.can_generate_invoice') || hasPermission('clients.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageDocuments = useCallback((): boolean => {
+    return hasPermission('documents.add') || hasPermission('documents.edit') || hasPermission('documents.delete') || hasPermission('documents.can_approve_document') || hasPermission('documents.can_generate_invoice') || hasPermission('documents.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageDevis = useCallback((): boolean => {
+    return hasPermission('devis.add') || hasPermission('devis.edit') || hasPermission('devis.delete') || hasPermission('devis.can_approve_devis') || hasPermission('devis.can_generate_invoice') || hasPermission('devis.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageContrats = useCallback((): boolean => {
+    return hasPermission('contrats.add') || hasPermission('contrats.edit') || hasPermission('contrats.delete');
+  }, [hasPermission]);
+
+  const canManageBillings = useCallback((): boolean => {
+    return hasPermission('billings.add') || hasPermission('billings.edit') || hasPermission('billings.delete') || hasPermission('billings.can_approve_billing') || hasPermission('billings.can_generate_invoice') || hasPermission('billings.can_view_financial_reports');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les projets
+  const canManageProjectMembers = useCallback((): boolean => {
+    return hasPermission('projects.can_manage_project_members') || hasPermission('projects.can_view_project_reports') || hasPermission('projects.can_export_project_data');
+  }, [hasPermission]);
+
+  const canViewProjectReports = useCallback((): boolean => {
+    return hasPermission('projects.can_view_project_reports') || hasPermission('projects.can_export_project_data');
+  }, [hasPermission]);
+
+  const canExportProjectData = useCallback((): boolean => {
+    return hasPermission('projects.can_export_project_data') || hasPermission('projects.can_view_project_reports');
+  }, [hasPermission]);
+
+  const canManageProjectBudget = useCallback((): boolean => {
+    return hasPermission('projects.add_projectbudget') || hasPermission('projects.edit_projectbudget') || hasPermission('projects.delete_projectbudget');
+  }, [hasPermission]);
+
+  const canManageProjectTasks = useCallback((): boolean => {
+    return hasPermission('projects.add_projecttask') || hasPermission('projects.edit_projecttask') || hasPermission('projects.delete_projecttask');
+  }, [hasPermission]);
+
+  const canManageProjectPhases = useCallback((): boolean => {
+    return hasPermission('projects.add_projectphase') || hasPermission('projects.edit_projectphase') || hasPermission('projects.delete_projectphase');
+  }, [hasPermission]);
+
+  const canManageTimesheets = useCallback((): boolean => {
+    return hasPermission('projects.add_timesheet') || hasPermission('projects.edit_timesheet') || hasPermission('projects.delete_timesheet');
+  }, [hasPermission]);
+
+  const canManageProjectEvents = useCallback((): boolean => {
+    return hasPermission('projects.add_projectevent') || hasPermission('projects.edit_projectevent') || hasPermission('projects.delete_projectevent');
+  }, [hasPermission]);
+
+  const canSendProject = useCallback((): boolean => {
+    return hasPermission('projects.send_project') || hasPermission('projects.edit_project') || hasPermission('projects.delete_project');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour la facturation
+  const canApproveBilling = useCallback((): boolean => {
+    return hasPermission('billings.can_approve_billing') || hasPermission('billings.can_generate_invoice') || hasPermission('billings.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canGenerateInvoice = useCallback((): boolean => {
+    return hasPermission('billings.can_generate_invoice');
+  }, [hasPermission]);
+
+  const canViewFinancialReports = useCallback((): boolean => {
+    return hasPermission('billings.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageBillingConfiguration = useCallback((): boolean => {
+    return hasPermission('billings.add_configurationfacturation') || hasPermission('billings.edit_configurationfacturation') || hasPermission('billings.delete_configurationfacturation');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les contrats
+  const canManageAvenants = useCallback((): boolean => {
+    return hasPermission('contrats.add_avenant') || hasPermission('contrats.edit_avenant') || hasPermission('contrats.delete_avenant');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour le catalogue
+  const canManageCategories = useCallback((): boolean => {
+    return hasPermission('client_categories.add_clientcategory') || hasPermission('client_categories.edit_clientcategory') || hasPermission('client_categories.delete_clientcategory');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les notifications
+  const canViewNotifications = useCallback((): boolean => {
+    return hasPermission('notifications.view_notification');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les départements
+  const canViewDepartments = useCallback((): boolean => {
+    return hasPermission('departments.view_department');
   }, [hasPermission]);
 
   // Vérifier les permissions de module spécifiques
@@ -198,6 +323,7 @@ export const usePermissions = () => {
     hasModuleAccess,
     hasRole,
     hasAnyRole,
+    isSuperAdmin,
     
     // Permissions spécifiques
     canManageUsers,
@@ -206,6 +332,39 @@ export const usePermissions = () => {
     canViewReports,
     canManageTeams,
     canManageClients,
+    canManageDocuments,
+    canManageDevis,
+    canManageContrats,
+    canManageBillings,
+    
+    // Permissions personnalisées pour les projets
+    canManageProjectMembers,
+    canViewProjectReports,
+    canExportProjectData,
+    canManageProjectBudget,
+    canManageProjectTasks,
+    canManageProjectPhases,
+    canManageTimesheets,
+    canManageProjectEvents,
+    canSendProject,
+    
+    // Permissions personnalisées pour la facturation
+    canApproveBilling,
+    canGenerateInvoice,
+    canViewFinancialReports,
+    canManageBillingConfiguration,
+    
+    // Permissions personnalisées pour les contrats
+    canManageAvenants,
+    
+    // Permissions personnalisées pour le catalogue
+    canManageCategories,
+    
+    // Permissions personnalisées pour les notifications
+    canViewNotifications,
+    
+    // Permissions personnalisées pour les départements
+    canViewDepartments,
     
     // Permissions de module
     canViewModule,

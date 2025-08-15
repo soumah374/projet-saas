@@ -95,8 +95,13 @@ const Login = () => {
           title: "Connexion réussie",
           description: `Bienvenue ${data.user.first_name || data.user.username}!`,
         });
-        
-        navigate('/');
+        const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
+        // console.log(lastVisitedUrl);
+        if (lastVisitedUrl) {
+          navigate(lastVisitedUrl);
+        } else {
+          navigate('/');
+        }
       } else {
         setError(data.error || data.otp_code?.[0] || 'Code OTP invalide');
       }

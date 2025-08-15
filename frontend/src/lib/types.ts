@@ -76,7 +76,7 @@ export interface UserUpdate {
   first_name?: string;
   last_name?: string;
   email?: string;
-  profile?: UserProfile;
+  profile?: Partial<UserProfile>;
 }
 
 // Project types

@@ -12,6 +12,7 @@ import type { ProjectStatus, ProjectType, ProjectPriority } from '@/lib/types';
 import { Plus, Search, Calendar, Users, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { CreateButton } from '@/components/PermissionButton';
 
 const projectTypes: { value: ProjectType; label: string }[] = [
   { value: 'Externe', label: 'Externe' },
@@ -97,10 +98,14 @@ export function ProjectsPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Projets</h1>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <CreateButton 
+          module="projects" 
+          onClick={() => setIsCreateModalOpen(true)}
+          variant="default"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nouveau projet
-        </Button>
+        </CreateButton>
       </div>
 
       <Card>

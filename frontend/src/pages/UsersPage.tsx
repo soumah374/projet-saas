@@ -46,6 +46,7 @@ import type { UserList } from '@/lib/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/components/ui/use-toast';
+import { usersAPI } from '@/lib/api';
 
 export const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,6 +65,14 @@ export const UsersPage = () => {
   const [detailsModalOpen, setDetailsModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserList | null>(null);
+
+  // Import state
+    const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+   const [isImporting, setIsImporting] = useState(false);
+   const [importPreview, setImportPreview] = useState<any[]>([]);
+   const [importRows, setImportRows] = useState<any[]>([]);
+   const [importHeaders, setImportHeaders] = useState<string[]>([]);
+   const [importReport, setImportReport] = useState<{ total: number; success: number; failed: number; errors: string[] } | null>(null);
 
   // Role management state
   const [availableRoles, setAvailableRoles] = useState<any[]>([]);
@@ -120,7 +129,32 @@ export const UsersPage = () => {
 
   const users = usersData?.data?.results || [];
   const totalUsers = usersData?.data?.count || 0;
-  const totalPages = Math.ceil(totalUsers / 20); // Assuming 20 users per page
+  const defaultPageSize = 20; // must align with backend PAGE_SIZE
+  const totalPages = Math.max(1, Math.ceil(totalUsers / defaultPageSize));
+  const startItem = totalUsers === 0 ? 0 : (currentPage - 1) * defaultPageSize + 1;
+  const endItem = Math.min(currentPage * defaultPageSize, totalUsers);
+
+  // Clamp current page when result count shrinks
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages]);
+
+  // Compute page number window
+  const getPageNumbers = () => {
+    const pages: number[] = [];
+    const maxVisible = 5;
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      let end = Math.min(totalPages, start + maxVisible - 1);
+      if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+    }
+    return pages;
+  };
 
   const departments = ['Développement', 'Design', 'Marketing', 'Commercial', 'Finance', 'RH', 'Direction'];
   const statuses = [
@@ -128,6 +162,151 @@ export const UsersPage = () => {
     { value: 'inactive', label: 'Inactif', color: 'bg-red-100 text-red-800' }
   ];
 
+
+  // ===== Export CSV =====
+  const handleExportCSV = () => {
+    const headers = [
+      'username', 'first_name', 'last_name', 'email', 'department', 'roles', 'is_active'
+    ];
+    const rows = users.map(u => [
+      u.username,
+      u.first_name || '',
+      u.last_name || '',
+      u.email || '',
+      u.profile?.department || '',
+      (u.groups || []).map(g => g.name).join('; '),
+      u.is_active ? 'true' : 'false',
+    ]);
+    const csvContent = [headers, ...rows]
+      .map(row => row.map(val => `"${(val ?? '').toString().replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'utilisateurs.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // ===== Import CSV =====
+  const parseCSV = (text: string) => {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length === 0) return { headers: [], rows: [] };
+    const rawHeaders = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const rows = lines.slice(1).map(line => {
+      const cols: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+        } else if (ch === ',' && !inQuotes) {
+          cols.push(current);
+          current = '';
+        } else {
+          current += ch;
+        }
+      }
+      cols.push(current);
+      const obj: Record<string, string> = {};
+      rawHeaders.forEach((h, idx) => { obj[h] = (cols[idx] || '').trim().replace(/^"|"$/g, ''); });
+      return obj;
+    });
+    return { headers: rawHeaders, rows };
+  };
+
+    const handleImportFile = async (file: File) => {
+     setImportReport(null);
+     const text = await file.text();
+     const { headers, rows } = parseCSV(text);
+     setImportHeaders(headers);
+     setImportRows(rows);
+     setImportPreview(rows.slice(0, 10));
+     if (rows.length === 0) {
+       toast({ title: 'Fichier vide', description: 'Aucune donnée trouvée dans le CSV', variant: 'destructive' });
+     }
+   };
+
+  const toBoolean = (val: string | undefined) => {
+    if (!val) return true;
+    const v = val.toLowerCase();
+    return ['true', '1', 'actif', 'yes', 'oui'].includes(v);
+  };
+
+  const generatePassword = () => {
+    const base = Math.random().toString(36).slice(-8);
+    return `Temp${base}!`;
+  };
+
+  const mapRolesToIds = (roleNames: string): number[] => {
+    if (!roleNames) return [];
+    const names = roleNames.split(/[,;|]/).map(s => s.trim()).filter(Boolean);
+    const ids: number[] = [];
+    names.forEach(n => {
+      const role = availableRoles.find((r: any) => r.name.toLowerCase() === n.toLowerCase());
+      if (role) ids.push(role.id);
+    });
+    return ids;
+  };
+
+  const handleConfirmImport = async () => {
+    setIsImporting(true);
+    const errors: string[] = [];
+    let success = 0;
+    const rows = importRows.length > 0 ? importRows : importPreview;
+    try {
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i] as any;
+        const username = row.username || (row.email ? row.email.split('@')[0] : undefined);
+        const email = row.email;
+        if (!username || !email) {
+          errors.push(`Ligne ${i + 2}: username ou email manquant`);
+          continue;
+        }
+        const password = row.password && row.password_confirm ? row.password : generatePassword();
+        const payload: any = {
+          username,
+          first_name: row.first_name || '',
+          last_name: row.last_name || '',
+          email,
+          password,
+          password_confirm: row.password_confirm || password,
+        };
+        const profile: any = {};
+        if (row.department) profile.department = row.department;
+        if (row.phone) profile.phone = row.phone;
+        if (row.bio) profile.bio = row.bio;
+        if (row.position) profile.position = row.position;
+        if (row.hire_date) profile.hire_date = row.hire_date;
+        if (Object.keys(profile).length > 0) payload.profile = profile;
+        if (row.roles || row.role || row.groups) {
+          const roleNames = row.roles || row.role || row.groups;
+          const ids = mapRolesToIds(roleNames);
+          if (ids.length > 0) payload.groups = ids;
+        }
+        try {
+          await usersAPI.createUser(payload);
+          success += 1;
+        } catch (e: any) {
+          const msg = e?.response?.data ? JSON.stringify(e.response.data) : (e?.message || 'Erreur inconnue');
+          errors.push(`Ligne ${i + 2}: ${msg}`);
+        }
+      }
+      setImportReport({ total: rows.length, success, failed: rows.length - success, errors });
+      toast({
+        title: 'Import terminé',
+        description: `${success}/${rows.length} utilisateur(s) importé(s)`
+      });
+      await refetch();
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const handleUserSelect = (userId: number) => {
     setSelectedUsers(prev => 
@@ -312,11 +491,11 @@ export const UsersPage = () => {
               Gestion des rôles
             </Button>
           )}
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
             <Download className="w-4 h-4 mr-2" />
             Exporter
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => { setIsImportDialogOpen(true); setImportPreview([]); setImportReport(null); }}>
             <Upload className="w-4 h-4 mr-2" />
             Importer
           </Button>
@@ -683,31 +862,43 @@ export const UsersPage = () => {
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6">
-              <div className="text-sm text-gray-600">
-                Page {currentPage} sur {totalPages}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                >
-                  Précédent
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                >
-                  Suivant
-                </Button>
-              </div>
+          <div className="flex items-center justify-between mt-6">
+            <div className="text-sm text-gray-600">
+              {totalUsers > 0 ? (
+                <span>Affichage {startItem}-{endItem} sur {totalUsers}</span>
+              ) : (
+                <span>Aucun utilisateur</span>
+              )}
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1 || totalUsers === 0}
+              >
+                Précédent
+              </Button>
+              {getPageNumbers().map((n) => (
+                <Button
+                  key={n}
+                  variant={n === currentPage ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCurrentPage(n)}
+                >
+                  {n}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages || totalUsers === 0}
+              >
+                Suivant
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -741,6 +932,60 @@ export const UsersPage = () => {
           />
         </>
       )}
+
+            {/* Import Users Dialog */}
+       <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+         <DialogContent className="max-w-4xl w-[90vw]">
+           <DialogHeader>
+             <DialogTitle>Importer des utilisateurs (CSV)</DialogTitle>
+            <DialogDescription>
+              Colonnes supportées: username, first_name, last_name, email, department, roles, is_active, password, password_confirm, phone, bio, position, hire_date
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input type="file" accept=".csv" onChange={e => { const f = e.target.files?.[0]; if (f) void handleImportFile(f); }} />
+            {importPreview.length > 0 && (
+              <div className="border rounded p-2 max-h-48 table-auto overflow-auto w-full">
+                <div className="text-sm text-gray-600 mb-2">Aperçu des 10 premières lignes</div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {importHeaders.map(h => (<TableHead key={h}>{h}</TableHead>))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {importPreview.map((row, idx) => (
+                      <TableRow key={idx}>
+                        {importHeaders.map(h => (
+                          <TableCell key={h} className="text-xs">{row[h]}</TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+            {importReport && (
+              <div className="text-sm">
+                <div>
+                  Résultat: {importReport.success}/{importReport.total} succès, {importReport.failed} échecs
+                </div>
+                {importReport.errors.length > 0 && (
+                  <div className="mt-2 max-h-24 overflow-auto text-red-600">
+                    {importReport.errors.map((e, i) => (<div key={i}>• {e}</div>))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)} disabled={isImporting}>Fermer</Button>
+            <Button onClick={handleConfirmImport} disabled={isImporting || importPreview.length === 0}>
+              {isImporting ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin"/> Import...</>) : 'Démarrer l\'import'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Role Management Modals */}
       <Dialog open={isAssignRoleDialogOpen} onOpenChange={setIsAssignRoleDialogOpen}>

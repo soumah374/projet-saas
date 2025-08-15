@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { 
   ArrowLeft,
   Download,
@@ -20,7 +21,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useProjectReports, useExportReport, ReportFilters } from '@/hooks/use-reports';
-import { useProjects } from '@/hooks/use-projects';
+import { useProjects, useCompletedProjectTasks } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
 
 export function ProjectReportPage() {
@@ -39,11 +40,11 @@ export function ProjectReportPage() {
 
   // Récupérer les données de rapport pour ce projet
   const { 
-    data: projectReports = [], 
+    data: reportsData, 
     isLoading: reportsLoading 
   } = useProjectReports(filters);
 
-  const projectReport = projectReports.find(p => p.id === projectId);
+  const projectReport = reportsData?.projects?.find((p: any) => p.id === projectId);
 
   const { mutate: exportPDF, isPending: isExportingPDF } = useExportReport();
   const { mutate: exportExcel, isPending: isExportingExcel } = useExportReport();
@@ -183,6 +184,24 @@ export function ProjectReportPage() {
   }
 
   const displayProject = projectReport || project;
+
+  // Completed activities for the project
+  const { data: completedTasksData, isLoading: completedTasksLoading } = useCompletedProjectTasks(projectId);
+  const completedTasks = completedTasksData?.results || [];
+
+  const getTaskStatusColor = (status: string) => {
+    switch (status) {
+      case 'Terminé':
+        return 'bg-green-100 text-green-800';
+      case 'En cours':
+        return 'bg-blue-100 text-blue-600';
+      case 'En pause':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'À faire':
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -375,38 +394,61 @@ export function ProjectReportPage() {
         </Card>
       )}
 
-      {/* Actions */}
+      {/* Activités réalisées */}
       <Card>
         <CardHeader>
-          <CardTitle>Actions</CardTitle>
+          <CardTitle>Activités réalisées</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button 
-              variant="outline" 
-              className="h-auto p-4 flex flex-col items-center space-y-2"
-              onClick={() => navigate(`/projects/${projectId}`)}
-            >
-              <Target className="w-6 h-6" />
-              <span>Voir le projet</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto p-4 flex flex-col items-center space-y-2"
-              onClick={handleExportPDF}
-            >
-              <Download className="w-6 h-6" />
-              <span>Exporter PDF</span>
-            </Button>
-            <Button 
-              variant="outline" 
-              className="h-auto p-4 flex flex-col items-center space-y-2"
-              onClick={handleExportExcel}
-            >
-              <FileSpreadsheet className="w-6 h-6" />
-              <span>Exporter Excel</span>
-            </Button>
-          </div>
+          {completedTasksLoading ? (
+            <div className="py-8 text-center text-muted-foreground">Chargement des activités...</div>
+          ) : completedTasks.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">Aucune activité réalisée pour ce projet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Titre</TableHead>
+                    <TableHead>Exécutant</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Début</TableHead>
+                    <TableHead>Échéance</TableHead>
+                    <TableHead>Exécuté le</TableHead>
+                    <TableHead className="text-right">Heures réelles</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {completedTasks.map((task: any) => (
+                    <TableRow key={task.id}>
+                      <TableCell className="font-medium max-w-[280px] truncate">{task.title}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <span className="font-medium">{task.assigned_to_name || 'Non assigné'}</span>
+                          {task.assigned_to && (
+                            <span className="text-muted-foreground"> (ID: {task.assigned_to})</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={getTaskStatusColor(task.status)}>{task.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        {task.start_date ? format(new Date(task.start_date), 'dd/MM/yyyy', { locale: fr }) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {task.due_date ? format(new Date(task.due_date), 'dd/MM/yyyy', { locale: fr }) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {task.executed_at ? format(new Date(task.executed_at), 'dd/MM/yyyy', { locale: fr }) : '-'}
+                      </TableCell>
+                      <TableCell className="text-right">{task.actual_hours ?? 0}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

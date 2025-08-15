@@ -43,17 +43,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Vérifier l'authentification au chargement
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem('access_token');
       const userData = localStorage.getItem('user');
 
       if (token && userData) {
         try {
           const user = JSON.parse(userData);
-          setUser(user);
+          // Vérifier que le token est encore valide en faisant un appel API
+          try {
+            // Optionnel : vérifier la validité du token avec le backend
+            // await authAPI.verifyToken();
+            setUser(user);
+          } catch (error) {
+            console.error('Token invalide, déconnexion...', error);
+            logout();
+            return;
+          }
         } catch (error) {
           console.error('Erreur lors du parsing des données utilisateur:', error);
           logout();
+          return;
         }
       }
       setIsLoading(false);
@@ -78,6 +88,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         description: `Bienvenue ${response.user.first_name || response.user.username}!`,
       });
       
+      // Restaurer l'URL de la dernière page visitée si elle existe
+      const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
+      if (lastVisitedUrl && lastVisitedUrl !== '/login') {
+        navigate(lastVisitedUrl);
+      } else {
+        navigate('/');
+      }
+      
       return true;
     } catch (error: any) {
       toast({
@@ -90,6 +108,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
+    // Sauvegarder l'URL actuelle avant de nettoyer le localStorage
+    const currentUrl = window.location.pathname + window.location.search;
+    if (currentUrl !== '/') {
+      localStorage.setItem('lastVisitedUrl', currentUrl);
+    }
+    
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
