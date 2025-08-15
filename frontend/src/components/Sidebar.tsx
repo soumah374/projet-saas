@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/hooks/use-auth"
+import { usePermissions } from "@/hooks/use-permissions"
 
 
 interface User {
@@ -258,13 +259,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 )}
               </div>
             )}
-            {/* Documents */}
-            <Link to="/documents" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/documents') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <FileText className="h-4 w-4" /> Documents
-            </Link> 
           </nav>
         </div>
 

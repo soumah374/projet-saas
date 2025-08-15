@@ -34,6 +34,7 @@ export const PermissionButton = ({
 }: PermissionButtonProps) => {
   const { hasPermission, hasModuleAccess, hasRole, hasAnyRole, isLoading } = usePermissions();
 
+  console.log("permission",hasPermission)
   // Afficher un loader pendant le chargement des permissions
   if (isLoading) {
     return (
@@ -63,6 +64,10 @@ export const PermissionButton = ({
   if (showIfNoPermission) {
     hasAccess = !hasAccess;
   }
+
+  console.log("hasAccess",hasAccess) 
+  console.log("permission",permission) 
+  console.log("hasAccess",hasAccess) 
 
   if (hasAccess) {
     return (

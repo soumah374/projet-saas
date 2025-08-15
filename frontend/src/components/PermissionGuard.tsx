@@ -64,7 +64,7 @@ export const CanView = ({ children, module, fallback }: { children: ReactNode; m
 );
 
 export const CanCreate = ({ children, module, fallback }: { children: ReactNode; module: string; fallback?: ReactNode }) => (
-  <PermissionGuard permission={`${module}.create` as Permission} fallback={fallback}>
+  <PermissionGuard permission={`${module}.add` as Permission} fallback={fallback}>
     {children}
   </PermissionGuard>
 );
@@ -83,7 +83,7 @@ export const CanDelete = ({ children, module, fallback }: { children: ReactNode;
 
 export const CanManage = ({ children, module, fallback }: { children: ReactNode; module: string; fallback?: ReactNode }) => (
   <PermissionGuard 
-    permission={`${module}.create` as Permission} 
+    permission={`${module}.add` as Permission} 
     fallback={
       <PermissionGuard permission={`${module}.edit` as Permission} fallback={fallback}>
         {children}
@@ -149,38 +149,8 @@ export const IsStaff = ({ children, fallback }: { children: ReactNode; fallback?
 );
 
 // Composants pour les permissions spécifiques
-export const CanManageUsers = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
-  <PermissionGuard permission="users.create" fallback={fallback}>
+export const CanPermission = ({ children,permission,fallback }: { children: ReactNode; permission: Permission; fallback?: ReactNode }) => (
+  <PermissionGuard permission={permission} fallback={fallback}>
     {children}
   </PermissionGuard>
 );
-
-export const CanManageProjects = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
-  <PermissionGuard permission="projects.create" fallback={fallback}>
-    {children}
-  </PermissionGuard>
-);
-
-export const CanManageBilling = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
-  <PermissionGuard permission="billings.create" fallback={fallback}>
-    {children}
-  </PermissionGuard>
-);
-
-export const CanViewReports = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
-  <PermissionGuard permission="reports.view" fallback={fallback}>
-    {children}
-  </PermissionGuard>
-);
-
-export const CanManageTeams = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
-  <PermissionGuard permission="teams.create" fallback={fallback}>
-    {children}
-  </PermissionGuard>
-);
-
-export const CanManageClients = ({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) => (
-  <PermissionGuard permission="clients.create" fallback={fallback}>
-    {children}
-  </PermissionGuard>
-); 

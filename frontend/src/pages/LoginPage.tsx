@@ -30,7 +30,12 @@ export function LoginPage() {
     try {
       const success = await login(username, password);
       if (success) {
-        navigate('/');
+        const lastVisitedUrl = localStorage.getItem('lastVisitedUrl');
+        if (lastVisitedUrl) {
+          navigate(lastVisitedUrl);
+        } else {
+          navigate('/');
+        }
       }
     } finally {
       setIsLoading(false);

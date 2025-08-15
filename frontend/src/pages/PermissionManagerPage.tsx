@@ -25,13 +25,15 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { usePermissionManager } from '@/hooks/use-permission-manager';
 import { Permission, Role } from '@/hooks/use-permissions';
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from '@/components/ui/select';
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ChevronDown, Edit, Settings, Trash2 } from 'lucide-react';
 interface PermissionObject {
   id: number;
   name: string;
@@ -68,17 +70,14 @@ export default function PermissionManagerPage() {
     loadPermissionData,
     createRole: createRoleAPI,
     createPermission: createPermissionAPI,
-    updateRolePermissions: updateRolePermissionsAPI,
     deleteRole: deleteRoleAPI,
     deletePermission: deletePermissionAPI,
     updateRole: updateRoleAPI,
-    assignPermissionToRole,
   } = usePermissionManager();
   
   const [roles, setRoles] = useState<(Role | RoleObject)[]>([]);
   const [permissions, setPermissions] = useState<(Permission | PermissionObject)[]>([]);
   const [rolePermissions, setRolePermissions] = useState<RolePermissions[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string>('');
   const [newRoleName, setNewRoleName] = useState('');
   const [newPermissionName, setNewPermissionName] = useState('');
   const [isCreateRoleDialogOpen, setIsCreateRoleDialogOpen] = useState(false);
@@ -90,7 +89,6 @@ export default function PermissionManagerPage() {
   const [roleToDelete, setRoleToDelete] = useState<RoleObject | null>(null);
   const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
   const [isDeletePermissionDialogOpen, setIsDeletePermissionDialogOpen] = useState(false);
-  const [selectedRoleForPermission, setSelectedRoleForPermission] = useState<Record<string, string>>({});
 
   // Charger les données
   useEffect(() => {
@@ -143,14 +141,6 @@ export default function PermissionManagerPage() {
       setNewPermissionName('');
       setIsCreatePermissionDialogOpen(false);
       loadData();
-    }
-  };
-
-  // Mettre à jour les permissions d'un rôle
-  const updateRolePermissions = async (roleId: number,roleName: string, moduleName: string, permissionType: string, value: boolean) => {
-    const success = await updateRolePermissionsAPI(roleId,roleName, moduleName, permissionType, value);
-    if (success) {
-      // loadData();
     }
   };
 
@@ -213,7 +203,7 @@ export default function PermissionManagerPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="max-w-8xl mx-auto space-y-8">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Gestionnaire de Permissions</h1>
@@ -346,27 +336,32 @@ export default function PermissionManagerPage() {
                           <Badge variant="secondary">{totalPermissions}</Badge>
                         </div>
                         <div className="flex space-x-2 pt-2">
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => navigate(`/permissions/role/${roleId}`)}
-                          >
-                            Permissions
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openEditRoleDialog((role as RoleObject).id,roleName)}
-                          >
-                            Éditer
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeleteRole((role as RoleObject))}
-                          >
-                            Supprimer
-                          </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                Actions
+                                <ChevronDown className="ml-2 h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/permissions/role/${roleId}`)}>
+                                <Settings className="mr-2 h-4 w-4" />
+                                Permissions
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditRoleDialog((role as RoleObject).id,roleName)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Éditer
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteRole((role as RoleObject))}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Supprimer
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </CardContent>
                     </Card>
@@ -480,38 +475,6 @@ export default function PermissionManagerPage() {
                                   <Badge variant="outline">{displayModuleName}</Badge>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {/* <Select
-                                    value={selectedRoleForPermission[permissionName] || ''}
-                                    onValueChange={(value) => setSelectedRoleForPermission((prev) => ({ ...prev, [permissionName]: value }))}
-                                  >
-                                    <SelectTrigger className="w-[180px]">
-                                      <SelectValue placeholder="Sélectionner un rôle" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {roles.map((r) => {
-                                        const rObj = r as RoleObject;
-                                        return (
-                                          <SelectItem key={`role-opt-${rObj.id}`} value={String(rObj.id)}>
-                                            {rObj.name}
-                                          </SelectItem>
-                                        );
-                                      })}
-                                    </SelectContent>
-                                  </Select> */}
-                                  {/* <Button
-                                    size="sm"
-                                    onClick={async () => {
-                                      const roleIdStr = selectedRoleForPermission[permissionName];
-                                      if (!roleIdStr) return;
-                                      const roleId = parseInt(roleIdStr);
-                                      const ok = await assignPermissionToRole(roleId, permissionName);
-                                      if (ok) {
-                                        toast({ title: 'Succès', description: 'Permission associée au rôle' });
-                                      }
-                                    }}
-                                  >
-                                    Associer
-                                  </Button> */}
                                   <Button
                                     variant="destructive"
                                     size="sm"

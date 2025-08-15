@@ -29,7 +29,7 @@ interface UserPermissions {
 export const usePermissions = () => {
   const { user, isAuthenticated } = useAuth();
   const [userPermissions, setUserPermissions] = useState<UserPermissions | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Commencer avec true pour éviter les vérifications prématurées
   const [error, setError] = useState<string | null>(null);
 
   // Récupérer les permissions de l'utilisateur depuis le backend
@@ -54,8 +54,10 @@ export const usePermissions = () => {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchUserPermissions();
-    } else {
+    } else if (!isAuthenticated) {
+      // Si l'utilisateur n'est pas authentifié, arrêter le chargement
       setUserPermissions(null);
+      setIsLoading(false);
     }
   }, [isAuthenticated, user, fetchUserPermissions]);
 
@@ -99,6 +101,7 @@ export const usePermissions = () => {
 
   // Vérifier si l'utilisateur a accès à un module
   const hasModuleAccess = useCallback((module: string): boolean => {
+   
     if (!userPermissions) return false;
     
     // Super admin a accès à tout
@@ -106,7 +109,10 @@ export const usePermissions = () => {
     
     // Les staff ont accès limité selon leur rôle
     if (userPermissions.is_staff) return true;
-    
+    if(module === 'projects'){
+      console.log("userPermissions",userPermissions.permissions)
+      console.log("userPermissions hasModuleAccess =====",userPermissions.permissions.includes('projects.add_project'))
+    }
     const modulePerms = userPermissions.module_permissions[module];
     return modulePerms ? (modulePerms.view || modulePerms.add || modulePerms.change || modulePerms.delete) : false;
   }, [userPermissions]);
@@ -193,7 +199,97 @@ export const usePermissions = () => {
   }, [hasPermission]);
 
   const canManageClients = useCallback((): boolean => {
-    return hasPermission('clients.create') || hasPermission('clients.edit') || hasPermission('clients.delete');
+    return hasPermission('clients.add') || hasPermission('clients.edit') || hasPermission('clients.delete') || hasPermission('clients.can_approve_client') || hasPermission('clients.can_generate_invoice') || hasPermission('clients.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageDocuments = useCallback((): boolean => {
+    return hasPermission('documents.add') || hasPermission('documents.edit') || hasPermission('documents.delete') || hasPermission('documents.can_approve_document') || hasPermission('documents.can_generate_invoice') || hasPermission('documents.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageDevis = useCallback((): boolean => {
+    return hasPermission('devis.add') || hasPermission('devis.edit') || hasPermission('devis.delete') || hasPermission('devis.can_approve_devis') || hasPermission('devis.can_generate_invoice') || hasPermission('devis.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageContrats = useCallback((): boolean => {
+    return hasPermission('contrats.add') || hasPermission('contrats.edit') || hasPermission('contrats.delete');
+  }, [hasPermission]);
+
+  const canManageBillings = useCallback((): boolean => {
+    return hasPermission('billings.add') || hasPermission('billings.edit') || hasPermission('billings.delete') || hasPermission('billings.can_approve_billing') || hasPermission('billings.can_generate_invoice') || hasPermission('billings.can_view_financial_reports');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les projets
+  const canManageProjectMembers = useCallback((): boolean => {
+    return hasPermission('projects.can_manage_project_members') || hasPermission('projects.can_view_project_reports') || hasPermission('projects.can_export_project_data');
+  }, [hasPermission]);
+
+  const canViewProjectReports = useCallback((): boolean => {
+    return hasPermission('projects.can_view_project_reports') || hasPermission('projects.can_export_project_data');
+  }, [hasPermission]);
+
+  const canExportProjectData = useCallback((): boolean => {
+    return hasPermission('projects.can_export_project_data') || hasPermission('projects.can_view_project_reports');
+  }, [hasPermission]);
+
+  const canManageProjectBudget = useCallback((): boolean => {
+    return hasPermission('projects.add_projectbudget') || hasPermission('projects.edit_projectbudget') || hasPermission('projects.delete_projectbudget');
+  }, [hasPermission]);
+
+  const canManageProjectTasks = useCallback((): boolean => {
+    return hasPermission('projects.add_projecttask') || hasPermission('projects.edit_projecttask') || hasPermission('projects.delete_projecttask');
+  }, [hasPermission]);
+
+  const canManageProjectPhases = useCallback((): boolean => {
+    return hasPermission('projects.add_projectphase') || hasPermission('projects.edit_projectphase') || hasPermission('projects.delete_projectphase');
+  }, [hasPermission]);
+
+  const canManageTimesheets = useCallback((): boolean => {
+    return hasPermission('projects.add_timesheet') || hasPermission('projects.edit_timesheet') || hasPermission('projects.delete_timesheet');
+  }, [hasPermission]);
+
+  const canManageProjectEvents = useCallback((): boolean => {
+    return hasPermission('projects.add_projectevent') || hasPermission('projects.edit_projectevent') || hasPermission('projects.delete_projectevent');
+  }, [hasPermission]);
+
+  const canSendProject = useCallback((): boolean => {
+    return hasPermission('projects.send_project') || hasPermission('projects.edit_project') || hasPermission('projects.delete_project');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour la facturation
+  const canApproveBilling = useCallback((): boolean => {
+    return hasPermission('billings.can_approve_billing') || hasPermission('billings.can_generate_invoice') || hasPermission('billings.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canGenerateInvoice = useCallback((): boolean => {
+    return hasPermission('billings.can_generate_invoice');
+  }, [hasPermission]);
+
+  const canViewFinancialReports = useCallback((): boolean => {
+    return hasPermission('billings.can_view_financial_reports');
+  }, [hasPermission]);
+
+  const canManageBillingConfiguration = useCallback((): boolean => {
+    return hasPermission('billings.add_configurationfacturation') || hasPermission('billings.edit_configurationfacturation') || hasPermission('billings.delete_configurationfacturation');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les contrats
+  const canManageAvenants = useCallback((): boolean => {
+    return hasPermission('contrats.add_avenant') || hasPermission('contrats.edit_avenant') || hasPermission('contrats.delete_avenant');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour le catalogue
+  const canManageCategories = useCallback((): boolean => {
+    return hasPermission('client_categories.add_clientcategory') || hasPermission('client_categories.edit_clientcategory') || hasPermission('client_categories.delete_clientcategory');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les notifications
+  const canViewNotifications = useCallback((): boolean => {
+    return hasPermission('notifications.view_notification');
+  }, [hasPermission]);
+
+  // Permissions personnalisées pour les départements
+  const canViewDepartments = useCallback((): boolean => {
+    return hasPermission('departments.view_department');
   }, [hasPermission]);
 
   // Vérifier les permissions de module spécifiques
@@ -236,6 +332,39 @@ export const usePermissions = () => {
     canViewReports,
     canManageTeams,
     canManageClients,
+    canManageDocuments,
+    canManageDevis,
+    canManageContrats,
+    canManageBillings,
+    
+    // Permissions personnalisées pour les projets
+    canManageProjectMembers,
+    canViewProjectReports,
+    canExportProjectData,
+    canManageProjectBudget,
+    canManageProjectTasks,
+    canManageProjectPhases,
+    canManageTimesheets,
+    canManageProjectEvents,
+    canSendProject,
+    
+    // Permissions personnalisées pour la facturation
+    canApproveBilling,
+    canGenerateInvoice,
+    canViewFinancialReports,
+    canManageBillingConfiguration,
+    
+    // Permissions personnalisées pour les contrats
+    canManageAvenants,
+    
+    // Permissions personnalisées pour le catalogue
+    canManageCategories,
+    
+    // Permissions personnalisées pour les notifications
+    canViewNotifications,
+    
+    // Permissions personnalisées pour les départements
+    canViewDepartments,
     
     // Permissions de module
     canViewModule,
