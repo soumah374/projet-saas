@@ -18,6 +18,7 @@ import { AlertCircle } from 'lucide-react';
 import { EditProjectModal } from '@/components/EditProjectModal';
 import type { CreateProjectForm } from '@/lib/types';
 import { ProjectActionModals } from '@/components/projects/ProjectActionModals';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
@@ -38,6 +39,10 @@ export function ProjectDetailsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('planning');
+
+  const { 
+    canManageProjects, 
+  } = usePermissions();
   
   const { data: project, isLoading, error } = useProject(projectId || '');
   const startProjectMutation = useStartProject();
@@ -129,12 +134,15 @@ export function ProjectDetailsPage() {
         </div>
         <div className="flex items-center gap-2">
           {isProjectStarted && (
+
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">Projet démarré</span>
             </div>
+            
           )}
           {project.status !== 'Terminé' && (
+            canManageProjects('edit') && (
             <EditProjectModal 
               project={project as any} 
               onProjectUpdate={handleProjectUpdate}
@@ -144,6 +152,7 @@ export function ProjectDetailsPage() {
                 Modifier
               </Button>
             </EditProjectModal>
+            )
           )}
           <ProjectActionModals
             status={project.status}

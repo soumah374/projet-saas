@@ -30,7 +30,7 @@ class DevisViewSet(viewsets.ModelViewSet):
     
     queryset = Devis.objects.select_related('client').prefetch_related('lignes').all()
     serializer_class = DevisSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['statut', 'client', 'date_creation', 'date_validite']
     search_fields = ['numero', 'client__nom', 'client__prenom', 'client__raison_sociale']

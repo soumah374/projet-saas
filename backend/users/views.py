@@ -293,6 +293,9 @@ class UserViewSet(viewsets.ModelViewSet):
                 'add': add_perm in user_permissions,
                 'change': change_perm in user_permissions,
                 'delete': delete_perm in user_permissions,
+                'group_permissions': [
+                    perm.codename for perm in Permission.objects.filter(group__user=user, content_type=content_type)
+                ],
             }
         
         summary = {
@@ -439,7 +442,7 @@ class ClientProfileViewSet(viewsets.ModelViewSet):
     
     queryset = ClientProfile.objects.all()
     serializer_class = ClientProfileSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
     filterset_fields = ['is_active', 'pays', 'ville', 'type_client', 'statut_commercial']
     search_fields = ['nom', 'prenom', 'email', 'telephone', 'contact', 'raison_sociale', 'rccm_nif']
     ordering_fields = ['nom', 'prenom', 'date_inscription']
@@ -491,7 +494,7 @@ class ClientCategoryViewSet(viewsets.ModelViewSet):
     
     queryset = ClientCategory.objects.all()
     serializer_class = ClientCategorySerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
     search_fields = ['name']
     ordering = ['name']
     
@@ -520,7 +523,7 @@ class ClientCategoryViewSet(viewsets.ModelViewSet):
 
 class PermissionManagerViewSet(viewsets.ViewSet):
     """ViewSet pour la gestion des permissions et rôles"""
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
     
     @action(detail=False, methods=['get'])
     def roles(self, request):

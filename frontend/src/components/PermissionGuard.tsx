@@ -34,6 +34,7 @@ export const PermissionGuard = ({
   if (permission) {
     hasAccess = hasPermission(permission);
   } else if (module) {
+    // Si on a un module mais pas de permission spécifique, vérifier l'accès général au module
     hasAccess = hasModuleAccess(module);
   } else if (role) {
     hasAccess = hasRole(role);
@@ -64,28 +65,28 @@ export const CanView = ({ children, module, fallback }: { children: ReactNode; m
 );
 
 export const CanCreate = ({ children, module, fallback }: { children: ReactNode; module: string; fallback?: ReactNode }) => (
-  <PermissionGuard permission={`${module}.add` as Permission} fallback={fallback}>
-    {children}
+  <PermissionGuard permission={`${module}.add_${module}` as Permission} fallback={fallback}>
+    {children} {`${module}.add_${module}`}
   </PermissionGuard>
 );
 
 export const CanEdit = ({ children, module, fallback }: { children: ReactNode; module: string; fallback?: ReactNode }) => (
-  <PermissionGuard permission={`${module}.edit` as Permission} fallback={fallback}>
+  <PermissionGuard permission={`${module}.edit_${module}` as Permission} fallback={fallback}>
     {children}
   </PermissionGuard>
 );
 
 export const CanDelete = ({ children, module, fallback }: { children: ReactNode; module: string; fallback?: ReactNode }) => (
-  <PermissionGuard permission={`${module}.delete` as Permission} fallback={fallback}>
+  <PermissionGuard permission={`${module}.delete_${module}` as Permission} fallback={fallback}>
     {children}
   </PermissionGuard>
 );
 
 export const CanManage = ({ children, module, fallback }: { children: ReactNode; module: string; fallback?: ReactNode }) => (
   <PermissionGuard 
-    permission={`${module}.add` as Permission} 
+    permission={`${module}.add_${module}` as Permission} 
     fallback={
-      <PermissionGuard permission={`${module}.edit` as Permission} fallback={fallback}>
+      <PermissionGuard permission={`${module}.edit_${module}` as Permission} fallback={fallback}>
         {children}
       </PermissionGuard>
     }
@@ -149,8 +150,13 @@ export const IsStaff = ({ children, fallback }: { children: ReactNode; fallback?
 );
 
 // Composants pour les permissions spécifiques
-export const CanPermission = ({ children,permission,fallback }: { children: ReactNode; permission: Permission; fallback?: ReactNode }) => (
-  <PermissionGuard permission={permission} fallback={fallback}>
+export const CanPermission = ({ children,module,fallback }: { children: ReactNode; module: string; permission?: Permission; fallback?: ReactNode }) => (
+  <PermissionGuard 
+    module={module} 
+    permission={`${module}.add_${module}` as Permission} 
+    fallback={fallback}
+    showIfNoPermission={true}
+  >
     {children}
   </PermissionGuard>
 );
