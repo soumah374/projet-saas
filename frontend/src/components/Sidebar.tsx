@@ -31,11 +31,7 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Logo } from './Logo';
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useAuth } from "@/hooks/use-auth"
 import { usePermissions } from "@/hooks/use-permissions"
 
 
@@ -59,6 +55,14 @@ interface SidebarProps {
 export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { 
+    canManageProjects, 
+    canManageClients, 
+    canManageBilling, 
+    canManageUsers,
+    hasModuleAccess 
+  } = usePermissions();
+  
   const [openMenus, setOpenMenus] = useState<{[key: string]: boolean}>({ 
     projets: false, 
     planning: false,
@@ -103,19 +107,20 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             </Link>
 
             {/* Prestations accordéon */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => toggleMenu('prestations')} 
-                className={cn(
-                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' || location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' || location.pathname === '/categories-services' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <Wrench className="h-5 w-5" /> Prestations
-                <span className="ml-auto">
-                  {openMenus.prestations ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </span>
-              </button>
+            {hasModuleAccess('catalog') && (
+              <div className="space-y-2">
+                <button 
+                  onClick={() => toggleMenu('prestations')} 
+                  className={cn(
+                    "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' || location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' || location.pathname === '/categories-services' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
+                  )}
+                >
+                  <Wrench className="h-5 w-5" /> Prestations
+                  <span className="ml-auto">
+                    {openMenus.prestations ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </span>
+                </button>
               {openMenus.prestations && (
                 <div className="ml-8 space-y-1">
                   <Link to="/categories-services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
@@ -148,21 +153,23 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 </div>
               )}
             </div>
+            )}
 
             {/* Clients accordéon */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => toggleMenu('clients')} 
-                className={cn(
-                  "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                  location.pathname.startsWith('/clients') || location.pathname.startsWith('/categories-clients') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
-                )}
-              >
-                <Users className="h-5 w-5" /> Clients
-                <span className="ml-auto">
-                  {openMenus.clients ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                </span>
-              </button>
+            {canManageClients('view') && (
+              <div className="space-y-2">
+                <button 
+                  onClick={() => toggleMenu('clients')} 
+                  className={cn(
+                    "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    location.pathname.startsWith('/clients') || location.pathname.startsWith('/categories-clients') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
+                  )}
+                >
+                  <Users className="h-5 w-5" /> Clients
+                  <span className="ml-auto">
+                    {openMenus.clients ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  </span>
+                </button>
               {openMenus.clients && (
                 <div className="ml-8 space-y-1">
                   <Link to="/categories-clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
@@ -174,51 +181,63 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 </div>
               )}
             </div>
+            )}
+            
             {/* Devis */}
-            <Link to="/devis" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/devis') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <Receipt className="h-5 w-5" />
-                <span>Devis</span>
-              </Link>
+            {hasModuleAccess('devis') && (
+              <Link to="/devis" className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                  location.pathname.startsWith('/devis') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:text-gray-900"
+                )}>
+                  <Receipt className="h-5 w-5" />
+                  <span>Devis</span>
+                </Link>
+            )}
 
             {/* Contrats */}
-            <Link to="/contrats" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/contrats') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <FileCheck className="h-5 w-5" />
-                <span>Contrats</span>
-            </Link>
+            {hasModuleAccess('contrats') && (
+              <Link to="/contrats" className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                  location.pathname.startsWith('/contrats') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+                )}>
+                  <FileCheck className="h-5 w-5" />
+                  <span>Contrats</span>
+              </Link>
+            )}
 
             {/* Projets accordéon */}
-            <Link to="/projects" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/projects') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-              <Target className="h-4 w-4" /> <span>Projets</span>
-            </Link>
+            {canManageProjects('view') && (
+              <Link to="/projects" className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                  location.pathname.startsWith('/projects') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+                )}>
+                <Target className="h-4 w-4" /> <span>Projets</span>
+              </Link>
+            )}
 
              {/* Facturation */}
-             <Link to="/factures" className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
-                location.pathname.startsWith('/factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
-              )}>
-                <CreditCard className="h-5 w-5" />
-                <span>Facturation</span>
-            </Link>
+             {canManageBilling('view') && (
+               <Link to="/factures" className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                  location.pathname.startsWith('/factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+                )}>
+                  <CreditCard className="h-5 w-5" />
+                  <span>Facturation</span>
+              </Link>
+             )}
           
             {/* Départements */}
-            <Link to="/departments" className={cn(
-              "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-              location.pathname.includes('/departments') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-            )}>
-              <Building2 className="h-5 w-5" /> Départements
-            </Link>
+            {hasModuleAccess('departments') && (
+              <Link to="/departments" className={cn(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                location.pathname.includes('/departments') ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              )}>
+                <Building2 className="h-5 w-5" /> Départements
+              </Link>
+            )}
 
             {/* Menu Administration */}
-            {user?.is_staff && (
+            {(user?.is_staff) && (
               <div className="space-y-2">
                 <button 
                   onClick={() => toggleMenu('administration')} 
@@ -236,15 +255,17 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 </button>
                 {openMenus.administration && (
                   <div className="ml-6 space-y-1">
-                    <Link 
-                      to="/users" 
-                      className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                        location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
-                      )}
-                    > 
-                      <Users className="h-4 w-4" /> Utilisateurs 
-                    </Link>
+                    {canManageUsers() && (
+                      <Link 
+                        to="/users" 
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+                          location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        )}
+                      > 
+                        <Users className="h-4 w-4" /> Utilisateurs 
+                      </Link>
+                    )}
                     
                     <Link 
                       to="/permissions" 

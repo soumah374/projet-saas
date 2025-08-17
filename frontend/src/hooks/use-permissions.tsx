@@ -22,6 +22,7 @@ interface UserPermissions {
       add: boolean;
       change: boolean;
       delete: boolean;
+      group_permissions: string[];
     };
   };
 }
@@ -99,7 +100,7 @@ export const usePermissions = () => {
     return userPermissions.permissions.includes(permission);
   }, [userPermissions]);
 
-  // Vérifier si l'utilisateur a accès à un module
+  // Vérifier si l'utilisateur a accès à un module (général)
   const hasModuleAccess = useCallback((module: string): boolean => {
    
     if (!userPermissions) return false;
@@ -109,10 +110,9 @@ export const usePermissions = () => {
     
     // Les staff ont accès limité selon leur rôle
     if (userPermissions.is_staff) return true;
-    if(module === 'projects'){
-      console.log("userPermissions",userPermissions.permissions)
-      console.log("userPermissions hasModuleAccess =====",userPermissions.permissions.includes('projects.add_project'))
-    }
+  
+    // console.log("modulePerms",userPermissions.permissions.filter(res => res.includes(module)).length > 0)
+
     const modulePerms = userPermissions.module_permissions[module];
     return modulePerms ? (modulePerms.view || modulePerms.add || modulePerms.change || modulePerms.delete) : false;
   }, [userPermissions]);
@@ -182,139 +182,145 @@ export const usePermissions = () => {
     return hasPermission('users.create') || hasPermission('users.edit') || hasPermission('users.delete');
   }, [hasPermission]);
 
-  const canManageProjects = useCallback((): boolean => {
-    return hasPermission('projects.create') || hasPermission('projects.edit') || hasPermission('projects.delete');
+  const canManageProjects = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
-  const canManageBilling = useCallback((): boolean => {
-    return hasPermission('billings.create') || hasPermission('billings.edit') || hasPermission('billings.delete');
+  const canManageBilling = useCallback((action: string): boolean => {
+    return hasPermission(`billings.${action}_billings`);
   }, [hasPermission]);
 
   const canViewReports = useCallback((): boolean => {
-    return hasPermission('projects.view');
+    return hasPermission('projects.can_view_project_reports');
   }, [hasPermission]);
 
-  const canManageTeams = useCallback((): boolean => {
-    return hasPermission('teams.create') || hasPermission('teams.edit') || hasPermission('teams.delete');
+  const canManageTeams = useCallback((action: string): boolean => {
+    return hasPermission(`teams.${action}_teams`);
   }, [hasPermission]);
 
-  const canManageClients = useCallback((): boolean => {
-    return hasPermission('clients.add') || hasPermission('clients.edit') || hasPermission('clients.delete') || hasPermission('clients.can_approve_client') || hasPermission('clients.can_generate_invoice') || hasPermission('clients.can_view_financial_reports');
+  const canManageClients = useCallback((action: string): boolean => {
+    return hasPermission(`clients.${action}_clients`);
   }, [hasPermission]);
 
-  const canManageDocuments = useCallback((): boolean => {
-    return hasPermission('documents.add') || hasPermission('documents.edit') || hasPermission('documents.delete') || hasPermission('documents.can_approve_document') || hasPermission('documents.can_generate_invoice') || hasPermission('documents.can_view_financial_reports');
+  const canManageDocuments = useCallback((action: string): boolean => {
+    return hasPermission(`documents.${action}_documents`);
   }, [hasPermission]);
 
-  const canManageDevis = useCallback((): boolean => {
-    return hasPermission('devis.add') || hasPermission('devis.edit') || hasPermission('devis.delete') || hasPermission('devis.can_approve_devis') || hasPermission('devis.can_generate_invoice') || hasPermission('devis.can_view_financial_reports');
+  const canManageDevis = useCallback((action: string): boolean => {
+    return hasPermission(`devis.${action}_devis`);
   }, [hasPermission]);
 
-  const canManageContrats = useCallback((): boolean => {
-    return hasPermission('contrats.add') || hasPermission('contrats.edit') || hasPermission('contrats.delete');
+  const canManageContrats = useCallback((action: string): boolean => {
+    return hasPermission(`contrats.${action}_contrats`);
   }, [hasPermission]);
 
-  const canManageBillings = useCallback((): boolean => {
-    return hasPermission('billings.add') || hasPermission('billings.edit') || hasPermission('billings.delete') || hasPermission('billings.can_approve_billing') || hasPermission('billings.can_generate_invoice') || hasPermission('billings.can_view_financial_reports');
+  const canManageBillings = useCallback((action: string): boolean => {
+    return hasPermission(`billings.${action}_billings`);
   }, [hasPermission]);
 
   // Permissions personnalisées pour les projets
   const canManageProjectMembers = useCallback((): boolean => {
-    return hasPermission('projects.can_manage_project_members') || hasPermission('projects.can_view_project_reports') || hasPermission('projects.can_export_project_data');
+    return hasPermission(`projects.can_manage_project_members`);
   }, [hasPermission]);
 
   const canViewProjectReports = useCallback((): boolean => {
-    return hasPermission('projects.can_view_project_reports') || hasPermission('projects.can_export_project_data');
+    return hasPermission(`projects.can_view_project_reports`);
   }, [hasPermission]);
 
-  const canExportProjectData = useCallback((): boolean => {
-    return hasPermission('projects.can_export_project_data') || hasPermission('projects.can_view_project_reports');
+  const canExportProjectData = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
-  const canManageProjectBudget = useCallback((): boolean => {
-    return hasPermission('projects.add_projectbudget') || hasPermission('projects.edit_projectbudget') || hasPermission('projects.delete_projectbudget');
+  const canManageProjectBudget = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
-  const canManageProjectTasks = useCallback((): boolean => {
-    return hasPermission('projects.add_projecttask') || hasPermission('projects.edit_projecttask') || hasPermission('projects.delete_projecttask');
+  const canManageProjectTasks = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
-  const canManageProjectPhases = useCallback((): boolean => {
-    return hasPermission('projects.add_projectphase') || hasPermission('projects.edit_projectphase') || hasPermission('projects.delete_projectphase');
+  const canManageProjectPhases = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
-  const canManageTimesheets = useCallback((): boolean => {
-    return hasPermission('projects.add_timesheet') || hasPermission('projects.edit_timesheet') || hasPermission('projects.delete_timesheet');
+  const canManageTimesheets = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
-  const canManageProjectEvents = useCallback((): boolean => {
-    return hasPermission('projects.add_projectevent') || hasPermission('projects.edit_projectevent') || hasPermission('projects.delete_projectevent');
+  const canManageProjectEvents = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
-  const canSendProject = useCallback((): boolean => {
-    return hasPermission('projects.send_project') || hasPermission('projects.edit_project') || hasPermission('projects.delete_project');
+  const canSendProject = useCallback((action: string): boolean => {
+    return hasPermission(`projects.${action}_projects`);
   }, [hasPermission]);
 
   // Permissions personnalisées pour la facturation
-  const canApproveBilling = useCallback((): boolean => {
-    return hasPermission('billings.can_approve_billing') || hasPermission('billings.can_generate_invoice') || hasPermission('billings.can_view_financial_reports');
+  const canApproveBilling = useCallback((action: string): boolean => {
+    return hasPermission(`billings.${action}_billings`);
   }, [hasPermission]);
 
-  const canGenerateInvoice = useCallback((): boolean => {
-    return hasPermission('billings.can_generate_invoice');
+  const canGenerateInvoice = useCallback((action: string): boolean => {
+    return hasPermission(`billings.${action}_billings`);
   }, [hasPermission]);
 
-  const canViewFinancialReports = useCallback((): boolean => {
-    return hasPermission('billings.can_view_financial_reports');
+  const canViewFinancialReports = useCallback((action: string): boolean => {
+    return hasPermission(`billings.${action}_billings`);
   }, [hasPermission]);
 
-  const canManageBillingConfiguration = useCallback((): boolean => {
-    return hasPermission('billings.add_configurationfacturation') || hasPermission('billings.edit_configurationfacturation') || hasPermission('billings.delete_configurationfacturation');
+  const canManageBillingConfiguration = useCallback((action: string): boolean => {
+    return hasPermission(`billings.${action}_billings`);
   }, [hasPermission]);
 
   // Permissions personnalisées pour les contrats
-  const canManageAvenants = useCallback((): boolean => {
-    return hasPermission('contrats.add_avenant') || hasPermission('contrats.edit_avenant') || hasPermission('contrats.delete_avenant');
+  const canManageAvenants = useCallback((action: string): boolean => {
+    return hasPermission(`contrats.${action}_contrats`);
   }, [hasPermission]);
 
   // Permissions personnalisées pour le catalogue
-  const canManageCategories = useCallback((): boolean => {
-    return hasPermission('client_categories.add_clientcategory') || hasPermission('client_categories.edit_clientcategory') || hasPermission('client_categories.delete_clientcategory');
+  const canManageCategories = useCallback((action: string): boolean => {
+    return hasPermission(`client_categories.${action}_client_categories`);
   }, [hasPermission]);
 
   // Permissions personnalisées pour les notifications
-  const canViewNotifications = useCallback((): boolean => {
-    return hasPermission('notifications.view_notification');
+  const canViewNotifications = useCallback((action: string): boolean => {
+    return hasPermission(`notifications.${action}_notifications`);
   }, [hasPermission]);
 
   // Permissions personnalisées pour les départements
-  const canViewDepartments = useCallback((): boolean => {
-    return hasPermission('departments.view_department');
+  const canViewDepartments = useCallback((action: string): boolean => {
+    return hasPermission(`departments.${action}_departments`);
   }, [hasPermission]);
+
+  // Permissions personnalisées pour le calendrier
+  const canManageCalendar = useCallback((action: string): boolean => {
+    return hasPermission(`calendar.${action}_calendar`);
+  }, [hasPermission]);
+
 
   // Vérifier les permissions de module spécifiques
   const canViewModule = useCallback((module: string): boolean => {
     if (!userPermissions) return false;
-    const modulePerms = userPermissions.module_permissions[module];
-    return modulePerms ? modulePerms.view : false;
+    const modulePerms = userPermissions.module_permissions[module].group_permissions.filter(res => res === `view_${module}`).length > 0;
+    return modulePerms ? true : false;
   }, [userPermissions]);
 
   const canCreateModule = useCallback((module: string): boolean => {
     if (!userPermissions) return false;
-    const modulePerms = userPermissions.module_permissions[module];
-    return modulePerms ? modulePerms.add : false;
+    const modulePerms = userPermissions.module_permissions[module].group_permissions.filter(res => res === `add_${module}`).length > 0;
+    return modulePerms ? true : false;
   }, [userPermissions]);
 
   const canEditModule = useCallback((module: string): boolean => {
     if (!userPermissions) return false;
-    const modulePerms = userPermissions.module_permissions[module];
-    return modulePerms ? modulePerms.change : false;
+    const modulePerms = userPermissions.module_permissions[module].group_permissions.filter(res => res === `edit_${module}`).length > 0;
+    return modulePerms ? true : false;
   }, [userPermissions]);
 
   const canDeleteModule = useCallback((module: string): boolean => {
     if (!userPermissions) return false;
-    const modulePerms = userPermissions.module_permissions[module];
-    return modulePerms ? modulePerms.delete : false;
+    const modulePerms = userPermissions.module_permissions[module].group_permissions.filter(res => res === `delete_${module}`).length > 0;
+    return modulePerms ? true : false;
   }, [userPermissions]);
 
   return {
@@ -380,6 +386,9 @@ export const usePermissions = () => {
     // Permissions et rôles disponibles depuis la base de données
     getAvailablePermissions,
     getAvailableRoles,
+    
+    // Permissions personnalisées pour le calendrier
+    canManageCalendar,
     
     // État
     user: userPermissions,

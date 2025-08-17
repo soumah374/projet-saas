@@ -49,11 +49,6 @@ class TeamMemberViewSet(viewsets.ModelViewSet):
     ordering = ['joined_at']
 
     def get_queryset(self):
-        print("get_queryset")
-        print(self.request.GET.get('team'))
-        print(self.request.GET.get('team'))
-        print(self.request.GET.get('team'))
-        print(self.request.GET.get('team'))
         """Filtrer les membres d'équipe en fonction de l'équipe"""
         return TeamMember.objects.filter(team=self.request.GET.get('team'))
     

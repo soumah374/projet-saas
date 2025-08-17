@@ -188,6 +188,9 @@ def create_custom_permissions():
         ('can_manage_project_members', 'Can manage project members'),
         ('can_view_project_reports', 'Can view project reports'),
         ('can_export_project_data', 'Can export project data'),
+        ('can_start_project', 'Can start project'),
+        ('can_move_to_livraison', 'Can move to livraison'),
+        ('can_complete_project', 'Can complete project'),
     ]
     
     for codename, name in custom_permissions:

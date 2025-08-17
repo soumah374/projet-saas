@@ -29,8 +29,8 @@ class DashboardOverviewView(View):
             end_date = timezone.now()
             start_date = end_date - timedelta(days=period_days)
             
-            # Initialiser le service
-            metrics_service = DashboardMetricsService()
+            # Initialiser le service avec l'utilisateur connecté
+            metrics_service = DashboardMetricsService(user=request.user)
             
             # Récupérer toutes les métriques
             overview_data = {
@@ -38,7 +38,8 @@ class DashboardOverviewView(View):
                 'financial': metrics_service.get_financial_metrics(start_date, end_date),
                 'performance': metrics_service.get_performance_metrics(start_date, end_date),
                 'calendar': metrics_service.get_calendar_metrics(start_date, end_date),
-                'last_updated': timezone.now().isoformat()
+                'last_updated': timezone.now().isoformat(),
+                'user_role': metrics_service.user_role
             }
             
             return JsonResponse(overview_data, safe=False)
@@ -60,7 +61,7 @@ class DashboardProjectsView(View):
             end_date = timezone.now()
             start_date = end_date - timedelta(days=period_days)
             
-            metrics_service = DashboardMetricsService()
+            metrics_service = DashboardMetricsService(user=request.user)
             projects_data = metrics_service.get_projects_metrics(start_date, end_date)
             
             return JsonResponse(projects_data, safe=False)
@@ -82,7 +83,7 @@ class DashboardFinancialView(View):
             end_date = timezone.now()
             start_date = end_date - timedelta(days=period_days)
             
-            metrics_service = DashboardMetricsService()
+            metrics_service = DashboardMetricsService(user=request.user)
             financial_data = metrics_service.get_financial_metrics(start_date, end_date)
             
             return JsonResponse(financial_data, safe=False)
@@ -104,7 +105,7 @@ class DashboardPerformanceView(View):
             end_date = timezone.now()
             start_date = end_date - timedelta(days=period_days)
             
-            metrics_service = DashboardMetricsService()
+            metrics_service = DashboardMetricsService(user=request.user)
             performance_data = metrics_service.get_performance_metrics(start_date, end_date)
             
             return JsonResponse(performance_data, safe=False)
@@ -126,7 +127,7 @@ class DashboardCalendarView(View):
             end_date = timezone.now()
             start_date = end_date - timedelta(days=period_days)
             
-            metrics_service = DashboardMetricsService()
+            metrics_service = DashboardMetricsService(user=request.user)
             calendar_data = metrics_service.get_calendar_metrics(start_date, end_date)
             
             return JsonResponse(calendar_data, safe=False)
@@ -145,10 +146,10 @@ class DashboardRefreshView(View):
     def post(self, request):
         try:
             # Forcer le recalcul des métriques
-            metrics_service = DashboardMetricsService()
+            metrics_service = DashboardMetricsService(user=request.user)
             
             # Optionnel : recalculer et stocker les métriques
-            # metrics_service.refresh_all_metrics()
+            metrics_service.refresh_all_metrics()
             
             return JsonResponse({
                 'message': 'Métriques rafraîchies avec succès',

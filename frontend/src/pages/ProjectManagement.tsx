@@ -45,8 +45,10 @@ import {
   ChevronRight
 } from "lucide-react";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
-import { useProjects, useCreateProject, useUpdateProject } from "@/hooks/use-projects";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from "@/hooks/use-projects";
 import { useBackendStatus } from "@/hooks/use-backend-status";
+import { usePermissions } from "@/hooks/use-permissions";
 import type { 
   ProjectList, 
   CreateProjectForm, 
@@ -90,6 +92,13 @@ const toProjectList = (project: ExtendedProject): ProjectList => ({
 });
 
 export function ProjectManagement() {
+  const { 
+    canManageProjects, 
+    canManageDocuments, 
+    canManageCalendar, 
+    canViewProjectReports,
+    canManageProjectMembers
+  } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -98,6 +107,8 @@ export function ProjectManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10); // Default to 10 for list view
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<ProjectList | null>(null);
   const navigate = useNavigate();
 
   // Mettre à jour itemsPerPage quand viewMode change
@@ -105,7 +116,7 @@ export function ProjectManagement() {
     setItemsPerPage(viewMode === 'list' ? 9 : 10);
   }, [viewMode]);
 
-  // React Query hooks
+  // React Query hook
   const { data: backendStatus, isLoading: backendLoading } = useBackendStatus();
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
     search: searchTerm || undefined,
@@ -116,7 +127,6 @@ export function ProjectManagement() {
     page: currentPage,
     page_size: itemsPerPage
   } as ExtendedProjectFilters);
-
   const projects = (projectsData?.results || []).map(toProjectList);
   const totalPages = projectsData?.count ? Math.ceil(projectsData.count / itemsPerPage) : 0;
 
@@ -131,6 +141,7 @@ export function ProjectManagement() {
 
   const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
+  const deleteProjectMutation = useDeleteProject();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -191,6 +202,23 @@ export function ProjectManagement() {
       await updateProjectMutation.mutateAsync({ projectId, data });
     } catch (error) {
       console.error('Erreur lors de la mise à jour du projet:', error);
+    }
+  };
+
+  const handleProjectDelete = async (project: ProjectList) => {
+    setProjectToDelete(project);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!projectToDelete) return;
+    
+    try {
+      await deleteProjectMutation.mutateAsync(projectToDelete.id);
+      setShowDeleteModal(false);
+      setProjectToDelete(null);
+    } catch (error) {
+      console.error('Erreur lors de la suppression du projet:', error);
     }
   };
 
@@ -274,27 +302,48 @@ export function ProjectManagement() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          {canManageProjectMembers() && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/team`)}>
             <Users className="h-4 w-4 mr-2" />
             Équipe
           </DropdownMenuItem>
+          )}
+          {canManageProjects('view') && (
+          <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
+            <Eye className="h-4 w-4 mr-2" />
+            Détails
+          </DropdownMenuItem>
+          )}
+          {canViewProjectReports() && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/reports`)}>
             <BarChart3 className="h-4 w-4 mr-2" />
             Rapports
           </DropdownMenuItem>
+          )}
+
+          {canManageCalendar('view') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/calendar`)}>
             <Calendar className="h-4 w-4 mr-2" />
             Calendrier
           </DropdownMenuItem>
+          )}
+          {canManageDocuments('view') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/documents`)}>
             <FileText className="h-4 w-4 mr-2" />
             Documents
           </DropdownMenuItem>
+          )}
+          
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="text-red-600">
-            <Trash2 className="h-4 w-4 mr-2" />
-            Supprimer
-          </DropdownMenuItem>
+          {canManageProjects('delete') && (
+            <DropdownMenuItem 
+              className="text-red-600"
+              onClick={() => handleProjectDelete(project)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Supprimer
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -308,16 +357,50 @@ export function ProjectManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
           <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets saKom</p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nouveau Projet
-        </Button>
+        { canManageProjects('add') && (
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nouveau Projet
+          </Button>
+        )}
       </div>
 
       <CreateProjectModal 
         isOpen={showCreateModal} 
         onClose={() => setShowCreateModal(false)}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteModal} onOpenChange={setShowDeleteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer le projet "{projectToDelete?.title}" ?
+              Cette action ne peut pas être annulée et supprimera définitivement le projet et toutes ses données associées.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
+              Annuler
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDelete}
+              disabled={deleteProjectMutation.isPending}
+            >
+              {deleteProjectMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                'Supprimer définitivement'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Statistics Cards */}
       {!projectsLoading && summary && (
