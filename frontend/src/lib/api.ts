@@ -6,7 +6,8 @@ import type {
     ProjectStatus, 
     ProjectPriority,
     TeamMember,
-    ClientCategory
+    ClientCategory,
+    ProjectMember
 } from './types';
 
 export const api = axios.create({
@@ -107,15 +108,7 @@ export interface TimeSheet {
     updated_at: string;
 }
 
-export interface ProjectMember {
-    id: number;
-    project: string;
-    user: number;
-    role: string;
-    joined_at: string;
-    is_active: boolean;
-    allocation_percentage: number;
-}
+
 
 // API Client
 export const projectApi = {
@@ -475,7 +468,7 @@ export default api;
 
 export const projectTeamAPI = {
     getProjectTeam: (projectId: string) => 
-        api.get<TeamMember>(`/projects/${projectId}/team/`),
+        api.get<ProjectMember[]>(`/projects/${projectId}/team/`),
     addTeamMember: (projectId: string, data: { user: string; role: string; allocation_percentage: number }) => 
         api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
     updateTeamMember: (projectId: string, memberId: number, data: { role?: string; allocation_percentage?: number }) => 

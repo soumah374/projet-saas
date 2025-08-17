@@ -39,25 +39,12 @@ import {
   List
 } from "lucide-react";
 import { projectTeamAPI, usersAPI } from '@/lib/api';
-import type { Project, User, ProjectMemberRole, ProjectMemberUpdate } from '@/lib/types';
+import type { Project, User, ProjectMemberRole, ProjectMemberUpdate, ProjectMember } from '@/lib/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useUsers } from '@/hooks/use-users';
 
-interface ProjectMember {
-  id: number;
-  user: {
-    id: number;
-    username: string;
-    first_name: string;
-    last_name: string;
-    email: string;
-    avatar?: string;
-  };
-  role: string;
-  joined_at: string;
-  is_active: boolean;
-}
+
 
 export function ProjectTeamPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -81,7 +68,7 @@ export function ProjectTeamPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // React Query hooks
-  const { data: users, isLoading: usersLoading, error: usersError } = useUsers({
+  const { data: usersData, isLoading: usersLoading, error: usersError } = useUsers({
     is_active: true,
     ordering: 'first_name'
   });
@@ -144,7 +131,7 @@ export function ProjectTeamPage() {
     try {
       setIsLoading(true);
       const projectData = await projectTeamAPI.getProjectTeam(projectId!);
-      setTeamMembers(Array.isArray(projectData.data) ? projectData.data : []);
+      setTeamMembers(projectData.data || []);
     } catch (err) {
       setError('Erreur lors du chargement de l\'équipe du projet');
       console.error('Error loading project team:', err);
@@ -231,10 +218,10 @@ export function ProjectTeamPage() {
     }
   };
 
-  const filteredMembers = teamMembers.filter(member => {
-    const matchesSearch = member.user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         member.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  const filteredMembers = (teamMembers || []).filter(member => {
+    const matchesSearch = member.user_details.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.user_details.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         member.user_details.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          member.role.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesRole = roleFilter === 'all' || member.role === roleFilter;
@@ -243,8 +230,8 @@ export function ProjectTeamPage() {
   });
 
   // Filtrer les utilisateurs qui ne sont pas déjà dans l'équipe
-  const availableUsers = users?.data?.results?.filter(user => 
-    !teamMembers.some(member => member.user.id === user.id)
+  const availableUsers = usersData?.data?.results?.filter(user => 
+    !(teamMembers || []).some(member => member.user === user.id)
   ) || [];
 
   const roles: ProjectMemberRole[] = ['Chef de projet', 'Assistant', 'Consultant'];
@@ -289,7 +276,7 @@ export function ProjectTeamPage() {
             </h1>
             {project && (
               <p className="text-gray-600">
-                {project.title} • {teamMembers.length} membre{teamMembers.length > 1 ? 's' : ''}
+                {project.title} • {(teamMembers || []).length} membre{(teamMembers || []).length > 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -429,18 +416,17 @@ export function ProjectTeamPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={member.user.avatar} />
-                      <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                        {member.user.first_name[0]}{member.user.last_name[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {member.user.first_name} {member.user.last_name}
-                      </h3>
-                      <p className="text-sm text-gray-500">{member.user.email}</p>
-                    </div>
+                                          <Avatar className="w-12 h-12">
+                        <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
+                          {member.user_details.first_name[0]}{member.user_details.last_name[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">
+                          {member.user_details.first_name} {member.user_details.last_name}
+                        </h3>
+                        <p className="text-sm text-gray-500">{member.user_details.email}</p>
+                      </div>
                   </div>
                   <Button variant="ghost" size="sm">
                     <MoreHorizontal className="w-4 h-4" />
@@ -451,7 +437,7 @@ export function ProjectTeamPage() {
                   <div className="flex items-center gap-2">
                     {getRoleIcon(member.role)}
                     <Badge className={getRoleColor(member.role)}>
-                      {member.role}
+                      {member.role || 'Rôle non défini'}
                     </Badge>
                   </div>
 
@@ -462,7 +448,7 @@ export function ProjectTeamPage() {
 
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <Mail className="w-4 h-4" />
-                    <span>{member.user.email}</span>
+                    <span>{member.user_details.email}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -532,14 +518,13 @@ export function ProjectTeamPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar className="w-8 h-8">
-                        <AvatarImage src={member.user.avatar} />
                         <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold text-xs">
-                          {member.user.first_name[0]}{member.user.last_name[0]}
+                          {member.user_details.first_name[0]}{member.user_details.last_name[0]}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{member.user.first_name} {member.user.last_name}</div>
-                        <div className="text-sm text-gray-500">{member.user.email}</div>
+                        <div className="font-medium">{member.user_details.first_name} {member.user_details.last_name}</div>
+                        <div className="text-sm text-gray-500">{member.user_details.email}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -547,7 +532,7 @@ export function ProjectTeamPage() {
                     <div className="flex items-center gap-2">
                       {getRoleIcon(member.role)}
                       <Badge className={getRoleColor(member.role)}>
-                        {member.role}
+                        {member.role || 'Rôle non défini'}
                       </Badge>
                     </div>
                   </TableCell>
@@ -628,7 +613,7 @@ export function ProjectTeamPage() {
           <DialogHeader>
             <DialogTitle>Modifier le membre de l'équipe</DialogTitle>
             <DialogDescription>
-              Modifiez le rôle et le statut de {memberToEdit?.user.first_name} {memberToEdit?.user.last_name}.
+              Modifiez le rôle et le statut de {memberToEdit?.user_details.first_name} {memberToEdit?.user_details.last_name}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -689,7 +674,7 @@ export function ProjectTeamPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
             <AlertDialogDescription>
-              Êtes-vous sûr de vouloir retirer {memberToDelete?.user.first_name} {memberToDelete?.user.last_name} de l'équipe ?
+              Êtes-vous sûr de vouloir retirer {memberToDelete?.user_details.first_name} {memberToDelete?.user_details.last_name} de l'équipe ?
               Cette action ne peut pas être annulée.
             </AlertDialogDescription>
           </AlertDialogHeader>
