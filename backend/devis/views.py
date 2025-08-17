@@ -30,7 +30,7 @@ class DevisViewSet(viewsets.ModelViewSet):
     
     queryset = Devis.objects.select_related('client').prefetch_related('lignes').all()
     serializer_class = DevisSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['statut', 'client', 'date_creation', 'date_validite']
     search_fields = ['numero', 'client__nom', 'client__prenom', 'client__raison_sociale']
@@ -452,7 +452,7 @@ class LigneDevisViewSet(viewsets.ModelViewSet):
     
     queryset = LigneDevis.objects.select_related('service', 'activity', 'frais_category', 'ligne_frais', 'unite').all()
     serializer_class = LigneDevisSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['devis', 'type_ligne', 'service', 'activity', 'frais_category', 'ligne_frais', 'unite']
     ordering_fields = ['created_at']
@@ -531,7 +531,7 @@ class LigneDevisIntervenantViewSet(viewsets.ModelViewSet):
     
     queryset = LigneDevisIntervenant.objects.select_related('ligne_devis', 'profile_intervenant').all()
     serializer_class = LigneDevisIntervenantSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ['ligne_devis', 'profile_intervenant']
     
