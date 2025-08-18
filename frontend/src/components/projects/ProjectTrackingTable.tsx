@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+// import { Progress } from '@/components/ui/progress';
 import { 
   Calendar, 
   CheckCircle, 
@@ -125,7 +125,7 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
             <TableRow>
               <TableHead>Métrique</TableHead>
               <TableHead>Valeur</TableHead>
-              <TableHead>Pourcentage</TableHead>
+              {/* <TableHead>Pourcentage</TableHead> */}
               <TableHead>Statut</TableHead>
             </TableRow>
           </TableHeader>
@@ -137,9 +137,9 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
                 Progression globale
               </TableCell>
               <TableCell>{metrics.executionPercentage}%</TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <Progress value={metrics.executionPercentage} className="w-24" />
-              </TableCell>
+              </TableCell> */}
               <TableCell>{getStatusBadge(metrics.executionPercentage)}</TableCell>
             </TableRow>
 
@@ -173,12 +173,12 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
                   </div>
                 )}
               </TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <Progress 
                   value={metrics.temporalProgress} 
                   className={`w-24 ${metrics.temporalProgress > 100 ? 'bg-red-200' : ''}`} 
                 />
-              </TableCell>
+              </TableCell> */}
               <TableCell>
                 {metrics.daysRemaining > 0 ? 
                   <Badge className="bg-blue-100 text-blue-800">En cours</Badge> :
@@ -196,9 +196,9 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
               <TableCell>
                 {metrics.completedTasks} / {metrics.totalTasks} tâches
               </TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <Progress value={metrics.tasksExecutionPercentage} className="w-24" />
-              </TableCell>
+              </TableCell> */}
               <TableCell>{getStatusBadge(metrics.tasksExecutionPercentage)}</TableCell>
             </TableRow>
 
@@ -211,12 +211,12 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
               <TableCell>
                 {formatMontant(metrics.budgetUsed)} / {formatMontant(metrics.budgetTotal)}
               </TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <Progress 
                   value={Math.min(metrics.budgetPercentage, 100)} 
                   className={`w-24 ${metrics.budgetPercentage > 100 ? 'bg-red-200' : ''}`} 
                 />
-              </TableCell>
+              </TableCell> */}
               <TableCell>
                 {metrics.budgetPercentage > 100 ? 
                   <Badge className="bg-red-100 text-red-800">Dépassé</Badge> :
@@ -234,12 +234,12 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
               <TableCell className={getStatusColor(metrics.marginPercentage)}>
                 {formatMontant(metrics.margin)}
               </TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <Progress 
                   value={Math.max(metrics.marginPercentage, 0)} 
                   className="w-24" 
                 />
-              </TableCell>
+              </TableCell> */}
               <TableCell>
                 {metrics.margin > 0 ? 
                   <Badge className="bg-green-100 text-green-800">Positive</Badge> :
@@ -260,12 +260,12 @@ export function ProjectTrackingTable({ project }: ProjectTrackingTableProps) {
                   'Projet terminé'
                 }
               </TableCell>
-              <TableCell>
+              {/* <TableCell>
                 <Progress 
                   value={metrics.temporalProgress} 
                   className={`w-24 ${metrics.temporalProgress > 100 ? 'bg-red-200' : ''}`} 
                 />
-              </TableCell>
+              </TableCell> */}
               <TableCell>
                 {metrics.daysRemaining > 0 ? 
                   <Badge className="bg-blue-100 text-blue-800">En cours</Badge> :

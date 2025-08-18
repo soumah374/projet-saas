@@ -57,6 +57,22 @@ export const QuickSummary: React.FC<QuickSummaryProps> = ({ data, period }) => {
 
   const summaryItems = [
     {
+      title: 'Échéances Urgentes',
+      value: data.urgent_deadlines || 0,
+      icon: Calendar,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      description: '≤ 3 jours'
+    },
+    {
+      title: 'Projets en Retard',
+      value: data.overdue_projects || 0,
+      icon: AlertTriangle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      description: 'À traiter'
+    },
+    {
       title: 'Projets Actifs',
       value: data.active_projects || 0,
       icon: Target,
@@ -73,22 +89,6 @@ export const QuickSummary: React.FC<QuickSummaryProps> = ({ data, period }) => {
       bgColor: 'bg-green-50',
       change: data.revenue_change,
       description: `Sur ${period}`
-    },
-    {
-      title: 'Échéances Urgentes',
-      value: data.urgent_deadlines || 0,
-      icon: Calendar,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      description: '≤ 3 jours'
-    },
-    {
-      title: 'Projets en Retard',
-      value: data.overdue_projects || 0,
-      icon: AlertTriangle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      description: 'À traiter'
     }
   ];
 

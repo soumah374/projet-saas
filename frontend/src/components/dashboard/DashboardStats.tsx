@@ -62,16 +62,16 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
   };
 
   const stats = [
-    {
-      title: 'Projets Actifs',
-      value: data.active_projects || 0,
-      icon: Target,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      change: data.projects_change,
-      description: 'Projets en cours',
-      trend: 'vs période précédente'
-    },
+    // {
+    //   title: 'Projets Actifs',
+    //   value: data.active_projects || 0,
+    //   icon: Target,
+    //   color: 'text-blue-600',
+    //   bgColor: 'bg-blue-50',
+    //   change: data.projects_change,
+    //   description: 'Projets en cours',
+    //   trend: 'vs période précédente'
+    // },
     {
       title: 'Total Projets',
       value: data.total_projects || 0,
@@ -110,18 +110,18 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
       description: 'Contrats actifs',
       trend: 'vs période précédente'
     },
+    // {
+    //   title: 'Revenus',
+    //   value: formatCurrency(data.total_revenue || 0),
+    //   icon: DollarSign,
+    //   color: 'text-green-600',
+    //   bgColor: 'bg-green-50',
+    //   change: data.revenue_change,
+    //   description: `Sur ${period}`,
+    //   trend: 'vs période précédente'
+    // },
     {
-      title: 'Revenus',
-      value: formatCurrency(data.total_revenue || 0),
-      icon: DollarSign,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      change: data.revenue_change,
-      description: `Sur ${period}`,
-      trend: 'vs période précédente'
-    },
-    {
-      title: 'Tâches en Attente',
+      title: 'Activités en Attente',
       value: data.pending_tasks || 0,
       icon: Clock,
       color: 'text-yellow-600',
@@ -130,7 +130,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
       trend: 'vs période précédente'
     },
     {
-      title: 'Tâches en Retard',
+      title: 'Activités en Retard',
       value: data.overdue_tasks || 0,
       icon: AlertTriangle,
       color: 'text-red-600',
