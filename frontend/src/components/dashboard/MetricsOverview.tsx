@@ -20,14 +20,14 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({ data, period }
   if (!data) return null;
 
   const metrics = [
-    {
-      title: 'Projets Actifs',
-      value: data.active_projects || 0,
-      icon: Target,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      description: 'Projets en cours'
-    },
+    // {
+    //   title: 'Projets Actifs',
+    //   value: data.active_projects || 0,
+    //   icon: Target,
+    //   color: 'text-blue-600',
+    //   bgColor: 'bg-blue-50',
+    //   description: 'Projets en cours'
+    // },
     {
       title: 'Total Projets',
       value: data.total_projects || 0,
@@ -69,7 +69,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({ data, period }
       description: `Sur ${period}`
     },
     {
-      title: 'Tâches en Attente',
+      title: 'Activités en Attente',
       value: data.pending_tasks || 0,
       icon: Clock,
       color: 'text-yellow-600',
@@ -77,7 +77,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({ data, period }
       description: 'À traiter'
     },
     {
-      title: 'Tâches en Retard',
+      title: 'Activités en Retard',
       value: data.overdue_tasks || 0,
       icon: AlertTriangle,
       color: 'text-red-600',

@@ -263,6 +263,23 @@ export const FacturesPage: React.FC = () => {
         </div>
       )}
 
+      {/* Liste des factures */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">
+            Factures ({pagination.count})
+          </h1>
+          <div className="flex items-center space-x-2">
+             <Badge variant="outline">
+               {(factures || []).filter(f => f.statut === 'payee').length} payées
+             </Badge>
+             <Badge variant="outline">
+               {(factures || []).filter(f => f.statut === 'en_retard').length} en retard
+             </Badge>
+           </div>
+        </div>
+
+      </div>
       {/* Filtres */}
       <Card>
         <CardHeader>
@@ -351,31 +368,19 @@ export const FacturesPage: React.FC = () => {
 
       {/* Liste des factures */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-semibold">
-            Factures ({pagination.count})
-          </h2>
-          <div className="flex items-center space-x-2">
-             <Badge variant="outline">
-               {(factures || []).filter(f => f.statut === 'payee').length} payées
-             </Badge>
-             <Badge variant="outline">
-               {(factures || []).filter(f => f.statut === 'en_retard').length} en retard
-             </Badge>
-           </div>
-        </div>
-
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
               <Card key={i} className="animate-pulse">
-                <CardHeader className="pb-2">
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-32"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <div className="h-8 bg-gray-200 rounded w-24"></div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -389,27 +394,130 @@ export const FacturesPage: React.FC = () => {
         ) : factures.length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">Aucune facture trouvée</p>
+              <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <p className="text-lg text-muted-foreground mb-2">Aucune facture trouvée</p>
+              <p className="text-sm text-muted-foreground">
+                Essayez de modifier vos filtres ou créez une nouvelle facture
+              </p>
             </CardContent>
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {factures.map((facture) => (
-                 <FactureCard
-                   key={facture.id}
-                   facture={facture}
-                   onView={handleViewDetails}
-                   onPaiement={handlePaiement}
-                   onPDF={handleGenererPDF}
-                 />
-               ))}
-            </div>
+            {/* Tableau des factures */}
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-gray-50">
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          N° Facture
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Client
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Montant
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Statut
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date émission
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Échéance
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {factures.map((facture) => (
+                        <tr key={facture.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {facture.numero || `FAC-${facture.id}`}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {facture.client_nom || 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                            {formatMontant(facture.montant_ttc || 0)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Badge 
+                              variant={
+                                facture.statut === 'payee' ? 'default' :
+                                facture.statut === 'en_retard' ? 'destructive' :
+                                facture.statut === 'partiellement_payee' ? 'secondary' :
+                                facture.statut === 'annulee' ? 'outline' :
+                                'outline'
+                              }
+                              className={
+                                facture.statut === 'payee' ? 'bg-green-100 text-green-800' :
+                                facture.statut === 'en_retard' ? 'bg-red-100 text-red-800' :
+                                facture.statut === 'partiellement_payee' ? 'bg-yellow-100 text-yellow-800' :
+                                facture.statut === 'annulee' ? 'bg-gray-100 text-gray-800' :
+                                'bg-blue-100 text-blue-800'
+                              }
+                            >
+                              {facture.statut === 'payee' ? 'Payée' :
+                               facture.statut === 'en_retard' ? 'En retard' :
+                               facture.statut === 'partiellement_payee' ? 'Partiellement payée' :
+                               facture.statut === 'annulee' ? 'Annulée' :
+                               facture.statut === 'emise' ? 'Émise' :
+                               facture.statut === 'envoyee' ? 'Envoyée' :
+                               facture.statut}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {facture.date_emission ? format(new Date(facture.date_emission), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {facture.date_echeance ? format(new Date(facture.date_echeance), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewDetails(facture)}
+                                className="h-8 px-3"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              {facture.statut !== 'payee' && facture.statut !== 'annulee' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handlePaiement(facture)}
+                                  className="h-8 px-3"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleGenererPDF(facture)}
+                                className="h-8 px-3"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Informations de pagination */}
             {pagination.count > 0 && (
-              <div className="flex items-center justify-between mt-6">
+              <div className="flex items-center justify-between mt-8 p-4 bg-gray-50 rounded-lg">
                 <div className="text-sm text-gray-600">
                   Affichage de {((currentPage - 1) * pageSize) + 1} à {Math.min(currentPage * pageSize, pagination.count)} sur {pagination.count} factures
                 </div>
