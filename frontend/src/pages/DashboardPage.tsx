@@ -36,6 +36,7 @@ const DashboardPage: React.FC = () => {
       case '30': return '30 jours';
       case '90': return '3 mois';
       case '365': return '1 an';
+      case 'autre': return 'Autre';
       default: return `${days} jours`;
     }
   };
@@ -102,6 +103,7 @@ const DashboardPage: React.FC = () => {
               <SelectItem value="30">30 jours</SelectItem>
               <SelectItem value="90">3 mois</SelectItem>
               <SelectItem value="365">1 an</SelectItem>
+              <SelectItem value="autre">Autre</SelectItem>
             </SelectContent>
           </Select>
           

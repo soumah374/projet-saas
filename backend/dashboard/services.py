@@ -23,6 +23,23 @@ class DashboardMetricsService:
         self.user = user
         self.user_role = self._get_user_role()
     
+    def _validate_date_range(self, start_date, end_date, max_days=365*2):
+        """Valide et normalise un intervalle de dates"""
+        if not start_date or not end_date:
+            return None, None
+        
+        # S'assurer que start_date <= end_date
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+        
+        # Limiter la période maximale
+        period_days = (end_date - start_date).days
+        if period_days > max_days:
+            end_date = start_date + timedelta(days=max_days)
+            logger.warning(f"Période limitée à {max_days} jours pour éviter les calculs trop lourds")
+        
+        return start_date, end_date
+    
     def _get_user_role(self):
         """Récupère le rôle de l'utilisateur"""
         if not self.user or not self.user.is_authenticated:
@@ -172,6 +189,24 @@ class DashboardMetricsService:
                 for mp in monthly_projects_qs
             ]
             
+            # Performance projet: TOP/FLOP basés sur la progression
+            top_project_vals = projects_in_period.order_by('-progress').values('id', 'title', 'progress', 'status').first()
+            flop_project_vals = projects_in_period.order_by('progress').values('id', 'title', 'progress', 'status').first()
+            project_performance = {
+                'top': {
+                    'id': top_project_vals['id'],
+                    'name': top_project_vals['title'],
+                    'progress': top_project_vals['progress'],
+                    'status': top_project_vals['status'],
+                } if top_project_vals else None,
+                'flop': {
+                    'id': flop_project_vals['id'],
+                    'name': flop_project_vals['title'],
+                    'progress': flop_project_vals['progress'],
+                    'status': flop_project_vals['status'],
+                } if flop_project_vals else None,
+            }
+            
             return {
                 'total_projects': projects_in_period.count(),
                 'active_projects': projects_in_period.filter(status__in=['Production', 'Livraison']).count(),
@@ -180,6 +215,7 @@ class DashboardMetricsService:
                 'overdue_projects': list(overdue_projects),
                 'team_performance': list(team_performance),
                 'monthly_projects': monthly_projects,
+                'project_performance': project_performance,
                 'user_role': self.user_role,
             }
             
@@ -190,36 +226,94 @@ class DashboardMetricsService:
     def get_financial_metrics(self, start_date, end_date):
         """Calcule les métriques financières"""
         try:
-            # Tendance des revenus (6 derniers mois)
+            # Tendance des recettes basée sur l'intervalle choisi par l'utilisateur
             revenue_trend = []
-            for i in range(6):
-                month_start = self.now.replace(day=1) - timedelta(days=30*i)
-                month_end = month_start.replace(day=28) + timedelta(days=4)
-                month_end = month_end.replace(day=1) - timedelta(days=1)
-                
-                factures_base = Facture.objects.filter(
-                    date_emission__gte=month_start,
-                    date_emission__lte=month_end,
-                    statut='payee'
-                )
-                factures_base = self._filter_by_role(factures_base, 'billings')
-                
-                monthly_revenue = factures_base.aggregate(
-                    total=Coalesce(
-                        Sum('montant_ht'),
-                        Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
-                    )
-                )['total'] or 0
-                
-                revenue_trend.append({
-                    'month': month_start.strftime('%Y-%m'),
-                    'revenue': float(monthly_revenue)
-                })
             
-            revenue_trend.reverse()
+            # Validation et normalisation des dates
+            start_date, end_date = self._validate_date_range(start_date, end_date, max_days=365*2)
+            if not start_date or not end_date:
+                logger.warning("Dates de début ou de fin manquantes pour les métriques financières")
+                return {}
+            
+            # Calculer le nombre de mois entre start_date et end_date
+            from dateutil.relativedelta import relativedelta
+            months_diff = (end_date.year - start_date.year) * 12 + end_date.month - start_date.month
+            
+            # Si l'intervalle est inférieur à 1 mois, utiliser des périodes journalières
+            if months_diff < 1:
+                period_days = (end_date - start_date).days
+                if period_days <= 0:
+                    period_days = 1
+                
+                # Limiter à 30 jours maximum pour éviter les calculs trop lourds
+                if period_days > 30:
+                    period_days = 30
+                    end_date = start_date + timedelta(days=30)
+                
+                # Tendance journalière
+                for i in range(period_days):
+                    day_date = start_date + timedelta(days=i)
+                    day_end = day_date + timedelta(days=1)
+                    
+                    factures_base = Facture.objects.filter(
+                        date_emission__gte=day_date,
+                        date_emission__lt=day_end,
+                        statut='payee'
+                    )
+                    factures_base = self._filter_by_role(factures_base, 'billings')
+                    
+                    daily_revenue = factures_base.aggregate(
+                        total=Coalesce(
+                            Sum('montant_ht'),
+                            Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                        )
+                    )['total'] or 0
+                    
+                    revenue_trend.append({
+                        'period': day_date.strftime('%Y-%m-%d'),
+                        'recettes': float(daily_revenue),
+                        'type': 'daily'
+                    })
+            else:
+                # Tendance mensuelle
+                current_date = start_date.replace(day=1)
+                end_month = end_date.replace(day=1)
+                
+                # Limiter à 24 mois maximum pour éviter les calculs trop lourds
+                if months_diff > 24:
+                    logger.warning(f"Intervalle trop large ({months_diff} mois), limité à 24 mois")
+                    end_month = start_date + relativedelta(months=24)
+                
+                while current_date <= end_month:
+                    month_end = current_date + relativedelta(months=1) - timedelta(days=1)
+                    
+                    factures_base = Facture.objects.filter(
+                        date_emission__gte=current_date,
+                        date_emission__lte=month_end,
+                        statut='payee'
+                    )
+                    factures_base = self._filter_by_role(factures_base, 'billings')
+                    
+                    monthly_revenue = factures_base.aggregate(
+                        total=Coalesce(
+                            Sum('montant_ht'),
+                            Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                        )
+                    )['total'] or 0
+                    
+                    revenue_trend.append({
+                        'period': current_date.strftime('%Y-%m'),
+                        'recettes': float(monthly_revenue),
+                        'type': 'monthly'
+                    })
+                    
+                    current_date += relativedelta(months=1)
             
             # Statut de facturation
-            factures_status = Facture.objects.all()
+            factures_status = Facture.objects.filter(
+                date_emission__gte=start_date,
+                date_emission__lte=end_date
+            )
             factures_status = self._filter_by_role(factures_status, 'billings')
             billing_status = dict(
                 factures_status.values('statut').annotate(
@@ -258,20 +352,109 @@ class DashboardMetricsService:
             expenses = 0  # À implémenter selon votre modèle de dépenses
             net = income - expenses
             
+            # Montant des factures impayées
+            factures_impayees = Facture.objects.filter(
+                statut__in=['emise', 'envoyee', 'en_retard'],
+                date_echeance__lt=self.now
+            )
+            factures_impayees = self._filter_by_role(factures_impayees, 'billings')
+            
+            montant_impaye = factures_impayees.aggregate(
+                total=Coalesce(
+                    Sum('montant_restant'),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                )
+            )['total'] or 0
+            
+            # Taux de recouvrement (période et cumulé)
+            factures_periode = Facture.objects.filter(
+                date_emission__gte=start_date,
+                date_emission__lte=end_date
+            )
+            factures_periode = self._filter_by_role(factures_periode, 'billings')
+            
+            total_factures_periode = factures_periode.aggregate(
+                total=Coalesce(
+                    Sum('montant_ttc'),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                )
+            )['total'] or 0
+            
+            recettes_periode = factures_periode.filter(statut='payee').aggregate(
+                total=Coalesce(
+                    Sum('montant_ttc'),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                )
+            )['total'] or 0
+            
+            taux_recouvrement_periode = (recettes_periode / total_factures_periode * 100) if total_factures_periode > 0 else 0
+            
+            factures_cumulees = Facture.objects.filter(
+                date_emission__lte=end_date
+            )
+            factures_cumulees = self._filter_by_role(factures_cumulees, 'billings')
+            
+            total_factures_cumule = factures_cumulees.aggregate(
+                total=Coalesce(
+                    Sum('montant_ttc'),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                )
+            )['total'] or 0
+            
+            recettes_cumulees = factures_cumulees.filter(statut='payee').aggregate(
+                total=Coalesce(
+                    Sum('montant_ttc'),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                )
+            )['total'] or 0
+            
+            taux_recouvrement_cumule = (recettes_cumulees / total_factures_cumule * 100) if total_factures_cumule > 0 else 0
+            
             # Top clients
             raw_top_clients = Contrat.objects.filter(
                 date_creation__gte=start_date,
                 date_creation__lte=end_date
             ).values('client__nom').annotate(
-                revenue=Sum('montant_ttc')
-            ).order_by('-revenue')[:5]
+                recettes=Sum('montant_ttc')
+            ).order_by('-recettes')[:5]
             top_clients = [
                 {
                     'name': c['client__nom'],
-                    'revenue': float(c['revenue'] or 0),
+                    'recettes': float(c['recettes'] or 0),
                 }
                 for c in raw_top_clients
             ]
+            
+            # Calculer des métriques supplémentaires basées sur l'intervalle
+            period_days = (end_date - start_date).days
+            
+            # Recettes moyennes par jour
+            avg_daily_revenue = float(income) / period_days if period_days > 0 else 0
+            
+            # Projection des recettes (basée sur la moyenne quotidienne)
+            projected_monthly_revenue = avg_daily_revenue * 30
+            
+            # Croissance des recettes (comparaison avec la période précédente)
+            previous_start = start_date - timedelta(days=period_days)
+            previous_end = start_date - timedelta(days=1)
+            
+            previous_factures = Facture.objects.filter(
+                date_emission__gte=previous_start,
+                date_emission__lte=previous_end,
+                statut='payee'
+            )
+            previous_factures = self._filter_by_role(previous_factures, 'billings')
+            
+            previous_income = previous_factures.aggregate(
+                total=Coalesce(
+                    Sum('montant_ht'),
+                    Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+                )
+            )['total'] or 0
+            
+            revenue_growth = 0
+            if previous_income > 0:
+                revenue_growth = ((income - previous_income) / previous_income) * 100
             
             return {
                 'revenue_trend': revenue_trend,
@@ -282,11 +465,23 @@ class DashboardMetricsService:
                     'rate': round(conversion_rate, 1)
                 },
                 'cash_flow': {
-                    'income': float(income),
+                    'recettes': float(income),
                     'expenses': float(expenses),
                     'net': float(net)
                 },
-                'top_clients': list(top_clients)
+                'top_clients': list(top_clients),
+                'montant_impaye': float(montant_impaye),
+                'taux_recouvrement': {
+                    'periode': round(taux_recouvrement_periode, 2),
+                    'cumule': round(taux_recouvrement_cumule, 2)
+                },
+                'period_metrics': {
+                    'period_days': period_days,
+                    'avg_daily_recettes': round(avg_daily_revenue, 2),
+                    'projected_monthly_recettes': round(projected_monthly_revenue, 2),
+                    'recettes_growth_percent': round(revenue_growth, 1),
+                    'previous_period_income': float(previous_income)
+                }
             }
             
         except Exception as e:
