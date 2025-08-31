@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { Users, Target, TrendingUp, Clock, Award } from 'lucide-react';
+import { Users, Target, TrendingUp, Clock, Award, AlertTriangle } from 'lucide-react';
 
 interface PerformanceMetricsProps {
   data?: {
@@ -28,10 +28,14 @@ interface PerformanceMetricsProps {
       total_completed_tasks: number;
     };
   };
+  project_performance?: {
+    top?: { id: string | number; name: string; progress: number; status: string } | null;
+    flop?: { id: string | number; name: string; progress: number; status: string } | null;
+  };
   period: string;
 }
 
-export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, period }) => {
+export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, project_performance, period }) => {
   if (!data) return null;
 
   const getCompletionRateColor = (rate: number) => {
@@ -48,6 +52,52 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pe
 
   return (
     <div className="space-y-6">
+      {/* Performance projet TOP/FLOP */}
+      {(project_performance?.top || project_performance?.flop) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              Performance Projet
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {project_performance?.top && (
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Award className="h-5 w-5 text-green-600" />
+                      <span className="font-medium text-gray-900">TOP</span>
+                    </div>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {project_performance.top.progress}%
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-gray-700">{project_performance.top.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">Statut: {project_performance.top.status}</div>
+                </div>
+              )}
+              {project_performance?.flop && (
+                <div className="p-4 border rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                      <span className="font-medium text-gray-900">FLOP</span>
+                    </div>
+                    <Badge variant="secondary" className="bg-red-100 text-red-800">
+                      {project_performance.flop.progress}%
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-gray-700">{project_performance.flop.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">Statut: {project_performance.flop.status}</div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Taux de completion global */}
       <Card>
         <CardHeader>
@@ -118,41 +168,6 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pe
                   value={team.completion_rate} 
                   className="h-2"
                 />
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Performance des utilisateurs */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Award className="h-5 w-5" />
-            Performance des Utilisateurs
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {data.user_performance?.slice(0, 10).map((user) => (
-              <div key={user.username} className="flex items-center justify-between p-3 border rounded-lg">
-                <div className="flex-1">
-                  <h4 className="font-medium text-gray-900">{user.username}</h4>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-gray-500">
-                      {user.completed_tasks}/{user.total_tasks} tâches
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className={`text-lg font-bold ${getCompletionRateColor(user.completion_rate)}`}>
-                    {user.completion_rate.toFixed(1)}%
-                  </div>
-                  <Progress 
-                    value={user.completion_rate} 
-                    className="w-20 mt-1 h-2"
-                  />
-                </div>
               </div>
             ))}
           </div>

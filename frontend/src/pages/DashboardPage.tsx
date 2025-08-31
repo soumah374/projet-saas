@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
-import { MetricsOverview } from '@/components/dashboard/MetricsOverview';
 import { ProjectMetrics } from '@/components/dashboard/ProjectMetrics';
 import { FinancialOverview } from '@/components/dashboard/FinancialOverview';
 import { PerformanceMetrics } from '@/components/dashboard/PerformanceMetrics';
@@ -8,22 +7,52 @@ import { CalendarOverview } from '@/components/dashboard/CalendarOverview';
 import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { DashboardAlerts } from '@/components/dashboard/DashboardAlerts';
-import { QuickSummary } from '@/components/dashboard/QuickSummary';
+import { QuickSummaryProjects } from '@/components/dashboard/QuickSummaryProjects';
+import { QuickSummaryFinances } from '@/components/dashboard/QuickSummaryFinances';
 import { useDashboardMetrics } from '@/hooks/use-dashboard-metrics';
+import { useDashboardConfig } from '@/hooks/use-dashboard-config';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RefreshCw, Calendar, TrendingUp, BarChart3, Users, DollarSign, AlertTriangle, Target } from 'lucide-react';
+import { RefreshCw, Calendar as CalendarIcon, BarChart3, Users, DollarSign, AlertTriangle, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 
 const DashboardPage: React.FC = () => {
   const [period, setPeriod] = useState('30');
-  const { data, loading, error, refetch } = useDashboardMetrics(parseInt(period));
+  const [customStart, setCustomStart] = useState<string>('');
+  const [customEnd, setCustomEnd] = useState<string>('');
+  const { user } = useAuth();
+
+  const customDays = useMemo(() => {
+    if (!customStart || !customEnd) return 30;
+    const start = new Date(customStart);
+    const end = new Date(customEnd);
+    const diffMs = end.getTime() - start.getTime();
+    const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    return isFinite(days) ? days : 30;
+  }, [customStart, customEnd]);
+
+  // Charger la configuration widgets (par utilisateur connecté)
+  const { selected } = useDashboardConfig({ user_id: user?.id });
+
+  const { data, loading, error, refetch } = useDashboardMetrics(
+    period === 'autre' ? customDays : parseInt(period),
+    selected && selected.length > 0 ? selected : undefined
+  );
   
   const [activeTab, setActiveTab] = useState('overview');
 
   const handlePeriodChange = (newPeriod: string) => {
     setPeriod(newPeriod);
+    if (newPeriod !== 'autre') {
+      // reset custom dates when leaving custom mode
+      setCustomStart('');
+      setCustomEnd('');
+    }
   };
 
   const handleRefresh = () => {
@@ -42,12 +71,42 @@ const DashboardPage: React.FC = () => {
   };
 
   const revenueChange = useMemo(() => {
-    const trend = data?.financial?.revenue_trend || [];
-    if (trend.length < 2) return 0;
-    const last = trend[trend.length - 1]?.revenue || 0;
-    const prev = trend[trend.length - 2]?.revenue || 0;
+    const trendAny = (data?.financial?.revenue_trend as any[]) || [];
+    if (trendAny.length < 2) return 0;
+    const lastItem = trendAny[trendAny.length - 1] || {};
+    const prevItem = trendAny[trendAny.length - 2] || {};
+    const last = lastItem.recettes ?? lastItem.revenue ?? 0;
+    const prev = prevItem.recettes ?? prevItem.revenue ?? 0;
     return prev > 0 ? ((last - prev) / prev) * 100 : 0;
   }, [data?.financial?.revenue_trend]);
+
+  // Dérivés pour compatibilités backend (si certains champs ne sont pas renvoyés)
+  const totalProjectsDerived = useMemo(() => {
+    const dist = data?.projects?.status_distribution || {};
+    return Object.values(dist).reduce((acc: any, v: any) => acc + (typeof v === 'number' ? v : 0), 0);
+  }, [data?.projects?.status_distribution]);
+
+  const activeProjectsDerived = useMemo(() => {
+    const dist = data?.projects?.status_distribution || {} as Record<string, number>;
+    const keys = Object.keys(dist);
+    const candidates = ['Production', 'Livraison', 'En cours'];
+    return keys.filter(k => candidates.includes(k)).reduce((acc, k) => acc + (dist[k] || 0), 0);
+  }, [data?.projects?.status_distribution]);
+
+  // Helpers de sélection
+  const isSelected = (key: string) => !selected || selected.length === 0 || selected.includes(key);
+  const anySelected = (prefix: string, keys?: string[]) => {
+    if (!selected || selected.length === 0) return true;
+    if (keys && keys.length > 0) return keys.some(k => selected.includes(k));
+    return selected.some(k => k.startsWith(prefix + '.'));
+  };
+
+  // Gating des onglets
+  const showProjectsTab = anySelected('projects');
+  const showFinancialTab = anySelected('financial');
+  const showPerformanceTab = anySelected('performance');
+  const showCalendarTab = anySelected('calendar');
+  const showAlertsTab = isSelected('calendar.upcoming_deadlines') || isSelected('projects.overdue_projects');
 
   if (loading) {
     return (
@@ -106,6 +165,44 @@ const DashboardPage: React.FC = () => {
               <SelectItem value="autre">Autre</SelectItem>
             </SelectContent>
           </Select>
+          {period === 'autre' && (
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn('w-[160px] justify-start', !customStart && 'text-muted-foreground')}>
+                    {customStart ? new Date(customStart).toLocaleDateString('fr-FR') : 'Début'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customStart ? new Date(customStart) : undefined}
+                    onSelect={(d: Date | undefined) => setCustomStart(d ? d.toISOString().slice(0,10) : '')}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-sm text-gray-500">à</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn('w-[160px] justify-start', !customEnd && 'text-muted-foreground')}>
+                    {customEnd ? new Date(customEnd).toLocaleDateString('fr-FR') : 'Fin'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customEnd ? new Date(customEnd) : undefined}
+                    onSelect={(d: Date | undefined) => setCustomEnd(d ? d.toISOString().slice(0,10) : '')}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button onClick={handleRefresh} variant="outline" size="sm" disabled={!customStart || !customEnd}>
+                Appliquer
+              </Button>
+            </div>
+          )}
           
           <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -144,66 +241,76 @@ const DashboardPage: React.FC = () => {
           <BarChart3 className="h-4 w-4 inline mr-2" />
           Vue d'ensemble
         </button>
-        <button
-          onClick={() => setActiveTab('projects')}
-          className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-            activeTab === 'projects'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <Target className="h-4 w-4 inline mr-2" />
-          Projets
-        </button>
-        <button
-          onClick={() => setActiveTab('financial')}
-          className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-            activeTab === 'financial'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <DollarSign className="h-4 w-4 inline mr-2" />
-          Financier
-        </button>
-        <button
-          onClick={() => setActiveTab('performance')}
-          className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-            activeTab === 'performance'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <Users className="h-4 w-4 inline mr-2" />
-          Performance
-        </button>
-        <button
-          onClick={() => setActiveTab('calendar')}
-          className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-            activeTab === 'calendar'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <Calendar className="h-4 w-4 inline mr-2" />
-          Calendrier
-        </button>
-        <button
-          onClick={() => setActiveTab('alerts')}
-          className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
-            activeTab === 'alerts'
-              ? 'bg-primary text-primary-foreground'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <AlertTriangle className="h-4 w-4 inline mr-2" />
-          Alertes
-          {totalAlerts > 0 && (
-            <Badge variant="destructive" className="ml-2 text-xs">
-              {totalAlerts}
-            </Badge>
-          )}
-        </button>
+        {showProjectsTab && (
+          <button
+            onClick={() => setActiveTab('projects')}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === 'projects'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Target className="h-4 w-4 inline mr-2" />
+            Projets
+          </button>
+        )}
+        {showFinancialTab && (
+          <button
+            onClick={() => setActiveTab('financial')}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === 'financial'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <DollarSign className="h-4 w-4 inline mr-2" />
+            Financier
+          </button>
+        )}
+        {showPerformanceTab && (
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === 'performance'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <Users className="h-4 w-4 inline mr-2" />
+            Performance
+          </button>
+        )}
+        {showCalendarTab && (
+          <button
+            onClick={() => setActiveTab('calendar')}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === 'calendar'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <CalendarIcon className="h-4 w-4 inline mr-2" />
+            Calendrier
+          </button>
+        )}
+        {showAlertsTab && (
+          <button
+            onClick={() => setActiveTab('alerts')}
+            className={`px-4 py-2 rounded-t-lg font-medium transition-colors ${
+              activeTab === 'alerts'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <AlertTriangle className="h-4 w-4 inline mr-2" />
+            Alertes
+            {totalAlerts > 0 && (
+              <Badge variant="destructive" className="ml-2 text-xs">
+                {totalAlerts}
+              </Badge>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Contenu des onglets */}
@@ -211,76 +318,99 @@ const DashboardPage: React.FC = () => {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Résumé rapide des informations essentielles */}
-            <QuickSummary 
-              data={{
-                total_projects: data?.projects?.total_projects || 0,
-                active_projects: data?.projects?.active_projects || 0,
-                total_revenue: data?.financial?.cash_flow?.income || 0,
-                urgent_deadlines: data?.calendar?.upcoming_deadlines?.filter(d => d.days_until_deadline <= 3).length || 0,
-                overdue_projects: data?.projects?.overdue_projects?.length || 0,
-                revenue_change: revenueChange,
-                projects_change: 2.1,
-              }}
-              period={getPeriodLabel(period)}
-            />
+            {/* <div className="space-y-6">
+              {(isSelected('financial.cash_flow') || isSelected('financial.revenue_trend') || isSelected('projects.overdue_projects') || isSelected('calendar.upcoming_deadlines')) && (
+                <QuickSummaryProjects 
+                  data={{
+                    total_projects: data?.projects?.total_projects || totalProjectsDerived || 0,
+                    active_projects: data?.projects?.active_projects || activeProjectsDerived || 0,
+                    total_revenue: (data?.financial?.cash_flow as any)?.recettes ?? data?.financial?.cash_flow?.income ?? 0,
+                    urgent_deadlines: data?.calendar?.upcoming_deadlines?.filter(d => d.days_until_deadline <= 3).length || 0,
+                    overdue_projects: data?.projects?.overdue_projects?.length || 0,
+                    revenue_change: revenueChange,
+                    projects_change: 2.1,
+                  }}
+                  period={getPeriodLabel(period)}
+                />
+              )}
+              {anySelected('financial') && (
+                <QuickSummaryFinances 
+                  data={{
+                    taux_recouvrement: (data as any)?.financial?.taux_recouvrement,
+                    total_impayees_amount: (data as any)?.financial?.total_impayees_amount,
+                    total_paid_amount: (data as any)?.financial?.total_paid_amount,
+                    total_recouvrable_amount: (data as any)?.financial?.total_recouvrable_amount,
+                    total_factures_amount: (data as any)?.financial?.total_factures_amount,
+                    total_en_retard_amount: (data as any)?.financial?.total_en_retard_amount,
+                  }}
+                  period={getPeriodLabel(period)}
+                />
+              )}
+            </div> */}
             
             {/* Statistiques principales avec tendances */}
-            <DashboardStats 
-              data={{
-                total_projects: data?.projects?.total_projects || 0,
-                active_projects: data?.projects?.active_projects || 0,
-                total_users: data?.calendar?.resource_utilization?.total_users || 0,
-                total_clients: data?.calendar?.resource_utilization?.total_clients || 0,
-                total_contracts: data?.calendar?.resource_utilization?.total_contracts || 0,
-                total_revenue: data?.financial?.cash_flow?.income || 0,
-                pending_tasks: data?.performance?.pending_tasks || 0,
-                overdue_tasks: data?.performance?.overdue_tasks || 0,
-                revenue_change: revenueChange,
-                projects_change: 2.1,
-                users_change: 0.8,
-              }}
-              period={getPeriodLabel(period)}
-            />
-            
+            {/* {(isSelected('projects.status_distribution') || isSelected('performance.pending_tasks') || isSelected('performance.overdue_tasks') || isSelected('financial.cash_flow') || isSelected('financial.revenue_trend') || isSelected('calendar.resource_utilization')) && (
+              <DashboardStats 
+                data={{
+                  total_projects: data?.projects?.total_projects || totalProjectsDerived || 0,
+                  active_projects: data?.projects?.active_projects || activeProjectsDerived || 0,
+                  total_contracts: data?.calendar?.resource_utilization?.total_contracts || 0,
+                  total_revenue: (data?.financial?.cash_flow as any)?.recettes ?? data?.financial?.cash_flow?.income ?? 0,
+                  pending_tasks: data?.performance?.pending_tasks || 0,
+                  overdue_tasks: data?.performance?.overdue_tasks || 0,
+                  revenue_change: revenueChange,
+                  projects_change: 2.1,
+                  users_change: 0.8,
+                }}
+                period={getPeriodLabel(period)}
+              />
+            )} */}
+
             {/* Graphiques et visualisations */}
-            <DashboardCharts 
-              data={{
-                revenue_trend: data?.financial?.revenue_trend,
-                project_status_distribution: data?.projects?.status_distribution,
-                team_performance: data?.projects?.team_performance,
-                monthly_projects: (data?.projects?.monthly_projects || []).map((m: any) => ({
-                  month: m.month,
-                  count: m.count
-                })),
-              }}
-              period={getPeriodLabel(period)}
-            />
-            
+            {/* {(isSelected('financial.revenue_trend') || isSelected('projects.status_distribution') || isSelected('projects.team_performance') || isSelected('projects.monthly_projects')) && (
+              <DashboardCharts 
+                data={{
+                  revenue_trend: data?.financial?.revenue_trend,
+                  project_status_distribution: data?.projects?.status_distribution,
+                  team_performance: data?.projects?.team_performance,
+                  monthly_projects: (data?.projects?.monthly_projects || []).map((m: any) => ({
+                    month: m.month,
+                    count: m.count
+                  })),
+                }}
+                period={getPeriodLabel(period)}
+              />
+            )}
+             */}
             {/* Vue d'ensemble des projets */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Résumé des Projets</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ProjectMetrics 
-                  data={data?.projects}
-                  period={getPeriodLabel(period)}
-                />
-              </CardContent>
-            </Card>
+            {anySelected('projects') && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Résumé des Projets</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ProjectMetrics 
+                    data={data?.projects}
+                    period={getPeriodLabel(period)}
+                  />
+                </CardContent>
+              </Card>
+            )}
             
             {/* Vue d'ensemble financière */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Résumé Financier</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <FinancialOverview 
-                  data={data?.financial}
-                  period={getPeriodLabel(period)}
-                />
-              </CardContent>
-            </Card>
+            {anySelected('financial') && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Résumé Financier</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <FinancialOverview 
+                    data={data?.financial}
+                    period={getPeriodLabel(period)}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </div>
         )}
 
@@ -303,59 +433,48 @@ const DashboardPage: React.FC = () => {
         )}
 
         {activeTab === 'performance' && (
-          <DashboardLayout>
-            <PerformanceMetrics 
-              data={data?.performance}
-              period={getPeriodLabel(period)}
-            />
-          </DashboardLayout>
+          anySelected('performance') && (
+            <DashboardLayout>
+              <PerformanceMetrics 
+                data={data?.performance}
+                project_performance={(data as any)?.projects?.project_performance}
+                period={getPeriodLabel(period)}
+              />
+            </DashboardLayout>
+          )
         )}
 
         {activeTab === 'calendar' && (
-          <DashboardLayout>
-            <CalendarOverview 
-              data={data?.calendar}
-              period={getPeriodLabel(period)}
-            />
-          </DashboardLayout>
+          anySelected('calendar') && (
+            <DashboardLayout>
+              <CalendarOverview 
+                data={data?.calendar}
+                period={getPeriodLabel(period)}
+              />
+            </DashboardLayout>
+          )
         )}
 
         {activeTab === 'alerts' && (
-          <DashboardLayout>
-            <DashboardAlerts 
-              data={{
-                urgent_deadlines: data?.calendar?.upcoming_deadlines
-                  ?.filter(d => d.days_until_deadline <= 3)
-                  ?.map(d => ({
-                    ...d,
-                    priority: d.days_until_deadline === 0 ? 'high' : 
-                             d.days_until_deadline === 1 ? 'medium' : 'low'
-                  })) || [],
-                overdue_projects: data?.projects?.overdue_projects?.map(p => ({
-                  ...p,
-                  impact: 'high' as const
-                })) || [],
-                billing_alerts: [
-                  {
-                    id: 1,
-                    type: 'overdue' as const,
-                    message: 'Facture en retard de paiement',
-                    amount: 5000,
-                    days_overdue: 15
-                  }
-                ],
-                team_alerts: [
-                  {
-                    id: 1,
-                    type: 'overload' as const,
-                    message: 'Équipe surchargée',
-                    team_name: 'Équipe Développement',
-                    severity: 'medium' as const
-                  }
-                ]
-              }}
-            />
-          </DashboardLayout>
+          (isSelected('calendar.upcoming_deadlines') || isSelected('projects.overdue_projects')) && (
+            <DashboardLayout>
+              <DashboardAlerts 
+                data={{
+                  urgent_deadlines: data?.calendar?.upcoming_deadlines
+                    ?.filter(d => d.days_until_deadline <= 3)
+                    ?.map(d => ({
+                      ...d,
+                      priority: d.days_until_deadline === 0 ? 'high' : 
+                               d.days_until_deadline === 1 ? 'medium' : 'low'
+                    })) || [],
+                  overdue_projects: data?.projects?.overdue_projects?.map(p => ({
+                    ...p,
+                    impact: 'high' as const
+                  })) || []
+                }}
+              />
+            </DashboardLayout>
+          )
         )}
       </div>
 

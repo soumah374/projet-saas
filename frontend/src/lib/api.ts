@@ -641,7 +641,7 @@ export const contratsAPI = {
         conditions?: string;
         notes?: string;
     }) => api.patch(`/contrats/${id}/`, data),
-
+    
     addDevisToContrat: (id: number, data: {
         devis_ids: number[];
         devis_principal_id?: number;
@@ -676,6 +676,22 @@ export const contratsAPI = {
     updateIntervenantLigneContrat: (id: number, data: any) => api.patch(`/contrats/intervenants/${id}/`, data),
     deleteIntervenantLigneContrat: (id: number) => api.delete(`/contrats/intervenants/${id}/`),
 }; 
+
+// Dashboard
+export const dashboardAPI = {
+    getOverview: (params: { period_days?: number; widgets?: string[] } = {}) => {
+        const { period_days, widgets } = params;
+        const search = new URLSearchParams();
+        if (period_days) search.set('period_days', String(period_days));
+        if (widgets && widgets.length > 0) search.set('widgets', JSON.stringify(widgets));
+        const qs = search.toString();
+        return api.get(`/dashboard/overview/${qs ? `?${qs}` : ''}`);
+    },
+    getWidgetsCatalog: () => api.get('/dashboard/widgets/catalog/'),
+    getWidgetsConfig: (params?: { role?: string; user_id?: number }) => api.get('/dashboard/widgets/config/', { params }),
+    saveWidgetsConfig: (data: { role?: string; user_id?: number; widgets: string[]; is_active?: boolean }) =>
+        api.post('/dashboard/widgets/config/', data),
+};
 
 // PATCHs
 // 

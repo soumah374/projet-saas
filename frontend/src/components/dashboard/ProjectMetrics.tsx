@@ -29,6 +29,10 @@ interface ProjectMetricsProps {
       project_count: number;
       avg_progress: number;
     }>;
+    progress_retards?: {
+      projects_overdue_count: number;
+      unbilled_amount_total: number;
+    };
   };
   period: string;
 }
@@ -49,6 +53,15 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
       default:
         return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'GNF',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
   };
 
   return (
@@ -74,6 +87,34 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
           </div>
         </CardContent>
       </Card>
+
+      {/* Carte Retards */}
+      {data.progress_retards && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-5 w-5" />
+              Retards
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 border rounded-lg bg-red-50">
+                <div className="text-sm text-red-700">Projets en retard</div>
+                <div className="text-3xl font-bold text-red-800 mt-1">
+                  {data.progress_retards.projects_overdue_count || 0}
+                </div>
+              </div>
+              <div className="p-4 border rounded-lg bg-yellow-50">
+                <div className="text-sm text-yellow-700">Montant total factures non émises</div>
+                <div className="text-2xl font-bold text-yellow-800 mt-1">
+                  {formatCurrency(data.progress_retards.unbilled_amount_total || 0)}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Projets récents */}
       <Card>

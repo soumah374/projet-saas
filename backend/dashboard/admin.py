@@ -60,4 +60,24 @@ class DashboardCacheAdmin(admin.ModelAdmin):
     
     def has_add_permission(self, request):
         """Le cache est géré automatiquement par les signaux"""
-        return False 
+        return False
+
+from .models import DashboardWidgetConfig
+
+@admin.register(DashboardWidgetConfig)
+class DashboardWidgetConfigAdmin(admin.ModelAdmin):
+    list_display = ['role', 'user', 'is_active', 'updated_at']
+    list_filter = ['is_active', 'role']
+    search_fields = ['role', 'user__username']
+    readonly_fields = ['created_at', 'updated_at']
+    fieldsets = (
+        ('Cible', {
+            'fields': ('role', 'user')
+        }),
+        ('Configuration', {
+            'fields': ('widgets', 'is_active')
+        }),
+        ('Horodatage', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    ) 
