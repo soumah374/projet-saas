@@ -559,10 +559,6 @@ class ProjectTask(models.Model):
     def update_actual_hours(self):
         """Mettre à jour les heures réelles basées sur les timesheets"""
         total_hours = self.timesheets.aggregate(total=Sum('hours'))['total'] or 0
-        print(total_hours)
-        print(total_hours)
-        print(total_hours)
-        print(total_hours)
         self.actual_hours = total_hours
         self.save()
 

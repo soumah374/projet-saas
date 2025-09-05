@@ -27,10 +27,13 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
   const pendingTasks = data?.pending_tasks ?? 0;
   const overdueTasks = data?.overdue_tasks ?? 0;
 
+  const isSelected = (key: string) => !data?.selected || data?.selected.includes(key) || data?.userSelected.includes(key);
+
   const formatCurrency = (amount: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'GNF', minimumFractionDigits: 0 }).format(amount || 0);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      {isSelected('projects.total_projects') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -43,7 +46,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
           <div className="text-sm text-gray-500">{activeProjects} actifs</div>
         </CardContent>
       </Card>
+      )}
 
+      {isSelected('projects.active_projects') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -58,7 +63,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
           </div>
         </CardContent>
       </Card>
+      )}
 
+      {isSelected('projects.pending_tasks') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -71,7 +78,9 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
           <div className="text-sm text-gray-500">{overdueTasks} en retard</div>
         </CardContent>
       </Card>
+      )}
 
+      {isSelected('projects.total_contracts') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -84,6 +93,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
           <div className="text-sm text-gray-500">—</div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }; 

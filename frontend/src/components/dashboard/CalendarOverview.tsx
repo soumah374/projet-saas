@@ -29,7 +29,7 @@ interface CalendarOverviewProps {
   userSelected: string[];
 }
 
-export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period }) => {
+export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period, selected, userSelected }) => {
   if (!data) return null;
 
   const getUrgencyColor = (days: number) => {
@@ -51,6 +51,8 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
     if (days <= 14) return 'Prochainement';
     return 'À venir';
   };
+
+  const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
 
   return (
     <div className="space-y-6">
@@ -144,6 +146,7 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
       </Card>
 
       {/* Utilisation des ressources */}
+      {isSelected('calendar.resource_utilization') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -153,32 +156,39 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="text-center p-4 border rounded-lg">
+            {isSelected('calendar.resource_utilization') && (
+              <div className="text-center p-4 border rounded-lg">
                 <div className="text-3xl font-bold text-blue-600">
                   {data.resource_utilization?.total_contracts || 0}
                 </div>
                 <p className="text-sm text-gray-600">Total Contrats</p>
               </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-green-600">
-                {data.resource_utilization?.active_users || 0}
+            )}
+            {isSelected('calendar.resource_utilization') && (
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-3xl font-bold text-green-600">
+                  {data.resource_utilization?.active_users || 0}
+                </div>
+                <p className="text-sm text-gray-600">Utilisateurs Actifs</p>
+                <p className="text-xs text-gray-500">7 derniers jours</p>
               </div>
-              <p className="text-sm text-gray-600">Utilisateurs Actifs</p>
-              <p className="text-xs text-gray-500">7 derniers jours</p>
-            </div>
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-purple-600">
-                {data.resource_utilization?.utilization_rate || 0}%
+            )}
+            {isSelected('calendar.resource_utilization') && (
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-3xl font-bold text-purple-600">
+                  {data.resource_utilization?.utilization_rate || 0}%
+                </div>
+                <p className="text-sm text-gray-600">Taux d'Utilisation</p>
               </div>
-              <p className="text-sm text-gray-600">Taux d'Utilisation</p>
-            </div>
+            )}
           </div>
           
           {/* Barre de progression pour l'utilisation */}
-          <div className="mt-6">
+          {isSelected('calendar.resource_utilization') && (
+            <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Taux d'utilisation des ressources</span>
-                              <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500">
                   {data.resource_utilization?.active_users || 0} utilisateurs actifs
                 </span>
             </div>
@@ -191,10 +201,13 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
               ></div>
             </div>
           </div>
+          )}
         </CardContent>
       </Card>
-
+      )}
       {/* Résumé du calendrier */}
+
+      {isSelected('calendar.summary_calendar') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -207,7 +220,7 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
             <p className="text-gray-600 mb-4">
               Vue d'ensemble des événements et échéances sur <strong>{period}</strong>
             </p>
-            
+            {isSelected('calendar.summary_calendar') && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-blue-50 rounded-lg">
                 <div className="text-lg font-bold text-blue-600">
@@ -223,6 +236,7 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
                 <p className="text-sm text-green-600">Échéances urgentes (≤3j)</p>
               </div>
             </div>
+            )}
             
             <div className="mt-4 p-3 bg-gray-50 rounded-lg">
               <p className="text-sm text-gray-600">
@@ -232,6 +246,7 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }; 

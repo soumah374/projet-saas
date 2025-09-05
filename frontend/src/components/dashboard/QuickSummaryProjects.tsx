@@ -55,10 +55,7 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
     return `${change.toFixed(1)}%`;
   };
 
-  const isSelected = (key: string) => !data.selected || data.selected.length !== 0 || data.selected.includes(key);
-
-  console.log(data.userSelected, data.selected, isSelected('projects.urgent_deadlines'));
-
+  const isSelected = (key: string) => !data.selected || data.selected.includes(key) || data.userSelected.includes(key);
 
   const projectItems: SummaryItem[] = [
     ...(isSelected('calendar.upcoming_deadlines') ? [{
@@ -90,10 +87,12 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
 
   return (
     <div>
+      {isSelected('projects.quick_summary_projects') && ( 
       <div className="flex items-center gap-2 mb-3">
         <Target className="h-4 w-4 text-blue-600" />
         <h3 className="text-sm font-semibold text-gray-700">Projets</h3>
       </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {projectItems.map((item, index) => {
           const IconComponent = item.icon;

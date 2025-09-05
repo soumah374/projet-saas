@@ -17,23 +17,50 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RefreshCw, Calendar as CalendarIcon, BarChart3, Users, DollarSign, AlertTriangle, Target } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverTrigger } from '@radix-ui/react-popover';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { PopoverContent } from '@radix-ui/react-popover';
 
 const DashboardPage: React.FC = () => {
   const [period, setPeriod] = useState('30');
   const { user } = useAuth();
+  const [customStart, setCustomStart] = useState<string>('');
+  const [customEnd, setCustomEnd] = useState<string>('');
 
   // Charger la configuration widgets (par utilisateur connecté)
   const { selected, userSelected} = useDashboardConfig({ user_id: user?.id });
 
+  const customDays = useMemo(() => {
+    if (!customStart || !customEnd) return 30;
+    const start = new Date(customStart);
+    const end = new Date(customEnd);
+    const diffMs = end.getTime() - start.getTime();
+    const days = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    return isFinite(days) ? days : 30;
+  }, [customStart, customEnd]);
+
   const { data, loading, error, refetch } = useDashboardMetrics(
-    parseInt(period),
+    period === 'autre' ? customDays : parseInt(period),
     selected && selected.length > 0 ? selected : userSelected && userSelected.length > 0 ? userSelected : undefined
   );
   
   const [activeTab, setActiveTab] = useState('overview');
+  // Activer l'onglet alerte si aucun droit n'est défini
+  React.useEffect(() => {
+    if (!selected || selected.length === 0) {
+      setActiveTab('alerts');
+    }
+    setActiveTab('overview');
+  }, [selected]);
 
   const handlePeriodChange = (newPeriod: string) => {
     setPeriod(newPeriod);
+    if (newPeriod !== 'autre') {
+      // reset custom dates when leaving custom mode
+      setCustomStart('');
+      setCustomEnd('');
+    }
   };
 
   const handleRefresh = () => {
@@ -46,6 +73,7 @@ const DashboardPage: React.FC = () => {
       case '30': return '30 jours';
       case '90': return '3 mois';
       case '365': return '1 an';
+      case 'autre': return 'autre';
       default: return `${days} jours`;
     }
   };
@@ -144,8 +172,63 @@ const DashboardPage: React.FC = () => {
               <SelectItem value="30">30 jours</SelectItem>
               <SelectItem value="90">3 mois</SelectItem>
               <SelectItem value="365">1 an</SelectItem>
+              <SelectItem value="autre">Autre</SelectItem>
             </SelectContent>
           </Select>
+
+          {period === 'autre' && (
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn('w-[160px] justify-start', !customStart && 'text-muted-foreground')}>
+                    {customStart ? new Date(customStart).toLocaleDateString('fr-FR') : 'Début'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    style={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '4px',
+                      padding: '10px',
+                      boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
+                    }}
+                    selected={customStart ? new Date(customStart) : undefined}
+                    onSelect={(d: Date | undefined) => setCustomStart(d ? d.toISOString().slice(0,10) : '')}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-sm text-gray-500">à</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn('w-[160px] justify-start', !customEnd && 'text-muted-foreground')}>
+                    {customEnd ? new Date(customEnd).toLocaleDateString('fr-FR') : 'Fin'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    style={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '4px',
+                      padding: '10px',
+                      boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
+                    }}
+                    selected={customEnd ? new Date(customEnd) : undefined}
+                    onSelect={(d: Date | undefined) => setCustomEnd(d ? d.toISOString().slice(0,10) : '')}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <Button onClick={handleRefresh} variant="outline" size="sm" disabled={!customStart || !customEnd}>
+                Appliquer
+              </Button>
+            </div>
+          )}
+    
           
           <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
@@ -425,26 +508,24 @@ const DashboardPage: React.FC = () => {
         )}
 
         {activeTab === 'alerts' && (
-          (isSelected('calendar.upcoming_deadlines') || isSelected('projects.overdue_projects')) && (
-            <DashboardLayout>
-              <DashboardAlerts 
-                data={{
-                  urgent_deadlines: data?.calendar?.upcoming_deadlines
-                    ?.filter(d => d.days_until_deadline <= 3)
-                    ?.map(d => ({
-                      ...d,
-                      priority: d.days_until_deadline === 0 ? 'high' : d.days_until_deadline === 1 ? 'medium' : 'low'
-                    })) || [],
-                  overdue_projects: data?.projects?.overdue_projects?.map(p => ({
-                    ...p,
-                    impact: 'high' as const
-                  })) || []
-                }}
-                selected={selected}
-                userSelected={userSelected}
-              />
-            </DashboardLayout>
-          )
+          <DashboardLayout>
+            <DashboardAlerts 
+              data={{
+                urgent_deadlines: data?.calendar?.upcoming_deadlines
+                  ?.filter(d => d.days_until_deadline <= 3)
+                  ?.map(d => ({
+                    ...d,
+                    priority: d.days_until_deadline === 0 ? 'high' : d.days_until_deadline === 1 ? 'medium' : 'low'
+                  })) || [],
+                overdue_projects: data?.projects?.overdue_projects?.map(p => ({
+                  ...p,
+                  impact: 'high' as const
+                })) || []
+              }}
+              selected={selected}
+              userSelected={userSelected}
+            />
+          </DashboardLayout>
         )}
       </div>
 

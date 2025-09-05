@@ -60,7 +60,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
   return (
     <div className="space-y-6">
       {/* Performance projet TOP/FLOP */}
-      {(project_performance?.top || project_performance?.flop) && (
+      {(project_performance?.top || project_performance?.flop) && isSelected('projects.project_performance') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -106,6 +106,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
       )}
 
       {/* Taux de completion global */}
+      {isSelected('projects.task_completion_rate') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -142,7 +143,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
           </div>
         </CardContent>
       </Card>
-
+      )}
       {/* Performance des équipes */}
       {isSelected('performance.team_productivity') && (
       <Card>
@@ -183,6 +184,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
       </Card>
       )}
       {/* Métriques d'efficacité */}
+      {isSelected('projects.pending_tasks') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -207,8 +209,9 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
           </div>
         </CardContent>
       </Card>
-
+      )}
       {/* Résumé de la période */}
+      {isSelected('projects.summary_period') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -238,6 +241,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }; 

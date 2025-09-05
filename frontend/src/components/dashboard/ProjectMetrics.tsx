@@ -72,7 +72,9 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period, se
     }
   };
 
-  const isSelected = (key: string) => !selected || selected.length !== 0 || selected.includes(key) || userSelected.includes(key);
+  const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
+
+  console.log(selected, userSelected, isSelected('projects.recent_projects'));
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
@@ -138,6 +140,7 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period, se
       )}
 
       {/* Projets récents */}
+      {isSelected('projects.recent_projects') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -169,9 +172,10 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period, se
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Projets en retard */}
-      {data.overdue_projects && data.overdue_projects.length > 0 && (
+      {data.overdue_projects && data.overdue_projects.length > 0 && isSelected('projects.overdue_projects') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600">
