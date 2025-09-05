@@ -13,8 +13,9 @@ import {
 interface DashboardChartsProps {
   data?: {
     revenue_trend?: Array<{
-      month: string;
-      revenue: number;
+      period: string;
+      recettes: number;
+      type: 'daily' | 'monthly';
     }>;
     project_status_distribution?: Record<string, number>;
     team_performance?: Array<{
@@ -28,9 +29,11 @@ interface DashboardChartsProps {
     }>;
   };
   period: string;
+  selected: string[];
+  userSelected: string[];
 }
 
-export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period }) => {
+export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period, selected, userSelected }) => {
   if (!data) return null;
 
   const formatCurrency = (amount: number) => {
@@ -64,10 +67,12 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period }
     return 'bg-red-500';
   };
 
+  const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
+
   return (
     <div className="space-y-6">
       {/* Tendance des revenus */}
-      {data.revenue_trend && data.revenue_trend.length > 0 && (
+      {data.revenue_trend && data.revenue_trend.length > 0 && isSelected('financial.revenue_trend') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -81,10 +86,10 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period }
                 {data.revenue_trend.map((month, index) => (
                   <div key={index} className="text-center">
                     <div className="text-lg font-bold text-gray-900">
-                      {formatCurrency(month.revenue)}
+                      {formatCurrency(month.recettes)}
                     </div>
                     <div className="text-sm text-gray-500">
-                      {new Date(month.month + '-01').toLocaleDateString('fr-FR', { 
+                      {new Date(month.period + '-01').toLocaleDateString('fr-FR', { 
                         month: 'short', 
                         year: 'numeric' 
                       })}
@@ -94,14 +99,15 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period }
               </div>
               
               {/* Barre de progression simple */}
+              {isSelected('financial.revenue_trend') && (
               <div className="mt-6">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700">Évolution des revenus</span>
                 </div>
                 <div className="flex items-end gap-1 h-32">
                   {data.revenue_trend.map((month, index) => {
-                    const maxRevenue = Math.max(...data.revenue_trend.map(m => m.revenue));
-                    const height = maxRevenue > 0 ? (month.revenue / maxRevenue) * 100 : 0;
+                    const maxRevenue = Math.max(...data.revenue_trend.map(m => m.recettes));
+                    const height = maxRevenue > 0 ? (month.recettes / maxRevenue) * 100 : 0;
                     return (
                       <div key={index} className="flex-1 bg-blue-200 rounded-t transition-all duration-300 hover:bg-blue-300">
                         <div 
@@ -113,13 +119,14 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period }
                   })}
                 </div>
               </div>
+              )}
             </div>
           </CardContent>
         </Card>
       )}
 
       {/* Distribution des statuts de projets */}
-      {data.project_status_distribution && Object.keys(data.project_status_distribution).length > 0 && (
+      {data.project_status_distribution && Object.keys(data.project_status_distribution).length > 0 && isSelected('projects.status_distribution') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -184,7 +191,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period }
       )}
 
       {/* Performance des équipes */}
-      {data.team_performance && data.team_performance.length > 0 && (
+      {data.team_performance && data.team_performance.length > 0 && isSelected('projects.team_performance') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -235,7 +242,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period }
       )}
 
       {/* Projets par mois */}
-      {data.monthly_projects && data.monthly_projects.length > 0 && (
+      {data.monthly_projects && data.monthly_projects.length > 0 && isSelected('projects.monthly_projects') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">

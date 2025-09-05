@@ -6,25 +6,27 @@ import { Target, AlertTriangle, TrendingUp, Users } from 'lucide-react';
 
 interface ProjectMetricsProps {
   data?: {
-    status_distribution: Record<string, number>;
-    progress_distribution: Array<{
+    status_distribution?: Record<string, number>;
+    progress_distribution?: Array<{
       range: string;
       count: number;
     }>;
-    recent_projects: Array<{
+    recent_projects?: Array<{
       id: number;
       name: string;
       status: string;
       progress: number;
       created_at: string;
+      activite_percent?: number;
+      delai_percent?: number;
     }>;
-    overdue_projects: Array<{
+    overdue_projects?: Array<{
       id: number;
       name: string;
       deadline: string;
       days_overdue: number;
     }>;
-    team_performance: Array<{
+    team_performance?: Array<{
       team_name: string;
       project_count: number;
       avg_progress: number;
@@ -33,11 +35,26 @@ interface ProjectMetricsProps {
       projects_overdue_count: number;
       unbilled_amount_total: number;
     };
+    project_performance?: Array<{
+      type: 'top' | 'flop';
+      projects: Array<{
+        title: string;
+        progress: number;
+      }>;
+    }>;
+    monthly_projects?: Array<{
+      month: string;
+      count: number;
+    }>;
+    user_role?: string;
+    widgets_used?: string[];
   };
   period: string;
+  selected: string[];
+  userSelected: string[];
 }
 
-export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) => {
+export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period, selected, userSelected }) => {
   if (!data) return null;
 
   const getStatusColor = (status: string) => {
@@ -55,6 +72,8 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
     }
   };
 
+  const isSelected = (key: string) => !selected || selected.length !== 0 || selected.includes(key) || userSelected.includes(key);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
@@ -67,6 +86,7 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
   return (
     <div className="space-y-6">
       {/* Distribution par statut */}
+      {isSelected('projects.status_distribution') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -85,11 +105,12 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Carte Retards */}
-      {data.progress_retards && (
+      {data.progress_retards && isSelected('projects.progress_retards') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-700">
@@ -181,6 +202,7 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
       )}
 
       {/* Performance des équipes */}
+      {isSelected('projects.team_performance') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -210,6 +232,7 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }; 

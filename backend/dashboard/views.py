@@ -289,7 +289,8 @@ class DashboardWidgetsConfigView(APIView):
                     'config_id': config.id,
                     'is_active': config.is_active,
                     'updated_at': config.updated_at.isoformat(),
-                    'is_user_specific': config.user is not None
+                    'is_user_specific': config.user is not None,
+                    'widgets': config.widgets
                 })
             
             return Response(response_data)

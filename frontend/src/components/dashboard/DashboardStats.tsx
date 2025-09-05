@@ -13,6 +13,8 @@ interface DashboardStatsProps {
     revenue_change?: number;
     projects_change?: number;
     users_change?: number;
+    selected: string[];
+    userSelected: string[];
   };
   period: string;
 }

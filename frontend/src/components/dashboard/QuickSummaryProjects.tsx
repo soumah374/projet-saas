@@ -11,6 +11,8 @@ interface QuickSummaryProps {
     overdue_projects: number;
     revenue_change?: number;
     projects_change?: number;
+    selected: string[];
+    userSelected: string[];
   };
   period: string;
 }
@@ -53,24 +55,29 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
     return `${change.toFixed(1)}%`;
   };
 
+  const isSelected = (key: string) => !data.selected || data.selected.length !== 0 || data.selected.includes(key);
+
+  console.log(data.userSelected, data.selected, isSelected('projects.urgent_deadlines'));
+
+
   const projectItems: SummaryItem[] = [
-    {
+    ...(isSelected('calendar.upcoming_deadlines') ? [{
       title: 'Échéances Urgentes',
       value: data.urgent_deadlines || 0,
       icon: Calendar,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50',
       description: '≤ 3 jours'
-    },
-    {
+    }] : []),
+    ...(isSelected('projects.overdue_projects') ? [{
       title: 'Projets en Retard',
       value: data.overdue_projects || 0,
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'À traiter'
-    },
-    {
+    }] : []),
+    ...(isSelected('projects.active_projects') ? [{
       title: 'Projets Actifs',
       value: data.active_projects || 0,
       icon: Target,
@@ -78,7 +85,7 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
       bgColor: 'bg-blue-50',
       change: data.projects_change,
       description: 'En cours'
-    }
+    }] : []),
   ];
 
   return (

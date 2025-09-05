@@ -68,11 +68,6 @@ class DashboardMetricsService:
     def get_authorized_widgets(self):
         """Récupère la liste des widgets autorisés pour l'utilisateur actuel"""
         config = self._load_widget_config()
-        print("config ===== ", config)
-        print("config ===== ", config)
-        print("config ===== ", config)
-        
-        
         # Filtrer uniquement les widgets qui existent dans AVAILABLE_WIDGETS
         authorized_widgets = []
         for widget_key in config.widgets:
@@ -227,10 +222,6 @@ class DashboardMetricsService:
             selected = self._selected_set(selected_widgets)
             result = {}
             
-            print("selected", selected)
-            print("selected", selected)
-            print("selected", selected)
-
             # Vérifier d'abord si des métriques de projets sont demandées
             if selected and not self._has_section_widgets('projects', selected):
                 # Aucun widget de projets demandé

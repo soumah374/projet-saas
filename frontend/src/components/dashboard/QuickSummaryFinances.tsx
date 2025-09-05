@@ -13,6 +13,8 @@ interface QuickSummaryProps {
       periode: number;
       cumule: number;
     };
+    selected: string[];
+    userSelected: string[];
   };
   period: string;
 }
@@ -25,6 +27,7 @@ type SummaryItem = {
   bgColor: string;
   description: string;
   change?: number;
+
 };
 
 export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
@@ -42,40 +45,42 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
   const periodeRate = Number(data?.taux_recouvrement?.periode) || 0;
   const cumuleRate = Number(data?.taux_recouvrement?.cumule) || 0;
 
+  const isSelected = (key: string) => !data?.selected || data?.selected.includes(key) || data?.userSelected.includes(key);
+
   const financeItems: SummaryItem[] = [
-    {
+    ...(isSelected('financial.total_factures_amount') ? [{
       title: 'Montant total des factures',
       value: formatCurrency(data.total_factures_amount || 0),
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       description: 'Montant total'
-    },
-    {
+    }] : []),
+    ...(isSelected('financial.total_impayees_amount') ? [{
       title: 'Factures impayées',
       value: formatCurrency(data.total_impayees_amount || 0),
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'Montant total'
-    },
-    {
+    }] : []),
+    ...(isSelected('financial.total_en_retard_amount') ? [{
       title: 'Factures en retard',
       value: formatCurrency(data.total_en_retard_amount || 0),
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'Montant total'
-    },
-    {
+    }] : []),
+    ...(isSelected('financial.total_paid_amount') ? [{
       title: 'Total payé',
       value: formatCurrency(data.total_paid_amount || 0),
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       description: 'Montant total'
-    },
-    {
+    }] : []),
+    ...(isSelected('financial.taux_recouvrement') ? [{
       title: 'Taux de recouvrement',
       value: (
         <>
@@ -93,7 +98,7 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       description: 'Sur la période'
-    }
+    }] : [])
   ];
 
   return (

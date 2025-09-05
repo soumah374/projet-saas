@@ -6,36 +6,41 @@ import { Users, Target, TrendingUp, Clock, Award, AlertTriangle } from 'lucide-r
 
 interface PerformanceMetricsProps {
   data?: {
-    team_productivity: Array<{
+    team_productivity?: Array<{
       team_name: string;
       total_tasks: number;
       completed_tasks: number;
       completion_rate: number;
     }>;
-    user_performance: Array<{
+    user_performance?: Array<{
       username: string;
       total_tasks: number;
       completed_tasks: number;
       completion_rate: number;
     }>;
-    task_completion_rate: {
+    task_completion_rate?: {
       total: number;
       completed: number;
       rate: number;
     };
-    efficiency_metrics: {
-      avg_completion_time_days: number;
-      total_completed_tasks: number;
+    pending_tasks?: number;
+    overdue_tasks?: number;
+    overdue_activities?: {
+      count: number;
+      rate_percent: number;
     };
+    widgets_used?: string[];
   };
   project_performance?: {
     top?: { id: string | number; name: string; progress: number; status: string } | null;
     flop?: { id: string | number; name: string; progress: number; status: string } | null;
   };
   period: string;
+  selected: string[];
+  userSelected: string[];
 }
 
-export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, project_performance, period }) => {
+export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, project_performance, period, selected, userSelected }) => {
   if (!data) return null;
 
   const getCompletionRateColor = (rate: number) => {
@@ -49,6 +54,8 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
     if (rate >= 60) return 'bg-yellow-100 text-yellow-800';
     return 'bg-red-100 text-red-800';
   };
+
+  const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
 
   return (
     <div className="space-y-6">
@@ -137,6 +144,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
       </Card>
 
       {/* Performance des équipes */}
+      {isSelected('performance.team_productivity') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -173,7 +181,7 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
           </div>
         </CardContent>
       </Card>
-
+      )}
       {/* Métriques d'efficacité */}
       <Card>
         <CardHeader>
@@ -186,15 +194,15 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ data, pr
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="text-center p-4 border rounded-lg">
               <div className="text-3xl font-bold text-blue-600">
-                {data.efficiency_metrics?.avg_completion_time_days || 0}
+                {data.pending_tasks || 0}
               </div>
-              <p className="text-sm text-gray-600">Jours Moyens de Completion</p>
+              <p className="text-sm text-gray-600">Tâches en Attente</p>
             </div>
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-green-600">
-                {data.efficiency_metrics?.total_completed_tasks || 0}
+              <div className="text-3xl font-bold text-red-600">
+                {data.overdue_tasks || 0}
               </div>
-              <p className="text-sm text-gray-600">Tâches Terminées</p>
+              <p className="text-sm text-gray-600">Tâches en Retard</p>
             </div>
           </div>
         </CardContent>

@@ -45,6 +45,8 @@ interface DashboardAlertsProps {
       severity: 'high' | 'medium' | 'low';
     }>;
   };
+  selected: string[];
+  userSelected: string[];
 }
 
 export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {

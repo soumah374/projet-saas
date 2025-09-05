@@ -36,24 +36,17 @@ const DashboardManagerPage: React.FC = () => {
     const groups: Record<string, Array<{ key: string; label: string }>> = {};
     
     // Debug logging
-    console.log('Catalog received:', catalog);
-    console.log('Catalog type:', typeof catalog);
-    console.log('Catalog is array:', Array.isArray(catalog));
-    
     if (!catalog || typeof catalog !== 'object') {
-      console.log('Catalog is null/undefined or not an object, returning empty groups');
       return groups;
     }
     
     // Handle case where catalog might be an array
     if (Array.isArray(catalog)) {
-      console.log('Catalog is an array, converting to object format');
       return groups;
     }
     
     try {
       Object.entries(catalog).forEach(([key, item]: any) => {
-        console.log('Processing item:', key, item);
         if (item && typeof item === 'object' && item.type) {
           const group = item.type || 'autres';
           if (!groups[group]) groups[group] = [];
@@ -68,7 +61,6 @@ const DashboardManagerPage: React.FC = () => {
     
     // If no groups were created, create a fallback structure
     if (Object.keys(groups).length === 0) {
-      console.log('No groups created, creating fallback structure');
       groups['autres'] = [];
       if (catalog && typeof catalog === 'object') {
         Object.keys(catalog).forEach(key => {
@@ -79,7 +71,6 @@ const DashboardManagerPage: React.FC = () => {
     
     // If still no groups, create a default fallback
     if (Object.keys(groups).length === 0) {
-      console.log('Still no groups, creating default fallback');
       groups['projects'] = [
         { key: 'projects.status_distribution', label: 'Répartition des statuts des projets' },
         { key: 'projects.recent_projects', label: 'Projets récents' }
@@ -89,8 +80,6 @@ const DashboardManagerPage: React.FC = () => {
         { key: 'financial.billing_status', label: 'Statut de facturation' }
       ];
     }
-    
-    console.log('Final groups:', groups);
     return groups;
   }, [catalog]);
 

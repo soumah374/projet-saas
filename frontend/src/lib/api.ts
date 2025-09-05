@@ -689,6 +689,7 @@ export const dashboardAPI = {
     },
     getWidgetsCatalog: () => api.get('/dashboard/widgets/catalog/'),
     getWidgetsConfig: (params?: { role?: string; user_id?: number }) => api.get('/dashboard/widgets/config/', { params }),
+    getWidgetsUserConfig: (params?: { user_id?: number }) => api.get('/dashboard/widgets/user-config/', { params }),
     saveWidgetsConfig: (data: { role?: string; user_id?: number; widgets: string[]; is_active?: boolean }) =>
         api.post('/dashboard/widgets/config/', data),
 };

@@ -5,25 +5,28 @@ import { Calendar, Clock, Users, BarChart3, AlertTriangle } from 'lucide-react';
 
 interface CalendarOverviewProps {
   data?: {
-    upcoming_deadlines: Array<{
+    upcoming_deadlines?: Array<{
       id: number;
       title: string;
       deadline: string;
       project: string;
       days_until_deadline: number;
     }>;
-    event_distribution: {
+    event_distribution?: {
       tasks: number;
       projects: number;
       contrats: number;
     };
-    resource_utilization: {
-      total_users: number;
+    resource_utilization?: {
       active_users: number;
+      total_contracts: number;
       utilization_rate: number;
     };
+    widgets_used?: string[];
   };
   period: string;
+  selected: string[];
+  userSelected: string[];
 }
 
 export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period }) => {
@@ -150,12 +153,12 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-4 border rounded-lg">
-              <div className="text-3xl font-bold text-blue-600">
-                {data.resource_utilization?.total_users || 0}
+                          <div className="text-center p-4 border rounded-lg">
+                <div className="text-3xl font-bold text-blue-600">
+                  {data.resource_utilization?.total_contracts || 0}
+                </div>
+                <p className="text-sm text-gray-600">Total Contrats</p>
               </div>
-              <p className="text-sm text-gray-600">Total Utilisateurs</p>
-            </div>
             <div className="text-center p-4 border rounded-lg">
               <div className="text-3xl font-bold text-green-600">
                 {data.resource_utilization?.active_users || 0}
@@ -175,9 +178,9 @@ export const CalendarOverview: React.FC<CalendarOverviewProps> = ({ data, period
           <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Taux d'utilisation des ressources</span>
-              <span className="text-sm text-gray-500">
-                {data.resource_utilization?.active_users || 0} / {data.resource_utilization?.total_users || 0}
-              </span>
+                              <span className="text-sm text-gray-500">
+                  {data.resource_utilization?.active_users || 0} utilisateurs actifs
+                </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div 
