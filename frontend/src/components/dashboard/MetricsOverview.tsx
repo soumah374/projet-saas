@@ -57,7 +57,7 @@ export const MetricsOverview: React.FC<MetricsOverviewProps> = ({ data, period, 
       description: 'Contrats actifs'
     } : {}),
     (isSelected('financial.total_revenue') ? {
-      title: 'Revenus',
+      title: 'Recettes',
       value: `${(data.total_revenue || 0).toLocaleString('fr-FR')} €`,
       icon: TrendingUp,
       color: 'text-green-600',

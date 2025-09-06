@@ -126,7 +126,7 @@ else:
 
 ### 3. **Métriques enrichies**
 
-- Revenus moyens par jour
+- Recettes moyens par jour
 - Projections basées sur les tendances
 - Comparaisons avec les périodes précédentes
 - Croissance des revenus en pourcentage

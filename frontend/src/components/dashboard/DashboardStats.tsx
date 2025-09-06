@@ -53,7 +53,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ data, period }) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Revenus ({period})
+            Recettes ({period})
           </CardTitle>
         </CardHeader>
         <CardContent>

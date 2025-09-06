@@ -74,8 +74,6 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period, se
 
   const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
 
-  console.log(selected, userSelected, isSelected('projects.recent_projects'));
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',

@@ -77,7 +77,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ data, period, 
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Tendance des Revenus
+              Tendance des Recettes
             </CardTitle>
           </CardHeader>
           <CardContent>

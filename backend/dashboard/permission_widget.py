@@ -18,7 +18,7 @@ AVAILABLE_WIDGETS = {
   'financial.period_metrics': {'type': 'financial', 'label': 'Métriques de période'},
   'financial.total_paid_amount': {'type': 'financial', 'label': 'Montant total payé'},
   'financial.total_en_retard_amount': {'type': 'financial', 'label': 'Montant en retard'},
-  'financial.total_impayees_amount': {'type': 'financial', 'label': 'Montant impayé total'},
+  # 'financial.total_impayees_amount': {'type': 'financial', 'label': 'Montant impayé total'},
   'financial.total_factures_amount': {'type': 'financial', 'label': 'Montant total facturé'},
   
   'performance.team_productivity': {'type': 'performance', 'label': 'Productivité des équipes'},

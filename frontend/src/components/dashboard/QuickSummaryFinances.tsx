@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, AlertTriangle } from 'lucide-react';
+import FactureImpayeModal from '@/components/billings/FactureImpayeModal';
 
 interface QuickSummaryProps {
   data?: {
@@ -9,6 +10,7 @@ interface QuickSummaryProps {
     total_impayees_amount?: number;
     total_factures_amount?: number;
     total_en_retard_amount?: number;
+    montant_impaye?: number;
     taux_recouvrement?: {
       periode: number;
       cumule: number;
@@ -27,7 +29,6 @@ type SummaryItem = {
   bgColor: string;
   description: string;
   change?: number;
-
 };
 
 export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
@@ -47,21 +48,34 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
 
   const isSelected = (key: string) => !data?.selected || data?.selected.includes(key) || data?.userSelected.includes(key);
 
+  const [showFactureImpayeModal, setShowFactureImpayeModal] = useState(false);
+
   const financeItems: SummaryItem[] = [
+    ...(isSelected('financial.montant_impaye') ? [{
+      title: 'Montant impayé',
+      value: (
+        <>
+          <button
+            onClick={() => setShowFactureImpayeModal(true)}
+            className="text-left hover:underline focus:outline-none focus:underline"
+            type="button"
+          >
+            {formatCurrency(data.montant_impaye || 0)}
+          </button>
+          <FactureImpayeModal open={showFactureImpayeModal} onClose={() => setShowFactureImpayeModal(false)} />
+        </>
+      ),
+      icon: AlertTriangle,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      description: 'Montant impayé (cliquez pour voir la liste)'
+    }] : []),
     ...(isSelected('financial.total_factures_amount') ? [{
       title: 'Montant total des factures',
       value: formatCurrency(data.total_factures_amount || 0),
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      description: 'Montant total'
-    }] : []),
-    ...(isSelected('financial.total_impayees_amount') ? [{
-      title: 'Factures impayées',
-      value: formatCurrency(data.total_impayees_amount || 0),
-      icon: AlertTriangle,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
       description: 'Montant total'
     }] : []),
     ...(isSelected('financial.total_en_retard_amount') ? [{
@@ -101,9 +115,11 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
     }] : [])
   ];
 
+  const isSelectedFinances = isSelected('financial.quick_summary_finances') || isSelected('financial.total_factures_amount') || isSelected('financial.total_en_retard_amount') || isSelected('financial.total_paid_amount') || isSelected('financial.taux_recouvrement');
+
   return (
     <div>
-      {isSelected('financial.quick_summary_finances') && (
+      {isSelectedFinances && (
       <div className="flex items-center gap-2 mb-3">
         <DollarSign className="h-4 w-4 text-green-600" />
         <h3 className="text-sm font-semibold text-gray-700">Finances</h3>

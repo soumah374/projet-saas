@@ -603,18 +603,6 @@ class DashboardMetricsService:
                 )['total'] or 0
                 result['total_en_retard_amount'] = float(total_en_retard_amount)
 
-            if self._want('financial', 'total_impayees_amount', selected):
-                factures_impayees = Facture.objects.filter(
-                    date_emission__gte=start_date,
-                    date_emission__lte=end_date,
-                    statut='emise'
-                )
-                factures_impayees = self._filter_by_role(factures_impayees, 'billings')
-                total_impayees_amount = factures_impayees.aggregate(
-                    total=Coalesce(Sum('montant_ttc'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)))
-                )['total'] or 0
-                result['total_impayees_amount'] = float(total_impayees_amount)
-
             if self._want('financial', 'total_factures_amount', selected):
                 factures_total = Facture.objects.filter(
                     date_emission__gte=start_date,

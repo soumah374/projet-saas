@@ -400,6 +400,21 @@ export const useFactures = () => {
     }
   }, []);
 
+  const fetchFacturesImpayees = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.get('/billings/factures/factures_impayees');
+      return response.data;
+    } catch (err) {
+      setError('Erreur lors du chargement des factures impayées');
+      console.error('Erreur fetchFacturesImpayees:', err);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     factures,
     loading,
@@ -415,6 +430,7 @@ export const useFactures = () => {
     fetchStatistiques,
     fetchFacturesEnRetard,
     fetchFacturesAVenir,
+    fetchFacturesImpayees,
   };
 };
 
@@ -670,6 +686,7 @@ export const useContratsFacturation = () => {
       setLoading(false);
     }
   }, []);
+
 
   return {
     contrats,

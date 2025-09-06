@@ -44,7 +44,7 @@ const DashboardPage: React.FC = () => {
     period === 'autre' ? customDays : parseInt(period),
     selected && selected.length > 0 ? selected : userSelected && userSelected.length > 0 ? userSelected : undefined
   );
-  
+
   const [activeTab, setActiveTab] = useState('overview');
   // Activer l'onglet alerte si aucun droit n'est défini
   React.useEffect(() => {
@@ -342,11 +342,27 @@ const DashboardPage: React.FC = () => {
       </div>
 
       {/* Contenu des onglets */}
-      <div className="mt-6">
+      <div className="mt-2">
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Résumé rapide des informations essentielles */}
             <div className="space-y-6">
+              {anySelected('financial') && (
+                <QuickSummaryFinances 
+                  data={{
+                    taux_recouvrement: data?.financial?.taux_recouvrement,
+                    total_impayees_amount: data?.financial?.total_impayees_amount,
+                    total_paid_amount: data?.financial?.total_paid_amount,
+                    total_recouvrable_amount: data?.financial?.total_factures_amount, // Utiliser total_factures_amount comme proxy
+                    total_factures_amount: data?.financial?.total_factures_amount,
+                    total_en_retard_amount: data?.financial?.total_en_retard_amount,
+                    selected: selected,
+                    userSelected: userSelected,
+                    montant_impaye: data?.financial?.montant_impaye,
+                  }}
+                  period={getPeriodLabel(period)}
+                />
+              )}
               {(isSelected('financial.cash_flow') || isSelected('financial.revenue_trend') || isSelected('projects.overdue_projects') || isSelected('calendar.upcoming_deadlines')) && (
                 <QuickSummaryProjects 
                   data={{
@@ -357,21 +373,6 @@ const DashboardPage: React.FC = () => {
                     overdue_projects: data?.projects?.overdue_projects?.length || 0,
                     revenue_change: revenueChange,
                     projects_change: 2.1,
-                    selected: selected,
-                    userSelected: userSelected,
-                  }}
-                  period={getPeriodLabel(period)}
-                />
-              )}
-              {anySelected('financial') && (
-                <QuickSummaryFinances 
-                  data={{
-                    taux_recouvrement: data?.financial?.taux_recouvrement,
-                    total_impayees_amount: data?.financial?.total_impayees_amount,
-                    total_paid_amount: data?.financial?.total_paid_amount,
-                    total_recouvrable_amount: data?.financial?.total_factures_amount, // Utiliser total_factures_amount comme proxy
-                    total_factures_amount: data?.financial?.total_factures_amount,
-                    total_en_retard_amount: data?.financial?.total_en_retard_amount,
                     selected: selected,
                     userSelected: userSelected,
                   }}

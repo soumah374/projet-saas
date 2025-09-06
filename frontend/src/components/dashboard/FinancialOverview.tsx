@@ -91,9 +91,6 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
   });
 
   const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
-
-  console.log(isSelected('financial.revenue_trend'));
-
   
   const statusTrendData = (data.billing_status_trend || []).map((m) => ({
     month: new Date(m.month + '-01').toLocaleDateString('fr-FR', { month: 'short' }),
@@ -111,7 +108,7 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-2" />
-            Tendance des Revenus (6 derniers mois)
+            Tendance des Recettes (6 derniers mois)
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -246,7 +243,7 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
               <div className="text-3xl font-bold text-green-600">
                 {formatCurrency(data.cash_flow?.recettes || 0)}
               </div>
-              <p className="text-sm text-gray-600">Revenus</p>
+              <p className="text-sm text-gray-600">Recettes</p>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-red-600">
@@ -277,13 +274,13 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-sm text-gray-600">Période</div>
                 <div className="text-3xl font-bold text-blue-600 mt-1">
-                  {(Number((data as any).financial.taux_recouvrement.periode) || 0).toFixed(2)}%
+                  {(Number(data.taux_recouvrement?.periode) || 0).toFixed(2)}%
                 </div>
               </div>
               <div className="text-center p-4 border rounded-lg">
                 <div className="text-sm text-gray-600">Cumulé</div>
                 <div className="text-3xl font-bold text-emerald-600 mt-1">
-                  {(Number((data as any).financial.taux_recouvrement.cumule) || 0).toFixed(2)}%
+                  {(Number(data.taux_recouvrement?.cumule) || 0).toFixed(2)}%
                 </div>
               </div>
             </div>
@@ -303,25 +300,25 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
             <div className="grid grid-cols-2 gap-4">
               <div className="text-center p-3 border rounded-lg">
                 <div className="text-2xl font-bold text-blue-600">
-                  {formatCurrency(data.period_metrics.avg_daily_recettes)}
+                  {formatCurrency(data.period_metrics?.avg_daily_recettes || 0)}
                 </div>
                 <p className="text-sm text-gray-600">Recettes Journalières Moyennes</p>
               </div>
               <div className="text-center p-3 border rounded-lg">
                 <div className="text-2xl font-bold text-green-600">
-                  {formatCurrency(data.period_metrics.projected_monthly_recettes)}
+                  {formatCurrency(data.period_metrics?.projected_monthly_recettes || 0)}
                 </div>
                 <p className="text-sm text-gray-600">Projection Mensuelle</p>
               </div>
               <div className="text-center p-3 border rounded-lg">
                 <div className="text-2xl font-bold text-purple-600">
-                  {data.period_metrics.recettes_growth_percent.toFixed(1)}%
+                  {(data.period_metrics?.recettes_growth_percent || 0).toFixed(1)}%
                 </div>
                 <p className="text-sm text-gray-600">Croissance des Recettes</p>
               </div>
               <div className="text-center p-3 border rounded-lg">
                 <div className="text-2xl font-bold text-orange-600">
-                  {data.period_metrics.period_days}
+                  {data.period_metrics?.period_days || 0}
                 </div>
                 <p className="text-sm text-gray-600">Jours de Période</p>
               </div>
