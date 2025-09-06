@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -6,9 +7,7 @@ import {
   AlertTriangle, 
   Clock, 
   DollarSign, 
-  Calendar,
   Users,
-  TrendingDown,
   CheckCircle,
   Info
 } from 'lucide-react';
@@ -45,9 +44,12 @@ interface DashboardAlertsProps {
       severity: 'high' | 'medium' | 'low';
     }>;
   };
+  selected: string[];
+  userSelected: string[];
 }
 
 export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
+  const navigate = useNavigate();
   if (!data) return null;
 
   const getPriorityColor = (priority: string) => {
@@ -209,7 +211,7 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
               ))}
               {data.overdue_projects.length > 5 && (
                 <div className="text-center pt-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => navigate('/projects')}>
                     Voir tous les projets ({data.overdue_projects.length})
                   </Button>
                 </div>
@@ -305,7 +307,7 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
               ))}
               {data.team_alerts.length > 5 && (
                 <div className="text-center pt-2">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => navigate('/projects?q=alerts')}>
                     Voir toutes les alertes ({data.team_alerts.length})
                   </Button>
                 </div>

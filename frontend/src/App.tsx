@@ -42,6 +42,7 @@ import RoleDetailsPage from './pages/RoleDetailsPage';
 import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
+import DashboardManagerPage from './pages/DashboardManagerPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -117,6 +118,11 @@ function App() {
                 <Route path="/" element={
                   <ProtectedRoute>
                     <DashboardPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/dashboard-manager" element={
+                  <ProtectedRoute roles={["Managing Director", "Finance/Admin", 'Super Admin']}>
+                    <DashboardManagerPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/profile" element={

@@ -13,6 +13,11 @@ urlpatterns = [
     path('performance/', views.DashboardPerformanceView.as_view(), name='performance'),
     path('calendar/', views.DashboardCalendarView.as_view(), name='calendar'),
     
-    # Endpoint pour forcer le rafraîchissement des métriques
-    path('refresh/', views.DashboardRefreshView.as_view(), name='refresh'),
+    # Nouveaux endpoints pour la configuration et le catalogue des widgets
+    path('widgets/catalog/', views.DashboardWidgetsCatalogView.as_view(), name='widgets_catalog'),
+    path('widgets/config/', views.DashboardRoleConfigView.as_view(), name='widgets_config'),
+    path('widgets/user-config/', views.DashboardWidgetsConfigView.as_view(), name='user_widgets_config'),
+    
+    # Endpoint de test pour debug
+    path('test/', views.DashboardTestView.as_view(), name='test'),
 ] 

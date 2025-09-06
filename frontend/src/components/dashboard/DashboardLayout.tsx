@@ -1,22 +1,13 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-  className?: string;
-}
-
-export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ 
-  children, 
-  className 
-}) => {
+export const DashboardLayout: React.FC<{ children: React.ReactNode; header?: React.ReactNode }> = ({ children, header }) => {
   return (
-    <div className={cn(
-      "grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-1 gap-6",
-      "auto-rows-min",
-      className
-    )}>
-      {children}
+    <div className="space-y-6">
+      {header}
+      <div className="grid grid-cols-1 gap-6">
+        {children}
+      </div>
     </div>
   );
 }; 

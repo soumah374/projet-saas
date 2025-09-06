@@ -1,29 +1,25 @@
 import { useState, useEffect } from 'react';
-import { api } from '@/lib/api';
+import { dashboardAPI } from '@/lib/api';
 
 export interface DashboardMetrics {
   projects?: {
-    total_projects: number;
-    active_projects: number;
-    status_distribution: Record<string, number>;
-    progress_distribution: Array<{
-      range: string;
-      count: number;
-    }>;
-    recent_projects: Array<{
+    status_distribution?: Record<string, number>;
+    recent_projects?: Array<{
       id: number;
       name: string;
       status: string;
       progress: number;
       created_at: string;
+      activite_percent: number;
+      delai_percent: number;
     }>;
-    overdue_projects: Array<{
+    overdue_projects?: Array<{
       id: number;
       name: string;
       deadline: string;
       days_overdue: number;
     }>;
-    team_performance: Array<{
+    team_performance?: Array<{
       team_name: string;
       project_count: number;
       avg_progress: number;
@@ -32,78 +28,111 @@ export interface DashboardMetrics {
       month: string;
       count: number;
     }>;
+    progress_retards?: {
+      projects_overdue_count: number;
+      unbilled_amount_total: number;
+    };
+    project_performance?: Array<{
+      type: 'top' | 'flop';
+      projects: Array<{
+        title: string;
+        progress: number;
+      }>;
+    }>;
+    user_role?: string;
+    widgets_used?: string[];
   };
   financial?: {
-    revenue_trend: Array<{
-      month: string;
-      revenue: number;
+    revenue_trend?: Array<{
+      period: string;
+      recettes: number;
+      type: 'daily' | 'monthly';
     }>;
-    billing_status: Record<string, number>;
-    devis_conversion: {
+    billing_status?: Record<string, number>;
+    devis_conversion?: {
       total: number;
       converted: number;
       rate: number;
     };
-    cash_flow: {
-      income: number;
+    cash_flow?: {
+      recettes: number;
       expenses: number;
       net: number;
     };
-    top_clients: Array<{
-      name: string;
-      revenue: number;
-    }>;
+    montant_impaye?: number;
+    taux_recouvrement?: {
+      periode: number;
+      cumule: number;
+    };
+    period_metrics?: {
+      period_days: number;
+      avg_daily_recettes: number;
+      projected_monthly_recettes: number;
+      recettes_growth_percent: number;
+      previous_period_income: number;
+    };
+    total_paid_amount?: number;
+    total_en_retard_amount?: number;
+    total_impayees_amount?: number;
+    total_factures_amount?: number;
+    widgets_used?: string[];
   };
   performance?: {
-    team_productivity: Array<{
+    team_productivity?: Array<{
       team_name: string;
       total_tasks: number;
       completed_tasks: number;
       completion_rate: number;
     }>;
-    user_performance: Array<{
+    user_performance?: Array<{
       username: string;
       total_tasks: number;
       completed_tasks: number;
       completion_rate: number;
     }>;
-    task_completion_rate: {
+    task_completion_rate?: {
       total: number;
       completed: number;
       rate: number;
     };
-    efficiency_metrics: {
-      avg_completion_time_days: number;
-      total_completed_tasks: number;
-    };
     pending_tasks?: number;
     overdue_tasks?: number;
+    overdue_activities?: {
+      count: number;
+      rate_percent: number;
+    };
+    widgets_used?: string[];
   };
   calendar?: {
-    upcoming_deadlines: Array<{
+    upcoming_deadlines?: Array<{
       id: number;
       title: string;
       deadline: string;
       project: string;
       days_until_deadline: number;
     }>;
-    event_distribution: {
+    event_distribution?: {
       tasks: number;
       projects: number;
       contrats: number;
     };
-    resource_utilization: {
-      total_users: number;
+    resource_utilization?: {
       active_users: number;
+      total_contracts: number;
       utilization_rate: number;
-      total_clients?: number;
-      total_contracts?: number;
     };
+    widgets_used?: string[];
   };
   last_updated?: string;
+  user_role?: string;
+  widgets_config?: {
+    total_available: number;
+    total_authorized: number;
+    widgets_used: string[];
+  };
 }
 
-export const useDashboardMetrics = (periodDays: number = 30) => {
+export const useDashboardMetrics = (periodDays: number = 30, widgets?: string[]) => {
   const [data, setData] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -112,12 +141,11 @@ export const useDashboardMetrics = (periodDays: number = 30) => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await api.get(`/dashboard/overview/?period_days=${periodDays}`);
+      const response = await dashboardAPI.getOverview({ period_days: periodDays, widgets });
       setData(response.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Erreur lors de la récupération des métriques du tableau de bord:', err);
-      setError(err instanceof Error ? err.message : 'Erreur inconnue');
+      setError(err?.message || 'Erreur inconnue');
     } finally {
       setLoading(false);
     }
@@ -125,7 +153,7 @@ export const useDashboardMetrics = (periodDays: number = 30) => {
 
   useEffect(() => {
     fetchData();
-  }, [periodDays]);
+  }, [periodDays, JSON.stringify(widgets || [])]);
 
   const refetch = () => {
     fetchData();

@@ -7,11 +7,12 @@ import { AreaChart, Area, Legend } from 'recharts';
 
 interface FinancialOverviewProps {
   data?: {
-    revenue_trend: Array<{
-      month: string;
-      revenue: number;
+    revenue_trend?: Array<{
+      period: string;
+      recettes: number;
+      type: 'daily' | 'monthly';
     }>;
-    billing_status: Record<string, number>;
+    billing_status?: Record<string, number>;
     billing_status_trend?: Array<{
       month: string; // YYYY-MM
       payee?: number;
@@ -19,25 +20,40 @@ interface FinancialOverviewProps {
       en_retard?: number;
       annulee?: number;
     }>;
-    devis_conversion: {
+    devis_conversion?: {
       total: number;
       converted: number;
       rate: number;
     };
-    cash_flow: {
-      income: number;
+    cash_flow?: {
+      recettes: number;
       expenses: number;
       net: number;
     };
-    top_clients: Array<{
-      name: string;
-      revenue: number;
-    }>;
+    montant_impaye?: number;
+    taux_recouvrement?: {
+      periode: number;
+      cumule: number;
+    };
+    period_metrics?: {
+      period_days: number;
+      avg_daily_recettes: number;
+      projected_monthly_recettes: number;
+      recettes_growth_percent: number;
+      previous_period_income: number;
+    };
+    total_paid_amount?: number;
+    total_en_retard_amount?: number;
+    total_impayees_amount?: number;
+    total_factures_amount?: number;
+    widgets_used?: string[];
   };
   period: string;
+  selected: string[];
+  userSelected: string[];
 }
 
-export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, period }) => {
+export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, period, selected, userSelected }) => {
   if (!data) return null;
 
   const formatCurrency = (amount: number) => {
@@ -64,11 +80,18 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
     }
   };
 
-  const chartData = (data.revenue_trend || []).map((m) => ({
-    month: new Date(m.month + '-01').toLocaleDateString('fr-FR', { month: 'short' }),
-    revenue: m.revenue,
-  }));
+  const chartData = (data.revenue_trend || []).map((m: any) => {
+    const rawPeriod = m?.period;
+    const amount = m?.recettes ?? 0;
+    const labelDate = rawPeriod ? new Date((rawPeriod as string) + (rawPeriod.length === 7 ? '-01' : '')) : new Date();
+    return {
+      month: labelDate.toLocaleDateString('fr-FR', { month: 'short' }),
+      revenue: amount,
+    };
+  });
 
+  const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
+  
   const statusTrendData = (data.billing_status_trend || []).map((m) => ({
     month: new Date(m.month + '-01').toLocaleDateString('fr-FR', { month: 'short' }),
     payee: m.payee || 0,
@@ -80,28 +103,31 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
   return (
     <div className="space-y-2">
       {/* Tendance des revenus */}
+      {isSelected('financial.revenue_trend') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-2" />
-            Tendance des Revenus (6 derniers mois)
+            Tendance des Recettes (6 derniers mois)
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 min-w-[900px] md:min-w-[1000px] lg:min-w-0">
-            {data.revenue_trend?.map((month) => (
-              <div key={month.month} className="text-center">
-                <div className="text-lg font-bold text-gray-900">
-                  {formatCurrency(month.revenue)}
+            {data.revenue_trend?.map((m: any, idx: number) => {
+              const rawPeriod = m?.period;
+              const amount = m?.recettes ?? 0;
+              const d = rawPeriod ? new Date((rawPeriod as string) + (rawPeriod.length === 7 ? '-01' : '')) : new Date();
+              return (
+                <div key={idx} className="text-center">
+                  <div className="text-lg font-bold text-gray-900">
+                    {formatCurrency(amount)}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-500">
-                  {new Date(month.month + '-01').toLocaleDateString('fr-FR', { 
-                    month: 'short', 
-                    year: 'numeric' 
-                  })}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="mt-6 h-64 w-full min-w-[600px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -109,16 +135,16 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(v) => new Intl.NumberFormat('fr-FR', { notation: 'compact', maximumFractionDigits: 1 }).format(v)} />
-                <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Revenus']} labelFormatter={(label) => `Mois: ${label}`} />
+                <Tooltip formatter={(value) => [formatCurrency(Number(value)), 'Recettes']} labelFormatter={(label) => `Mois: ${label}`} />
                 <Line type="monotone" dataKey="revenue" stroke="#2563eb" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </CardContent>
       </Card>
-
+      )}
       {/* Évolution des statuts de facturation */}
-      {statusTrendData.length > 0 && (
+      {statusTrendData.length > 0 && isSelected('financial.billing_status_trend') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -147,6 +173,7 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
       )}
 
       {/* Statut de facturation */}
+      {isSelected('financial.billing_status') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -167,8 +194,9 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
           </div>
         </CardContent>
       </Card>
-
+      )}
       {/* Conversion des devis */}
+      {isSelected('financial.devis_conversion') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -199,8 +227,9 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
           </div>
         </CardContent>
       </Card>
-
+      )}
       {/* Flux de trésorerie */}
+      {isSelected('financial.cash_flow') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -212,9 +241,9 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <div className="text-3xl font-bold text-green-600">
-                {formatCurrency(data.cash_flow?.income || 0)}
+                {formatCurrency(data.cash_flow?.recettes || 0)}
               </div>
-              <p className="text-sm text-gray-600">Revenus</p>
+              <p className="text-sm text-gray-600">Recettes</p>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-red-600">
@@ -233,35 +262,66 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
           </div>
         </CardContent>
       </Card>
-
-      {/* Top clients */}
-      {data.top_clients && data.top_clients.length > 0 && (
+      )}
+      {/* Carte Taux de recouvrement */}
+      {isSelected('financial.taux_recouvrement') && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Taux de recouvrement</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-sm text-gray-600">Période</div>
+                <div className="text-3xl font-bold text-blue-600 mt-1">
+                  {(Number(data.taux_recouvrement?.periode) || 0).toFixed(2)}%
+                </div>
+              </div>
+              <div className="text-center p-4 border rounded-lg">
+                <div className="text-sm text-gray-600">Cumulé</div>
+                <div className="text-3xl font-bold text-emerald-600 mt-1">
+                  {(Number(data.taux_recouvrement?.cumule) || 0).toFixed(2)}%
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {/* Métriques de période - remplace top_clients qui n'est pas disponible dans le backend */}
+      {isSelected('financial.period_metrics') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Top Clients par Revenus
+              <BarChart3 className="h-5 w-5" />
+              Métriques de Période
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {data.top_clients.slice(0, 5).map((client, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-bold text-blue-600">{index + 1}</span>
-                    </div>
-                    <div>
-                      <h4 className="font-medium text-gray-900">{client.name}</h4>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-gray-900">
-                      {formatCurrency(client.revenue)}
-                    </div>
-                  </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 border rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">
+                  {formatCurrency(data.period_metrics?.avg_daily_recettes || 0)}
                 </div>
-              ))}
+                <p className="text-sm text-gray-600">Recettes Journalières Moyennes</p>
+              </div>
+              <div className="text-center p-3 border rounded-lg">
+                <div className="text-2xl font-bold text-green-600">
+                  {formatCurrency(data.period_metrics?.projected_monthly_recettes || 0)}
+                </div>
+                <p className="text-sm text-gray-600">Projection Mensuelle</p>
+              </div>
+              <div className="text-center p-3 border rounded-lg">
+                <div className="text-2xl font-bold text-purple-600">
+                  {(data.period_metrics?.recettes_growth_percent || 0).toFixed(1)}%
+                </div>
+                <p className="text-sm text-gray-600">Croissance des Recettes</p>
+              </div>
+              <div className="text-center p-3 border rounded-lg">
+                <div className="text-2xl font-bold text-orange-600">
+                  {data.period_metrics?.period_days || 0}
+                </div>
+                <p className="text-sm text-gray-600">Jours de Période</p>
+              </div>
             </div>
           </CardContent>
         </Card>

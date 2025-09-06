@@ -1,0 +1,6 @@
+Implement la gestion due tableau de bord en permettant
+administrateur d'afficher les widgets et les retires si souhaité. 
+Les indicateurs sont deja implements des @service.py, chaque indicateurs
+doit etre liee permession @AVAILABLE_WIDGETS, lorsque la permession est 
+autorisé dans @DashboardWidgetConfig pour utilisateur il peut voir cet indicateur sur 
+sont tableau de bord

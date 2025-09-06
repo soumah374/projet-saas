@@ -14,76 +14,72 @@ interface MetricsOverviewProps {
     overdue_tasks: number;
   };
   period: string;
+  selected: string[];
+  userSelected: string[];
 }
 
-export const MetricsOverview: React.FC<MetricsOverviewProps> = ({ data, period }) => {
+export const MetricsOverview: React.FC<MetricsOverviewProps> = ({ data, period, selected, userSelected }) => {
   if (!data) return null;
 
+  const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
+
   const metrics = [
-    // {
-    //   title: 'Projets Actifs',
-    //   value: data.active_projects || 0,
-    //   icon: Target,
-    //   color: 'text-blue-600',
-    //   bgColor: 'bg-blue-50',
-    //   description: 'Projets en cours'
-    // },
-    {
+    (isSelected('projects.total_projects') ? {
       title: 'Total Projets',
       value: data.total_projects || 0,
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       description: 'Tous les projets'
-    },
-    {
+    } : {}),
+    (isSelected('projects.total_users') ? {
       title: 'Utilisateurs',
       value: data.total_users || 0,
       icon: Users,
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       description: 'Équipe totale'
-    },
-    {
+    } : {}),
+    (isSelected('projects.total_clients') ? {
       title: 'Clients',
       value: data.total_clients || 0,
       icon: Users,
       color: 'text-indigo-600',
       bgColor: 'bg-indigo-50',
       description: 'Portefeuille clients'
-    },
-    {
+    } : {}),
+    (isSelected('projects.total_contracts') ? {
       title: 'Contrats',
       value: data.total_contracts || 0,
       icon: CheckCircle,
       color: 'text-emerald-600',
       bgColor: 'bg-emerald-50',
       description: 'Contrats actifs'
-    },
-    {
-      title: 'Revenus',
+    } : {}),
+    (isSelected('financial.total_revenue') ? {
+      title: 'Recettes',
       value: `${(data.total_revenue || 0).toLocaleString('fr-FR')} €`,
       icon: TrendingUp,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
       description: `Sur ${period}`
-    },
-    {
+    } : {}),
+    (isSelected('projects.pending_tasks') ? {
       title: 'Activités en Attente',
       value: data.pending_tasks || 0,
       icon: Clock,
       color: 'text-yellow-600',
       bgColor: 'bg-yellow-50',
       description: 'À traiter'
-    },
-    {
+    } : {}),
+    (isSelected('projects.overdue_tasks') ? {
       title: 'Activités en Retard',
       value: data.overdue_tasks || 0,
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'Urgentes'
-    }
+    } : {}),
   ];
 
   return (

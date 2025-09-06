@@ -152,12 +152,12 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       const member = teamMembers?.find(m => m.user === parseInt(selectedMemberForAssignment));
       const memberName = member ? member.user_name : 'Membre inconnu';
 
-      toast.success(`Tâche "${selectedTaskForAssignment.title}" assignée à ${memberName}`);
+      toast.success(`Activité "${selectedTaskForAssignment.title}" assignée à ${memberName}`);
       setShowAssignmentDialog(false);
       setSelectedTaskForAssignment(null);
       setSelectedMemberForAssignment('');
     } catch (error) {
-      toast.error('Erreur lors de l\'assignation de la tâche');
+      toast.error('Erreur lors de l\'assignation de l\'activité');
       console.error('Error assigning task:', error);
     }
   };
@@ -477,12 +477,12 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Assigner une tâche</DialogTitle>
+            <DialogTitle>Assigner une activité</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {selectedTaskForAssignment && (
               <div>
-                <Label>Tâche sélectionnée</Label>
+                <Label>Activité sélectionnée</Label>
                 <div className="mt-2 p-3 bg-gray-50 rounded-lg">
                   <p className="font-medium">{selectedTaskForAssignment.title}</p>
                   <p className="text-sm text-gray-600">{selectedTaskForAssignment.description}</p>

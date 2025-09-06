@@ -243,7 +243,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   onClick={() => toggleMenu('administration')} 
                   className={cn(
                     "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    (location.pathname === '/users' || location.pathname === '/permissions') 
+                    (location.pathname === '/users' || location.pathname === '/permissions' || location.pathname === '/dashboard-manager') 
                       ? "bg-blue-50 text-blue-600" 
                       : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   )}
@@ -266,7 +266,15 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                         <Users className="h-4 w-4" /> Utilisateurs 
                       </Link>
                     )}
-                    
+                    <Link 
+                      to="/dashboard-manager" 
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
+                        location.pathname === '/dashboard-manager' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                      )}
+                    > 
+                      <BarChart3 className="h-4 w-4" /> Manager Tableau de bord
+                    </Link>
                     <Link 
                       to="/permissions" 
                       className={cn(

@@ -180,6 +180,13 @@ class FactureViewSet(viewsets.ModelViewSet):
         )
         serializer = self.get_serializer(factures, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['get'])
+    def factures_impayees(self, request):
+        """Retourne les factures impayées"""
+        factures = self.get_queryset().filter(montant_restant__gt=0)
+        serializer = self.get_serializer(factures, many=True)
+        return Response(serializer.data)
 
 
 class PaiementFactureViewSet(viewsets.ModelViewSet):

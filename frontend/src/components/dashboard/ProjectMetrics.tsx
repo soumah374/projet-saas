@@ -6,34 +6,55 @@ import { Target, AlertTriangle, TrendingUp, Users } from 'lucide-react';
 
 interface ProjectMetricsProps {
   data?: {
-    status_distribution: Record<string, number>;
-    progress_distribution: Array<{
+    status_distribution?: Record<string, number>;
+    progress_distribution?: Array<{
       range: string;
       count: number;
     }>;
-    recent_projects: Array<{
+    recent_projects?: Array<{
       id: number;
       name: string;
       status: string;
       progress: number;
       created_at: string;
+      activite_percent?: number;
+      delai_percent?: number;
     }>;
-    overdue_projects: Array<{
+    overdue_projects?: Array<{
       id: number;
       name: string;
       deadline: string;
       days_overdue: number;
     }>;
-    team_performance: Array<{
+    team_performance?: Array<{
       team_name: string;
       project_count: number;
       avg_progress: number;
     }>;
+    progress_retards?: {
+      projects_overdue_count: number;
+      unbilled_amount_total: number;
+    };
+    project_performance?: Array<{
+      type: 'top' | 'flop';
+      projects: Array<{
+        title: string;
+        progress: number;
+      }>;
+    }>;
+    monthly_projects?: Array<{
+      month: string;
+      count: number;
+    }>;
+    user_role?: string;
+    widgets_used?: string[];
   };
   period: string;
+  selected: string[];
+  userSelected: string[];
 }
 
-export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) => {
+export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period, selected, userSelected }) => {
   if (!data) return null;
 
   const getStatusColor = (status: string) => {
@@ -51,9 +72,21 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
     }
   };
 
+  const isSelected = (key: string) => !selected || selected.includes(key) || userSelected.includes(key);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR', {
+      style: 'currency',
+      currency: 'GNF',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
+  };
+
   return (
     <div className="space-y-6">
       {/* Distribution par statut */}
+      {isSelected('projects.status_distribution') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -72,10 +105,40 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Carte Retards */}
+      {data.progress_retards && isSelected('projects.progress_retards') && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-5 w-5" />
+              Retards
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 border rounded-lg bg-red-50">
+                <div className="text-sm text-red-700">Projets en retard</div>
+                <div className="text-3xl font-bold text-red-800 mt-1">
+                  {data.progress_retards.projects_overdue_count || 0}
+                </div>
+              </div>
+              <div className="p-4 border rounded-lg bg-yellow-50">
+                <div className="text-sm text-yellow-700">Montant total factures non émises</div>
+                <div className="text-2xl font-bold text-yellow-800 mt-1">
+                  {formatCurrency(data.progress_retards.unbilled_amount_total || 0)}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Projets récents */}
+      {isSelected('projects.recent_projects') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -107,9 +170,10 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Projets en retard */}
-      {data.overdue_projects && data.overdue_projects.length > 0 && (
+      {data.overdue_projects && data.overdue_projects.length > 0 && isSelected('projects.overdue_projects') && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-600">
@@ -140,6 +204,7 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
       )}
 
       {/* Performance des équipes */}
+      {isSelected('projects.team_performance') && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -169,6 +234,7 @@ export const ProjectMetrics: React.FC<ProjectMetricsProps> = ({ data, period }) 
           </div>
         </CardContent>
       </Card>
+      )}
     </div>
   );
 }; 

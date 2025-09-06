@@ -1,0 +1,35 @@
+# Catalogue des widgets disponibles (clé => description et type)
+AVAILABLE_WIDGETS = {
+  'projects.status_distribution': {'type': 'projects', 'label': 'Répartition des statuts des projets'},
+  'projects.recent_projects': {'type': 'projects', 'label': 'Projets récents'},
+  'projects.overdue_projects': {'type': 'projects', 'label': 'Projets en retard'},
+  'projects.team_performance': {'type': 'projects', 'label': 'Performance des équipes'},
+  'projects.monthly_projects': {'type': 'projects', 'label': 'Projets par mois'},
+  'projects.progress_retards': {'type': 'projects', 'label': 'Retards et progression'},
+  'projects.project_performance': {'type': 'projects', 'label': 'Top/Flop projets'},
+  
+  'financial.revenue_trend': {'type': 'financial', 'label': 'Tendance des recettes'},
+  'financial.billing_status': {'type': 'financial', 'label': 'Statut de facturation'},
+  'financial.devis_conversion': {'type': 'financial', 'label': 'Conversion des devis'},
+  'financial.cash_flow': {'type': 'financial', 'label': 'Flux de trésorerie'},
+  'financial.top_clients': {'type': 'financial', 'label': 'Top clients'},
+  'financial.montant_impaye': {'type': 'financial', 'label': 'Montant impayé'},
+  'financial.taux_recouvrement': {'type': 'financial', 'label': 'Taux de recouvrement'},
+  'financial.period_metrics': {'type': 'financial', 'label': 'Métriques de période'},
+  'financial.total_paid_amount': {'type': 'financial', 'label': 'Montant total payé'},
+  'financial.total_en_retard_amount': {'type': 'financial', 'label': 'Montant en retard'},
+  # 'financial.total_impayees_amount': {'type': 'financial', 'label': 'Montant impayé total'},
+  'financial.total_factures_amount': {'type': 'financial', 'label': 'Montant total facturé'},
+  
+  'performance.team_productivity': {'type': 'performance', 'label': 'Productivité des équipes'},
+  'performance.user_performance': {'type': 'performance', 'label': 'Performance des utilisateurs'},
+  'performance.task_completion_rate': {'type': 'performance', 'label': 'Taux de complétion des tâches'},
+  'performance.efficiency_metrics': {'type': 'performance', 'label': 'Métriques d\'efficacité'},
+  'performance.overdue_activities': {'type': 'performance', 'label': 'Activités en retard'},
+  'performance.pending_tasks': {'type': 'performance', 'label': 'Tâches en attente'},
+  'performance.overdue_tasks': {'type': 'performance', 'label': 'Tâches en retard'},
+  
+  'calendar.upcoming_deadlines': {'type': 'calendar', 'label': 'Échéances à venir'},
+  'calendar.event_distribution': {'type': 'calendar', 'label': 'Distribution des événements'},
+  'calendar.resource_utilization': {'type': 'calendar', 'label': 'Utilisation des ressources'},
+}
