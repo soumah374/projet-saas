@@ -530,11 +530,11 @@ export const FacturesPage: React.FC = () => {
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
-                          if (pagination.previous) {
+                          if (currentPage > 1) {
                             handlePageChange(currentPage - 1);
                           }
                         }}
-                        className={!pagination.previous ? "pointer-events-none opacity-50" : ""}
+                        className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
 
@@ -543,6 +543,11 @@ export const FacturesPage: React.FC = () => {
                       const totalPages = Math.ceil(pagination.count / pageSize);
                       const pages = [];
                       const maxVisiblePages = 5;
+                      
+                      // Validation des données de pagination
+                      if (!totalPages || totalPages <= 0) {
+                        return null;
+                      }
                       
                       if (totalPages <= maxVisiblePages) {
                         // Afficher toutes les pages
@@ -566,7 +571,7 @@ export const FacturesPage: React.FC = () => {
                         // Logique pour afficher les pages avec ellipsis
                         if (currentPage <= 3) {
                           // Début
-                          for (let i = 1; i <= 3; i++) {
+                          for (let i = 1; i <= Math.min(3, totalPages); i++) {
                             pages.push(
                               <PaginationItem key={i}>
                                 <PaginationLink
@@ -582,25 +587,27 @@ export const FacturesPage: React.FC = () => {
                               </PaginationItem>
                             );
                           }
-                          pages.push(
-                            <PaginationItem key="ellipsis1">
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                          pages.push(
-                            <PaginationItem key={totalPages}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handlePageChange(totalPages);
-                                }}
-                                isActive={currentPage === totalPages}
-                              >
-                                {totalPages}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
+                          if (totalPages > 4) {
+                            pages.push(
+                              <PaginationItem key="ellipsis1">
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                            pages.push(
+                              <PaginationItem key={totalPages}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handlePageChange(totalPages);
+                                  }}
+                                  isActive={currentPage === totalPages}
+                                >
+                                  {totalPages}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          }
                         } else if (currentPage >= totalPages - 2) {
                           // Fin
                           pages.push(
@@ -617,12 +624,14 @@ export const FacturesPage: React.FC = () => {
                               </PaginationLink>
                             </PaginationItem>
                           );
-                          pages.push(
-                            <PaginationItem key="ellipsis2">
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                          for (let i = totalPages - 2; i <= totalPages; i++) {
+                          if (totalPages > 4) {
+                            pages.push(
+                              <PaginationItem key="ellipsis2">
+                                <PaginationEllipsis />
+                              </PaginationItem>
+                            );
+                          }
+                          for (let i = Math.max(1, totalPages - 2); i <= totalPages; i++) {
                             pages.push(
                               <PaginationItem key={i}>
                                 <PaginationLink
@@ -659,7 +668,7 @@ export const FacturesPage: React.FC = () => {
                               <PaginationEllipsis />
                             </PaginationItem>
                           );
-                          for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+                          for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
                             pages.push(
                               <PaginationItem key={i}>
                                 <PaginationLink
@@ -705,11 +714,12 @@ export const FacturesPage: React.FC = () => {
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
-                          if (pagination.next) {
+                          const totalPages = Math.ceil(pagination.count / pageSize);
+                          if (currentPage < totalPages) {
                             handlePageChange(currentPage + 1);
                           }
                         }}
-                        className={!pagination.next ? "pointer-events-none opacity-50" : ""}
+                        className={currentPage >= Math.ceil(pagination.count / pageSize) ? "pointer-events-none opacity-50" : ""}
                       />
                     </PaginationItem>
                   </PaginationContent>

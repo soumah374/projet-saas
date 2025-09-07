@@ -17,9 +17,10 @@ interface QuickSummaryProps {
     };
     selected: string[];
     userSelected: string[];
+    facture_non_emises: number;
   };
   period: string;
-  period_days: string
+  period_days: string,
 }
 
 type SummaryItem = {
@@ -93,6 +94,14 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data,period_
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
+      description: 'Montant total'
+    }] : []), 
+    ...(isSelected('financial.facture_non_emises') ? [{
+      title: 'Factures non emises',
+      value: formatCurrency(data.facture_non_emises || 0),
+      icon: DollarSign,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
       description: 'Montant total'
     }] : []),
     ...(isSelected('financial.taux_recouvrement') ? [{

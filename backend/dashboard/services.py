@@ -306,6 +306,21 @@ class DashboardMetricsService:
                         'unbilled_amount_total': float(0)
                     }
             
+            #Nombre de projets et total
+            if self._want('projects', 'active_projects', selected) or self._want('projects', 'total_projects', selected):
+                projects_base = Project.objects.all()
+                projects_base = self._filter_by_role(projects_base, 'projects')
+                
+                if self._want('projects', 'active_projects', selected):
+                    active_projects_count = projects_base.filter(
+                        status__in=['Production', 'Livraison']
+                    ).count()
+                    result['active_projects'] = active_projects_count
+                
+                if self._want('projects', 'total_projects', selected):
+                    total_projects_count = projects_base.count()
+                    result['total_projects'] = total_projects_count
+            
             # Performance des équipes
             if self._want('projects', 'team_performance', selected):
                 team_base = Team.objects.all()
@@ -341,15 +356,23 @@ class DashboardMetricsService:
             # Top/Flop projets
             if self._want('projects', 'project_performance', selected) and projects_in_period is not None:
                 project_performance = []
-                top_projects = projects_in_period.order_by('-progress')[:5].values('title', 'progress')
-                flop_projects = projects_in_period.order_by('progress')[:5].values('title', 'progress')
+                top_projects = projects_in_period.order_by('-progress').first() 
+                flop_projects = projects_in_period.order_by('progress').first()
                 project_performance.append({
                     'type': 'top',
-                    'projects': list(top_projects)
+                    'projects': {
+                        'id': top_projects.id,
+                        'title': top_projects.title,
+                        'progress': top_projects.progress
+                    }
                 })
                 project_performance.append({
                     'type': 'flop',
-                    'projects': list(flop_projects)
+                    'projects': {
+                        'id': flop_projects.id,
+                        'title': flop_projects.title,
+                        'progress': flop_projects.progress
+                    }
                 })
                 result['project_performance'] = project_performance
             
@@ -615,6 +638,24 @@ class DashboardMetricsService:
                     total=Coalesce(Sum('montant_ttc'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)))
                 )['total'] or 0
                 result['total_factures_amount'] = float(total_factures_amount)
+            
+            #Facture non emises 
+            if self._want('financial', 'facture_non_emises', selected):
+                echeancier_ids = Facture.objects.filter(
+                    created_at__gte=start_date, 
+                    created_at__lte=end_date).values('echeance_id')
+                echeancier_ids = [e['echeance_id'] for e in echeancier_ids if e['echeance_id'] is not None]
+                
+                echeances_non_emises = EcheancierContrat.objects.filter(
+                    date_echeance__gte=start_date,
+                    date_echeance__lte=end_date,
+                ).exclude(id__in=echeancier_ids)
+                
+                echeances_non_emises = self._filter_by_role(echeances_non_emises, 'contrats')
+                total_non_emises = echeances_non_emises.aggregate(
+                    total=Coalesce(Sum('montant_ttc'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)))
+                )['total'] or 0
+                result['facture_non_emises'] = float(total_non_emises)
 
             result['widgets_used'] = [k for k in selected or [] if k.startswith('financial.')] if selected else []
             return result

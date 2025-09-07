@@ -3,7 +3,9 @@ import { dashboardAPI } from '@/lib/api';
 
 export interface DashboardMetrics {
   projects?: {
+    total_projects: number;
     status_distribution?: Record<string, number>;
+    active_projects: number;
     recent_projects?: Array<{
       id: number;
       name: string;
@@ -34,15 +36,16 @@ export interface DashboardMetrics {
     };
     project_performance?: Array<{
       type: 'top' | 'flop';
-      projects: Array<{
+      projects:{
         title: string;
         progress: number;
-      }>;
+      };
     }>;
     user_role?: string;
     widgets_used?: string[];
   };
   financial?: {
+    facture_non_emises?: number;
     revenue_trend?: Array<{
       period: string;
       recettes: number;
