@@ -305,52 +305,83 @@ export const useFactures = () => {
     }
   }, [fetchFactures, toast]);
 
-  // Générer le PDF d'une facture
-  const genererPDF = useCallback(async (factureId: number, saveToModel = false) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.post(`/billings/factures/${factureId}/generer_pdf/`, {
-        save: saveToModel
-      });
-      
-      if (saveToModel) {
-        toast({
-          title: 'Succès',
-          description: response.data.message,
-        });
-        return response.data;
-      } else {
-        // Créer un blob et télécharger le PDF
-        const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `facture_${factureId}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        
-        toast({
-          title: 'Succès',
-          description: 'PDF téléchargé avec succès',
-        });
-        return { success: true };
+  // util: lien de téléchargement fiable
+function downloadBlob(data: BlobPart | BlobPart[] | Blob, filename: string, mimeType?: string) {
+  const parts = data instanceof Blob ? [data] : (Array.isArray(data) ? data : [data]);
+  const blob = data instanceof Blob ? data : new Blob(parts, { type: mimeType || 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  // petit délai pour Safari/Firefox
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+// util: extraire un filename du header Content-Disposition
+function filenameFromContentDisposition(cd?: string | null): string | null {
+  if (!cd) return null;
+  const m1 = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(cd);
+  if (m1) return decodeURIComponent(m1[1].replace(/(^"|"$)/g, ''));
+  const m2 = /filename=([^;]+)/i.exec(cd);
+  if (m2) return m2[1].replace(/(^"|"$)/g, '');
+  return null;
+}
+
+// ---- Ta fonction corrigée
+const genererPDF = useCallback(async (facture: Facture, saveToModel = false) => {
+  setLoading(true);
+  setError(null);
+  try {
+    // Toujours demander un blob : si le serveur renvoie du JSON, on le détecte via le Content-Type.
+    const res = await api.post(
+      `/billings/factures/${facture.id}/generer_pdf/`,
+      { save: saveToModel },
+      { responseType: 'blob' } // <- clé pour ne pas corrompre le binaire
+    );
+    const ct = res.headers?.['content-type'] as string | undefined;
+    const cd = res.headers?.['content-disposition'] as string | undefined;
+
+    if (ct && ct.includes('application/json')) {
+      // Le serveur a renvoyé du JSON (probablement quand saveToModel = true)
+      const text = await (res.data as Blob).text();
+      const json = JSON.parse(text);
+      // 1) message de succès côté serveur
+      if (json.message) {
+        toast({ title: 'Succès', description: json.message });
       }
-    } catch (err: any) {
-      const message = err.response?.data?.message || 'Erreur lors de la génération du PDF';
-      setError(message);
-      toast({
-        title: 'Erreur',
-        description: message,
-        variant: 'destructive',
-      });
-      return null;
-    } finally {
-      setLoading(false);
+      // 2) cas A: le serveur fournit une URL du PDF
+      if (json.pdfUrl) {
+        const pdfResp = await api.get(json.pdfUrl, { responseType: 'blob' });
+        const fname = filenameFromContentDisposition(pdfResp.headers?.['content-disposition']) || `facture-${facture.numero}.pdf`;
+        downloadBlob(pdfResp.data, fname, pdfResp.data.type || 'application/pdf');
+        return { success: true };
+      }     
+      return { success: true };
+    } else {
+      // Réponse binaire directe (le cas idéal)
+      const blob = res.data as Blob;
+      const fname = filenameFromContentDisposition(cd) || `facture-${facture.numero}.pdf`;
+      downloadBlob(blob, fname, blob.type || 'application/pdf');
+      toast({ title: 'Succès', description: 'PDF téléchargé avec succès' });
+      return { success: true };
     }
-  }, [toast]);
+  } catch (err: any) {
+    const message =
+      err.response?.data?.message ||
+      err.message ||
+      'Erreur lors de la génération du PDF';
+    setError(message);
+    toast({ title: 'Erreur', description: message, variant: 'destructive' });
+    return null;
+  } finally {
+    setLoading(false);
+  }
+}, [toast]);
 
   // Récupérer les statistiques
   const fetchStatistiques = useCallback(async (): Promise<StatistiquesFacturation | null> => {
@@ -400,11 +431,11 @@ export const useFactures = () => {
     }
   }, []);
 
-  const fetchFacturesImpayees = useCallback(async () => {
+  const fetchFacturesImpayees = useCallback(async (periodDays: string = '30')  => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/billings/factures/factures_impayees');
+      const response = await api.get(`/billings/factures/factures_impayees?period_days=${periodDays}`);
       return response.data;
     } catch (err) {
       setError('Erreur lors du chargement des factures impayées');
@@ -696,4 +727,4 @@ export const useContratsFacturation = () => {
     genererFacturesContrat,
     fetchResumeFacturation,
   };
-}; 
+};

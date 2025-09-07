@@ -494,9 +494,11 @@ class DashboardMetricsService:
             if self._want('financial', 'montant_impaye', selected):
                 factures_impayees = Facture.objects.filter(
                     statut__in=['emise', 'envoyee', 'en_retard'],
-                    date_echeance__lt=self.now
+                    date_echeance__lt=self.now,
+                    created_at__gte=start_date,
+                    created_at__lte=end_date,
                 )
-                factures_impayees = self._filter_by_role(factures_impayees, 'billings')
+                # factures_impayees = self._filter_by_role(factures_impayees, 'billings')
                 montant_impaye = factures_impayees.aggregate(
                     total=Coalesce(
                         Sum('montant_restant'),

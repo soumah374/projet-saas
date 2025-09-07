@@ -361,6 +361,7 @@ const DashboardPage: React.FC = () => {
                     montant_impaye: data?.financial?.montant_impaye,
                   }}
                   period={getPeriodLabel(period)}
+                  period_days={period.toString()}
                 />
               )}
               {(isSelected('financial.cash_flow') || isSelected('financial.revenue_trend') || isSelected('projects.overdue_projects') || isSelected('calendar.upcoming_deadlines')) && (

@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 
 import { Button } from '@/components/ui/button';
 import { DialogFooter } from '@/components/ui/dialog';
-import { Loader2 } from "lucide-react";
+import { Download, FileIcon, Loader2 } from "lucide-react";
 import { useFactures } from "@/hooks/use-factures";
+import { formatMontant } from "@/lib/formatters";
 
 interface Facture {
   id: number;
@@ -21,22 +22,34 @@ interface Facture {
 interface FactureImpayeModalProps {
   open: boolean;
   onClose: () => void;
+  period_days?: string;
 }
 
 const FactureImpayeModal: React.FC<FactureImpayeModalProps> = ({
   open,
   onClose,
+  period_days = '30'
 }) => {
-  const { loading, error, fetchFacturesImpayees } = useFactures();
+
+  const { 
+    loading, 
+    error, 
+    fetchFacturesImpayees,
+    genererPDF 
+  } = useFactures();
+
   const [facturesImpayees, setFacturesImpayees] = useState<Facture[]>([]);
   useEffect(() => {
     if (open) {
-      fetchFacturesImpayees().then((data) => {
-        console.log(data);
-        setFacturesImpayees(data);
+      fetchFacturesImpayees(period_days).then((data) => {
+        setFacturesImpayees(data.facture);
       });
     }
   }, [open]);
+
+    const handleGenererPDF = async (facture) => {
+      await genererPDF(facture, true);
+    };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -61,24 +74,25 @@ const FactureImpayeModal: React.FC<FactureImpayeModalProps> = ({
             <p className="text-sm mt-1">Toutes les factures sont à jour</p>
           </div>
         ) : (
-                    <div className="overflow-auto max-h-96 border rounded-lg">
+          <div className="overflow-auto max-h-96 border rounded-lg">
             <table className="w-full caption-bottom text-sm">
               <thead className="[&_tr]:border-b">
                 <tr className="bg-gray-50 border-b transition-colors hover:bg-muted/50">
-                  <th className="h-12 px-4 text-left align-middle font-semibold text-gray-700 w-20">N° Facture</th>
-                  <th className="h-12 px-4 text-left align-middle font-semibold text-gray-700">Client</th>
-                  <th className="h-12 px-4 text-left align-middle font-semibold text-gray-700 w-28">Date émission</th>
-                  <th className="h-12 px-4 text-left align-middle font-semibold text-gray-700 w-28">Date échéance</th>
-                  <th className="h-12 px-4 text-right align-middle font-semibold text-gray-700 w-32">Montant TTC</th>
-                  <th className="h-12 px-4 text-right align-middle font-semibold text-gray-700 w-32">Montant restant</th>
-                  <th className="h-12 px-4 text-left align-middle font-semibold text-gray-700 w-24">Statut</th>
+                  <th className="sticky top-0 z-10 bg-gray-50 h-12 px-4 text-left align-middle font-semibold text-gray-700 w-20">N° Facture</th>
+                  <th className="sticky top-0 z-10 bg-gray-50 h-12 px-4 text-left align-middle font-semibold text-gray-700">Client</th>
+                  <th className="sticky top-0 z-10 bg-gray-50 h-12 px-4 text-left align-middle font-semibold text-gray-700 w-28">Date émission</th>
+                  <th className="sticky top-0 z-10 bg-gray-50 h-12 px-4 text-left align-middle font-semibold text-gray-700 w-28">Date échéance</th>
+                  <th className="sticky top-0 z-10 bg-gray-50 h-12 px-4 text-right align-middle font-semibold text-gray-700 w-32">Montant TTC</th>
+                  <th className="sticky top-0 z-10 bg-gray-50 h-12 px-4 text-right align-middle font-semibold text-gray-700 w-32">Montant restant</th>
+                  <th className="sticky top-0 z-10 bg-gray-50">Statut</th>
+                  <th className="sticky top-0 z-10 bg-gray-50">Actions</th>
                 </tr>
               </thead>
               <tbody className="[&_tr:last-child]:border-0">
                 {facturesImpayees?.map((facture, index) => (
                   <tr key={facture.id} className={`border-b transition-colors hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/30'}`}>
                     <td className="p-4 align-middle font-medium text-blue-600">{facture.numero}</td>
-                    <td className="p-4 align-middle max-w-48 truncate font-medium">{facture.client_nom}</td>
+                    <td>{facture.client_nom}</td>
                     <td className="p-4 align-middle text-sm text-gray-600">
                       {facture.date_emission
                         ? new Date(facture.date_emission).toLocaleDateString("fr-FR")
@@ -90,16 +104,10 @@ const FactureImpayeModal: React.FC<FactureImpayeModalProps> = ({
                         : "-"}
                     </td>
                     <td className="p-4 align-middle text-right font-medium text-gray-800">
-                      {facture.montant_ttc?.toLocaleString("fr-FR", {
-                        style: "currency",
-                        currency: "GNF",
-                      }) || "-"}
+                      {formatMontant(facture.montant_ttc) }
                     </td>
                     <td className="p-4 align-middle text-right font-bold text-red-600">
-                      {facture.montant_restant?.toLocaleString("fr-FR", {
-                        style: "currency",
-                        currency: "GNF",
-                      }) || "-"}
+                      {formatMontant(facture.montant_restant) }
                     </td>
                     <td className="p-4 align-middle">
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${
@@ -110,6 +118,15 @@ const FactureImpayeModal: React.FC<FactureImpayeModalProps> = ({
                       }`}>
                         {facture.statut?.replace('_', ' ').toUpperCase() || "-"}
                       </span>
+                    </td>
+                    <td className="p-4 align-middle">
+                      <Button variant="outline" 
+                        className="px-2 py-1"
+                        size="sm"
+                        onClick={() => handleGenererPDF(facture)}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -124,6 +141,8 @@ const FactureImpayeModal: React.FC<FactureImpayeModalProps> = ({
               {facturesImpayees?.length > 0 && (
                 <span>Total: {facturesImpayees.length} facture{facturesImpayees.length > 1 ? 's' : ''} impayée{facturesImpayees.length > 1 ? 's' : ''}</span>
               )}
+              <br />
+
             </div>
             <Button onClick={onClose} variant="default" className="px-6">
               Fermer

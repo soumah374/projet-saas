@@ -19,6 +19,7 @@ interface QuickSummaryProps {
     userSelected: string[];
   };
   period: string;
+  period_days: string
 }
 
 type SummaryItem = {
@@ -31,7 +32,7 @@ type SummaryItem = {
   change?: number;
 };
 
-export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
+export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data,period_days }) => {
   if (!data) return null;
 
   const formatCurrency = (amount: number) => {
@@ -52,7 +53,7 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
 
   const financeItems: SummaryItem[] = [
     ...(isSelected('financial.montant_impaye') ? [{
-      title: 'Montant impayé',
+      title: 'Montant de la facture impayé',
       value: (
         <>
           <button
@@ -62,13 +63,13 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data }) => {
           >
             {formatCurrency(data.montant_impaye || 0)}
           </button>
-          <FactureImpayeModal open={showFactureImpayeModal} onClose={() => setShowFactureImpayeModal(false)} />
+          <FactureImpayeModal open={showFactureImpayeModal} onClose={() => setShowFactureImpayeModal(false)} period_days={period_days.toString()} />
         </>
       ),
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      description: 'Montant impayé (cliquez pour voir la liste)'
+      description: 'Montant de la facture impayé (cliquez pour voir la liste)'
     }] : []),
     ...(isSelected('financial.total_factures_amount') ? [{
       title: 'Montant total des factures',

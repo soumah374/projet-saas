@@ -154,7 +154,7 @@ export const FacturesPage: React.FC = () => {
   };
 
   const handleGenererPDF = async (facture: Facture) => {
-    await genererPDF(facture.id);
+    await genererPDF(facture, true);
   };
 
   const handleRefresh = () => {
