@@ -1,6 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '@/lib/api';
 import { useToast } from './use-toast';
+import { PaginatedResponse } from './use-devis';
+
+const BASE_URL = '/billings';
+async function apiRequest<T>(endpoint: string, options: any = {}): Promise<T> {
+  try {
+    const response = await api({
+      url: `${BASE_URL}${endpoint}`,
+      ...options,
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('API Error:', error);
+    throw new Error(error.response?.data?.message || error.message || 'API Error');
+  }
+}
 
 export interface Facture {
   id: number;
@@ -159,16 +174,15 @@ export const useFactures = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.get('/billings/factures/', { params });
+      const response = await apiRequest<PaginatedResponse<Facture>>('/factures/', { params });
       // S'assurer que les données sont un tableau
-      const data = Array.isArray(response.data.results) ? response.data.results : [];
+      const data = Array.isArray(response.results) ? response.results : [];
       setFactures(data);
-      
       // Mettre à jour la pagination
       setPagination({
-        count: response.data.count || 0,
-        next: response.data.next,
-        previous: response.data.previous,
+        count: response.count || 0,
+        next: response.next,
+        previous: response.previous,
         currentPage: params?.page || 1,
         pageSize: params?.page_size || 10,
       });

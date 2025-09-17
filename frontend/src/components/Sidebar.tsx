@@ -56,10 +56,6 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
   const location = useLocation();
   const navigate = useNavigate();
   const { 
-    canManageProjects, 
-    canManageClients, 
-    canManageBilling, 
-    canManageUsers,
     hasModuleAccess 
   } = usePermissions();
   
@@ -156,7 +152,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             )}
 
             {/* Clients accordéon */}
-            {canManageClients('view') && (
+            {hasModuleAccess('users') && (
               <div className="space-y-2">
                 <button 
                   onClick={() => toggleMenu('clients')} 
@@ -172,12 +168,16 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 </button>
               {openMenus.clients && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/categories-clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    <List className="h-4 w-4" /> Catégories clients
-                  </Link>
-                  <Link to="/clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    <Users className="h-4 w-4" /> Liste clients
-                  </Link>
+                  {hasModuleAccess('catalog') && (
+                    <Link to="/categories-clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                      <List className="h-4 w-4" /> Catégories clients
+                    </Link>
+                  )}
+                  {hasModuleAccess('catalog') && (
+                    <Link to="/clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                      <Users className="h-4 w-4" /> Liste clients
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
@@ -206,7 +206,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             )}
 
             {/* Projets accordéon */}
-            {canManageProjects('view') && (
+            {hasModuleAccess('projects') && (
               <Link to="/projects" className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
                   location.pathname.startsWith('/projects') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
@@ -216,7 +216,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             )}
 
              {/* Facturation */}
-             {canManageBilling('view') && (
+             {hasModuleAccess('billings') && (
                <Link to="/factures" className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
                   location.pathname.startsWith('/factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
@@ -255,7 +255,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 </button>
                 {openMenus.administration && (
                   <div className="ml-6 space-y-1">
-                    {canManageUsers() && (
+                    {hasModuleAccess('users') && (
                       <Link 
                         to="/users" 
                         className={cn(

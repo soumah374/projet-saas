@@ -11,7 +11,7 @@ AVAILABLE_WIDGETS = {
   'projects.total_projects': {'type': 'projects', 'label': 'Nombre total de projets'},
   
   'financial.revenue_trend': {'type': 'financial', 'label': 'Tendance des recettes'},
-  'financial.billing_status': {'type': 'financial', 'label': 'Statut de facturation'},
+  # 'financial.billing_status': {'type': 'financial', 'label': 'Statut de facturation'},
   'financial.devis_conversion': {'type': 'financial', 'label': 'Conversion des devis'},
   'financial.cash_flow': {'type': 'financial', 'label': 'Flux de trésorerie'},
   'financial.top_clients': {'type': 'financial', 'label': 'Top clients'},

@@ -41,7 +41,9 @@ export function ProjectDetailsPage() {
   const [activeTab, setActiveTab] = useState('planning');
 
   const { 
-    canManageProjects, 
+    canManageProjects,
+    canManageContrats,
+    canManageClients
   } = usePermissions();
   
   const { data: project, isLoading, error } = useProject(projectId || '');
@@ -167,22 +169,27 @@ export function ProjectDetailsPage() {
       
       <ProjectTrackingAlerts projectId={projectId} />
       
+
       {/* Tableau de suivi du projet */}
-      <ProjectTrackingTable project={project} />
+      {canManageProjects('can_sommary_project') && (
+        <ProjectTrackingTable project={project} />
+      )}
       
       {/* Informations client et contrat */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {project.client_details && (
-          <ClientDetailsCard client={project.client_details} />
-        )}
-        {project.contract_details && (
-          <ContratDetailsCard 
-            contrat={project.contract_details} 
-            showViewButton={true}
-            onView={() => window.open(`/contrats/${project.contract}`, '_blank')}
-          />
-        )}
-      </div>
+      {canManageContrats('view_contrat') && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {project.client_details && (
+            <ClientDetailsCard client={project.client_details} />
+          )}
+          {project.contract_details && (
+            <ContratDetailsCard 
+              contrat={project.contract_details} 
+              showViewButton={true}
+              onView={() => window.open(`/contrats/${project.contract}`, '_blank')}
+            />
+          )}
+        </div>
+      )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">

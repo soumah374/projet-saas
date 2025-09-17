@@ -31,7 +31,7 @@ class FactureViewSet(viewsets.ModelViewSet):
     serializer_class = FactureSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['statut', 'contrat', 'client', 'mode_paiement']
-    search_fields = ['numero', 'client__nom_complet', 'contrat__numero']
+    search_fields = ['numero', 'client__nom', 'client__prenom', 'contrat__numero']
     ordering_fields = ['date_emission', 'date_echeance', 'montant_ttc', 'statut']
     ordering = ['-date_emission']
     

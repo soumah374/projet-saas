@@ -1,3 +1,4 @@
+from typing import Set
 from django.db.models import Count, Q, Avg, Sum, F
 from django.utils import timezone
 from django.db.models.functions import TruncMonth, Coalesce
@@ -22,7 +23,7 @@ class DashboardMetricsService:
     def __init__(self, user=None):
         self.now = timezone.now()
         self.user = user
-        self.user_role = self._get_user_role()
+        self.user_roles = self._get_user_roles()
         self.selected_widgets = None
         self._widget_config = None
     
@@ -50,12 +51,16 @@ class DashboardMetricsService:
             ).first()
             
             # Si pas de config utilisateur, chercher par rôle
-            if not config and self.user_role:
-                config = DashboardWidgetConfig.objects.filter(
-                    role=self.user_role,
-                    user__isnull=True,
-                    is_active=True
-                ).first()
+            if not config and self.user_roles:
+                # Essayer de trouver une config pour chaque rôle de l'utilisateur
+                for role in self.user_roles:
+                    config = DashboardWidgetConfig.objects.filter(
+                        role=role,
+                        user__isnull=True,
+                        is_active=True
+                    ).first()
+                    if config:
+                        break
             
             self._widget_config = config
             return config
@@ -68,6 +73,12 @@ class DashboardMetricsService:
     def get_authorized_widgets(self):
         """Récupère la liste des widgets autorisés pour l'utilisateur actuel"""
         config = self._load_widget_config()
+        
+        # Si aucune configuration trouvée, retourner tous les widgets disponibles
+        if not config or not hasattr(config, 'widgets') or not config.widgets:
+            logger.info(f"Aucune configuration de widgets trouvée pour {self.user.username if self.user else 'anonyme'}, retour de tous les widgets disponibles")
+            return list(AVAILABLE_WIDGETS.keys())
+        
         # Filtrer uniquement les widgets qui existent dans AVAILABLE_WIDGETS
         authorized_widgets = []
         for widget_key in config.widgets:
@@ -147,72 +158,73 @@ class DashboardMetricsService:
         
         return start_date, end_date
     
-    def _get_user_role(self):
-        """Récupère le rôle de l'utilisateur"""
+    def _get_user_roles(self):
+        """
+        Récupère les groupes de l'utilisateur (adapté au groupe d'utilisateur)
+        Retourne un set de noms de groupes (str), ou un set vide si non authentifié.
+        """
         if not self.user or not self.user.is_authenticated:
-            return None
-        
+            return set()
         if self.user.is_superuser:
-            return 'superuser'
-        
-        if hasattr(self.user, 'profile') and hasattr(self.user.profile, 'role'):
-            return self.user.profile.role
-        
-        return None
+            return {'superuser'}
+        # Retourne les noms des groupes de l'utilisateur
+        return set(self.user.groups.values_list('name', flat=True))
     
     def _filter_by_role(self, queryset, model_name):
         """Filtre les données en fonction du rôle de l'utilisateur"""
-        if not self.user_role or self.user_role == 'superuser':
+        if not self.user_roles or 'superuser' in self.user_roles:
             return queryset
         
-        # Filtrage basé sur le rôle
-        if self.user_role == 'Chef de projet':
+        # Construire une liste de conditions Q pour accumuler les permissions
+        conditions = Q()
+        
+        # Chef de projet
+        if 'Chef de projet' in self.user_roles:
             if model_name == 'projects':
-                # Les chefs de projet voient leurs projets et ceux de leur équipe
-                return queryset.filter(
-                    Q(project_members__user=self.user, project_members__role='Chef de projet') |
-                    Q(team__team_members__user=self.user)
-                ).distinct()
+                conditions |= Q(project_members__user=self.user, project_members__role='Chef de projet')
+                conditions |= Q(team__team_members__user=self.user)
             elif model_name == 'teams':
-                # Les chefs de projet voient leurs équipes
-                return queryset.filter(team_members__user=self.user)
+                conditions |= Q(team_members__user=self.user)
             elif model_name == 'clients':
-                # Les chefs de projet voient les clients de leurs projets
                 project_ids = Project.objects.filter(
                     project_members__user=self.user, 
                     project_members__role='Chef de projet'
                 ).values_list('client_id', flat=True)
-                return queryset.filter(id__in=project_ids)
+                conditions |= Q(id__in=project_ids)
         
-        elif self.user_role == 'Finance/Admin':
+        # Finance/Admin - accès complet aux données financières
+        if 'Finance/Admin' in self.user_roles:
             if model_name in ['billings', 'devis', 'contrats']:
-                # Les finance/admin ont accès complet aux données financières
+                # Accès complet - ne pas ajouter de condition restrictive
                 return queryset
             elif model_name == 'projects':
-                # Accès limité aux projets (vue uniquement)
+                # Accès complet aux projets aussi
                 return queryset
         
-        elif self.user_role in ['Designer', 'Développeur', 'Rédacteur']:
+        # Membres d'équipe (Designer, Développeur, Rédacteur)
+        team_roles = ['Designer', 'Développeur', 'Rédacteur']
+        if any(role in self.user_roles for role in team_roles):
             if model_name == 'projects':
-                # Les membres d'équipe voient leurs projets assignés
-                return queryset.filter(project_members__user=self.user)
+                conditions |= Q(project_members__user=self.user)
             elif model_name == 'teams':
-                # Les membres voient leurs équipes
-                return queryset.filter(team_members__user=self.user)
+                conditions |= Q(team_members__user=self.user)
             elif model_name == 'documents':
-                # Accès aux documents de leurs projets
                 project_ids = Project.objects.filter(
                     project_members__user=self.user
                 ).values_list('id', flat=True)
-                return queryset.filter(project_id__in=project_ids)
+                conditions |= Q(project_id__in=project_ids)
         
-        elif self.user_role == 'Consultant':
+        # Consultant
+        if 'Consultant' in self.user_roles:
             if model_name in ['clients', 'devis', 'contrats']:
-                # Les consultants ont accès aux clients et devis
+                # Accès complet aux données commerciales
                 return queryset
             elif model_name == 'projects':
-                # Accès limité aux projets
-                return queryset.filter(project_members__user=self.user)
+                conditions |= Q(project_members__user=self.user)
+        
+        # Appliquer les conditions si elles existent
+        if conditions:
+            return queryset.filter(conditions).distinct()
         
         return queryset
     
@@ -324,9 +336,9 @@ class DashboardMetricsService:
             # Performance des équipes
             if self._want('projects', 'team_performance', selected):
                 team_base = Team.objects.all()
-                if self.user_role == 'Chef de projet':
+                if 'Chef de projet' in self.user_roles:
                     team_base = team_base.filter(team_members__user=self.user)
-                elif self.user_role in ['Designer', 'Développeur', 'Rédacteur']:
+                elif any(role in self.user_roles for role in ['Designer', 'Développeur', 'Rédacteur']):
                     team_base = team_base.filter(team_members__user=self.user)
                 
                 team_performance = team_base.annotate(
@@ -376,11 +388,12 @@ class DashboardMetricsService:
                 })
                 result['project_performance'] = project_performance
             
-            result['user_role'] = self.user_role
+            result['user_roles'] = list(self.user_roles) if self.user_roles else []
             result['widgets_used'] = [k for k in selected or [] if k.startswith('projects.')] if selected else []
             return result
             
         except Exception as e:
+            print("Error in get_projects_metrics:", str(e))
             logger.error(f"Erreur lors du calcul des métriques projets: {str(e)}")
             return {'error': str(e)}
     
@@ -463,18 +476,18 @@ class DashboardMetricsService:
                 result['revenue_trend'] = revenue_trend
 
             # Statut de facturation
-            if self._want('financial', 'billing_status', selected):
-                factures_status = Facture.objects.filter(
-                    date_emission__gte=start_date,
-                    date_emission__lte=end_date
-                )
-                factures_status = self._filter_by_role(factures_status, 'billings')
-                billing_status = dict(
-                    factures_status.values('statut').annotate(
-                        count=Count('id')
-                    ).values_list('statut', 'count')
-                )
-                result['billing_status'] = billing_status
+            # if self._want('financial', 'billing_status', selected):
+            #     factures_status = Facture.objects.filter(
+            #         date_emission__gte=start_date,
+            #         date_emission__lte=end_date
+            #     )
+            #     factures_status = self._filter_by_role(factures_status, 'billings')
+            #     billing_status = dict(
+            #         factures_status.values('statut').annotate(
+            #             count=Count('id')
+            #         ).values_list('statut', 'count')
+            #     )
+            #     result['billing_status'] = billing_status
             
             # Conversion des devis
             if self._want('financial', 'devis_conversion', selected):
@@ -699,7 +712,7 @@ class DashboardMetricsService:
             # Performance des utilisateurs
             if self._want('performance', 'user_performance', selected):
                 user_base = User.objects.all()
-                if self.user_role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']:
+                if any(role in self.user_roles for role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']):
                     user_base = user_base.filter(
                         Q(id=self.user.id) |
                         Q(team_members__team__team_members__user=self.user)
@@ -726,7 +739,7 @@ class DashboardMetricsService:
                     created_at__gte=start_date,
                     created_at__lte=end_date
                 )
-                if self.user_role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']:
+                if any(role in self.user_roles for role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']):
                     project_ids = Project.objects.filter(
                         project_members__user=self.user
                     ).values_list('id', flat=True)
@@ -751,7 +764,7 @@ class DashboardMetricsService:
                         due_date__lt=self.now,
                         status__in=['À faire', 'En cours']
                     )
-                    if self.user_role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']:
+                    if any(role in self.user_roles for role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']):
                         project_ids = Project.objects.filter(
                             project_members__user=self.user
                         ).values_list('id', flat=True)
@@ -815,7 +828,7 @@ class DashboardMetricsService:
                     due_date__lte=self.now + timedelta(days=30),
                     status__in=['En cours', 'À faire']
                 )
-                if self.user_role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']:
+                if any(role in self.user_roles for role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']):
                     project_ids = Project.objects.filter(
                         project_members__user=self.user
                     ).values_list('id', flat=True)
@@ -841,7 +854,7 @@ class DashboardMetricsService:
                     created_at__gte=start_date,
                     created_at__lte=end_date
                 )
-                if self.user_role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']:
+                if any(role in self.user_roles for role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']):
                     project_ids = Project.objects.filter(
                         project_members__user=self.user
                     ).values_list('id', flat=True)
@@ -869,7 +882,7 @@ class DashboardMetricsService:
             # Utilisation des ressources
             if self._want('calendar', 'resource_utilization', selected):
                 users_base = User.objects.all()
-                if self.user_role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']:
+                if any(role in self.user_roles for role in ['Chef de projet', 'Designer', 'Développeur', 'Rédacteur']):
                     users_base = users_base.filter(
                         Q(id=self.user.id) |
                         Q(team_members__team__team_members__user=self.user)
@@ -891,7 +904,7 @@ class DashboardMetricsService:
                     'utilization_rate': round(utilization_rate, 1)
                 }
             
-            result['user_role'] = self.user_role
+            result['user_roles'] = list(self.user_roles) if self.user_roles else []
             result['widgets_used'] = [k for k in selected or [] if k.startswith('calendar.')] if selected else []
             return result
             
@@ -923,7 +936,7 @@ class DashboardMetricsService:
                 'performance': self.get_performance_metrics(start_date, end_date, selected_widgets),
                 'calendar': self.get_calendar_metrics(start_date, end_date, selected_widgets),
                 'last_updated': timezone.now().isoformat(),
-                'user_role': self.user_role,
+                'user_roles': list(self.user_roles) if self.user_roles else [],
                 'widgets_config': {
                     'total_available': len(AVAILABLE_WIDGETS),
                     'total_authorized': len(selected_widgets) if selected_widgets else len(AVAILABLE_WIDGETS),

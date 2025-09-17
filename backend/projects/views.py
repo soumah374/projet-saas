@@ -36,7 +36,9 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         """Filtrer les projets selon les permissions de l'utilisateur"""
         user = self.request.user
-        if user.is_staff:
+        roles = user.groups.values_list('name', flat=True)
+        # Si l'utilisateur est admin ou dans le groupe Finance/Admin, voir tous les projets
+        if user.is_staff or 'Finance/Admin' in roles:
             return Project.objects.all()
         return Project.objects.filter(
             Q(created_by=user) | Q(team_members=user)
@@ -58,120 +60,73 @@ class ProjectViewSet(viewsets.ModelViewSet):
         """Créer un projet avec l'utilisateur connecté"""
         serializer.save(created_by=self.request.user)
     
-    @action(detail=False, methods=['get'], url_path='reports')
-    def reports(self, request):
-        """Rapport agrégé pour la page Rapports (projets, timeline, équipe)."""
+    @action(detail=True, methods=['get'], url_path='reports')
+    def reports(self, request, pk=None):
+        """Rapport spécifique pour un projet donné."""
         try:
-            params = request.GET
-            start_date_str = params.get('start_date')
-            end_date_str = params.get('end_date')
-            status_param = params.get('status')
-            type_param = params.get('type')
-            team_param = params.get('team')
+            # Get the specific project
+            try:
+                project = self.get_object()
+            except Exception:
+                return Response({'error': 'Projet non trouvé'}, status=status.HTTP_404_NOT_FOUND)
 
-            # Build base queryset with permissions
-            projects_qs = self.get_queryset()
-
-            # Date range filter on created_at by default
-            if start_date_str:
-                try:
-                    start_date = datetime.strptime(start_date_str, '%Y-%m-%d').date()
-                    projects_qs = projects_qs.filter(created_at__date__gte=start_date)
-                except Exception:
-                    pass
-            if end_date_str:
-                try:
-                    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
-                    projects_qs = projects_qs.filter(created_at__date__lte=end_date)
-                except Exception:
-                    pass
-
-            if status_param:
-                projects_qs = projects_qs.filter(status__iexact=status_param)
-            if type_param:
-                projects_qs = projects_qs.filter(type__iexact(type_param))
-            if team_param:
-                try:
-                    projects_qs = projects_qs.filter(team_members__id=int(team_param))
-                except Exception:
-                    projects_qs = projects_qs.none() if team_param and team_param != '' else projects_qs
-
-            projects_qs = projects_qs.distinct()
-
-            # Collect project details
+            # Get project details with related data
             today = timezone.now().date()
-            projects = []
-            for p in projects_qs.select_related('created_by').prefetch_related('team_members', 'tasks'):
-                tasks_total = p.tasks.count()
-                tasks_completed = p.tasks.filter(status='Terminé').count()
-                tasks_pending = p.tasks.exclude(status='Terminé').count()
-                tasks_overdue = p.tasks.filter(due_date__lt=today).exclude(status='Terminé').count()
+            
+            # Project tasks statistics
+            tasks_total = project.tasks.count()
+            tasks_completed = project.tasks.filter(status='Terminé').count()
+            tasks_pending = project.tasks.exclude(status='Terminé').count()
+            tasks_overdue = project.tasks.filter(due_date__lt=today).exclude(status='Terminé').count()
 
-                manager_user = p.created_by
-                manager = {
-                    'id': str(manager_user.id) if manager_user else None,
-                    'first_name': getattr(manager_user, 'first_name', '') if manager_user else '',
-                    'last_name': getattr(manager_user, 'last_name', '') if manager_user else '',
-                    'email': getattr(manager_user, 'email', '') if manager_user else '',
-                }
+            # Manager information
+            manager_user = project.created_by
+            manager = {
+                'id': str(manager_user.id) if manager_user else None,
+                'first_name': getattr(manager_user, 'first_name', '') if manager_user else '',
+                'last_name': getattr(manager_user, 'last_name', '') if manager_user else '',
+                'email': getattr(manager_user, 'email', '') if manager_user else '',
+            }
 
-                projects.append({
-                    'id': p.id,
-                    'title': p.title,
-                    'status': p.status,
-                    'priority': p.priority,
-                    'progress': p.progress,
-                    'start_date': p.start_date.isoformat() if p.start_date else None,
-                    'deadline': p.deadline.isoformat() if p.deadline else None,
-                    'budget': str(p.budget or 0),
-                    'team_members_count': p.team_members.count(),
-                    'tasks_total': tasks_total,
-                    'tasks_completed': tasks_completed,
-                    'tasks_pending': tasks_pending,
-                    'tasks_overdue': tasks_overdue,
-                    'manager': manager,
-                })
+            # Project data
+            project_data = {
+                'id': project.id,
+                'title': project.title,
+                'description': project.description,
+                'status': project.status,
+                'priority': project.priority,
+                'progress': project.progress,
+                'start_date': project.start_date.isoformat() if project.start_date else None,
+                'deadline': project.deadline.isoformat() if project.deadline else None,
+                'budget': str(project.budget or 0),
+                'type': project.type,
+                'team_members_count': project.team_members.count(),
+                'tasks_total': tasks_total,
+                'tasks_completed': tasks_completed,
+                'tasks_pending': tasks_pending,
+                'tasks_overdue': tasks_overdue,
+                'manager': manager,
+                'created_at': project.created_at.isoformat() if project.created_at else None,
+                'updated_at': project.updated_at.isoformat() if project.updated_at else None,
+            }
 
-            # Timeline metrics (monthly aggregation within range or last 6 months by default)
-            # Determine timeline range
-            if start_date_str and end_date_str:
-                try:
-                    start_d = datetime.strptime(start_date_str, '%Y-%m-%d').date().replace(day=1)
-                    end_d = datetime.strptime(end_date_str, '%Y-%m-%d').date().replace(day=1)
-                except Exception:
-                    start_d = (timezone.now().date().replace(day=1) - timedelta(days=5*30))
-                    end_d = timezone.now().date().replace(day=1)
-            else:
-                end_d = timezone.now().date().replace(day=1)
-                start_d = end_d - timedelta(days=5*30)
+            # Timeline metrics for this specific project (last 6 months by default)
+            end_d = timezone.now().date().replace(day=1)
+            start_d = end_d - timedelta(days=5*30)
 
             # Build month labels
             labels = []
             cursor = start_d
             while cursor <= end_d:
                 labels.append(cursor.strftime('%Y-%m'))
-                # advance one month safely
                 if cursor.month == 12:
                     cursor = cursor.replace(year=cursor.year + 1, month=1)
                 else:
                     cursor = cursor.replace(month=cursor.month + 1)
 
-            # Projects completed per month (use updated_at month)
-            projects_completed_by_month = {label: 0 for label in labels}
-            completed_projects = projects_qs.filter(status='Terminé').values('updated_at')
-            for item in completed_projects:
-                dt = item['updated_at']
-                if not dt:
-                    continue
-                label = dt.strftime('%Y-%m')
-                if label in projects_completed_by_month:
-                    projects_completed_by_month[label] += 1
-
-            # Tasks completed per month (use executed_at or updated_at)
+            # Tasks completed per month for this project
             tasks_completed_by_month = {label: 0 for label in labels}
-            completed_tasks_qs = ProjectTask.objects.filter(
-                project__in=projects_qs, status='Terminé'
-            ).values('executed_at', 'updated_at')
+            completed_tasks_qs = project.tasks.filter(status='Terminé').values('executed_at', 'updated_at')
             for item in completed_tasks_qs:
                 dt = item['executed_at'] or item['updated_at']
                 if not dt:
@@ -182,18 +137,15 @@ class ProjectViewSet(viewsets.ModelViewSet):
 
             timeline = {
                 'labels': labels,
-                'projects_completed': [projects_completed_by_month[l] for l in labels],
                 'tasks_completed': [tasks_completed_by_month[l] for l in labels],
+                'project_progress': [project.progress] * len(labels),  # Static progress line
             }
 
-            # Team performance metrics (aggregate across filtered projects)
-            total_tasks = ProjectTask.objects.filter(project__in=projects_qs).count()
-            completed_tasks = ProjectTask.objects.filter(project__in=projects_qs, status='Terminé').count()
-            active_projects = projects_qs.exclude(status='Terminé').count()
-            avg_productivity = int(round((completed_tasks / total_tasks) * 100)) if total_tasks > 0 else 0
+            # Team performance metrics for this project only
+            avg_productivity = int(round((tasks_completed / tasks_total) * 100)) if tasks_total > 0 else 0
 
-            # Members performance
-            members_qs = ProjectMember.objects.filter(project__in=projects_qs, is_active=True).select_related('user')
+            # Members performance for this project
+            members_qs = ProjectMember.objects.filter(project=project, is_active=True).select_related('user')
             member_stats = {}
             for pm in members_qs:
                 user = pm.user
@@ -206,13 +158,11 @@ class ProjectViewSet(viewsets.ModelViewSet):
                         'role': pm.role,
                         'tasks_completed': 0,
                         'tasks_assigned': 0,
-                        'projects_set': set(),
+                        'allocation_percentage': pm.allocation_percentage,
                     }
-                stat = member_stats[user.id]
-                stat['projects_set'].add(pm.project_id)
 
-            # Compute task assignments per user
-            tasks_assigned = ProjectTask.objects.filter(project__in=projects_qs, assigned_to__isnull=False).values('assigned_to_id', 'status')
+            # Compute task assignments per user for this project
+            tasks_assigned = project.tasks.filter(assigned_to__isnull=False).values('assigned_to_id', 'status')
             for t in tasks_assigned:
                 uid = t['assigned_to_id']
                 if uid in member_stats:
@@ -230,22 +180,58 @@ class ProjectViewSet(viewsets.ModelViewSet):
                     'role': stat['role'],
                     'productivity': productivity,
                     'tasks_completed': stat['tasks_completed'],
-                    'projects_involved': len(stat['projects_set']),
+                    'tasks_assigned': stat['tasks_assigned'],
+                    'allocation_percentage': stat.get('allocation_percentage', 0),
                 })
 
+            # Sort members by productivity
             top_performers = sorted(members_list, key=lambda m: (-m['productivity'], -m['tasks_completed']))[:5]
 
+            # Project timeline events (if any)
+            events = []
+            project_events = ProjectEvent.objects.filter(project=project).order_by('-created_at')[:10]
+            for event in project_events:
+                events.append({
+                    'id': event.id,
+                    'title': event.title,
+                    'description': event.description,
+                    'event_type': event.event_type,
+                    'created_at': event.created_at.isoformat(),
+                    'created_by': event.created_by.get_full_name() if event.created_by else 'Système',
+                })
+
+            # Time tracking summary
+            timesheets = TimeSheet.objects.filter(project=project)
+            total_hours_logged = sum(ts.hours for ts in timesheets)
+            
+            # Budget tracking (if budget is set)
+            budget_utilization = 0
+            if project.budget and project.budget > 0:
+                # This is a simplified calculation - you might want to implement actual cost tracking
+                estimated_cost = (total_hours_logged * 50)  # Assuming 50 GNF per hour
+                budget_utilization = min((estimated_cost / float(project.budget)) * 100, 100)
+
             data = {
-                'projects': projects,
+                'project': project_data,
                 'timeline': timeline,
                 'team': {
                     'avg_productivity': avg_productivity,
+                    'total_members': len(members_list),
                 },
                 'team_members': members_list,
                 'top_performers': top_performers,
-                'total_tasks': total_tasks,
-                'completed_tasks': completed_tasks,
-                'active_projects': active_projects,
+                'events': events,
+                'time_tracking': {
+                    'total_hours_logged': total_hours_logged,
+                    'budget_utilization': budget_utilization,
+                },
+                'summary': {
+                    'total_tasks': tasks_total,
+                    'completed_tasks': tasks_completed,
+                    'pending_tasks': tasks_pending,
+                    'overdue_tasks': tasks_overdue,
+                    'completion_rate': avg_productivity,
+                }
             }
 
             return Response(data)
@@ -344,8 +330,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             serializer.save(project=project)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
     
     @action(detail=True)
     def timeline(self, request, pk=None):
@@ -478,10 +462,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Membre non trouvé'}, status=status.HTTP_404_NOT_FOUND)
         return Response({'message': 'Membre supprimé avec succès'}, status=status.HTTP_200_OK)
         
-
-
-
-
 
 class TimeSheetViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des feuilles de temps"""

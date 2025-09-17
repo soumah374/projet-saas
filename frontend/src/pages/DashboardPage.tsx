@@ -368,7 +368,7 @@ const DashboardPage: React.FC = () => {
                 <QuickSummaryProjects 
                   data={{
                     total_projects: data?.projects?.total_projects || 0,
-                    active_projects: data.projects.active_projects || 0,
+                    active_projects: data?.projects?.active_projects || 0,
                     total_revenue: data?.financial?.cash_flow?.recettes ?? 0,
                     urgent_deadlines: data?.calendar?.upcoming_deadlines?.filter(d => d.days_until_deadline <= 3).length || 0,
                     overdue_projects: data?.projects?.overdue_projects?.length || 0,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,21 +14,20 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Search, 
   Filter, 
-  Plus, 
   Settings, 
   Download,
   AlertTriangle,
   CheckCircle,
   Clock,
   FileText,
-  TrendingUp,
-  RefreshCw
+  RefreshCw,
+  ChevronRight,
+  ChevronLeft
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 import { useFactures, type Facture } from '@/hooks/use-factures';
-import { FactureCard } from '@/components/billings/FactureCard';
 import { PaiementModal } from '@/components/billings/PaiementModal';
 import { StatistiquesFacturation } from '@/components/billings/StatistiquesFacturation';
 import { ConfigurationFacturationModal } from '@/components/billings/ConfigurationFacturationModal';
@@ -42,15 +41,46 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { usePermissionManager } from '@/hooks/use-permission-manager';
+import { usePermissions } from '@/hooks/use-permissions';
 
-const formatMontant = (montant: number) => {
-  return new Intl.NumberFormat('fr-FR', {
+// -------- Utils
+const formatMontant = (montant: number) =>
+  new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'GNF',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(montant);
-};
+
+// Petit hook de debounce local
+function useDebounce<T>(value: T, delay = 400) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
+}
+
+function statutBadge(statut?: string) {
+  switch (statut) {
+    case 'payee':
+      return { label: 'Payée', className: 'bg-green-100 text-green-800', variant: 'default' as const };
+    case 'en_retard':
+      return { label: 'En retard', className: 'bg-red-100 text-red-800', variant: 'destructive' as const };
+    case 'partiellement_payee':
+      return { label: 'Partiellement payée', className: 'bg-yellow-100 text-yellow-800', variant: 'secondary' as const };
+    case 'annulee':
+      return { label: 'Annulée', className: 'bg-gray-100 text-gray-800', variant: 'outline' as const };
+    case 'emise':
+      return { label: 'Émise', className: 'bg-blue-100 text-blue-800', variant: 'outline' as const };
+    case 'envoyee':
+      return { label: 'Envoyée', className: 'bg-blue-100 text-blue-800', variant: 'outline' as const };
+    default:
+      return { label: statut ?? 'N/A', className: 'bg-blue-100 text-blue-800', variant: 'outline' as const };
+  }
+}
 
 export const FacturesPage: React.FC = () => {
   const {
@@ -66,6 +96,11 @@ export const FacturesPage: React.FC = () => {
     fetchFacturesAVenir,
   } = useFactures();
 
+  const {
+    isLoading,
+    canManageBillings
+  } = usePermissions()
+
   const [statistiques, setStatistiques] = useState<any>(null);
   const [facturesEnRetard, setFacturesEnRetard] = useState<Facture[]>([]);
   const [facturesAVenir, setFacturesAVenir] = useState<Facture[]>([]);
@@ -73,56 +108,75 @@ export const FacturesPage: React.FC = () => {
   const [showPaiementModal, setShowPaiementModal] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  
-  // Filtres
+
+  // Filtres (UI)
   const [filtres, setFiltres] = useState({
     statut: '',
     mode_paiement: '',
     search: '',
   });
 
-  // État de pagination
+  // Debounce sur la recherche
+  const debouncedSearch = useDebounce(filtres.search, 400);
+
+  // Filtres envoyés à l’API (sanitization)
+  const effectiveFilters = useMemo(() => {
+    const sanitize = (v: string) => (v && v !== 'all' ? v : '');
+    return {
+      statut: sanitize(filtres.statut),
+      mode_paiement: sanitize(filtres.mode_paiement),
+      search: (debouncedSearch ?? '').trim(),
+    };
+  }, [filtres.statut, filtres.mode_paiement, debouncedSearch]);
+
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  // Chaque fois que les filtres (debounced) changent → revenir page 1
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [effectiveFilters.statut, effectiveFilters.mode_paiement, effectiveFilters.search]);
+
+  // Charger factures + blocs annexes quand page / taille / filtres changent
   useEffect(() => {
     fetchFactures({
-      ...filtres,
+      ...effectiveFilters,
       page: currentPage,
       page_size: pageSize,
     });
-    loadStatistiques();
-    loadFacturesEnRetard();
-    loadFacturesAVenir();
-  }, [currentPage, pageSize]);
+    (async () => {
+      const [stats, retard, aVenir] = await Promise.all([
+        fetchStatistiques(),
+        fetchFacturesEnRetard(),
+        fetchFacturesAVenir(),
+      ]);
+      if (stats) setStatistiques(stats);
+      setFacturesEnRetard(retard || []);
+      setFacturesAVenir(aVenir || []);
+    })();
+  }, [currentPage, pageSize, effectiveFilters, fetchFactures, fetchStatistiques, fetchFacturesEnRetard, fetchFacturesAVenir]);
 
-  // Effet pour recharger les factures quand les filtres changent
-  useEffect(() => {
-    setCurrentPage(1); // Reset à la première page
-    fetchFactures({
-      ...filtres,
-      page: 1,
-      page_size: pageSize,
-    });
-  }, [filtres]);
+  const count = pagination?.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(count / pageSize));
 
-  const loadStatistiques = async () => {
-    const stats = await fetchStatistiques();
-    if (stats) {
-      setStatistiques(stats);
+  const getPageNumbers = useCallback(() => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+      return pages;
     }
-  };
+    pages.push(1);
+    if (currentPage > 4) pages.push('ellipsis');
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (currentPage < totalPages - 3) pages.push('ellipsis');
+    pages.push(totalPages);
+    return pages;
+  }, [currentPage, totalPages]);
 
-  const loadFacturesEnRetard = async () => {
-    const factures = await fetchFacturesEnRetard();
-    setFacturesEnRetard(factures);
-  };
-
-  const loadFacturesAVenir = async () => {
-    const factures = await fetchFacturesAVenir();
-    setFacturesAVenir(factures);
-  };
-
+  // Actions
   const handlePaiement = (facture: Facture) => {
     setSelectedFacture(facture);
     setShowPaiementModal(true);
@@ -133,6 +187,17 @@ export const FacturesPage: React.FC = () => {
     setShowDetailModal(true);
   };
 
+  const reloadAll = useCallback(() => {
+    fetchFactures({
+      ...effectiveFilters,
+      page: currentPage,
+      page_size: pageSize,
+    });
+    fetchStatistiques().then(s => s && setStatistiques(s));
+    fetchFacturesEnRetard().then(setFacturesEnRetard);
+    fetchFacturesAVenir().then(setFacturesAVenir);
+  }, [fetchFactures, fetchStatistiques, fetchFacturesEnRetard, fetchFacturesAVenir, effectiveFilters, currentPage, pageSize]);
+
   const handleEnregistrerPaiement = async (data: {
     montant: number;
     date_paiement: string;
@@ -141,15 +206,11 @@ export const FacturesPage: React.FC = () => {
     notes?: string;
   }) => {
     if (!selectedFacture) return;
-
-    const result = await enregistrerPaiement(selectedFacture.id, data);
-    if (result) {
+    const ok = await enregistrerPaiement(selectedFacture.id, data);
+    if (ok) {
       setShowPaiementModal(false);
       setSelectedFacture(null);
-      // Recharger les données
-      fetchFactures();
-      loadStatistiques();
-      loadFacturesEnRetard();
+      reloadAll();
     }
   };
 
@@ -158,35 +219,26 @@ export const FacturesPage: React.FC = () => {
   };
 
   const handleRefresh = () => {
-    fetchFactures({
-      ...filtres,
-      page: currentPage,
-      page_size: pageSize,
-    });
-    loadStatistiques();
-    loadFacturesEnRetard();
-    loadFacturesAVenir();
+    reloadAll();
   };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    if (page >= 1 && page <= totalPages) setCurrentPage(page);
   };
-
-  const handlePageSizeChange = (newPageSize: number) => {
-    setPageSize(newPageSize);
-    setCurrentPage(1); // Reset à la première page
-  };
-
-  // Vérification de sécurité pour les données
+  
+  // Sécurité : si factures n’est pas un tableau, affiche un loader
   if (!Array.isArray(factures)) {
     return (
       <div className="max-w-8xl mx-auto space-y-8">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600" />
         </div>
       </div>
     );
   }
+
+  const payees = (factures ?? []).filter(f => f.statut === 'payee').length;
+  const enRetard = (factures ?? []).filter(f => f.statut === 'en_retard').length;
 
   return (
     <div className="max-w-8xl mx-auto space-y-8">
@@ -194,18 +246,15 @@ export const FacturesPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Facturation</h1>
-          <p className="text-muted-foreground">
-            Gestion des factures et suivi des paiements
-          </p>
+          <p className="text-muted-foreground">Gestion des factures et suivi des paiements</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowConfigModal(true)}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Configuration
-          </Button>
+          {canManageBillings('add_configurationfacturation') && (
+            <Button variant="outline" onClick={() => setShowConfigModal(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Configuration
+            </Button>
+          )}
           <Button onClick={handleRefresh} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Actualiser
@@ -215,71 +264,72 @@ export const FacturesPage: React.FC = () => {
 
       {/* Statistiques */}
       {statistiques && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Statistiques</h2>
-          <StatistiquesFacturation statistiques={statistiques} loading={loading} />
-        </div>
+        <>
+          {canManageBillings('can_view_financial_reports') && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Statistiques</h2>
+              <StatistiquesFacturation statistiques={statistiques} loading={loading} />
+            </div>
+          )}
+        </>
       )}
 
       {/* Alertes */}
       {(facturesEnRetard.length > 0 || facturesAVenir.length > 0) && (
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Alertes</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {facturesEnRetard.length > 0 && (
-              <Card className="border-red-200 bg-red-50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center space-x-2 text-red-800">
-                    <AlertTriangle className="h-5 w-5" />
-                    <span>Factures en retard</span>
-                    <Badge variant="destructive">{facturesEnRetard.length}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-red-700">
-                    {facturesEnRetard.length} facture(s) en retard de paiement
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {facturesAVenir.length > 0 && (
-              <Card className="border-yellow-200 bg-yellow-50">
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center space-x-2 text-yellow-800">
-                    <Clock className="h-5 w-5" />
-                    <span>Échéances à venir</span>
-                    <Badge variant="secondary">{facturesAVenir.length}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-yellow-700">
-                    {facturesAVenir.length} facture(s) à échéance dans les 30 jours
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+        <>
+        {canManageBillings('can_view_financial_reports') && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Alertes</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {facturesEnRetard.length > 0 && (
+                <Card className="border-red-200 bg-red-50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center space-x-2 text-red-800">
+                      <AlertTriangle className="h-5 w-5" />
+                      <span>Factures en retard</span>
+                      <Badge variant="destructive">{facturesEnRetard.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-red-700">
+                      {facturesEnRetard.length} facture(s) en retard de paiement
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              {facturesAVenir.length > 0 && (
+                <Card className="border-yellow-200 bg-yellow-50">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center space-x-2 text-yellow-800">
+                      <Clock className="h-5 w-5" />
+                      <span>Échéances à venir</span>
+                      <Badge variant="secondary">{facturesAVenir.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-yellow-700">
+                      {facturesAVenir.length} facture(s) à échéance dans les 30 jours
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </div>
-        </div>
+        )}
+        </>
       )}
 
-      {/* Liste des factures */}
+      {/* En-tête liste */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">
-            Factures ({pagination.count})
-          </h1>
+          <h1 className="text-3xl font-bold">Factures ({count})</h1>
           <div className="flex items-center space-x-2">
-             <Badge variant="outline">
-               {(factures || []).filter(f => f.statut === 'payee').length} payées
-             </Badge>
-             <Badge variant="outline">
-               {(factures || []).filter(f => f.statut === 'en_retard').length} en retard
-             </Badge>
-           </div>
+            <Badge variant="outline">{payees} payées</Badge>
+            <Badge variant="outline">{enRetard} en retard</Badge>
+          </div>
         </div>
-
       </div>
+
       {/* Filtres */}
       <Card>
         <CardHeader>
@@ -289,11 +339,11 @@ export const FacturesPage: React.FC = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2 md:col-span-2">
               <Label htmlFor="search">Recherche</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="search"
                   placeholder="Numéro, client, contrat..."
@@ -344,24 +394,6 @@ export const FacturesPage: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="page_size">Éléments par page</Label>
-              <Select
-                value={pageSize.toString()}
-                onValueChange={(value) => handlePageSizeChange(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="10" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -374,12 +406,12 @@ export const FacturesPage: React.FC = () => {
               <Card key={i} className="animate-pulse">
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
-                    <div className="h-4 bg-gray-200 rounded w-24"></div>
-                    <div className="h-4 bg-gray-200 rounded w-32"></div>
-                    <div className="h-4 bg-gray-200 rounded w-20"></div>
-                    <div className="h-4 bg-gray-200 rounded w-24"></div>
-                    <div className="h-4 bg-gray-200 rounded w-20"></div>
-                    <div className="h-8 bg-gray-200 rounded w-24"></div>
+                    <div className="h-4 bg-gray-200 rounded w-24" />
+                    <div className="h-4 bg-gray-200 rounded w-32" />
+                    <div className="h-4 bg-gray-200 rounded w-20" />
+                    <div className="h-4 bg-gray-200 rounded w-24" />
+                    <div className="h-4 bg-gray-200 rounded w-20" />
+                    <div className="h-8 bg-gray-200 rounded w-24" />
                   </div>
                 </CardContent>
               </Card>
@@ -391,7 +423,7 @@ export const FacturesPage: React.FC = () => {
               <p className="text-red-600">{error}</p>
             </CardContent>
           </Card>
-        ) : factures.length === 0 ? (
+        ) : (factures ?? []).length === 0 ? (
           <Card>
             <CardContent className="p-6 text-center">
               <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
@@ -403,7 +435,6 @@ export const FacturesPage: React.FC = () => {
           </Card>
         ) : (
           <>
-            {/* Tableau des factures */}
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -434,293 +465,128 @@ export const FacturesPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {factures.map((facture) => (
-                        <tr key={facture.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {facture.numero || `FAC-${facture.id}`}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {facture.client_nom || 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                            {formatMontant(facture.montant_ttc || 0)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge 
-                              variant={
-                                facture.statut === 'payee' ? 'default' :
-                                facture.statut === 'en_retard' ? 'destructive' :
-                                facture.statut === 'partiellement_payee' ? 'secondary' :
-                                facture.statut === 'annulee' ? 'outline' :
-                                'outline'
-                              }
-                              className={
-                                facture.statut === 'payee' ? 'bg-green-100 text-green-800' :
-                                facture.statut === 'en_retard' ? 'bg-red-100 text-red-800' :
-                                facture.statut === 'partiellement_payee' ? 'bg-yellow-100 text-yellow-800' :
-                                facture.statut === 'annulee' ? 'bg-gray-100 text-gray-800' :
-                                'bg-blue-100 text-blue-800'
-                              }
-                            >
-                              {facture.statut === 'payee' ? 'Payée' :
-                               facture.statut === 'en_retard' ? 'En retard' :
-                               facture.statut === 'partiellement_payee' ? 'Partiellement payée' :
-                               facture.statut === 'annulee' ? 'Annulée' :
-                               facture.statut === 'emise' ? 'Émise' :
-                               facture.statut === 'envoyee' ? 'Envoyée' :
-                               facture.statut}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {facture.date_emission ? format(new Date(facture.date_emission), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {facture.date_echeance ? format(new Date(facture.date_echeance), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex items-center space-x-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewDetails(facture)}
-                                className="h-8 px-3"
-                              >
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              {facture.statut !== 'payee' && facture.statut !== 'annulee' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handlePaiement(facture)}
-                                  className="h-8 px-3"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleGenererPDF(facture)}
-                                className="h-8 px-3"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {(factures ?? []).map((facture) => {
+                        const badge = statutBadge(facture.statut);
+                        return (
+                          <tr key={facture.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {facture.numero || `FAC-${facture.id}`}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {facture.client_nom || 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
+                              {formatMontant(facture.montant_ttc || 0)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge variant={badge.variant} className={badge.className}>
+                                {badge.label}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {facture.date_emission ? format(new Date(facture.date_emission), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {facture.date_echeance ? format(new Date(facture.date_echeance), 'dd/MM/yyyy', { locale: fr }) : 'N/A'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex items-center space-x-2">
+                                {canManageBillings('view_facture') && (
+                                  <Button
+                                    aria-label="Détails de la facture"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleViewDetails(facture)}
+                                    className="h-8 px-3"
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                )}
+                               
+                                {facture.statut !== 'payee' && facture.statut !== 'annulee' && (
+                                  <>
+                                    {canManageBillings('can_pay_facture') && (
+                                        <Button
+                                          aria-label="Enregistrer un paiement"
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => handlePaiement(facture)}
+                                          className="h-8 px-3"
+                                        >
+                                          <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                    )}
+                                  </>
+                                )}
+                                {canManageBillings('can_generate_invoice') && (
+                                  <Button
+                                    aria-label="Télécharger le PDF"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleGenererPDF(facture)}
+                                    className="h-8 px-3"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                )}
+                               
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Informations de pagination */}
-            {pagination.count > 0 && (
-              <div className="flex items-center justify-between mt-8 p-4 bg-gray-50 rounded-lg">
-                <div className="text-sm text-gray-600">
-                  Affichage de {((currentPage - 1) * pageSize) + 1} à {Math.min(currentPage * pageSize, pagination.count)} sur {pagination.count} factures
-                </div>
-
-                {/* Contrôles de pagination */}
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center mt-6">
                 <Pagination>
                   <PaginationContent>
                     <PaginationItem>
-                      <PaginationPrevious 
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (currentPage > 1) {
-                            handlePageChange(currentPage - 1);
-                          }
-                        }}
-                        className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
-                      />
+                      {currentPage === 1 ? (
+                        <Button variant="outline" size="icon" disabled className="cursor-not-allowed">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <PaginationPrevious onClick={(e) =>{ 
+                          e.preventDefault()
+                          handlePageChange(currentPage - 1)}} />
+                      )}
                     </PaginationItem>
 
-                    {/* Pages numérotées */}
-                    {(() => {
-                      const totalPages = Math.ceil(pagination.count / pageSize);
-                      const pages = [];
-                      const maxVisiblePages = 5;
-                      
-                      // Validation des données de pagination
-                      if (!totalPages || totalPages <= 0) {
-                        return null;
-                      }
-                      
-                      if (totalPages <= maxVisiblePages) {
-                        // Afficher toutes les pages
-                        for (let i = 1; i <= totalPages; i++) {
-                          pages.push(
-                            <PaginationItem key={i}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handlePageChange(i);
-                                }}
-                                isActive={currentPage === i}
-                              >
-                                {i}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        }
-                      } else {
-                        // Logique pour afficher les pages avec ellipsis
-                        if (currentPage <= 3) {
-                          // Début
-                          for (let i = 1; i <= Math.min(3, totalPages); i++) {
-                            pages.push(
-                              <PaginationItem key={i}>
-                                <PaginationLink
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handlePageChange(i);
-                                  }}
-                                  isActive={currentPage === i}
-                                >
-                                  {i}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                          if (totalPages > 4) {
-                            pages.push(
-                              <PaginationItem key="ellipsis1">
-                                <PaginationEllipsis />
-                              </PaginationItem>
-                            );
-                            pages.push(
-                              <PaginationItem key={totalPages}>
-                                <PaginationLink
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handlePageChange(totalPages);
-                                  }}
-                                  isActive={currentPage === totalPages}
-                                >
-                                  {totalPages}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                        } else if (currentPage >= totalPages - 2) {
-                          // Fin
-                          pages.push(
-                            <PaginationItem key={1}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handlePageChange(1);
-                                }}
-                                isActive={currentPage === 1}
-                              >
-                                1
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                          if (totalPages > 4) {
-                            pages.push(
-                              <PaginationItem key="ellipsis2">
-                                <PaginationEllipsis />
-                              </PaginationItem>
-                            );
-                          }
-                          for (let i = Math.max(1, totalPages - 2); i <= totalPages; i++) {
-                            pages.push(
-                              <PaginationItem key={i}>
-                                <PaginationLink
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handlePageChange(i);
-                                  }}
-                                  isActive={currentPage === i}
-                                >
-                                  {i}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                        } else {
-                          // Milieu
-                          pages.push(
-                            <PaginationItem key={1}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handlePageChange(1);
-                                }}
-                                isActive={currentPage === 1}
-                              >
-                                1
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                          pages.push(
-                            <PaginationItem key="ellipsis3">
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                          for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-                            pages.push(
-                              <PaginationItem key={i}>
-                                <PaginationLink
-                                  href="#"
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    handlePageChange(i);
-                                  }}
-                                  isActive={currentPage === i}
-                                >
-                                  {i}
-                                </PaginationLink>
-                              </PaginationItem>
-                            );
-                          }
-                          pages.push(
-                            <PaginationItem key="ellipsis4">
-                              <PaginationEllipsis />
-                            </PaginationItem>
-                          );
-                          pages.push(
-                            <PaginationItem key={totalPages}>
-                              <PaginationLink
-                                href="#"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handlePageChange(totalPages);
-                                }}
-                                isActive={currentPage === totalPages}
-                              >
-                                {totalPages}
-                              </PaginationLink>
-                            </PaginationItem>
-                          );
-                        }
-                      }
-                      
-                      return pages;
-                    })()}
+                    {getPageNumbers().map((p, idx) =>
+                      p === 'ellipsis' ? (
+                        <PaginationItem key={`ellipsis-${idx}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      ) : (
+                        <PaginationItem key={p}>
+                          <PaginationLink
+                            onClick={(e) => { 
+                              e.preventDefault();
+                              handlePageChange(p as number)}}
+                            isActive={currentPage === p}
+                          >
+                            {p}
+                          </PaginationLink>
+                        </PaginationItem>
+                      )
+                    )}
 
                     <PaginationItem>
-                      <PaginationNext 
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          const totalPages = Math.ceil(pagination.count / pageSize);
-                          if (currentPage < totalPages) {
-                            handlePageChange(currentPage + 1);
-                          }
-                        }}
-                        className={currentPage >= Math.ceil(pagination.count / pageSize) ? "pointer-events-none opacity-50" : ""}
-                      />
+                      {currentPage === totalPages ? (
+                        <Button variant="outline" size="icon" disabled className="cursor-not-allowed">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <PaginationNext onClick={(e) => {
+                          e.preventDefault()
+                          handlePageChange(currentPage + 1)}} />
+                      )}
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>
@@ -759,4 +625,4 @@ export const FacturesPage: React.FC = () => {
       />
     </div>
   );
-}; 
+};

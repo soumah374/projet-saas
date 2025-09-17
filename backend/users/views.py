@@ -841,7 +841,6 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                                     'projects': ('projects', 'project'),
                                     'teams': ('teams', 'team'),
                                     'departments': ('departments', 'department'),
-                                    'clients': ('users', 'clientprofile'),  # Les clients sont dans l'app users
                                     'devis': ('devis', 'devis'),
                                     'contrats': ('contrats', 'contrat'),
                                     'billings': ('billings', 'facture'),
@@ -849,6 +848,7 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                                     'documents': ('documents', 'document'),
                                     'notifications': ('notifications', 'notification'),
                                     # Modules qui n'ont pas d'app dédiée - utiliser users comme fallback
+                                    'clients': ('users', 'clientprofile'),  # Les clients sont dans l'app users
                                     'reports': ('users', 'userprofile'),
                                     'calendar': ('users', 'userprofile'),
                                     'timesheets': ('users', 'userprofile')

@@ -29,6 +29,7 @@ import { fr } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
 import { Facture } from '@/hooks/use-factures';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface PaiementModalProps {
   facture: Facture | null;
@@ -66,6 +67,11 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
   const [modePaiement, setModePaiement] = useState('virement');
   const [referencePaiement, setReferencePaiement] = useState('');
   const [notes, setNotes] = useState('');
+
+  const {
+    isLoading,
+    canManageBillings
+  } = usePermissions()
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,9 +245,11 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
             <Button type="button" variant="outline" onClick={handleClose}>
               Annuler
             </Button>
-            <Button type="submit" disabled={loading || !montant}>
-              {loading ? 'Enregistrement...' : 'Enregistrer le paiement'}
-            </Button>
+            {canManageBillings('can_pay_facture') && (
+              <Button type="submit" disabled={loading || !montant}>
+                {loading ? 'Enregistrement...' : 'Enregistrer le paiement'}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

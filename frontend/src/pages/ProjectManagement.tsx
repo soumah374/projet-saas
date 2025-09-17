@@ -117,7 +117,7 @@ export function ProjectManagement() {
   }, [viewMode]);
 
   // React Query hook
-  const { data: backendStatus, isLoading: backendLoading } = useBackendStatus();
+  const { data: backendStatus } = useBackendStatus();
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
     search: searchTerm || undefined,
     status: statusFilter !== 'all' ? statusFilter as ProjectStatus : undefined,
@@ -139,7 +139,6 @@ export function ProjectManagement() {
     }
   };
 
-  const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
 
@@ -187,22 +186,6 @@ export function ProjectManagement() {
     if (progress >= 60) return 'bg-yellow-600';
     if (progress >= 40) return 'bg-orange-600';
     return 'bg-red-600';
-  };
-
-  const handleProjectCreate = async (projectData: any) => {
-    try {
-      await createProjectMutation.mutateAsync(projectData);
-    } catch (error) {
-      console.error('Erreur lors de la création du projet:', error);
-    }
-  };
-
-  const handleProjectUpdate = async (projectId: string, data: Partial<CreateProjectForm>) => {
-    try {
-      await updateProjectMutation.mutateAsync({ projectId, data });
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du projet:', error);
-    }
   };
 
   const handleProjectDelete = async (project: ProjectList) => {
@@ -281,20 +264,20 @@ export function ProjectManagement() {
     }
   };
 
-  const filteredProjects = projects || [];
 
   const renderActionButtons = (project: ProjectList) => (
     <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => navigate(`/projects/${project.id}`)}
-        className="text-blue-600 hover:text-blue-600"
-      >
-        <Eye className="h-4 w-4 mr-1" />
-        Détails
-      </Button>
-    
+      {canManageProjects('view') && ( 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/projects/${project.id}`)}
+          className="text-blue-600 hover:text-blue-600"
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          Détails
+        </Button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">

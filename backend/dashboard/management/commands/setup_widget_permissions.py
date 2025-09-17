@@ -56,7 +56,7 @@ class Command(BaseCommand):
                     'projects.recent_projects',
                     'projects.overdue_projects',
                     'financial.revenue_trend',
-                    'financial.billing_status',
+                    # 'financial.billing_status',
                     'financial.devis_conversion',
                     'financial.cash_flow',
                     'financial.montant_impaye',
@@ -129,7 +129,7 @@ class Command(BaseCommand):
                 'description': 'Accès aux métriques de clients et devis',
                 'widgets': [
                     'financial.devis_conversion',
-                    'financial.billing_status',
+                    # 'financial.billing_status',
                     'projects.status_distribution',
                     'projects.recent_projects',
                     'calendar.event_distribution'

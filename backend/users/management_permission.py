@@ -155,8 +155,7 @@ def assign_users_to_groups():
     users = User.objects.filter(is_active=True)
     
     for user in users:
-        if hasattr(user, 'profile') and user.profile.role:
-            role = user.profile.role
+        if hasattr(user, 'profile'):
             
             # Retirer l'utilisateur de tous les groupes de rôles
             role_groups = Group.objects.filter(
@@ -168,12 +167,12 @@ def assign_users_to_groups():
             user.groups.remove(*role_groups)
             
             # Ajouter l'utilisateur au groupe correspondant à son rôle
-            try:
-                group = Group.objects.get(name=role)
-                user.groups.add(group)
-                print(f"Utilisateur {user.get_full_name()} assigné au groupe {role}")
-            except Group.DoesNotExist:
-                print(f"Groupe {role} non trouvé pour l'utilisateur {user.get_full_name()}")
+            # try:
+            #     group = Group.objects.get(name=role)
+            #     user.groups.add(group)
+            #     print(f"Utilisateur {user.get_full_name()} assigné au groupe {role}")
+            # except Group.DoesNotExist:
+            #     print(f"Groupe {role} non trouvé pour l'utilisateur {user.get_full_name()}")
 
 
 def create_custom_permissions():
@@ -191,6 +190,7 @@ def create_custom_permissions():
         ('can_start_project', 'Can start project'),
         ('can_move_to_livraison', 'Can move to livraison'),
         ('can_complete_project', 'Can complete project'),
+        ('can_sommary_project', 'Can sommary project'),
     ]
     
     for codename, name in custom_permissions:
@@ -209,6 +209,8 @@ def create_custom_permissions():
         ('can_approve_billing', 'Can approve billing'),
         ('can_generate_invoice', 'Can generate invoice'),
         ('can_view_financial_reports', 'Can view financial reports'),
+        ('can_pay_facture', 'Can pay facture'),
+        # ('can_download_facture', 'Can download facture'),
     ]
     
     for codename, name in billing_permissions:
@@ -242,7 +244,6 @@ def get_user_permissions_summary(user):
     summary = {
         'user_id': user.id,
         'user_name': user.get_full_name(),
-        'user_role': user.profile.role if hasattr(user, 'profile') else '',
         'groups': list(user.groups.values_list('name', flat=True)),
         'permissions': list(user.get_all_permissions()),
         'is_staff': user.is_staff,

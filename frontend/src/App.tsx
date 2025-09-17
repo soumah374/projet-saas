@@ -216,7 +216,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/clients" element={
-                  <ProtectedRoute module="clients">
+                  <ProtectedRoute permission="users.view_clientprofile">
                     <ClientsPage />
                   </ProtectedRoute>
                 } />
@@ -256,7 +256,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/categories-clients" element={
-                  <ProtectedRoute module="clients">
+                  <ProtectedRoute permission="users.view_clientcategory">
                     <ClientCategoriesPage />
                   </ProtectedRoute>
                 } />
