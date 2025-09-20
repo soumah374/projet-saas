@@ -4,6 +4,7 @@ from django.utils import timezone
 from .models import Facture, LigneFacture, ConfigurationFacturation
 from contrats.models import EcheancierContrat
 from django.db.models import Sum
+from email_templates.services import EmailTemplateService
 
 
 class FacturationService:
@@ -142,11 +143,35 @@ class FacturationService:
         
         for facture in factures_en_retard:
             try:
-                # Ici on pourrait implémenter l'envoi d'email
-                # Pour l'instant, on marque juste comme envoyée
-                facture.statut = 'envoyee'
-                facture.save()
-                relances_envoyees.append(facture)
+                # Calculer le nombre de jours de retard
+                jours_retard = (date.today() - facture.date_echeance).days
+                
+                # Récupérer l'email du client
+                destinataire = None
+                if hasattr(facture.client, 'user') and hasattr(facture.client.user, 'email'):
+                    destinataire = facture.client.user.email
+                elif hasattr(facture.client, 'email'):
+                    destinataire = facture.client.email
+                
+                if destinataire:
+                    # Envoyer la relance avec le template
+                    context = EmailTemplateService.prepare_relance_context(facture, jours_retard)
+                    result = EmailTemplateService.send_templated_email(
+                        'relance',
+                        context,
+                        destinataire
+                    )
+                    
+                    if result['success']:
+                        # Marquer la facture comme relancée
+                        facture.statut = 'relancee'
+                        facture.save()
+                        relances_envoyees.append(facture)
+                    else:
+                        print(f"Erreur lors de l'envoi de la relance pour la facture {facture.numero}: {result['error']}")
+                else:
+                    print(f"Pas d'email trouvé pour le client de la facture {facture.numero}")
+                    
             except Exception as e:
                 print(f"Erreur lors de l'envoi de la relance pour la facture {facture.numero}: {e}")
                 continue

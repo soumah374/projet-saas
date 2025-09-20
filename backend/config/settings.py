@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'contrats',
     'billings',
     'dashboard',
+    'email_templates',
 ]
 
 MIDDLEWARE = [

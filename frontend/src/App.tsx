@@ -44,6 +44,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
 import DashboardManagerPage from './pages/DashboardManagerPage';
+import { EmailTemplatesPage } from './pages/EmailTemplatesPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -300,6 +301,11 @@ function App() {
                 <Route path="/permissions/role/:roleId" element={
                   <ProtectedRoute roles={["Managing Director", "Finance/Admin",'Super Admin']}>
                     <RoleDetailsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/email-templates" element={
+                  <ProtectedRoute roles={["Managing Director", "Finance/Admin", "Super Admin"]}>
+                    <EmailTemplatesPage />
                   </ProtectedRoute>
                 } />
                 

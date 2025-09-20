@@ -26,6 +26,7 @@ from django.template.loader import render_to_string
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
 from django.http import HttpResponse
+from email_templates.services import EmailTemplateService
 
 
 class ContratViewSet(viewsets.ModelViewSet):
@@ -393,27 +394,22 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        sujet = f"Votre contrat n°{contrat.numero}"
-        message = (
-            f"Bonjour,\n\n"
-            f"Veuillez trouver ci-joint votre contrat (n°{contrat.numero}).\n\n"
-            f"Cordialement,\n"
-            f"L'équipe {getattr(settings, 'PROJECT_NAME', 'de la plateforme')}"
+        # Utiliser le service de template d'email
+        context = EmailTemplateService.prepare_contrat_context(contrat)
+        result = EmailTemplateService.send_templated_email(
+            'contrat',
+            context,
+            destinataire,
+            {
+                'name': f'contrat_{contrat.numero}.pdf',
+                'content': pdf,
+                'mime_type': 'application/pdf'
+            }
         )
-
-        email = EmailMessage(
-            subject=sujet,
-            body=message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
-            to=[destinataire],
-        )
-        email.attach(f"contrat_{contrat.numero}.pdf", pdf, "application/pdf")
-
-        try:
-            email.send()
-        except Exception as e:
+        
+        if not result['success']:
             return Response(
-                {'error': f"Erreur lors de l'envoi de l'email: {str(e)}"},
+                {'error': result['error']},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
@@ -819,27 +815,22 @@ class AvenantViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        sujet = f"Votre avenant n°{avenant.numero}"
-        message = (
-            f"Bonjour,\n\n"
-            f"Veuillez trouver ci-joint votre avenant (n°{avenant.numero}).\n\n"
-            f"Cordialement,\n"
-            f"L'équipe {getattr(settings, 'PROJECT_NAME', 'de la plateforme')}"
+        # Utiliser le service de template d'email
+        context = EmailTemplateService.prepare_avenant_context(avenant)
+        result = EmailTemplateService.send_templated_email(
+            'avenant',
+            context,
+            destinataire,
+            {
+                'name': f'avenant_{avenant.numero}.pdf',
+                'content': pdf,
+                'mime_type': 'application/pdf'
+            }
         )
-
-        email = EmailMessage(
-            subject=sujet,
-            body=message,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', None),
-            to=[destinataire],
-        )
-        email.attach(f"avenant_{avenant.numero}.pdf", pdf, "application/pdf")
-
-        try:
-            email.send()
-        except Exception as e:
+        
+        if not result['success']:
             return Response(
-                {'error': f"Erreur lors de l'envoi de l'email: {str(e)}"},
+                {'error': result['error']},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
