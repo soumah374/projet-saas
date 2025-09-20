@@ -370,22 +370,27 @@ class DashboardMetricsService:
                 project_performance = []
                 top_projects = projects_in_period.order_by('-progress').first() 
                 flop_projects = projects_in_period.order_by('progress').first()
-                project_performance.append({
-                    'type': 'top',
-                    'projects': {
-                        'id': top_projects.id,
-                        'title': top_projects.title,
-                        'progress': top_projects.progress
-                    }
-                })
-                project_performance.append({
-                    'type': 'flop',
-                    'projects': {
-                        'id': flop_projects.id,
-                        'title': flop_projects.title,
-                        'progress': flop_projects.progress
-                    }
-                })
+                
+                if top_projects:
+                    project_performance.append({
+                        'type': 'top',
+                        'projects': {
+                            'id': top_projects.id,
+                            'title': top_projects.title,
+                            'progress': top_projects.progress
+                        }
+                    })
+                
+                if flop_projects:
+                    project_performance.append({
+                        'type': 'flop',
+                        'projects': {
+                            'id': flop_projects.id,
+                            'title': flop_projects.title,
+                            'progress': flop_projects.progress
+                        }
+                    })
+                
                 result['project_performance'] = project_performance
             
             result['user_roles'] = list(self.user_roles) if self.user_roles else []

@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { AppearanceProvider } from './contexts/AppearanceContext';
 import { TopNavigation } from './components/TopNavigation';
 import { Sidebar } from './components/Sidebar';
 import { LoginPage } from './pages/LoginPage';
@@ -94,11 +95,12 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster />
-      <Sonner />
-      
-      {user ? (
+    <AppearanceProvider>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+        <Toaster />
+        <Sonner />
+        
+        {user ? (
         <div className="flex h-screen">
           <Sidebar 
             isOpen={isSidebarOpen} 
@@ -113,7 +115,7 @@ function App() {
               user={user}
               onLogout={handleLogout}
             />
-            <main className="flex-1 overflow-auto p-6">
+            <main className="flex-1 overflow-auto p-6 bg-gray-50 dark:bg-gray-900 transition-colors">
               <Routes>
                 <Route path="/" element={
                   <ProtectedRoute>
@@ -334,7 +336,8 @@ function App() {
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       )}
-    </div>
+      </div>
+    </AppearanceProvider>
   );
 }
 

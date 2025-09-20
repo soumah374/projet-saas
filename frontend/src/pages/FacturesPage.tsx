@@ -41,7 +41,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { usePermissionManager } from '@/hooks/use-permission-manager';
 import { usePermissions } from '@/hooks/use-permissions';
 
 // -------- Utils
@@ -98,7 +97,8 @@ export const FacturesPage: React.FC = () => {
 
   const {
     isLoading,
-    canManageBillings
+    canManageBillings,
+    hasPermission
   } = usePermissions()
 
   const [statistiques, setStatistiques] = useState<any>(null);
@@ -265,7 +265,7 @@ export const FacturesPage: React.FC = () => {
       {/* Statistiques */}
       {statistiques && (
         <>
-          {canManageBillings('can_view_financial_reports') && (
+          {hasPermission('billings.can_view_financial_reports') && (
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Statistiques</h2>
               <StatistiquesFacturation statistiques={statistiques} loading={loading} />
@@ -277,7 +277,7 @@ export const FacturesPage: React.FC = () => {
       {/* Alertes */}
       {(facturesEnRetard.length > 0 || facturesAVenir.length > 0) && (
         <>
-        {canManageBillings('can_view_financial_reports') && (
+        {hasPermission('billings.can_view_financial_reports') && (
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Alertes</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
