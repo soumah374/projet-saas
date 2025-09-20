@@ -13,7 +13,6 @@ import {
   Edit, 
   Trash2, 
   Play, 
-  Check, 
   X, 
   Pause, 
   CalendarIcon,

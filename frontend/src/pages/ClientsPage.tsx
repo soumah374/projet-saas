@@ -17,6 +17,7 @@ import { CreateEditClientModal } from '@/components/clients/CreateEditClientModa
 import { ClientDetailModal } from '@/components/clients/ClientDetailModal';
 import { DeleteClientModal } from '@/components/clients/DeleteClientModal';
 import React from 'react';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export function ClientsPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -38,7 +39,9 @@ export function ClientsPage() {
   const createClientMutation = useCreateClient();
   const updateClientMutation = useUpdateClient();
   const deleteClientMutation = useDeleteClient();
-
+  const { 
+    hasPermission
+  } = usePermissions();
   // Paramètres pour la requête des clients
   const queryParams = {
     page: Math.max(1, currentPage), // Ensure page is never less than 1
@@ -213,10 +216,14 @@ export function ClientsPage() {
           <div className="flex flex-wrap gap-2 items-center">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
+                {hasPermission('clients.add_clientprofile') && (
                 <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
+                )}
               </DialogTrigger>
             </Dialog>
-            <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2"><Download size={16}/> Exporter CSV</Button>
+            {hasPermission('clients.export_clientprofile') && ( 
+              <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2"><Download size={16}/> Exporter CSV</Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -348,8 +355,12 @@ export function ClientsPage() {
                       </TableCell>
                       <TableCell>
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDetail(client)}><Eye size={16}/></Button>
+                        {hasPermission('clients.change_clientprofile') && ( 
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(client)}><Edit size={16}/></Button>
-                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(client)}><Trash2 size={16}/></Button>
+                        )}
+                        {hasPermission('clients.delete_clientprofile') && (
+                          <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(client)}><Trash2 size={16}/></Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

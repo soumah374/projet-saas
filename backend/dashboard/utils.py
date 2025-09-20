@@ -49,7 +49,7 @@ def get_user_widget_config(user):
         
         config_data = {
             'authorized_widgets': authorized_widgets,
-            'user_role': metrics_service.user_role,
+            'user_roles': list(metrics_service.user_roles) if metrics_service.user_roles else [],
             'total_available': len(DashboardMetricsService.list_available_widgets()),
             'total_authorized': len(authorized_widgets)
         }

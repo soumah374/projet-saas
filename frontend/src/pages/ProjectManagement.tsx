@@ -94,10 +94,8 @@ const toProjectList = (project: ExtendedProject): ProjectList => ({
 export function ProjectManagement() {
   const { 
     canManageProjects, 
-    canManageDocuments, 
-    canManageCalendar, 
-    canViewProjectReports,
-    canManageProjectMembers
+    canManageDocuments,
+    hasPermission
   } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -117,7 +115,7 @@ export function ProjectManagement() {
   }, [viewMode]);
 
   // React Query hook
-  const { data: backendStatus, isLoading: backendLoading } = useBackendStatus();
+  const { data: backendStatus } = useBackendStatus();
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
     search: searchTerm || undefined,
     status: statusFilter !== 'all' ? statusFilter as ProjectStatus : undefined,
@@ -139,7 +137,6 @@ export function ProjectManagement() {
     }
   };
 
-  const createProjectMutation = useCreateProject();
   const updateProjectMutation = useUpdateProject();
   const deleteProjectMutation = useDeleteProject();
 
@@ -187,22 +184,6 @@ export function ProjectManagement() {
     if (progress >= 60) return 'bg-yellow-600';
     if (progress >= 40) return 'bg-orange-600';
     return 'bg-red-600';
-  };
-
-  const handleProjectCreate = async (projectData: any) => {
-    try {
-      await createProjectMutation.mutateAsync(projectData);
-    } catch (error) {
-      console.error('Erreur lors de la création du projet:', error);
-    }
-  };
-
-  const handleProjectUpdate = async (projectId: string, data: Partial<CreateProjectForm>) => {
-    try {
-      await updateProjectMutation.mutateAsync({ projectId, data });
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour du projet:', error);
-    }
   };
 
   const handleProjectDelete = async (project: ProjectList) => {
@@ -281,20 +262,20 @@ export function ProjectManagement() {
     }
   };
 
-  const filteredProjects = projects || [];
 
   const renderActionButtons = (project: ProjectList) => (
     <div className="flex items-center gap-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => navigate(`/projects/${project.id}`)}
-        className="text-blue-600 hover:text-blue-600"
-      >
-        <Eye className="h-4 w-4 mr-1" />
-        Détails
-      </Button>
-    
+      {canManageProjects('view_project') && ( 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/projects/${project.id}`)}
+          className="text-blue-600 hover:text-blue-600"
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          Détails
+        </Button>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm">
@@ -302,32 +283,32 @@ export function ProjectManagement() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {canManageProjectMembers() && (
+          {canManageProjects('view_projectmember') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/team`)}>
             <Users className="h-4 w-4 mr-2" />
             Équipe
           </DropdownMenuItem>
           )}
-          {canManageProjects('view') && (
+          {canManageProjects('view_project') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
             <Eye className="h-4 w-4 mr-2" />
             Détails
           </DropdownMenuItem>
           )}
-          {canViewProjectReports() && (
+          {canManageProjects('can_view_project_reports') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/reports`)}>
             <BarChart3 className="h-4 w-4 mr-2" />
             Rapports
           </DropdownMenuItem>
           )}
 
-          {canManageCalendar('view') && (
+          {canManageProjects('view_projectevent') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/calendar`)}>
             <Calendar className="h-4 w-4 mr-2" />
             Calendrier
           </DropdownMenuItem>
           )}
-          {canManageDocuments('view') && (
+          {canManageDocuments('view_document') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/documents`)}>
             <FileText className="h-4 w-4 mr-2" />
             Documents
@@ -335,7 +316,7 @@ export function ProjectManagement() {
           )}
           
           <DropdownMenuSeparator />
-          {canManageProjects('delete') && (
+          {canManageProjects('delete_project') && (
             <DropdownMenuItem 
               className="text-red-600"
               onClick={() => handleProjectDelete(project)}
@@ -357,7 +338,7 @@ export function ProjectManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
           <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets saKom</p>
         </div>
-        { canManageProjects('add') && (
+        { hasPermission('projects.add_project') && (
           <Button onClick={() => setShowCreateModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nouveau Projet
@@ -404,59 +385,61 @@ export function ProjectManagement() {
 
       {/* Statistics Cards */}
       {!projectsLoading && summary && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Projets</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.projects.total}</div>
-              <p className="text-xs text-muted-foreground">
-                Tous les projets
-              </p>
-            </CardContent>
-          </Card>
+        <>
+          {hasPermission('projects.can_sommary_project') && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Projets</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summary.projects.total}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Tous les projets
+                  </p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Projets Actifs</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.projects.active}</div>
-              <p className="text-xs text-muted-foreground">
-                En cours de réalisation
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Projets Terminés</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{summary.projects.completed}</div>
-              <p className="text-xs text-muted-foreground">
-                Projets finalisés
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Projets en Retard</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">{summary.projects.delayed}</div>
-              <p className="text-xs text-muted-foreground">
-                Dépassement d'échéance
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Projets Actifs</CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summary.projects.active}</div>
+                  <p className="text-xs text-muted-foreground">
+                    En cours de réalisation
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Projets Terminés</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{summary.projects.completed}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Projets finalisés
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Projets en Retard</CardTitle>
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">{summary.projects.delayed}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Dépassement d'échéance
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </>
       )}
 
       {/* Filters */}

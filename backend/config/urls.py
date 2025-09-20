@@ -32,6 +32,7 @@ urlpatterns = [
         path('contrats/', include('contrats.urls')),
         path('billings/', include('billings.urls')),
         path('dashboard/', include('dashboard.urls')),
+        path('email-templates/', include('email_templates.urls')),
     ])),
 ]
 

@@ -30,6 +30,7 @@ import {
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { formatMontant } from '@/lib/formatters';
+import { usePermissions } from '@/hooks/use-permissions';
 
 // Types
 interface Category {
@@ -126,6 +127,10 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
     
     onProfileAdd(profileId);
   };
+
+  const { 
+    hasPermission
+  } = usePermissions();
 
   return (
     <div className="space-y-3">
@@ -233,6 +238,8 @@ const useActivityForm = (profiles: IntervenantProfile[], setProfiles?: React.Dis
       }]
     }));
   };
+
+ 
 
   const handleProfileTimeChange = (profileId: number, temps: string) => {
     setForm(prev => ({
@@ -435,6 +442,10 @@ export function ServiceDetailsPage() {
       setCurrentActivityPage(safePage);
     }
   };
+
+  const { 
+    hasPermission
+  } = usePermissions();
 
   const getActivityPageNumbers = () => {
     const pages = [];
@@ -763,10 +774,12 @@ export function ServiceDetailsPage() {
           <Badge variant={service.is_active ? "default" : "destructive"}>
             {service.is_active ? 'Active' : 'Inactive'}
           </Badge>
+          {hasPermission('catalog.can_edit_catalog') && (
           <Button size="sm" variant="outline" onClick={handleOpenEditDialog}>
             <Edit className="h-4 w-4 mr-2" />
             Modifier
           </Button>
+          )}
         </div>
       </div>
 
@@ -820,10 +833,12 @@ export function ServiceDetailsPage() {
                 <Activity className="h-5 w-5" />
                 Activités associées ({filteredActivities.length}/{service.activities?.length || 0})
               </CardTitle>
+              {hasPermission('catalog.can_add_catalog') && (
               <Button onClick={handleOpenDialog} size="sm" className="gap-2">
                 <Plus size={16} />
                 Ajouter une activité
               </Button>
+              )}
             </CardHeader>
             <CardContent>
               {/* Barre de recherche */}
@@ -887,21 +902,25 @@ export function ServiceDetailsPage() {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenEditActivityDialog(activity)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenDeleteActivityDialog(activity)}
-                                className="text-red-600 hover:text-red-800"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              {hasPermission('catalog.can_edit_catalog') && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenEditActivityDialog(activity)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+                              {hasPermission('catalog.can_delete_catalog') && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenDeleteActivityDialog(activity)}
+                                  className="text-red-600 hover:text-red-800"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>

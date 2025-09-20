@@ -111,9 +111,8 @@ export const usePermissions = () => {
     // Les staff ont accès limité selon leur rôle
     if (userPermissions.is_staff) return true;
   
-    // console.log("modulePerms",userPermissions.permissions.filter(res => res.includes(module)).length > 0)
-
     const modulePerms = userPermissions.module_permissions[module];
+    
     return modulePerms ? (modulePerms.view || modulePerms.add || modulePerms.change || modulePerms.delete) : false;
   }, [userPermissions]);
 
@@ -183,7 +182,7 @@ export const usePermissions = () => {
   }, [hasPermission]);
 
   const canManageProjects = useCallback((action: string): boolean => {
-    return hasPermission(`projects.${action}_projects`);
+    return hasPermission(`projects.${action}`);
   }, [hasPermission]);
 
   const canManageBilling = useCallback((action: string): boolean => {
@@ -211,11 +210,11 @@ export const usePermissions = () => {
   }, [hasPermission]);
 
   const canManageContrats = useCallback((action: string): boolean => {
-    return hasPermission(`contrats.${action}_contrats`);
+    return hasPermission(`contrats.${action}`);
   }, [hasPermission]);
 
   const canManageBillings = useCallback((action: string): boolean => {
-    return hasPermission(`billings.${action}_billings`);
+    return hasPermission(`billings.${action}`);
   }, [hasPermission]);
 
   // Permissions personnalisées pour les projets
@@ -259,6 +258,7 @@ export const usePermissions = () => {
   const canApproveBilling = useCallback((action: string): boolean => {
     return hasPermission(`billings.${action}_billings`);
   }, [hasPermission]);
+
 
   const canGenerateInvoice = useCallback((action: string): boolean => {
     return hasPermission(`billings.${action}_billings`);

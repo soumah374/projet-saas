@@ -122,7 +122,7 @@ export function useProjectTasks(projectId: string) {
 }
 
 // Completed tasks for a project
-export function useCompletedProjectTasks(projectId: string) {
+export function useCompletedProjectTasks(projectId: number) {
   return useQuery({
     queryKey: ['project-tasks', projectId, 'completed'],
     queryFn: () => apiRequest<PaginatedResponse<ProjectTask>>(`/${projectId}/tasks/?status=${encodeURIComponent('Terminé')}`),

@@ -12,7 +12,7 @@ interface FinancialOverviewProps {
       recettes: number;
       type: 'daily' | 'monthly';
     }>;
-    billing_status?: Record<string, number>;
+    // billing_status?: Record<string, number>;
     billing_status_trend?: Array<{
       month: string; // YYYY-MM
       payee?: number;
@@ -170,30 +170,6 @@ export const FinancialOverview: React.FC<FinancialOverviewProps> = ({ data, peri
             </div>
           </CardContent>
         </Card>
-      )}
-
-      {/* Statut de facturation */}
-      {isSelected('financial.billing_status') && (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Statut de Facturation
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {Object.entries(data.billing_status || {}).map(([status, count]) => (
-              <div key={status} className="text-center">
-                <div className="text-2xl font-bold text-gray-900">{count}</div>
-                <Badge variant="secondary" className={getBillingStatusColor(status)}>
-                  {status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
       )}
       {/* Conversion des devis */}
       {isSelected('financial.devis_conversion') && (

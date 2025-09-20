@@ -1,0 +1,74 @@
+[
+  {
+    "model": "email_templates.emailtemplate",
+    "pk": 1,
+    "fields": {
+      "nom": "Template Devis Standard",
+      "type_email": "devis",
+      "sujet": "Votre devis n°{{numero}} - {{client_raison_sociale}}",
+      "contenu": "Bonjour {{client_prenom}} {{client_nom}},\n\nNous vous remercions de votre confiance.\n\nVeuillez trouver ci-joint votre devis n°{{numero}} d'un montant de {{montant_ttc}} € TTC.\n\nCe devis est valable jusqu'au {{date_validite}}.\n\nN'hésitez pas à nous contacter pour toute question.\n\nCordialement,\nL'équipe SAKOM",
+      "est_actif": true,
+      "est_defaut": true
+    }
+  },
+  {
+    "model": "email_templates.emailtemplate",
+    "pk": 2,
+    "fields": {
+      "nom": "Template Contrat Standard",
+      "type_email": "contrat",
+      "sujet": "Votre contrat n°{{numero}} - {{client_raison_sociale}}",
+      "contenu": "Bonjour {{client_prenom}} {{client_nom}},\n\nNous vous remercions de votre confiance.\n\nVeuillez trouver ci-joint votre contrat n°{{numero}} d'un montant total de {{montant_total}} €.\n\nCe contrat est valable du {{date_debut}} au {{date_fin}}.\n\nMerci de nous retourner ce contrat signé dans les meilleurs délais.\n\nCordialement,\nL'équipe SAKOM",
+      "est_actif": true,
+      "est_defaut": true
+    }
+  },
+  {
+    "model": "email_templates.emailtemplate",
+    "pk": 3,
+    "fields": {
+      "nom": "Template Avenant Standard",
+      "type_email": "avenant",
+      "sujet": "Avenant n°{{numero}} au contrat {{contrat_numero}}",
+      "contenu": "Bonjour {{client_nom}},\n\nVeuillez trouver ci-joint l'avenant n°{{numero}} au contrat {{contrat_numero}}.\n\nCet avenant modifie les conditions du contrat principal.\n\nMerci de nous retourner cet avenant signé.\n\nCordialement,\nL'équipe SAKOM",
+      "est_actif": true,
+      "est_defaut": true
+    }
+  },
+  {
+    "model": "email_templates.emailtemplate",
+    "pk": 4,
+    "fields": {
+      "nom": "Template Facture Standard",
+      "type_email": "facture",
+      "sujet": "Facture n°{{numero}} - {{client_nom}} {{client_prenom}}",
+      "contenu": "Bonjour {{client_prenom}} {{client_nom}},\n\nVeuillez trouver ci-joint votre facture n°{{numero}} du {{date_facture}}.\n\nMontant : {{montant_ttc}} € TTC\nÉchéance de paiement : {{date_echeance}}\n\nNous vous remercions de procéder au règlement dans les délais impartis.\n\nCordialement,\nL'équipe SAKOM",
+      "est_actif": true,
+      "est_defaut": true
+    }
+  },
+  {
+    "model": "email_templates.emailtemplate",
+    "pk": 5,
+    "fields": {
+      "nom": "Template Relance Standard",
+      "type_email": "relance",
+      "sujet": "RELANCE - Facture n°{{numero_facture}} en retard de {{jours_retard}} jours",
+      "contenu": "Bonjour {{client_nom}},\n\nNous vous informons que votre facture n°{{numero_facture}} d'un montant de {{montant_du}} € est en retard de {{jours_retard}} jours.\n\nDate d'échéance dépassée : {{date_echeance}}\n\nNous vous prions de bien vouloir procéder au règlement dans les plus brefs délais.\n\nEn cas de problème, n'hésitez pas à nous contacter.\n\nCordialement,\nL'équipe SAKOM",
+      "est_actif": true,
+      "est_defaut": true
+    }
+  },
+  {
+    "model": "email_templates.emailtemplate",
+    "pk": 6,
+    "fields": {
+      "nom": "Template Rappel Standard",
+      "type_email": "rappel",
+      "sujet": "Rappel : {{objet}}",
+      "contenu": "Bonjour {{client_nom}},\n\nCeci est un rappel concernant : {{objet}}\n\nDate prévue : {{date_rappel}}\n\nNous vous remercions de votre attention.\n\nCordialement,\nL'équipe SAKOM",
+      "est_actif": true,
+      "est_defaut": true
+    }
+  }
+]

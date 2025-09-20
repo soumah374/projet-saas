@@ -27,6 +27,7 @@ import {
 import { useFraisCategories } from '../hooks/use-frais-categories';
 import { LigneFraisCreateData, LigneFraisList } from '../lib/types';
 import { Search, Plus, Edit, Trash2, X, RotateCcw } from 'lucide-react';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const TYPE_FRAIS_OPTIONS = [
   { value: 'rh', label: 'Budget RH mobilisé' },
@@ -71,6 +72,10 @@ const LignesFraisPage: React.FC = () => {
   const lignes = lignesData?.results || [];
   const totalCount = lignesData?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  const { 
+    hasPermission
+  } = usePermissions();
 
   // Reset to first page when page size changes
   React.useEffect(() => {
@@ -182,10 +187,12 @@ const LignesFraisPage: React.FC = () => {
     <div className="max-w-8xl mx-auto space-y-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Lignes de Frais</h1>
-        <Button onClick={handleOpenCreateDialog}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nouvelle Ligne
-        </Button>
+        {hasPermission('catalog.add_lignefrais') && (
+          <Button onClick={handleOpenCreateDialog}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvelle Ligne
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -306,6 +313,7 @@ const LignesFraisPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
+                          {hasPermission('catalog.change_lignefrais') && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -313,6 +321,8 @@ const LignesFraisPage: React.FC = () => {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          )}
+                          {hasPermission('catalog.delete_lignefrais') && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -320,6 +330,7 @@ const LignesFraisPage: React.FC = () => {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

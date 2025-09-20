@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye, ChevronsLeft, ChevronsRight, Upload } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { ImportExcelModal } from '@/components/services/ImportExcelModal';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface Category {
   id: number;
@@ -35,6 +37,7 @@ interface PaginatedResponse {
   results: Service[];
 }
 
+
 export function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,7 +59,13 @@ export function ServicesPage() {
   const [togglingServices, setTogglingServices] = useState<Set<number>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState<Service | null>(null);
+  const { 
+    hasPermission
+  } = usePermissions();
   const [totalItems, setTotalItems] = useState(0);
+
+  // États pour l'import Excel
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Charger toutes les catégories depuis l'API
   useEffect(() => {
@@ -212,6 +221,7 @@ export function ServicesPage() {
     }
   };
 
+
   // Fonctions de pagination améliorées
   const setPageSafely = (page: number) => {
     const safePage = Math.max(1, page);
@@ -273,56 +283,69 @@ export function ServicesPage() {
               <option value="active">Actives</option>
               <option value="inactive">Inactives</option>
             </select>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editService ? 'Modifier' : 'Ajouter'} une prestation</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {/* Sélecteur de catégorie */}
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Catégorie</label>
-                    <select
-                      className="border rounded px-2 py-1 w-full"
-                      value={categoryId ?? ''}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (val === 'other') setCategoryId('other');
-                        else setCategoryId(val ? Number(val) : null);
-                      }}
-                    >
-                      <option value="">Sélectionner...</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                      <option value="other">Autre...</option>
-                    </select>
-                    {categoryId === 'other' && (
-                      <Input
-                        className="mt-2"
-                        placeholder="Nouvelle catégorie"
-                        value={newCategoryName}
-                        onChange={e => setNewCategoryName(e.target.value)}
-                      />
-                    )}
+            {hasPermission('catalog.can_import_catalog') && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={() => setImportDialogOpen(true)}
+              >
+                <Upload size={16}/> Importer Excel
+              </Button>
+            )}
+
+            {hasPermission('catalog.can_add_catalog') && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editService ? 'Modifier' : 'Ajouter'} une prestation</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {/* Sélecteur de catégorie */}
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Catégorie</label>
+                      <select
+                        className="border rounded px-2 py-1 w-full"
+                        value={categoryId ?? ''}
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'other') setCategoryId('other');
+                          else setCategoryId(val ? Number(val) : null);
+                        }}
+                      >
+                        <option value="">Sélectionner...</option>
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                        <option value="other">Autre...</option>
+                      </select>
+                      {categoryId === 'other' && (
+                        <Input
+                          className="mt-2"
+                          placeholder="Nouvelle catégorie"
+                          value={newCategoryName}
+                          onChange={e => setNewCategoryName(e.target.value)}
+                        />
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Nom</label>
+                      <Input name="name" placeholder="Nom" value={form.name || ''} onChange={handleChange} required />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Description</label>
+                      <textarea name="description" placeholder="Description" className="w-full border rounded p-2" value={form.description || ''} onChange={handleChange} ></textarea>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Nom</label>
-                    <Input name="name" placeholder="Nom" value={form.name || ''} onChange={handleChange} required />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Description</label>
-                    <textarea name="description" placeholder="Description" className="w-full border rounded p-2" value={form.description || ''} onChange={handleChange} ></textarea>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'}</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                  <DialogFooter>
+                    <Button onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'}</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -381,8 +404,12 @@ export function ServicesPage() {
                             <Eye size={16}/>
                           </Button>
                         </Link>
-                        <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(service)}><Edit size={16}/></Button>
-                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(service)}><Trash2 size={16}/></Button>
+                        {hasPermission('catalog.can_edit_catalog') && (
+                          <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(service)}><Edit size={16}/></Button>
+                        )}
+                        {hasPermission('catalog.can_delete_catalog') && (
+                          <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(service)}><Trash2 size={16}/></Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -543,6 +570,14 @@ export function ServicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modal d'import Excel */}
+      <ImportExcelModal
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
+        categories={categories}
+        onImportSuccess={() => fetchServices(currentPage)}
+      />
     </div>
   );
 } 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, AlertTriangle, Target } from 'lucide-react';
+import { Calendar, AlertTriangle, Target, TriangleAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface QuickSummaryProps {
   data?: {
@@ -13,6 +14,14 @@ interface QuickSummaryProps {
     projects_change?: number;
     selected: string[];
     userSelected: string[];
+    project_performance: Array<{
+      type: 'top' | 'flop';
+      projects: {
+        id: number;
+        title: string;
+        progress: number;
+      };
+    }>;
   };
   period: string;
 }
@@ -29,6 +38,9 @@ type SummaryItem = {
 
 export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
   if (!data) return null;
+
+    const navigate = useNavigate();
+  
 
   const getChangeIcon = (change?: number) => {
     if (!change) return null;
@@ -58,14 +70,6 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
   const isSelected = (key: string) => !data.selected || data.selected.includes(key) || data.userSelected.includes(key);
 
   const projectItems: SummaryItem[] = [
-    ...(isSelected('calendar.upcoming_deadlines') ? [{
-      title: 'Échéances Urgentes',
-      value: data.urgent_deadlines || 0,
-      icon: Calendar,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      description: '≤ 3 jours'
-    }] : []),
     ...(isSelected('projects.overdue_projects') ? [{
       title: 'Projets en Retard',
       value: data.overdue_projects || 0,
@@ -73,6 +77,14 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
       color: 'text-red-600',
       bgColor: 'bg-red-50',
       description: 'À traiter'
+    }] : []),
+    ...(isSelected('calendar.upcoming_deadlines') ? [{
+      title: 'Échéances Urgentes',
+      value: data.urgent_deadlines || 0,
+      icon: Calendar,
+      color: 'text-orange-600',
+      bgColor: 'bg-orange-50',
+      description: '≤ 3 jours'
     }] : []),
     ...(isSelected('projects.active_projects') ? [{
       title: 'Projets Actifs',
@@ -83,8 +95,47 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
       change: data.projects_change,
       description: 'En cours'
     }] : []),
+    ...(isSelected('projects.total_projects') ? [{
+      title: 'Nombre total de project',
+      value: data.total_projects || 0,
+      icon: Target,
+      color: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      change: data.projects_change,
+      description: 'En cours'
+    }] : []),
+    ...(isSelected('projects.project_performance') ? [{
+      title: 'Performance des projets',
+      value: (
+        <>
+          <div className="space-y-1">
+            {data.project_performance.map((perf) => (
+              <div key={perf.type} className="flex items-center justify-between text-xs">
+                <span
+                  style={{ cursor: 'pointer' }}
+                  className={`font-medium ${perf.type === 'top' ? 'text-green-600' : 'text-red-600'}`}
+                  onClick={() => {navigate(`/projects/${perf.projects.id}`)}}
+                >
+                  {perf.type === 'top' ? 'Top' : 'Flop'} : {perf.projects.title}
+                </span>
+                <span
+                  style={{ cursor: 'pointer' }}
+                  className={`ml-2 text-${perf.type === 'top' ? 'green' : 'red'}-600`}>
+                  {perf.projects.progress}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      ),
+      icon: TriangleAlert,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      change: data.revenue_change,
+      description: 'Ce mois-ci'
+    }] : []),
+    
   ];
-
   return (
     <div>
       {isSelected('projects.quick_summary_projects') && ( 
@@ -119,10 +170,10 @@ export const QuickSummaryProjects: React.FC<QuickSummaryProps> = ({ data }) => {
                   <div className="text-right">
                     {item.change !== undefined && (
                       <div className="flex items-center gap-1">
-                        {getChangeIcon(item.change)}
-                        <span className={`text-xs font-medium ${getChangeColor(item.change)}`}>
+                        {/* {getChangeIcon(item.change)} */}
+                        {/* <span className={`text-xs font-medium ${getChangeColor(item.change)}`}>
                           {getChangeText(item.change)}
-                        </span>
+                        </span> */}
                       </div>
                     )}
                   </div>

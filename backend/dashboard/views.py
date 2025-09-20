@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 class DashboardWidgetPermissionMixin:
     """Mixin pour gérer les permissions des widgets du tableau de bord"""
     
-    def _get_authorized_widgets(self, request, user_role):
+    def _get_authorized_widgets(self, request, user_roles):
         """Récupère les widgets autorisés pour l'utilisateur en fonction de ses permissions"""
         try:
             # Utiliser directement le service pour récupérer les widgets autorisés
@@ -78,7 +78,7 @@ class DashboardProjectsView(DashboardWidgetPermissionMixin, APIView):
             metrics_service = DashboardMetricsService(user=request.user)
             
             # Récupérer les widgets autorisés pour l'utilisateur
-            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_role)
+            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_roles)
             
             # Récupérer uniquement les métriques de projets autorisées
             projects_data = metrics_service.get_projects_metrics(start_date, end_date, selected_widgets)
@@ -105,7 +105,7 @@ class DashboardFinancialView(DashboardWidgetPermissionMixin, APIView):
             metrics_service = DashboardMetricsService(user=request.user)
             
             # Récupérer les widgets autorisés pour l'utilisateur
-            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_role)
+            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_roles)
             
             # Récupérer uniquement les métriques financières autorisées
             financial_data = metrics_service.get_financial_metrics(start_date, end_date, selected_widgets)
@@ -132,7 +132,7 @@ class DashboardPerformanceView(DashboardWidgetPermissionMixin, APIView):
             metrics_service = DashboardMetricsService(user=request.user)
             
             # Récupérer les widgets autorisés pour l'utilisateur
-            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_role)
+            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_roles)
             
             # Récupérer uniquement les métriques de performance autorisées
             performance_data = metrics_service.get_performance_metrics(start_date, end_date, selected_widgets)
@@ -159,7 +159,7 @@ class DashboardCalendarView(DashboardWidgetPermissionMixin, APIView):
             metrics_service = DashboardMetricsService(user=request.user)
             
             # Récupérer les widgets autorisés pour l'utilisateur
-            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_role)
+            selected_widgets = self._get_authorized_widgets(request, metrics_service.user_roles)
             
             # Récupérer uniquement les métriques du calendrier autorisées
             calendar_data = metrics_service.get_calendar_metrics(start_date, end_date, selected_widgets)
@@ -269,37 +269,38 @@ class DashboardWidgetsConfigView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        try:
-            # Utiliser le service pour récupérer la configuration
-            metrics_service = DashboardMetricsService(user=request.user)
-            authorized_widgets = metrics_service.get_authorized_widgets()
+        # try:
+        # Utiliser le service pour récupérer la configuration
+        metrics_service = DashboardMetricsService(user=request.user)
+        authorized_widgets = metrics_service.get_authorized_widgets()
+        
+        # Récupérer la configuration actuelle
+        config = metrics_service._load_widget_config()
+        
+        
+        response_data = {
+            'authorized_widgets': authorized_widgets,
+            'user_roles': list(metrics_service.user_roles) if metrics_service.user_roles else [],
+            'total_available': len(DashboardMetricsService.list_available_widgets()),
+            'total_authorized': len(authorized_widgets)
+        }
+        
+        if config:
+            response_data.update({
+                'config_id': config.id,
+                'is_active': config.is_active,
+                'updated_at': config.updated_at.isoformat(),
+                'is_user_specific': config.user is not None,
+                'widgets': config.widgets
+            })
+        
+        return Response(response_data)
             
-            # Récupérer la configuration actuelle
-            config = metrics_service._load_widget_config()
-            
-            response_data = {
-                'authorized_widgets': authorized_widgets,
-                'user_role': metrics_service.user_role,
-                'total_available': len(DashboardMetricsService.list_available_widgets()),
-                'total_authorized': len(authorized_widgets)
-            }
-            
-            if config:
-                response_data.update({
-                    'config_id': config.id,
-                    'is_active': config.is_active,
-                    'updated_at': config.updated_at.isoformat(),
-                    'is_user_specific': config.user is not None,
-                    'widgets': config.widgets
-                })
-            
-            return Response(response_data)
-            
-        except Exception as e:
-            return Response({
-                'error': str(e),
-                'message': 'Erreur lors de la récupération de la configuration des widgets'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+        # except Exception as e:
+        #     return Response({
+        #         'error': str(e),
+        #         'message': 'Erreur lors de la récupération de la configuration des widgets'
+        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
 
 
 class DashboardTestView(APIView):

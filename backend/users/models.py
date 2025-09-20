@@ -29,6 +29,50 @@ class UserProfile(models.Model):
     position = models.CharField(max_length=100, blank=True)
     hire_date = models.DateField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    
+    # Préférences d'apparence
+    theme = models.CharField(
+        max_length=10, 
+        choices=[
+            ('light', 'Clair'),
+            ('dark', 'Sombre'),
+            ('system', 'Système')
+        ],
+        default='system'
+    )
+    language = models.CharField(
+        max_length=5,
+        choices=[
+            ('fr', 'Français'),
+            ('en', 'English'),
+            ('es', 'Español'),
+            ('de', 'Deutsch')
+        ],
+        default='fr'
+    )
+    timezone = models.CharField(max_length=50, default='Europe/Paris')
+    date_format = models.CharField(max_length=20, default='DD/MM/YYYY')
+    time_format = models.CharField(
+        max_length=3,
+        choices=[
+            ('12h', '12 heures'),
+            ('24h', '24 heures')
+        ],
+        default='24h'
+    )
+    
+    # Préférences de notifications
+    email_notifications = models.BooleanField(default=True, help_text="Recevoir les notifications par email")
+    push_notifications = models.BooleanField(default=True, help_text="Recevoir les notifications push dans le navigateur")
+    project_updates = models.BooleanField(default=True, help_text="Notifications sur les changements de statut des projets")
+    team_messages = models.BooleanField(default=True, help_text="Notifications sur les nouveaux messages d'équipe")
+    deadline_reminders = models.BooleanField(default=True, help_text="Rappels pour les activités en approche d'échéance")
+    weekly_reports = models.BooleanField(default=False, help_text="Recevoir un résumé hebdomadaire de l'activité")
+    task_assignments = models.BooleanField(default=True, help_text="Notifications lors de l'attribution de nouvelles tâches")
+    comment_mentions = models.BooleanField(default=True, help_text="Notifications quand vous êtes mentionné dans un commentaire")
+    document_sharing = models.BooleanField(default=True, help_text="Notifications quand un document est partagé avec vous")
+    invoice_reminders = models.BooleanField(default=True, help_text="Rappels pour les factures en attente de paiement")
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

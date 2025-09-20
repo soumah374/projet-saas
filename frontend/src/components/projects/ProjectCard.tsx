@@ -40,7 +40,7 @@ export const ProjectCard = ({ project, userRole, onViewDetails }: ProjectCardPro
   // Extract team member names for display
   const teamMemberNames = project.team_members 
     ? project.team_members.map(member => {
-        if (typeof member.user === 'object' && member.user !== null) {
+        if (member?.user && typeof member.user === 'object') {
           return `${member.user.first_name} ${member.user.last_name}`.trim() || member.user.username;
         }
         return '';

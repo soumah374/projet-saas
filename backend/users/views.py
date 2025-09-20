@@ -17,7 +17,7 @@ from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     UserListSerializer, ChangePasswordSerializer, CustomTokenObtainPairSerializer,
     LoginRequestSerializer, OTPVerificationSerializer, ClientProfileSerializer,
-    ClientCategorySerializer
+    ClientCategorySerializer, AppearanceSettingsSerializer, NotificationSettingsSerializer
 )
 
 
@@ -166,6 +166,95 @@ class UserViewSet(viewsets.ModelViewSet):
             update_session_auth_hash(request, user)
             return Response({'message': 'Mot de passe modifié avec succès'})
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['patch'], url_path='upload-avatar')
+    def upload_avatar(self, request):
+        """Upload de l'avatar de l'utilisateur connecté"""
+        if 'avatar' not in request.FILES:
+            return Response(
+                {'error': 'Aucun fichier fourni'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        avatar_file = request.FILES['avatar']
+        
+        # Vérifier la taille du fichier (max 2MB)
+        if avatar_file.size > 2 * 1024 * 1024:
+            return Response(
+                {'error': 'Le fichier est trop volumineux. Taille maximum : 2MB'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Vérifier le type de fichier
+        allowed_types = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
+        if avatar_file.content_type not in allowed_types:
+            return Response(
+                {'error': 'Type de fichier non autorisé. Formats acceptés : JPG, PNG, GIF'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # S'assurer que l'utilisateur a un profil
+            if not hasattr(request.user, 'profile'):
+                UserProfile.objects.create(user=request.user)
+            
+            # Mettre à jour l'avatar
+            request.user.profile.avatar = avatar_file
+            request.user.profile.save()
+            
+            # Retourner les données utilisateur mises à jour
+            serializer = UserSerializer(request.user)
+            return Response(serializer.data)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la sauvegarde : {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get', 'patch'], url_path='appearance-settings')
+    def appearance_settings(self, request):
+        """Gérer les préférences d'apparence de l'utilisateur connecté"""
+        # S'assurer que l'utilisateur a un profil
+        if not hasattr(request.user, 'profile'):
+            UserProfile.objects.create(user=request.user)
+        
+        profile = request.user.profile
+        
+        if request.method == 'GET':
+            # Récupérer les préférences actuelles
+            serializer = AppearanceSettingsSerializer(profile)
+            return Response(serializer.data)
+        
+        elif request.method == 'PATCH':
+            # Mettre à jour les préférences
+            serializer = AppearanceSettingsSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['get', 'patch'], url_path='notification-settings')
+    def notification_settings(self, request):
+        """Gérer les préférences de notifications de l'utilisateur connecté"""
+        # S'assurer que l'utilisateur a un profil
+        if not hasattr(request.user, 'profile'):
+            UserProfile.objects.create(user=request.user)
+        
+        profile = request.user.profile
+        
+        if request.method == 'GET':
+            # Récupérer les préférences actuelles
+            serializer = NotificationSettingsSerializer(profile)
+            return Response(serializer.data)
+        
+        elif request.method == 'PATCH':
+            # Mettre à jour les préférences
+            serializer = NotificationSettingsSerializer(profile, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @action(detail=False)
     def statistics(self, request):
@@ -841,7 +930,6 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                                     'projects': ('projects', 'project'),
                                     'teams': ('teams', 'team'),
                                     'departments': ('departments', 'department'),
-                                    'clients': ('users', 'clientprofile'),  # Les clients sont dans l'app users
                                     'devis': ('devis', 'devis'),
                                     'contrats': ('contrats', 'contrat'),
                                     'billings': ('billings', 'facture'),
@@ -849,6 +937,7 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                                     'documents': ('documents', 'document'),
                                     'notifications': ('notifications', 'notification'),
                                     # Modules qui n'ont pas d'app dédiée - utiliser users comme fallback
+                                    'clients': ('users', 'clientprofile'),  # Les clients sont dans l'app users
                                     'reports': ('users', 'userprofile'),
                                     'calendar': ('users', 'userprofile'),
                                     'timesheets': ('users', 'userprofile')

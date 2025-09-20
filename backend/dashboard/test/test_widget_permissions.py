@@ -37,11 +37,11 @@ class DashboardWidgetPermissionsTestCase(TestCase):
         )
         
         # Créer des configurations de widgets de test
-        self.config_finance = DashboardWidgetConfig.objects.create(
-            role='Finance/Admin',
-            widgets=['financial.revenue_trend', 'financial.billing_status'],
-            is_active=True
-        )
+        # self.config_finance = DashboardWidgetConfig.objects.create(
+        #     role='Finance/Admin',
+        #     widgets=['financial.revenue_trend', 'financial.billing_status'],
+        #     is_active=True
+        # )
         
         self.config_projects = DashboardWidgetConfig.objects.create(
             role='Chef de projet',

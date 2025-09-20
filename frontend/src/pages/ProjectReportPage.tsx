@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,6 @@ export function ProjectReportPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const projectId = id || '';
 
   // Récupérer les données du projet
   const { data: projectsData } = useProjects();
@@ -42,9 +41,12 @@ export function ProjectReportPage() {
   const { 
     data: reportsData, 
     isLoading: reportsLoading 
-  } = useProjectReports(filters);
+  } = useProjectReports(filters,id);
 
-  const projectReport = reportsData?.projects?.find((p: any) => p.id === projectId);
+  const projectReport = reportsData?.project;
+
+  // Completed activities for the project - moved to top level
+  const { data: completedTasksData, isLoading: completedTasksLoading } = useCompletedProjectTasks(parseInt(id || '0'));
 
   const { mutate: exportPDF, isPending: isExportingPDF } = useExportReport();
   const { mutate: exportExcel, isPending: isExportingExcel } = useExportReport();
@@ -184,9 +186,6 @@ export function ProjectReportPage() {
   }
 
   const displayProject = projectReport || project;
-
-  // Completed activities for the project
-  const { data: completedTasksData, isLoading: completedTasksLoading } = useCompletedProjectTasks(projectId);
   const completedTasks = completedTasksData?.results || [];
 
   const getTaskStatusColor = (status: string) => {
@@ -321,7 +320,7 @@ export function ProjectReportPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {projectReport?.team_members_count || 0}
+              {reportsData?.team?.total_members || projectReport?.team_members_count || 0}
             </div>
             <div className="flex items-center space-x-2 text-xs text-muted-foreground">
               <Activity className="w-3 h-3 text-blue-600" />
@@ -331,7 +330,7 @@ export function ProjectReportPage() {
         </Card>
 
         {/* Activités */}
-        {projectReport && (
+        {reportsData?.summary && (
           <>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -340,12 +339,12 @@ export function ProjectReportPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {projectReport.tasks_completed}/{projectReport.tasks_total}
+                  {reportsData.summary.completed_tasks}/{reportsData.summary.total_tasks}
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                   <Target className="w-3 h-3 text-green-500" />
                   <span>
-                    {Math.round((projectReport.tasks_completed / projectReport.tasks_total) * 100)}% terminées
+                    {reportsData.summary.completion_rate}% terminées
                   </span>
                 </div>
               </CardContent>
@@ -358,7 +357,7 @@ export function ProjectReportPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">
-                  {projectReport.tasks_overdue}
+                  {reportsData.summary.overdue_tasks}
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                   <AlertCircle className="w-3 h-3 text-red-500" />
@@ -387,6 +386,80 @@ export function ProjectReportPage() {
                 </div>
                 <div className="text-sm text-gray-500">
                   {projectReport.manager.email}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Performance de l'équipe */}
+      {reportsData?.team_members && reportsData.team_members.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Performance de l'équipe</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Membre</TableHead>
+                    <TableHead>Rôle</TableHead>
+                    <TableHead>Tâches assignées</TableHead>
+                    <TableHead>Tâches terminées</TableHead>
+                    <TableHead>Productivité</TableHead>
+                    <TableHead>Allocation</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reportsData.team_members.map((member: any) => (
+                    <TableRow key={member.id}>
+                      <TableCell className="font-medium">{member.name}</TableCell>
+                      <TableCell>{member.role}</TableCell>
+                      <TableCell>{member.tasks_assigned}</TableCell>
+                      <TableCell>{member.tasks_completed}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Progress value={member.productivity} className="w-20" />
+                          <span className="text-sm">{member.productivity}%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{member.allocation_percentage}%</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Suivi du temps et du budget */}
+      {reportsData?.time_tracking && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Suivi du temps et du budget</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="text-sm font-medium text-gray-500">Heures totales</label>
+                <div className="mt-1 flex items-center space-x-1">
+                  <Clock className="w-4 h-4 text-gray-400" />
+                  <span className="font-medium">
+                    {reportsData.time_tracking.total_hours_logged} heures
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-500">Utilisation du budget</label>
+                <div className="mt-1">
+                  <div className="flex items-center space-x-2">
+                    <Progress value={reportsData.time_tracking.budget_utilization} className="flex-1" />
+                    <span className="text-sm font-medium">{reportsData.time_tracking.budget_utilization.toFixed(1)}%</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -453,4 +526,4 @@ export function ProjectReportPage() {
       </Card>
     </div>
   );
-} 
+}

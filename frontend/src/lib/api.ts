@@ -469,7 +469,7 @@ export default api;
 export const projectTeamAPI = {
     getProjectTeam: (projectId: string) => 
         api.get<ProjectMember[]>(`/projects/${projectId}/team/`),
-    addTeamMember: (projectId: string, data: { user: string; role: string; allocation_percentage: number }) => 
+    addTeamMember: (projectId: string, data: { project: string; user: string; role: string; allocation_percentage: number }) => 
         api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
     updateTeamMember: (projectId: string, memberId: number, data: { role?: string; allocation_percentage?: number }) => 
         api.patch<TeamMember>(`/projects/${projectId}/team/${memberId}/`, data),

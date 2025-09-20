@@ -4,7 +4,6 @@ import { ProjectMetrics } from '@/components/dashboard/ProjectMetrics';
 import { FinancialOverview } from '@/components/dashboard/FinancialOverview';
 import { PerformanceMetrics } from '@/components/dashboard/PerformanceMetrics';
 import { CalendarOverview } from '@/components/dashboard/CalendarOverview';
-import { DashboardStats } from '@/components/dashboard/DashboardStats';
 import { DashboardCharts } from '@/components/dashboard/DashboardCharts';
 import { DashboardAlerts } from '@/components/dashboard/DashboardAlerts';
 import { QuickSummaryProjects } from '@/components/dashboard/QuickSummaryProjects';
@@ -359,15 +358,17 @@ const DashboardPage: React.FC = () => {
                     selected: selected,
                     userSelected: userSelected,
                     montant_impaye: data?.financial?.montant_impaye,
+                    facture_non_emises: data?.financial?.facture_non_emises
                   }}
                   period={getPeriodLabel(period)}
+                  period_days={period.toString()}
                 />
               )}
               {(isSelected('financial.cash_flow') || isSelected('financial.revenue_trend') || isSelected('projects.overdue_projects') || isSelected('calendar.upcoming_deadlines')) && (
                 <QuickSummaryProjects 
                   data={{
-                    total_projects: totalProjectsDerived || 0,
-                    active_projects: activeProjectsDerived || 0,
+                    total_projects: data?.projects?.total_projects || 0,
+                    active_projects: data?.projects?.active_projects || 0,
                     total_revenue: data?.financial?.cash_flow?.recettes ?? 0,
                     urgent_deadlines: data?.calendar?.upcoming_deadlines?.filter(d => d.days_until_deadline <= 3).length || 0,
                     overdue_projects: data?.projects?.overdue_projects?.length || 0,
@@ -375,6 +376,15 @@ const DashboardPage: React.FC = () => {
                     projects_change: 2.1,
                     selected: selected,
                     userSelected: userSelected,
+                    project_performance: (data.projects?.project_performance || []).map(
+                      (perf: any, idx: number) => ({
+                        ...perf,
+                        projects: {
+                          ...perf.projects,
+                          id: perf.projects.id ?? idx
+                        }
+                      })
+                    ),
                   }}
                   period={getPeriodLabel(period)}
                 />
@@ -382,7 +392,7 @@ const DashboardPage: React.FC = () => {
             </div>
             
             {/* Statistiques principales avec tendances */}
-            {(isSelected('projects.status_distribution') || isSelected('performance.pending_tasks') || isSelected('performance.overdue_tasks') || isSelected('financial.cash_flow') || isSelected('financial.revenue_trend') || isSelected('calendar.resource_utilization')) && (
+            {/* {(isSelected('projects.status_distribution') || isSelected('performance.pending_tasks') || isSelected('performance.overdue_tasks') || isSelected('financial.cash_flow') || isSelected('financial.revenue_trend') || isSelected('calendar.resource_utilization')) && (
               <DashboardStats 
                 data={{
                   total_projects: totalProjectsDerived || 0,
@@ -399,7 +409,7 @@ const DashboardPage: React.FC = () => {
                 }}
                 period={getPeriodLabel(period)}
               />
-            )}
+            )} */}
 
             {/* Graphiques et visualisations */}
             {(isSelected('financial.revenue_trend') || isSelected('projects.status_distribution') || isSelected('projects.team_performance') || isSelected('projects.monthly_projects')) && (

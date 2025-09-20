@@ -1,0 +1,332 @@
+[
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 1,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "numero",
+      "description": "Numéro du devis",
+      "exemple": "DEV-2024-001"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 2,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "client_nom",
+      "description": "Nom du client",
+      "exemple": "Dupont"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 3,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "client_prenom",
+      "description": "Prénom du client",
+      "exemple": "Jean"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 4,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "client_raison_sociale",
+      "description": "Raison sociale du client",
+      "exemple": "Entreprise SARL"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 5,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "montant_ht",
+      "description": "Montant hors taxes",
+      "exemple": "1500.00"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 6,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "montant_ttc",
+      "description": "Montant toutes taxes comprises",
+      "exemple": "1800.00"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 7,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "date_creation",
+      "description": "Date de création du devis",
+      "exemple": "15/01/2024"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 8,
+    "fields": {
+      "type_email": "devis",
+      "nom_variable": "date_validite",
+      "description": "Date de validité du devis",
+      "exemple": "15/02/2024"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 9,
+    "fields": {
+      "type_email": "contrat",
+      "nom_variable": "numero",
+      "description": "Numéro du contrat",
+      "exemple": "CTR-2024-001"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 10,
+    "fields": {
+      "type_email": "contrat",
+      "nom_variable": "client_nom",
+      "description": "Nom du client",
+      "exemple": "Dupont"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 11,
+    "fields": {
+      "type_email": "contrat",
+      "nom_variable": "client_prenom",
+      "description": "Prénom du client",
+      "exemple": "Jean"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 12,
+    "fields": {
+      "type_email": "contrat",
+      "nom_variable": "client_raison_sociale",
+      "description": "Raison sociale du client",
+      "exemple": "Entreprise SARL"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 13,
+    "fields": {
+      "type_email": "contrat",
+      "nom_variable": "montant_total",
+      "description": "Montant total du contrat",
+      "exemple": "5000.00"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 14,
+    "fields": {
+      "type_email": "contrat",
+      "nom_variable": "date_debut",
+      "description": "Date de début du contrat",
+      "exemple": "01/02/2024"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 15,
+    "fields": {
+      "type_email": "contrat",
+      "nom_variable": "date_fin",
+      "description": "Date de fin du contrat",
+      "exemple": "31/12/2024"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 16,
+    "fields": {
+      "type_email": "avenant",
+      "nom_variable": "numero",
+      "description": "Numéro de l'avenant",
+      "exemple": "AVE-2024-001"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 17,
+    "fields": {
+      "type_email": "avenant",
+      "nom_variable": "contrat_numero",
+      "description": "Numéro du contrat principal",
+      "exemple": "CTR-2024-001"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 18,
+    "fields": {
+      "type_email": "avenant",
+      "nom_variable": "client_nom",
+      "description": "Nom du client",
+      "exemple": "Dupont"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 19,
+    "fields": {
+      "type_email": "facture",
+      "nom_variable": "numero",
+      "description": "Numéro de la facture",
+      "exemple": "FAC-2024-001"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 20,
+    "fields": {
+      "type_email": "facture",
+      "nom_variable": "client_nom",
+      "description": "Nom du client",
+      "exemple": "Dupont"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 21,
+    "fields": {
+      "type_email": "facture",
+      "nom_variable": "client_prenom",
+      "description": "Prénom du client",
+      "exemple": "Jean"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 22,
+    "fields": {
+      "type_email": "facture",
+      "nom_variable": "montant_ht",
+      "description": "Montant hors taxes",
+      "exemple": "2000.00"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 23,
+    "fields": {
+      "type_email": "facture",
+      "nom_variable": "montant_ttc",
+      "description": "Montant toutes taxes comprises",
+      "exemple": "2400.00"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 24,
+    "fields": {
+      "type_email": "facture",
+      "nom_variable": "date_facture",
+      "description": "Date de la facture",
+      "exemple": "01/03/2024"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 25,
+    "fields": {
+      "type_email": "facture",
+      "nom_variable": "date_echeance",
+      "description": "Date d'échéance",
+      "exemple": "31/03/2024"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 26,
+    "fields": {
+      "type_email": "relance",
+      "nom_variable": "numero_facture",
+      "description": "Numéro de la facture en retard",
+      "exemple": "FAC-2024-001"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 27,
+    "fields": {
+      "type_email": "relance",
+      "nom_variable": "client_nom",
+      "description": "Nom du client",
+      "exemple": "Dupont"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 28,
+    "fields": {
+      "type_email": "relance",
+      "nom_variable": "montant_du",
+      "description": "Montant dû",
+      "exemple": "2400.00"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 29,
+    "fields": {
+      "type_email": "relance",
+      "nom_variable": "jours_retard",
+      "description": "Nombre de jours de retard",
+      "exemple": "15"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 30,
+    "fields": {
+      "type_email": "relance",
+      "nom_variable": "date_echeance",
+      "description": "Date d'échéance originale",
+      "exemple": "31/03/2024"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 31,
+    "fields": {
+      "type_email": "rappel",
+      "nom_variable": "client_nom",
+      "description": "Nom du client",
+      "exemple": "Dupont"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 32,
+    "fields": {
+      "type_email": "rappel",
+      "nom_variable": "objet",
+      "description": "Objet du rappel",
+      "exemple": "Rendez-vous prévu"
+    }
+  },
+  {
+    "model": "email_templates.emailtemplatevariable",
+    "pk": 33,
+    "fields": {
+      "type_email": "rappel",
+      "nom_variable": "date_rappel",
+      "description": "Date du rappel",
+      "exemple": "15/04/2024"
+    }
+  }
+]

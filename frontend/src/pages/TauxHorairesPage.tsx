@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as Searc
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { formatMontant } from '@/lib/formatters';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface IntervenantProfile {
   id: number;
@@ -335,6 +336,10 @@ export function TauxHorairesPage() {
     return pages;
   };
 
+  const { 
+    hasPermission
+  } = usePermissions();
+
   return (
     <div className="max-w-10xl mx-auto space-y-6">
       {/* Header avec bouton retour */}
@@ -386,7 +391,9 @@ export function TauxHorairesPage() {
             </select>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
+                {hasPermission('catalog.add_tauxhoraire') && (
                 <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
+                )}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -500,8 +507,12 @@ export function TauxHorairesPage() {
                         </div>
                       </TableCell>
                       <TableCell className="flex gap-2">
+                        {hasPermission('catalog.change_tauxhoraire') && (
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(tauxHoraire)}><Edit size={16}/></Button>
+                        )}
+                        {hasPermission('catalog.delete_tauxhoraire') && (
                         <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(tauxHoraire)}><Trash2 size={16}/></Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

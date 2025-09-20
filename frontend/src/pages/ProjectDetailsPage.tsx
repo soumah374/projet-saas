@@ -41,7 +41,9 @@ export function ProjectDetailsPage() {
   const [activeTab, setActiveTab] = useState('planning');
 
   const { 
-    canManageProjects, 
+    canManageProjects,
+    canManageContrats,
+    hasPermission
   } = usePermissions();
   
   const { data: project, isLoading, error } = useProject(projectId || '');
@@ -142,7 +144,7 @@ export function ProjectDetailsPage() {
             
           )}
           {project.status !== 'Terminé' && (
-            canManageProjects('edit') && (
+            canManageProjects('can_edit_project') && (
             <EditProjectModal 
               project={project as any} 
               onProjectUpdate={handleProjectUpdate}
@@ -154,35 +156,42 @@ export function ProjectDetailsPage() {
             </EditProjectModal>
             )
           )}
-          <ProjectActionModals
-            status={project.status}
-            isStarting={startProjectMutation.isPending}
-            isUpdating={updateProjectMutation.isPending}
-            onStart={handleStartProject}
-            onMoveToLivraison={handleMoveToLivraison}
-              onComplete={handleCompleteProject}
-            />
+          {canManageProjects('can_start_project') && (
+            <ProjectActionModals
+              status={project.status}
+              isStarting={startProjectMutation.isPending}
+              isUpdating={updateProjectMutation.isPending}
+              onStart={handleStartProject}
+              onMoveToLivraison={handleMoveToLivraison}
+                onComplete={handleCompleteProject}
+              />
+          )}
         </div>
       </div>
       
       <ProjectTrackingAlerts projectId={projectId} />
       
+
       {/* Tableau de suivi du projet */}
-      <ProjectTrackingTable project={project} />
+      {canManageProjects('can_sommary_project') && (
+        <ProjectTrackingTable project={project} />
+      )}
       
       {/* Informations client et contrat */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {project.client_details && (
-          <ClientDetailsCard client={project.client_details} />
-        )}
-        {project.contract_details && (
-          <ContratDetailsCard 
-            contrat={project.contract_details} 
-            showViewButton={true}
-            onView={() => window.open(`/contrats/${project.contract}`, '_blank')}
-          />
-        )}
-      </div>
+      {canManageContrats('can_manage_project_members') && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {project.client_details && (
+            <ClientDetailsCard client={project.client_details} />
+          )}
+          {project.contract_details && (
+            <ContratDetailsCard 
+              contrat={project.contract_details} 
+              showViewButton={true}
+              onView={() => window.open(`/contrats/${project.contract}`, '_blank')}
+            />
+          )}
+        </div>
+      )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
@@ -193,19 +202,27 @@ export function ProjectDetailsPage() {
         </TabsList>
         
         <TabsContent value="planning">
-          <ProjectPlanning projectId={projectId} />
+          {hasPermission('projects.view_projecttask') && (
+            <ProjectPlanning projectId={projectId} />
+          )}
         </TabsContent>
         
         <TabsContent value="calendar">
-          <ProjectCalendar project={project} />
+          {hasPermission('projects.view_projectevent') && (
+            <ProjectCalendar project={project} />
+          )}
         </TabsContent>
         
         <TabsContent value="timesheets">
-          <ProjectTimesheets projectId={projectId} />
+          {hasPermission('projects.view_timesheet') && (
+            <ProjectTimesheets projectId={projectId} />
+          )}
         </TabsContent>
         
         <TabsContent value="documents">
-          <DocumentManager projectId={projectId} />
+          {hasPermission('documents.view_document') && (
+            <DocumentManager projectId={projectId} />
+          )}
         </TabsContent>
       </Tabs>
     </div>

@@ -7,9 +7,11 @@ AVAILABLE_WIDGETS = {
   'projects.monthly_projects': {'type': 'projects', 'label': 'Projets par mois'},
   'projects.progress_retards': {'type': 'projects', 'label': 'Retards et progression'},
   'projects.project_performance': {'type': 'projects', 'label': 'Top/Flop projets'},
+  'projects.active_projects': {'type': 'projects', 'label': 'Nombre de projets active'},
+  'projects.total_projects': {'type': 'projects', 'label': 'Nombre total de projets'},
   
   'financial.revenue_trend': {'type': 'financial', 'label': 'Tendance des recettes'},
-  'financial.billing_status': {'type': 'financial', 'label': 'Statut de facturation'},
+  # 'financial.billing_status': {'type': 'financial', 'label': 'Statut de facturation'},
   'financial.devis_conversion': {'type': 'financial', 'label': 'Conversion des devis'},
   'financial.cash_flow': {'type': 'financial', 'label': 'Flux de trésorerie'},
   'financial.top_clients': {'type': 'financial', 'label': 'Top clients'},
@@ -18,8 +20,9 @@ AVAILABLE_WIDGETS = {
   'financial.period_metrics': {'type': 'financial', 'label': 'Métriques de période'},
   'financial.total_paid_amount': {'type': 'financial', 'label': 'Montant total payé'},
   'financial.total_en_retard_amount': {'type': 'financial', 'label': 'Montant en retard'},
-  # 'financial.total_impayees_amount': {'type': 'financial', 'label': 'Montant impayé total'},
   'financial.total_factures_amount': {'type': 'financial', 'label': 'Montant total facturé'},
+  'financial.facture_non_emises': {'type': 'financial', 'label': 'Montant des factures non emises'},
+
   
   'performance.team_productivity': {'type': 'performance', 'label': 'Productivité des équipes'},
   'performance.user_performance': {'type': 'performance', 'label': 'Performance des utilisateurs'},

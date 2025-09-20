@@ -21,6 +21,7 @@ from .serializers import (
     DevisAvecLignesSerializer, LigneDevisAvecIntervenantsSerializer
 )
 from catalog.models import Activity, TauxHoraire, LigneFrais
+from email_templates.services import EmailTemplateService
 
 logger = logging.getLogger(__name__)
 
@@ -183,9 +184,10 @@ class DevisViewSet(viewsets.ModelViewSet):
         
         # Récupérer les données de l'email
         email_destinataire = request.data.get('email_destinataire')
-        sujet = request.data.get('sujet', f'Devis {devis.numero} - {devis.client.nom_complet}')
-        message = request.data.get('message', '')
         pdf_data = request.data.get('pdf_data')
+        use_custom_template = request.data.get('use_custom_template', False)
+        custom_sujet = request.data.get('sujet', '')
+        custom_message = request.data.get('message', '')
         
         if not email_destinataire:
             return Response({'error': 'Email destinataire requis'}, status=400)
@@ -193,7 +195,6 @@ class DevisViewSet(viewsets.ModelViewSet):
         if not pdf_data:
             return Response({'error': 'Données PDF requises'}, status=400)
         
-        # try:
         # Décoder les données PDF base64
         if pdf_data.startswith('data:application/pdf;base64,'):
             pdf_base64 = pdf_data.split(',')[1]
@@ -202,57 +203,80 @@ class DevisViewSet(viewsets.ModelViewSet):
         
         pdf_content = base64.b64decode(pdf_base64)
         
-        # Créer un fichier temporaire pour le PDF
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
-            temp_file.write(pdf_content)
-            temp_file_path = temp_file.name
-        
-        # Préparer le message email
-        message_complet = self.prepare_email_message(devis, message)
-        
-        # Créer l'email avec pièce jointe
-        email = EmailMessage(
-            subject=sujet,
-            body=message_complet,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            to=[email_destinataire]
-        )
-        
-        print("Email created", email)
-        # Attacher le PDF
-        with open(temp_file_path, 'rb') as pdf_file:
+        try:
+            # Utiliser le service de template d'email
+            if use_custom_template and custom_sujet and custom_message:
+                # Utiliser le contenu personnalisé fourni
+                sujet = custom_sujet
+                message_complet = custom_message
+            else:
+                # Utiliser le template par défaut
+                context = EmailTemplateService.prepare_devis_context(devis)
+                result = EmailTemplateService.send_templated_email(
+                    'devis',
+                    context,
+                    email_destinataire,
+                    {
+                        'name': f'devis-{devis.numero}.pdf',
+                        'content': pdf_content,
+                        'mime_type': 'application/pdf'
+                    }
+                )
+                
+                if result['success']:
+                    # Marquer le devis comme envoyé
+                    devis.statut = 'envoye'
+                    devis.save()
+                    
+                    return Response({
+                        'message': result['message'],
+                        'template_used': result.get('template_used'),
+                        'subject': result.get('subject')
+                    })
+                else:
+                    return Response({'error': result['error']}, status=500)
+            
+            # Fallback : envoi manuel si template personnalisé
+            email = EmailMessage(
+                subject=sujet,
+                body=message_complet,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email_destinataire]
+            )
+            
+            # Attacher le PDF
             email.attach(
                 f'devis-{devis.numero}.pdf',
-                pdf_file.read(),
+                pdf_content,
                 'application/pdf'
             )
         
-        # Envoyer l'email
-        email.send()
-        print("Email sent", email)
-        
-        # Nettoyer le fichier temporaire
-        os.unlink(temp_file_path)
-        
-        # Changer le statut du devis si ce n'est pas déjà fait
-        if devis.statut == 'brouillon':
-            devis.statut = 'envoye'
-            devis.save()
-        
-        return Response({
-            'status': 'Email envoyé avec succès',
-            'message': 'Le devis a été envoyé par email avec le PDF en pièce jointe'
-        })
+            # Envoyer l'email
+            email.send()
+            print("Email sent", email)
             
-        # except Exception as e:
-        #     # Nettoyer le fichier temporaire en cas d'erreur
-        #     if 'temp_file_path' in locals():
-        #         try:
-        #             os.unlink(temp_file_path)
-        #         except:
-        #             pass
+            # Nettoyer le fichier temporaire
+            os.unlink(temp_file_path)
             
-            # return Response({'error': str(e)}, status=400)
+            # Changer le statut du devis si ce n'est pas déjà fait
+            if devis.statut == 'brouillon':
+                devis.statut = 'envoye'
+                devis.save()
+            
+            return Response({
+                'status': 'Email envoyé avec succès',
+                'message': 'Le devis a été envoyé par email avec le PDF en pièce jointe'
+            })
+            
+        except Exception as e:
+            # Nettoyer le fichier temporaire en cas d'erreur
+            if 'temp_file_path' in locals():
+                try:
+                    os.unlink(temp_file_path)
+                except:
+                    pass
+            
+            return Response({'error': str(e)}, status=400)
     
     def prepare_email_message(self, devis, message_personnalise=''):
         """Préparer le message email complet"""

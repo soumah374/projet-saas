@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Home, 
   FolderOpen, 
@@ -26,7 +26,8 @@ import {
   Wrench,
   FileCheck,
   CreditCard,
-  Shield
+  Shield,
+  Mail
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -56,11 +57,8 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
   const location = useLocation();
   const navigate = useNavigate();
   const { 
-    canManageProjects, 
-    canManageClients, 
-    canManageBilling, 
-    canManageUsers,
-    hasModuleAccess 
+    hasModuleAccess, 
+    hasPermission
   } = usePermissions();
   
   const [openMenus, setOpenMenus] = useState<{[key: string]: boolean}>({ 
@@ -75,6 +73,28 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
   const toggleMenu = (key: string) => setOpenMenus(m => ({ ...m, [key]: !m[key] }));
 
+  // Auto-ouvrir les menus basés sur la route actuelle
+  useEffect(() => {
+    const path = location.pathname;
+    
+    // Prestations menu
+    if (path.includes('/services') || path.includes('/activities') || path.includes('/taux-horaires') || 
+        path.includes('/unites-standards') || path.includes('/frais-categories') || 
+        path.includes('/lignes-frais') || path.includes('/categories-services')) {
+      setOpenMenus(prev => ({ ...prev, prestations: true }));
+    }
+    
+    // Clients menu
+    if (path.includes('/clients') || path.includes('/categories-clients')) {
+      setOpenMenus(prev => ({ ...prev, clients: true }));
+    }
+    
+            // Administration menu
+            if (path.includes('/users') || path.includes('/permissions') || path.includes('/dashboard-manager') || path.includes('/email-templates')) {
+              setOpenMenus(prev => ({ ...prev, administration: true }));
+            }
+  }, [location.pathname]);
+
 
   return (
     <>
@@ -87,7 +107,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
       )}
       
       <aside className={cn(
-        "fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col justify-between py-6 px-3",
+        "fixed lg:static inset-y-0 left-0 z-40 w-68 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col justify-between py-6 px-3",
         isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         <div>
@@ -113,7 +133,10 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   onClick={() => toggleMenu('prestations')} 
                   className={cn(
                     "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    location.pathname === '/services' || location.pathname === '/activities' || location.pathname === '/taux-horaires' || location.pathname === '/unites-standards' || location.pathname === '/frais-categories' || location.pathname === '/lignes-frais' || location.pathname === '/categories-services' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
+                    (location.pathname.includes('/services') || location.pathname.includes('/activities') || 
+                     location.pathname.includes('/taux-horaires') || location.pathname.includes('/unites-standards') || 
+                     location.pathname.includes('/frais-categories') || location.pathname.includes('/lignes-frais') || 
+                     location.pathname.includes('/categories-services')) ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50"
                   )}
                 >
                   <Wrench className="h-5 w-5" /> Prestations
@@ -122,17 +145,29 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   </span>
                 </button>
               {openMenus.prestations && (
-                <div className="ml-8 space-y-1">
-                  <Link to="/categories-services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                <div className="ml-8 space-y-2">
+                  <Link to="/categories-services" className={cn(
+                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                    location.pathname.includes('/categories-services') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                  )}>
                     <List className="h-4 w-4" /> Catégories des prestations
                   </Link>
-                  <Link to="/services" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                  <Link to="/services" className={cn(
+                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                    location.pathname.includes('/services') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                  )}>
                     <List className="h-4 w-4" /> Catalogue des prestations
                   </Link>
-                  <Link to="/taux-horaires" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                  <Link to="/taux-horaires" className={cn(
+                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                    location.pathname.includes('/taux-horaires') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                  )}>
                     <Currency className="h-4 w-4" /> Taux horaires GNF
                   </Link>
-                  <Link to="/unites-standards" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                  <Link to="/unites-standards" className={cn(
+                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                    location.pathname.includes('/unites-standards') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                  )}>
                     <Ruler className="h-4 w-4" /> Unités standards
                   </Link>
                   
@@ -142,10 +177,16 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                       <DollarSign className="h-4 w-4" /> Frais
                     </div>
                     <div className="ml-4 space-y-1">
-                      <Link to="/frais-categories" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                      <Link to="/frais-categories" className={cn(
+                        "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                        location.pathname.includes('/frais-categories') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                      )}>
                         <List className="h-4 w-4" /> Catégories de frais
                       </Link>
-                      <Link to="/lignes-frais" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
+                      <Link to="/lignes-frais" className={cn(
+                        "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                        location.pathname.includes('/lignes-frais') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                      )}>
                         <Receipt className="h-4 w-4" /> Lignes de frais
                       </Link>
                     </div>
@@ -156,7 +197,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             )}
 
             {/* Clients accordéon */}
-            {canManageClients('view') && (
+            {hasModuleAccess('users') && (
               <div className="space-y-2">
                 <button 
                   onClick={() => toggleMenu('clients')} 
@@ -172,12 +213,22 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 </button>
               {openMenus.clients && (
                 <div className="ml-8 space-y-1">
-                  <Link to="/categories-clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    <List className="h-4 w-4" /> Catégories clients
-                  </Link>
-                  <Link to="/clients" className="flex items-center gap-2 text-sm h-8 text-gray-600 hover:text-blue-600">
-                    <Users className="h-4 w-4" /> Liste clients
-                  </Link>
+                  {hasPermission('users.view_clientcategory') && (
+                    <Link to="/categories-clients" className={cn(
+                      "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                      location.pathname.includes('/categories-clients') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                    )}>
+                      <List className="h-4 w-4" /> Catégories clients
+                    </Link>
+                  )}
+                  {hasPermission('users.view_clientprofile') && (
+                    <Link to="/clients" className={cn(
+                      "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                      location.pathname === '/clients' ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                    )}>
+                      <Users className="h-4 w-4" /> Liste clients
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
@@ -206,7 +257,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             )}
 
             {/* Projets accordéon */}
-            {canManageProjects('view') && (
+            {hasModuleAccess('projects') && (
               <Link to="/projects" className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
                   location.pathname.startsWith('/projects') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
@@ -216,7 +267,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
             )}
 
              {/* Facturation */}
-             {canManageBilling('view') && (
+             {hasModuleAccess('billings') && (
                <Link to="/factures" className={cn(
                   "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
                   location.pathname.startsWith('/factures') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
@@ -243,7 +294,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   onClick={() => toggleMenu('administration')} 
                   className={cn(
                     "flex items-center w-full gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    (location.pathname === '/users' || location.pathname === '/permissions' || location.pathname === '/dashboard-manager') 
+                    (location.pathname === '/users' || location.pathname === '/permissions' || location.pathname === '/dashboard-manager' || location.pathname === '/email-templates') 
                       ? "bg-blue-50 text-blue-600" 
                       : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
                   )}
@@ -254,13 +305,13 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   </span>
                 </button>
                 {openMenus.administration && (
-                  <div className="ml-6 space-y-1">
-                    {canManageUsers() && (
+                  <div className="ml-8 space-y-1">
+                    {hasModuleAccess('users') && (
                       <Link 
                         to="/users" 
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                          location.pathname === '/users' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                          "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors", 
+                          location.pathname.includes('/users') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
                         )}
                       > 
                         <Users className="h-4 w-4" /> Utilisateurs 
@@ -269,8 +320,8 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                     <Link 
                       to="/dashboard-manager" 
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                        location.pathname === '/dashboard-manager' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors", 
+                        location.pathname.includes('/dashboard-manager') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
                       )}
                     > 
                       <BarChart3 className="h-4 w-4" /> Manager Tableau de bord
@@ -278,11 +329,20 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                     <Link 
                       to="/permissions" 
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors", 
-                        location.pathname === '/permissions' ? "bg-blue-50 text-blue-600" : "text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+                        "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors", 
+                        location.pathname.includes('/permissions') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
                       )}
                     > 
                       <Shield className="h-4 w-4" /> Permissions 
+                    </Link>
+                    <Link 
+                      to="/email-templates" 
+                      className={cn(
+                        "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors", 
+                        location.pathname.includes('/email-templates') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                      )}
+                    > 
+                      <Mail className="h-4 w-4" /> Templates Email 
                     </Link>
                   </div>
                 )}

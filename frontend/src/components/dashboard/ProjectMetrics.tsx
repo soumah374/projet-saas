@@ -5,7 +5,7 @@ import { Progress } from '@/components/ui/progress';
 import { Target, AlertTriangle, TrendingUp, Users } from 'lucide-react';
 
 interface ProjectMetricsProps {
-  data?: {
+  data?: {  
     status_distribution?: Record<string, number>;
     progress_distribution?: Array<{
       range: string;
@@ -37,10 +37,10 @@ interface ProjectMetricsProps {
     };
     project_performance?: Array<{
       type: 'top' | 'flop';
-      projects: Array<{
+      projects: {
         title: string;
         progress: number;
-      }>;
+      };
     }>;
     monthly_projects?: Array<{
       month: string;

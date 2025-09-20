@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { EventModal } from '../EventModal';
+import { usePermissions } from '@/hooks/use-permissions';
 
 // Options de mise en cache pour les requêtes
 const queryOptions = {
@@ -75,6 +76,10 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<ProjectEvent | null>(null);
+
+  const {  
+      hasPermission
+    } = usePermissions();
 
   // 2. Data fetching
   const { data: projectsData, isLoading: isLoadingProjects, error: projectsError } = useProjects();
@@ -264,6 +269,7 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
+        
         <CalendarHeader
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -271,10 +277,12 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
           onFilterChange={setFilterType}
           onAddEvent={handleAddEvent}
         />
-        <Button onClick={handleAddEvent}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nouvel événement
-        </Button>
+        {hasPermission('projects.add_projectevent') && (
+          <Button onClick={handleAddEvent}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nouvel événement
+          </Button>
+        )}
       </div>
 
       <CalendarStats stats={stats} />

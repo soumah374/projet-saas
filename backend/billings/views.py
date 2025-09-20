@@ -5,13 +5,15 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Sum, Count
 from datetime import date, timedelta
-from decimal import Decimal
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
 import tempfile
 import os
+from django.db.models.functions import Coalesce
+from django.db.models import Value, DecimalField, FloatField
+from django.utils import timezone
 
 from .models import Facture, PaiementFacture, LigneFacture, ConfigurationFacturation
 from .serializers import (
@@ -20,7 +22,6 @@ from .serializers import (
     EcheanceFacturationSerializer, ContratFacturationSerializer
 )
 from contrats.models import Contrat, EcheancierContrat
-from users.models import ClientProfile
 
 
 class FactureViewSet(viewsets.ModelViewSet):
@@ -30,7 +31,7 @@ class FactureViewSet(viewsets.ModelViewSet):
     serializer_class = FactureSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['statut', 'contrat', 'client', 'mode_paiement']
-    search_fields = ['numero', 'client__nom_complet', 'contrat__numero']
+    search_fields = ['numero', 'client__nom', 'client__prenom', 'contrat__numero']
     ordering_fields = ['date_emission', 'date_echeance', 'montant_ttc', 'statut']
     ordering = ['-date_emission']
     
@@ -106,11 +107,10 @@ class FactureViewSet(viewsets.ModelViewSet):
                 # Nettoyer le fichier temporaire
                 os.unlink(tmp_file_path)
                 
-                return Response({
-                    'message': 'PDF généré et sauvegardé avec succès',
-                    'filename': filename,
-                    'download_url': facture.fichier_pdf.url if facture.fichier_pdf else None
-                }, status=status.HTTP_200_OK)
+                response = HttpResponse(pdf, content_type='application/pdf')
+                response['Content-Disposition'] = f'attachment; filename="contrat_{facture.numero}.pdf"'
+                response['Content-Length'] = len(pdf)
+                return response
             else:
                 # Retourner le PDF directement
                 response = HttpResponse(pdf, content_type='application/pdf')
@@ -183,10 +183,26 @@ class FactureViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def factures_impayees(self, request):
-        """Retourne les factures impayées"""
-        factures = self.get_queryset().filter(montant_restant__gt=0)
+        """Retourne les factures impayées"""        
+        period_days = request.GET.get('period_days',30)
+        # Calculer les dates de début et fin
+        end_date = timezone.now()
+        start_date = end_date - timedelta(days=int(period_days))
+        
+        factures = self.get_queryset().filter(
+            statut__in=['emise', 'envoyee', 'en_retard'],
+            date_echeance__lt=timezone.now(),
+            created_at__gte=start_date,
+            created_at__lte=end_date
+        )
         serializer = self.get_serializer(factures, many=True)
-        return Response(serializer.data)
+        montant_impayee = self.get_queryset().aggregate(
+            total=Coalesce(
+                Sum('montant_restant'),
+                Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+            )
+        )['total'] or 0
+        return Response({'facture':serializer.data,'montant_impayee': montant_impayee})
 
 
 class PaiementFactureViewSet(viewsets.ModelViewSet):

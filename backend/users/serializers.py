@@ -14,9 +14,32 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = [
             'phone', 'avatar', 'bio', 'department', 
-            'position', 'hire_date', 'is_active', 'created_at', 'updated_at'
+            'position', 'hire_date', 'is_active', 
+            'theme', 'language', 'timezone', 'date_format', 'time_format',
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
+
+
+class AppearanceSettingsSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les préférences d'apparence"""
+    
+    class Meta:
+        model = UserProfile
+        fields = ['theme', 'language', 'timezone', 'date_format', 'time_format']
+
+
+class NotificationSettingsSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les préférences de notifications"""
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'email_notifications', 'push_notifications', 'project_updates',
+            'team_messages', 'deadline_reminders', 'weekly_reports',
+            'task_assignments', 'comment_mentions', 'document_sharing',
+            'invoice_reminders'
+        ]
 
 
 class UserSerializer(serializers.ModelSerializer):

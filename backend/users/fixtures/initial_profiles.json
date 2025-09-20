@@ -4,7 +4,6 @@
     "pk": 1,
     "fields": {
       "user": 2,
-      "role": "Managing Director",
       "phone": "+33123456789",
       "avatar": "",
       "bio": "Directeur général de SAKOM",
@@ -21,7 +20,6 @@
     "pk": 2,
     "fields": {
       "user": 3,
-      "role": "Chef de projet",
       "phone": "+33123456790",
       "avatar": "",
       "bio": "Chef de projet expérimenté",
@@ -38,7 +36,6 @@
     "pk": 3,
     "fields": {
       "user": 4,
-      "role": "Designer",
       "phone": "+33123456791",
       "avatar": "",
       "bio": "Designer créatif spécialisé en identité visuelle",

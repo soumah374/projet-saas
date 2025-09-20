@@ -63,9 +63,9 @@ export interface ReportFilters {
   team?: string;
 }
 
-export const useProjectReports = (filters?: ReportFilters) => {
+export const useProjectReports = (filters?: ReportFilters, id?: string) => {
   return useQuery({
-    queryKey: ['project-reports', filters],
+    queryKey: ['project-reports', filters, id],
     queryFn: async () => {
       const params = new URLSearchParams();
       
@@ -75,9 +75,11 @@ export const useProjectReports = (filters?: ReportFilters) => {
       if (filters?.type) params.append('type', filters.type);
       if (filters?.team) params.append('team', filters.team);
 
-      const response = await apiRequest<any>(`/projects/reports/?${params.toString()}`);
+      const endpoint = id ? `/projects/${id}/reports/` : '/projects/reports/';
+      const response = await apiRequest<any>(`${endpoint}?${params.toString()}`);
       return response;
     },
+    enabled: !!id, // Only run query if id is provided
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };

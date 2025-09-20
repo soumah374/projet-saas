@@ -30,12 +30,12 @@ def test_permission_system():
     
     # 1. Initialiser les permissions
     print("1. Initialisation des permissions...")
-    try:
-        initialize_permissions()
-        print("✓ Permissions initialisées avec succès")
-    except Exception as e:
-        print(f"✗ Erreur lors de l'initialisation: {e}")
-        return
+    # try:
+    initialize_permissions()
+    print("✓ Permissions initialisées avec succès")
+    # except Exception as e:
+    #     print(f"✗ Erreur lors de l'initialisation: {e}")
+    #     return
     
     # 2. Vérifier les groupes créés
     print("\n2. Vérification des groupes...")
@@ -52,7 +52,7 @@ def test_permission_system():
         if hasattr(user, 'profile') and user.profile.role:
             summary = get_user_permissions_summary(user)
             print(f"\n  Utilisateur: {summary['user_name']}")
-            print(f"  Rôle: {summary['user_role']}")
+            # print(f"  Rôle: {summary['user_role']}")
             print(f"  Groupes: {', '.join(summary['groups'])}")
             print(f"  Permissions: {len(summary['permissions'])} permissions")
             
@@ -131,7 +131,7 @@ def test_specific_user(username):
         summary = get_user_permissions_summary(user)
         
         print(f"\n=== Permissions pour {summary['user_name']} ===")
-        print(f"Rôle: {summary['user_role']}")
+        # print(f"Rôle: {summary['user_role']}")
         print(f"Groupes: {', '.join(summary['groups'])}")
         print(f"Staff: {summary['is_staff']}")
         print(f"Superuser: {summary['is_superuser']}")

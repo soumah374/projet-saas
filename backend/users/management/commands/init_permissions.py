@@ -26,7 +26,10 @@ class Command(BaseCommand):
                 summary = get_user_permissions_summary(user)
                 
                 self.stdout.write(f"\nPermissions pour {summary['user_name']}:")
-                self.stdout.write(f"Rôle: {summary['user_role']}")
+                # if hasattr(user, 'profile') and hasattr(user.profile, 'role'):
+                #     self.stdout.write(f"Rôle: {user.profile.role}")
+                # else:
+                #     self.stdout.write("Rôle: N/A")
                 self.stdout.write(f"Groupes: {', '.join(summary['groups'])}")
                 self.stdout.write(f"Staff: {summary['is_staff']}")
                 self.stdout.write(f"Superuser: {summary['is_superuser']}")
@@ -62,4 +65,4 @@ class Command(BaseCommand):
         except Exception as e:
             self.stdout.write(
                 self.style.ERROR(f'Erreur lors de l\'initialisation: {str(e)}')
-            ) 
+            )
