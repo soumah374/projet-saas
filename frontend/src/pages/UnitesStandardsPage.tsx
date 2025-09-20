@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface UniteStandard {
   id: number;
@@ -173,6 +174,10 @@ export function UnitesStandardsPage() {
     }
   };
 
+  const { 
+    hasPermission
+  } = usePermissions();
+
   return (
     <div className="max-w-10xl mx-auto">
       <Card>
@@ -195,7 +200,9 @@ export function UnitesStandardsPage() {
             </select>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
+                {hasPermission('catalog.add_unitestandard') && (
                 <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
+                )}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -304,12 +311,16 @@ export function UnitesStandardsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="flex gap-2">
+                        {hasPermission('catalog.change_unitestandard') && (
                         <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(uniteStandard)}>
                           <Edit size={16}/>
                         </Button>
+                        )}
+                        {hasPermission('catalog.delete_unitestandard') && (
                         <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(uniteStandard)}>
                           <Trash2 size={16}/>
                         </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

@@ -43,7 +43,7 @@ export function ProjectDetailsPage() {
   const { 
     canManageProjects,
     canManageContrats,
-    canManageClients
+    hasPermission
   } = usePermissions();
   
   const { data: project, isLoading, error } = useProject(projectId || '');
@@ -144,7 +144,7 @@ export function ProjectDetailsPage() {
             
           )}
           {project.status !== 'Terminé' && (
-            canManageProjects('edit') && (
+            canManageProjects('can_edit_project') && (
             <EditProjectModal 
               project={project as any} 
               onProjectUpdate={handleProjectUpdate}
@@ -156,14 +156,16 @@ export function ProjectDetailsPage() {
             </EditProjectModal>
             )
           )}
-          <ProjectActionModals
-            status={project.status}
-            isStarting={startProjectMutation.isPending}
-            isUpdating={updateProjectMutation.isPending}
-            onStart={handleStartProject}
-            onMoveToLivraison={handleMoveToLivraison}
-              onComplete={handleCompleteProject}
-            />
+          {canManageProjects('can_start_project') && (
+            <ProjectActionModals
+              status={project.status}
+              isStarting={startProjectMutation.isPending}
+              isUpdating={updateProjectMutation.isPending}
+              onStart={handleStartProject}
+              onMoveToLivraison={handleMoveToLivraison}
+                onComplete={handleCompleteProject}
+              />
+          )}
         </div>
       </div>
       
@@ -176,7 +178,7 @@ export function ProjectDetailsPage() {
       )}
       
       {/* Informations client et contrat */}
-      {canManageContrats('view_contrat') && (
+      {canManageContrats('can_manage_project_members') && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {project.client_details && (
             <ClientDetailsCard client={project.client_details} />
@@ -200,19 +202,27 @@ export function ProjectDetailsPage() {
         </TabsList>
         
         <TabsContent value="planning">
-          <ProjectPlanning projectId={projectId} />
+          {hasPermission('projects.view_projecttask') && (
+            <ProjectPlanning projectId={projectId} />
+          )}
         </TabsContent>
         
         <TabsContent value="calendar">
-          <ProjectCalendar project={project} />
+          {hasPermission('projects.view_projectevent') && (
+            <ProjectCalendar project={project} />
+          )}
         </TabsContent>
         
         <TabsContent value="timesheets">
-          <ProjectTimesheets projectId={projectId} />
+          {hasPermission('projects.view_timesheet') && (
+            <ProjectTimesheets projectId={projectId} />
+          )}
         </TabsContent>
         
         <TabsContent value="documents">
-          <DocumentManager projectId={projectId} />
+          {hasPermission('documents.view_document') && (
+            <DocumentManager projectId={projectId} />
+          )}
         </TabsContent>
       </Tabs>
     </div>

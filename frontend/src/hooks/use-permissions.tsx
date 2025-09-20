@@ -112,9 +112,6 @@ export const usePermissions = () => {
     if (userPermissions.is_staff) return true;
   
     const modulePerms = userPermissions.module_permissions[module];
-    if (module === 'catalog'){
-      console.log(module, modulePerms);
-    }
     
     return modulePerms ? (modulePerms.view || modulePerms.add || modulePerms.change || modulePerms.delete) : false;
   }, [userPermissions]);

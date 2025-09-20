@@ -66,7 +66,7 @@ export function ProjectTeamPage() {
   const [editRole, setEditRole] = useState<string>('');
   const [editIsActive, setEditIsActive] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-
+  const [selectedAllocation, setSelectedAllocation] = useState(100); 
   // React Query hooks
   const { data: usersData, isLoading: usersLoading, error: usersError } = useUsers({
     is_active: true,
@@ -75,14 +75,15 @@ export function ProjectTeamPage() {
 
   // Mutations
   const addMemberMutation = useMutation({
-    mutationFn: ({ projectId, userId, role }: { projectId: string; userId: number; role: ProjectMemberRole }) =>
-      projectTeamAPI.addTeamMember(projectId, { user: userId.toString(), role, allocation_percentage: 100 }),
+    mutationFn: ({ project, userId, role, allocation_percentage }: { project: string; userId: number; role: ProjectMemberRole, allocation_percentage}) =>
+      projectTeamAPI.addTeamMember(projectId, {project: project, user: userId.toString(), role, allocation_percentage: allocation_percentage, }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
       setIsAddMemberDialogOpen(false);
       setSelectedUser('');
       setSelectedRole('');
+      setSelectedAllocation(100);
       toast.success('Membre ajouté à l\'équipe avec succès');
     },
     onError: (error) => {
@@ -147,9 +148,10 @@ export function ProjectTeamPage() {
     }
 
     addMemberMutation.mutate({
-      projectId: projectId!,
+      project: projectId!,
       userId: parseInt(selectedUser),
-      role: selectedRole as ProjectMemberRole
+      role: selectedRole as ProjectMemberRole,
+      allocation_percentage: selectedAllocation
     });
   };
 
@@ -335,6 +337,19 @@ export function ProjectTeamPage() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="allocation">Allocation (%)</Label>
+                <Input
+                  id="allocation"
+                  type="number"
+                  value={selectedAllocation}
+                  min={0}
+                  max={100}
+                  onChange={e => setSelectedAllocation(Number(e.target.value))}
+                  className="bg-gray-100"
+                />
+                <p className="text-sm text-gray-500 mt-1">L'allocation est fixée à 100% par défaut. Modifiez si besoin.</p>
               </div>
             </div>
             <DialogFooter>

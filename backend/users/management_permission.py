@@ -168,7 +168,7 @@ def assign_users_to_groups():
             
             # Ajouter l'utilisateur au groupe correspondant à son rôle
             # try:
-            #     group = Group.objects.get(name=role)
+            #     group = Group.objects.get(name='groups')
             #     user.groups.add(group)
             #     print(f"Utilisateur {user.get_full_name()} assigné au groupe {role}")
             # except Group.DoesNotExist:
@@ -191,6 +191,8 @@ def create_custom_permissions():
         ('can_move_to_livraison', 'Can move to livraison'),
         ('can_complete_project', 'Can complete project'),
         ('can_sommary_project', 'Can sommary project'),
+        ('can_contrat_customer_project', 'Can contrat customer project'),
+        ('can_edit_project', 'Can edit project')
     ]
     
     for codename, name in custom_permissions:
@@ -218,6 +220,42 @@ def create_custom_permissions():
             codename=codename,
             name=name,
             content_type=billing_ct
+        )
+    
+    # Permissions pour les catalogues
+    try:
+        catalog_ct = ContentType.objects.get_for_model(Service)
+    except Exception:
+        catalog_ct = ContentType.objects.get(app_label='catalog', model='service')
+    catalog_permissions = [
+        ('can_import_catalog', 'Can import catalog')
+    ]
+    
+    for codename, name in catalog_permissions:
+        Permission.objects.get_or_create(
+            codename=codename,
+            name=name,
+            content_type=catalog_ct
+        )
+
+    # Permissions pour gestion des clients
+    try:
+        client_ct = ContentType.objects.get_for_model(ClientProfile)
+    except Exception:
+        client_ct = ContentType.objects.get(app_label='users', model='clientprofile')
+    client_permissions = [
+        ('can_view_clientprofile', 'Can view client profile'),
+        ('can_add_clientprofile', 'Can add client profile'),
+        ('can_change_clientprofile', 'Can change client profile'),
+        ('can_delete_clientprofile', 'Can delete client profile'),
+        ('can_import_clientprofile', 'Can import client profile'),
+        ('can_export_clientprofile', 'Can export client profile'),
+    ]
+    for codename, name in client_permissions:
+        Permission.objects.get_or_create(
+            codename=codename,
+            name=name,
+            content_type=client_ct
         )
     
     print("Permissions personnalisées créées")

@@ -77,8 +77,8 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<ProjectEvent | null>(null);
 
-  const { 
-      canManageCalendar, 
+  const {  
+      hasPermission
     } = usePermissions();
 
   // 2. Data fetching
@@ -277,7 +277,7 @@ export const ProjectCalendar = ({ project }: ProjectCalendarProps) => {
           onFilterChange={setFilterType}
           onAddEvent={handleAddEvent}
         />
-        {canManageCalendar('create') && (
+        {hasPermission('projects.add_projectevent') && (
           <Button onClick={handleAddEvent}>
             <Plus className="h-4 w-4 mr-2" />
             Nouvel événement

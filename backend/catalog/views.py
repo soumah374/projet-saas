@@ -15,6 +15,8 @@ from .serializers import (
     LigneFraisSerializer
 )
 from rest_framework.decorators import action
+from rest_framework import status
+import json
 
 # Create your views here.
 
@@ -69,6 +71,94 @@ class ServiceViewSet(viewsets.ModelViewSet):
         services = Service.objects.filter(category=category_id)
         serializer = ServiceSerializer(services, many=True)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'], url_path='bulk-import')
+    def bulk_import(self, request):
+        """
+        Import multiple prestations at once.
+        Expected payload:
+        {
+            "services": [
+                {
+                    "name": "Prestation Name",
+                    "description": "Prestation Description",
+                    "category_id": 1,
+                    "is_active": true
+                },
+                ...
+            ]
+        }
+        """
+        services_data = request.data.get('services', [])
+        
+        if not services_data:
+            return Response(
+                {'error': 'Aucune prestation fournie pour l\'import'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        imported_services = []
+        errors = []
+        
+        for index, service_data in enumerate(services_data):
+            try:
+                # Validation des champs requis
+                if not service_data.get('name') or not service_data.get('description'):
+                    errors.append({
+                        'index': index,
+                        'error': 'Le nom et la description sont requis'
+                    })
+                    continue
+                
+                # Vérifier si la prestation existe déjà
+                if Service.objects.filter(name=service_data['name']).exists():
+                    errors.append({
+                        'index': index,
+                        'name': service_data['name'],
+                        'error': 'Une prestation avec ce nom existe déjà'
+                    })
+                    continue
+                
+                # Validation de la catégorie si fournie
+                category = None
+                if service_data.get('category_id'):
+                    try:
+                        category = Category.objects.get(id=service_data['category_id'])
+                    except Category.DoesNotExist:
+                        errors.append({
+                            'index': index,
+                            'name': service_data['name'],
+                            'error': f'Catégorie avec l\'ID {service_data["category_id"]} introuvable'
+                        })
+                        continue
+                
+                # Créer la prestation
+                service = Service.objects.create(
+                    name=service_data['name'],
+                    description=service_data['description'],
+                    category=category,
+                    is_active=service_data.get('is_active', True)
+                )
+                
+                imported_services.append({
+                    'id': service.id,
+                    'name': service.name,
+                    'description': service.description
+                })
+                
+            except Exception as e:
+                errors.append({
+                    'index': index,
+                    'name': service_data.get('name', 'Nom inconnu'),
+                    'error': str(e)
+                })
+        
+        return Response({
+            'success_count': len(imported_services),
+            'error_count': len(errors),
+            'imported_services': imported_services,
+            'errors': errors
+        }, status=status.HTTP_200_OK)
 
 
 class FraisCategoryViewSet(viewsets.ModelViewSet):

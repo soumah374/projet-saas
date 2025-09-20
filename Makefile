@@ -164,6 +164,12 @@ load-fixtures:
 	docker compose exec backend python manage.py loaddata initial_lignes_frais
 
 	docker compose exec backend python manage.py init_permissions
+
+# 	 example_faker_usage
+#     generate_fake_client_categories
+#     generate_fake_clients
+#     init_permissions
+#     seed_client_categories
 	
 
 load-fixtures-clean:

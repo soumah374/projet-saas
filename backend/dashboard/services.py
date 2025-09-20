@@ -295,7 +295,7 @@ class DashboardMetricsService:
             if self._want('projects', 'overdue_projects', selected) or self._want('projects', 'progress_retards', selected):
                 overdue_base = Project.objects.filter(
                     deadline__lt=self.now,
-                    status__in=['Production', 'Livraison','Terminé']
+                    status__in=['Production','Livraison','Terminé']
                 )
                 overdue_base = self._filter_by_role(overdue_base, 'projects')
                 

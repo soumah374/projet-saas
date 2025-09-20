@@ -94,10 +94,8 @@ const toProjectList = (project: ExtendedProject): ProjectList => ({
 export function ProjectManagement() {
   const { 
     canManageProjects, 
-    canManageDocuments, 
-    canManageCalendar, 
-    canViewProjectReports,
-    canManageProjectMembers
+    canManageDocuments,
+    hasPermission
   } = usePermissions();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -267,7 +265,7 @@ export function ProjectManagement() {
 
   const renderActionButtons = (project: ProjectList) => (
     <div className="flex items-center gap-2">
-      {canManageProjects('view') && ( 
+      {canManageProjects('view_project') && ( 
         <Button
           variant="outline"
           size="sm"
@@ -285,32 +283,32 @@ export function ProjectManagement() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {canManageProjectMembers() && (
+          {canManageProjects('view_projectmember') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/team`)}>
             <Users className="h-4 w-4 mr-2" />
             Équipe
           </DropdownMenuItem>
           )}
-          {canManageProjects('view') && (
+          {canManageProjects('view_project') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
             <Eye className="h-4 w-4 mr-2" />
             Détails
           </DropdownMenuItem>
           )}
-          {canViewProjectReports() && (
+          {canManageProjects('can_view_project_reports') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/reports`)}>
             <BarChart3 className="h-4 w-4 mr-2" />
             Rapports
           </DropdownMenuItem>
           )}
 
-          {canManageCalendar('view') && (
+          {canManageProjects('view_projectevent') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/calendar`)}>
             <Calendar className="h-4 w-4 mr-2" />
             Calendrier
           </DropdownMenuItem>
           )}
-          {canManageDocuments('view') && (
+          {canManageDocuments('view_document') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/documents`)}>
             <FileText className="h-4 w-4 mr-2" />
             Documents
@@ -318,7 +316,7 @@ export function ProjectManagement() {
           )}
           
           <DropdownMenuSeparator />
-          {canManageProjects('delete') && (
+          {canManageProjects('delete_project') && (
             <DropdownMenuItem 
               className="text-red-600"
               onClick={() => handleProjectDelete(project)}

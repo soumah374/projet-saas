@@ -17,6 +17,7 @@ import {
 } from '../hooks/use-frais-categories';
 import { FraisCategory, FraisCategoryCreateData } from '../lib/types';
 import { Search, Plus, Edit, Trash2, X } from 'lucide-react';
+import { usePermissions } from '@/hooks/use-permissions';
 
 const FraisCategoriesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +35,9 @@ const FraisCategoriesPage: React.FC = () => {
   const createMutation = useCreateFraisCategory();
   const updateMutation = useUpdateFraisCategory();
   const deleteMutation = useDeleteFraisCategory();
+  const { 
+    hasPermission
+  } = usePermissions();
 
   // Filtrer les catégories par recherche
   const filteredCategories = useMemo(() => {
@@ -120,10 +124,12 @@ const FraisCategoriesPage: React.FC = () => {
     <div className="max-w-8xl mx-auto space-y-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Catégories de Frais</h1>
+        {hasPermission('catalog.add_fraiscategory') && (
         <Button onClick={handleOpenCreateDialog}>
           <Plus className="w-4 h-4 mr-2" />
           Nouvelle Catégorie
         </Button>
+        )}
       </div>
 
       <Card>
@@ -185,6 +191,7 @@ const FraisCategoriesPage: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
+                          {hasPermission('catalog.change_fraiscategory') && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -192,6 +199,8 @@ const FraisCategoriesPage: React.FC = () => {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          )}
+                          {hasPermission('catalog.delete_fraiscategory') && (
                           <Button
                             variant="outline"
                             size="sm"
@@ -199,6 +208,7 @@ const FraisCategoriesPage: React.FC = () => {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

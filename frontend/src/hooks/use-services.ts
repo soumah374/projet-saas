@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { config } from '@/lib/config';
 import type { Service, PaginatedResponse, Category } from '@/lib/types';
 
@@ -79,6 +79,37 @@ export function useServicesByCategory(categoryId: number) {
   return useQuery({
     queryKey: ['services', categoryId],
     queryFn: () => apiRequest<PaginatedResponse<Service>>(`/services/category/${categoryId}/services/`),
+  });
+}
+
+interface ImportService {
+  name: string;
+  description: string;
+  category_id?: number | null;
+  is_active: boolean;
+}
+
+interface BulkImportResponse {
+  success_count: number;
+  error_count: number;
+  imported_services: Array<{
+    id: number;
+    name: string;
+    description: string;
+  }>;
+  errors: Array<{
+    index: number;
+    name?: string;
+    error: string;
+  }>;
+}
+
+export function useBulkImportServices() {
+  return useMutation({
+    mutationFn: (data: { services: ImportService[] }) => apiRequest<BulkImportResponse>('/services/bulk-import/', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   });
 }
 

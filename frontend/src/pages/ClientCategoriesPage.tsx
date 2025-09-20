@@ -8,6 +8,8 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Loader2, Plus, Trash2, Edit, Search, X } from 'lucide-react';
+import { CanManage } from '@/components/PermissionGuard';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export default function ClientCategoriesPage() {
   const [categories, setCategories] = useState<ClientCategory[]>([]);
@@ -17,6 +19,10 @@ export default function ClientCategoriesPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const { 
+    hasPermission
+  } = usePermissions();
 
   const fetchCategories = async () => {
     setLoading(true);
@@ -101,10 +107,12 @@ export default function ClientCategoriesPage() {
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Catégories de clients</CardTitle>
-            <Button onClick={openCreateModal}>
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter une catégorie
-            </Button>
+            {hasPermission('users.add_clientcategory') && (
+              <Button onClick={openCreateModal}>
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter une catégorie
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -161,8 +169,12 @@ export default function ClientCategoriesPage() {
                       <TableCell className="font-medium">{cat.name}</TableCell>
                       <TableCell className="max-w-md truncate">{cat.description}</TableCell>
                       <TableCell>
-                        <Button size="icon" variant="ghost" onClick={() => handleEdit(cat)}><Edit size={16} /></Button>
-                        <Button size="icon" variant="ghost" onClick={() => handleDelete(cat.id)}><Trash2 size={16} /></Button>
+                        {hasPermission('users.change_clientcategory') && (
+                          <Button size="icon" variant="ghost" onClick={() => handleEdit(cat)}><Edit size={16} /></Button>
+                        )}
+                        {hasPermission('users.delete_clientcategory') && (
+                          <Button size="icon" variant="ghost" onClick={() => handleDelete(cat.id)}><Trash2 size={16} /></Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
