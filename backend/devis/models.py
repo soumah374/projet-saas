@@ -81,6 +81,47 @@ class Devis(models.Model):
             
         return f"DEV{year}{new_number:04d}"
     
+    def generer_pdf(self, save_to_model=False):
+        """Génère le PDF du devis"""
+        from django.template.loader import render_to_string
+        from weasyprint import HTML, CSS
+        from weasyprint.text.fonts import FontConfiguration
+        import tempfile
+        import os
+        
+        try:
+            # Rendre le template HTML
+            html_string = render_to_string('devis/devis_pdf.html', {
+                'devis': self
+            })
+            
+            # Configuration des polices
+            font_config = FontConfiguration()
+            
+            # Créer le PDF avec WeasyPrint
+            html_doc = HTML(string=html_string)
+            css = CSS(string='''
+                @page { size: A4; margin: 1.5cm; }
+                body { font-family: Arial, sans-serif; }
+                .page-break { page-break-before: always; }
+            ''', font_config=font_config)
+            
+            # Générer le PDF
+            pdf = html_doc.write_pdf(stylesheets=[css], font_config=font_config)
+            
+            # Créer le nom de fichier
+            filename = f"devis_{self.numero}.pdf"
+            
+            if save_to_model:
+                # TODO: Implémenter la sauvegarde dans le modèle si nécessaire
+                # self.pdf_file.save(filename, ContentFile(pdf), save=True)
+                pass
+            
+            return pdf, filename
+            
+        except Exception as e:
+            raise Exception(f'Erreur lors de la génération du PDF: {str(e)}')
+    
     def calculer_montants(self):
         """Calculer les montants HT, TVA, Frais d'Agence et TTC"""
         from decimal import Decimal

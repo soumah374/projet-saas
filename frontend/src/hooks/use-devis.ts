@@ -355,6 +355,11 @@ export const useCreateLigneDevis = () => {
       description: string;
       quantite: number;
       unite_id: number;
+      intervenants?: Array<{
+        profile_intervenant_id: number;
+        temps_intervenant: number;
+        taux_horaire: number;
+      }>;
     }) => lignesDevisAPI.createLigne(data),
     onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: ['devis', data.devis_id] });

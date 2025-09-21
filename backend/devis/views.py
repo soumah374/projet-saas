@@ -7,6 +7,9 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.mail import EmailMessage
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.http import HttpResponse
+from weasyprint import HTML, CSS
+from weasyprint.text.fonts import FontConfiguration
 import base64
 import tempfile
 import os
@@ -24,7 +27,6 @@ from catalog.models import Activity, TauxHoraire, LigneFrais
 from email_templates.services import EmailTemplateService
 
 logger = logging.getLogger(__name__)
-
 
 class DevisViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des devis"""
@@ -176,6 +178,56 @@ class DevisViewSet(viewsets.ModelViewSet):
         devis.statut = 'envoye'
         devis.save()
         return Response({'status': 'Devis envoyé'})
+    
+    @action(detail=True, methods=['post'])
+    def generer_pdf(self, request, pk=None):
+        """Génère le PDF du devis"""
+        devis = self.get_object()
+        save_to_model = request.data.get('save', False)
+        
+        try:
+            # Rendre le template HTML
+            html_string = render_to_string('devis/devis_pdf.html', {
+                'devis': devis
+            })
+            
+            # Configuration des polices
+            font_config = FontConfiguration()
+            
+            # Créer le PDF avec WeasyPrint
+            html_doc = HTML(string=html_string)
+            css = CSS(string='''
+                @page { size: A4; margin: 1.5cm; }
+                body { font-family: Arial, sans-serif; }
+                .page-break { page-break-before: always; }
+            ''', font_config=font_config)
+            
+            # Générer le PDF
+            pdf = html_doc.write_pdf(stylesheets=[css], font_config=font_config)
+            
+            # Créer le nom de fichier
+            filename = f"devis_{devis.numero}.pdf"
+            
+            # Sauvegarder le PDF dans le modèle si demandé
+            if save_to_model:
+                # TODO: Ajouter le champ pdf_file au modèle Devis si nécessaire
+                return Response({
+                    'message': 'PDF généré et sauvegardé avec succès',
+                    'filename': filename
+                })
+            
+            # Retourner le PDF directement
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f'Erreur lors de la génération du PDF pour le devis {devis.numero}: {str(e)}')
+            return Response(
+                {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['post'])
     def envoyer_email_pdf(self, request, pk=None):

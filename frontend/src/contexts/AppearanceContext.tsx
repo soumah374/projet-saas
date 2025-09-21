@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark' | 'system';
-export type Language = 'fr' | 'en' | 'es' | 'de';
+export type Language = 'fr' | 'en';
 
 interface AppearanceSettings {
   theme: Theme;
@@ -21,7 +21,7 @@ const AppearanceContext = createContext<AppearanceContextType | undefined>(undef
 const STORAGE_KEY = 'sakom-appearance-settings';
 
 const DEFAULT_SETTINGS: AppearanceSettings = {
-  theme: 'system',
+  theme: 'light',
   language: 'fr'
 };
 
@@ -139,8 +139,6 @@ export function getLanguageLabel(language: Language): string {
   const labels: Record<Language, string> = {
     fr: 'Français',
     en: 'English',
-    es: 'Español',
-    de: 'Deutsch'
   };
   return labels[language];
 }

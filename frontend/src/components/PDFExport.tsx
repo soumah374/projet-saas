@@ -470,7 +470,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                          </tr>
                        );
 
-                                             // Lignes de frais
+                        // Lignes de frais
                        lines.forEach((ligne: any) => {
                          const typeFraisLabel = ligne.type_frais === 'forfait' ? 'Forfait' : 
                                                ligne.type_frais === 'offert' ? 'Offert' : 'Standard';
