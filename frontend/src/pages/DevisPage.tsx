@@ -214,7 +214,6 @@ export function DevisPage() {
           email_destinataire: devisToEnvoyer.client.email,
           sujet: `Devis ${devisToEnvoyer.numero} - ${devisToEnvoyer.client.nom_complet}`,
           message: 'Merci de bien vouloir signer le devis et de nous le retourner.',
-          pdf_data: pdfData
         }
       });
       setEnvoyerDialogOpen(false);
