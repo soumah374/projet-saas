@@ -1,10 +1,11 @@
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Devis {{ devis.numero }}</title>
-    <style>
+   <style>
         body {
             font-family: 'Arial', 'Helvetica', sans-serif;
             line-height: 1.4;
@@ -54,11 +55,10 @@
         }
         
         .document-title h1 {
-            font-size: 22px;
+            font-size: 18px;
             font-weight: bold;
             color: #333;
             margin: 0 0 8px 0;
-            letter-spacing: 2px;
         }
         
         .document-number {
@@ -132,16 +132,16 @@
             border-collapse: collapse;
             margin-bottom: 15px;
             font-size: 10px;
-            border: 1px solid #ccc;
+            border: 1px solid #000;
         }
         
         /* En-têtes de tableau */
         .table-header {
-            background: #e8e8e8;
+            background: #f5f5f5;
             font-weight: bold;
             text-align: center;
             padding: 8px 5px;
-            border: 1px solid #ccc;
+            border: 1px solid #000;
             font-size: 10px;
             color: #333;
         }
@@ -149,7 +149,7 @@
         /* Cellules de données */
         .table-cell {
             padding: 6px 8px;
-            border: 1px solid #ccc;
+            border: 1px solid #000;
             vertical-align: middle;
             font-size: 10px;
         }
@@ -164,11 +164,8 @@
         
         /* Lignes de regroupement (services) */
         .service-row {
-            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             font-weight: bold;
             text-align: center;
-            color: #1976d2;
-            border: 2px solid #4A90E2;
         }
         
         .service-row td {
@@ -178,50 +175,7 @@
             letter-spacing: 0.5px;
         }
         
-        /* Lignes de regroupement pour les frais */
-        .frais-header-row {
-            background: linear-gradient(135deg, #fff3e0, #ffcc80);
-            font-weight: bold;
-            text-align: center;
-            color: #f57c00;
-            border: 2px solid #ff9800;
-        }
-        
-        .frais-header-row td {
-            padding: 10px 8px;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        /* Lignes alternées pour les frais */
-        .frais-row {
-            background: #fffbf0;
-            border-left: 4px solid #ff9800;
-        }
-        
-        .frais-row td {
-            border-left: 1px solid #ffcc80;
-        }
-        
-        /* Ligne de prestation normale */
-        .prestation-row {
-            background: #fff;
-            border-left: 4px solid #4A90E2;
-        }
-        
-        .prestation-row td {
-            border-left: 1px solid #e3f2fd;
-        }
-        
-        /* Section séparatrice entre prestations et frais */
-        .section-separator {
-            height: 20px;
-            background: linear-gradient(to right, #4A90E2, #ff9800);
-            margin: 15px 0;
-            border-radius: 3px;
-        }
-        
+    
         /* Titre de section */
         .section-title-row {
             background: #f5f5f5;
@@ -334,6 +288,10 @@
         .text-primary { color: #3498db; }
         .text-success { color: #27ae60; }
         .text-danger { color: #e74c3c; }
+
+        .montant-ht {
+            font-weight: bold;
+        }
         
         /* Print specific styles */
         @media print {
@@ -350,11 +308,11 @@
         <!-- Header avec logo, titre et contact -->
         <div class="header">
             <div class="logo-section">
-                <div class="logo">sakom</div>
+                <div class="logo">saKom</div>
                 <div class="company-services">
-                    Communication<br>
-                    Relations publiques<br>
-                    Événementiel<br>
+                    Communication<br />
+                    Relations publiques<br />
+                    Événementiel<br />
                     Production Audiovisuelle
                 </div>
             </div>
@@ -367,8 +325,8 @@
             
             <div class="contact-info">
                 <div class="contact-name">{{ devis.client.nom_complet }}</div>
-                {% if devis.client.email %}{{ devis.client.email }}<br>{% endif %}
-                {% if devis.client.telephone %}{{ devis.client.telephone }}<br>{% endif %}
+                {% if devis.client.email %}{{ devis.client.email }}<br />{% endif %}
+                {% if devis.client.telephone %}{{ devis.client.telephone }}<br />{% endif %}
                 {% if devis.client.adresse %}{{ devis.client.adresse }}{% endif %}
             </div>
         </div>
@@ -393,109 +351,57 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- SECTION PRESTATIONS -->
-                    {% regroup devis.lignes.all by service as services_groupes %}
-                    {% if services_groupes.0.grouper %}
-                        <!-- Titre de section Prestations -->
-                        <tr class="section-title-row">
-                            <td colspan="5" class="table-cell">🎯 PRESTATIONS DE SERVICES</td>
+                    {% for service, prestations_list in prestations.items %}
+                        <tr class="service-row">
+                            <td colspan="5">{{ service }}</td>
                         </tr>
-                        
-                        {% for service_group in services_groupes %}
-                            {% if service_group.grouper %}
-                                <!-- Ligne de titre du service -->
-                                <tr class="service-row">
-                                    <td colspan="5" class="table-cell">📋 {{ service_group.grouper.nom }}</td>
-                                </tr>
-                                
-                                <!-- Lignes des prestations de ce service -->
-                                {% for ligne in service_group.list %}
-                                    {% if ligne.type_ligne == 'prestation' %}
-                                    <tr class="prestation-row">
-                                        <td class="table-cell">
-                                            {% if ligne.activity %}{{ ligne.activity.name }}{% endif %}
-                                            {% if ligne.description %}<br><small style="color: #666;">{{ ligne.description|truncatewords:15 }}</small>{% endif %}
-                                        </td>
-                                        <td class="table-cell center">{{ ligne.quantite|floatformat:2 }}</td>
-                                        <td class="table-cell center">{{ ligne.unite.name }}</td>
-                                        <td class="table-cell right">{{ ligne.prix_unitaire_ht|floatformat:0 }} GNF</td>
-                                        <td class="table-cell right"><strong>{{ ligne.montant_ht|floatformat:0 }} GNF</strong></td>
-                                    </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <!-- SÉPARATEUR VISUEL -->
-                    {% regroup devis.lignes.all by frais_category as frais_groupes %}
-                    {% if frais_groupes.1.grouper %}
-                        <tr>
-                            <td colspan="5" style="padding: 0;">
-                                <div class="section-separator"></div>
-                            </td>
-                        </tr>
-                        
-                        <!-- SECTION FRAIS -->
-                        <tr class="section-title-row">
-                            <td colspan="5" class="table-cell">💰 FRAIS ADDITIONNELS</td>
-                        </tr>
-                        
-                        {% for frais_group in frais_groupes %}
-                            {% if frais_group.grouper %}
-                                <!-- Ligne de titre des frais -->
-                                <tr class="frais-header-row">
-                                    <td colspan="5" class="table-cell">🏷️ {{ frais_group.grouper.name }}</td>
-                                </tr>
-                                
-                                <!-- Lignes des frais -->
-                                {% for ligne in frais_group.list %}
-                                    {% if ligne.type_ligne == 'frais' %}
-                                    <tr class="frais-row">
-                                        <td class="table-cell">
-                                            {% if ligne.ligne_frais %}{{ ligne.ligne_frais.name }}{% endif %}
-                                            {% if ligne.description %}<br><small style="color: #f57c00;">{{ ligne.description|truncatewords:15 }}</small>{% endif %}
-                                        </td>
-                                        <td class="table-cell center">{{ ligne.quantite|floatformat:2 }}</td>
-                                        <td class="table-cell center">{{ ligne.unite.name }}</td>
-                                        <td class="table-cell right">{{ ligne.prix_unitaire_ht|floatformat:0 }} GNF</td>
-                                        <td class="table-cell right"><strong style="color: #f57c00;">{{ ligne.montant_ht|floatformat:0 }} GNF</strong></td>
-                                    </tr>
-                                    {% endif %}
-                                {% endfor %}
-                            {% endif %}
-                        {% endfor %}
-                    {% endif %}
-                    
-                    <!-- Si pas de lignes regroupées, afficher toutes avec distinction -->
-                    {% if not services_groupes.0.grouper and not frais_groupes.0.grouper %}
-                        {% for ligne in devis.lignes.all %}
-                            {% if ligne.type_ligne == 'prestation' %}
+                        {% for prestation in prestations_list %}
+                            {% if prestation.type_ligne == 'prestation' %}
                             <tr class="prestation-row">
                                 <td class="table-cell">
-                                    {% if ligne.activity %}{{ ligne.activity.name }}{% endif %}
-                                    {% if ligne.description %}<br><small>{{ ligne.description|truncatewords:15 }}</small>{% endif %}
+                                    {{ prestation.activity.name }}
                                 </td>
-                                <td class="table-cell center">{{ ligne.quantite|floatformat:2 }}</td>
-                                <td class="table-cell center">{{ ligne.unite.name }}</td>
-                                <td class="table-cell right">{{ ligne.prix_unitaire_ht|floatformat:0 }} GNF</td>
-                                <td class="table-cell right">{{ ligne.montant_ht|floatformat:0 }} GNF</td>
-                            </tr>
-                            {% elif ligne.type_ligne == 'frais' %}
-                            <tr class="frais-row">
-                                <td class="table-cell">
-                                    <strong style="color: #f57c00;">💰 FRAIS:</strong> 
-                                    {% if ligne.ligne_frais %}{{ ligne.ligne_frais.name }}{% endif %}
-                                    {% if ligne.description %}<br><small style="color: #f57c00;">{{ ligne.description|truncatewords:15 }}</small>{% endif %}
+                                <td class="table-cell center">{{ prestation.quantite }}</td>
+                                <td class="table-cell center">
+                                    {{ prestation.unite.code }} 
                                 </td>
-                                <td class="table-cell center">{{ ligne.quantite|floatformat:2 }}</td>
-                                <td class="table-cell center">{{ ligne.unite.name }}</td>
-                                <td class="table-cell right">{{ ligne.prix_unitaire_ht|floatformat:0 }} GNF</td>
-                                <td class="table-cell right"><strong style="color: #f57c00;">{{ ligne.montant_ht|floatformat:0 }} GNF</strong></td>
+                                <td class="table-cell right">{{ prestation.prix_unitaire_ht|floatformat:0|intcomma}} GNF</td>
+                                <td class="table-cell right montant-ht">{{ prestation.montant_ht|floatformat:0|intcomma}} GNF</td>
                             </tr>
                             {% endif %}
+                            {% if prestation.type_ligne == 'frais' %}
+                                <tr class="frais-row">
+                                    <td class="table-cell">
+                                        {{ prestation.ligne_frais.description }} <strong>{{ prestation.type_frais }}</strong>
+                                    </td>
+                                    <td class="table-cell center"> 
+                                        {% if prestation.type_frais == 'forfait' %}
+                                            <strong>Forfait</strong>
+                                        {% else %}
+                                            {{ prestation.quantite }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="table-cell center">
+                                        {% if prestation.type_frais == 'forfait' %}
+                                            <strong>Forfait</strong>
+                                        {% else %}
+                                            {{ prestation.unite.code }} 
+                                        {% endif %}
+                                    </td>
+                                    <td class="table-cell right">
+                                        {% if prestation.type_frais == 'forfait' %}
+                                            <strong>Forfait</strong>
+                                        {% else %}  
+                                            {{ prestation.prix_unitaire_ht|floatformat:0|intcomma}} GNF
+                                        {% endif %}
+                                    </td>
+                                    <td class="table-cell right montant-ht">
+                                        {{ prestation.montant_ht|floatformat:0|intcomma}} GNF
+                                    </td>
+                                </tr>
+                            {% endif %}
                         {% endfor %}
-                    {% endif %}
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
@@ -504,26 +410,26 @@
         <div class="totals-section">
             <div class="totals-row ht">
                 <span class="totals-label">Montant HT:</span>
-                <span class="totals-value">{{ devis.montant_ht|floatformat:0 }} GNF</span>
+                <span class="totals-value">{{ devis.montant_ht|floatformat:0|intcomma}} GNF</span>
             </div>
             
             {% if devis.appliquer_tva and devis.montant_tva > 0 %}
             <div class="totals-row">
                 <span class="totals-label">TVA ({{ devis.taux_tva }}%):</span>
-                <span class="totals-value">{{ devis.montant_tva|floatformat:0 }} GNF</span>
+                <span class="totals-value">{{ devis.montant_tva|floatformat:0|intcomma}} GNF</span>
             </div>
             {% endif %}
             
             {% if devis.appliquer_frais_agence and devis.montant_frais_agence > 0 %}
             <div class="totals-row">
                 <span class="totals-label">Frais d'agence ({{ devis.taux_frais_agence }}%):</span>
-                <span class="totals-value">{{ devis.montant_frais_agence|floatformat:0 }} GNF</span>
+                <span class="totals-value">{{ devis.montant_frais_agence|floatformat:0|intcomma}} GNF</span>
             </div>
             {% endif %}
             
             <div class="totals-row ttc">
                 <span class="totals-label">Montant TTC:</span>
-                <span class="totals-value">{{ devis.montant_ttc|floatformat:0 }} GNF</span>
+                <span class="totals-value">{{ devis.montant_ttc|floatformat:0|intcomma}} GNF</span>
             </div>
         </div>
         
@@ -544,8 +450,8 @@
                 {% if devis.conditions %}
                     {{ devis.conditions|linebreaks }}
                 {% else %}
-                    Ce devis est valable jusqu'au {{ devis.date_validite|date:"d/m/Y" }}.<br>
-                    * Les frais d'agence incluent : Conseil, Accompagnement & Coordination générale de l'événement<br>
+                    Ce devis est valable jusqu'au {{ devis.date_validite|date:"d/m/Y" }}.<br />
+                    * Les frais d'agence incluent : Conseil, Accompagnement & Coordination générale de l'événement<br />
                     Pour toute question ou modification, n'hésitez pas à nous contacter
                 {% endif %}
             </div>

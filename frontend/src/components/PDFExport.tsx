@@ -1,15 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { formatDate, formatMontant, formatTemps } from '@/lib/formatters';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Mail, Loader2 } from 'lucide-react';
+import { Mail, Loader2, Download, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
+import { useEnvoyerEmailPDF, useGenererPDF } from '@/hooks/use-devis';
+import { devisAPI } from '@/lib/api';
 
 interface PDFExportProps {
   devis: any;
@@ -19,84 +18,55 @@ interface PDFExportProps {
 export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
   const pdfRef = useRef<HTMLDivElement>(null);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [emailForm, setEmailForm] = useState({
     email_destinataire: devis?.client?.email || '',
     sujet: `Devis ${devis?.numero} - ${devis?.client?.nom_complet}`,
-    message: ''
+    message: '',
+    use_custom_template: true
   });
 
   const envoyerEmailPDFMutation = useEnvoyerEmailPDF();
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  const generatePDF = async (): Promise<string | null> => {
-    if (!pdfRef.current) return null;
-
-    try {
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 794, // A4 width in pixels at 96 DPI
-        height: 1123, // A4 height in pixels at 96 DPI
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 295; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // Retourner le PDF en base64
-      return pdf.output('datauristring');
-    } catch (error) {
-      console.error('Erreur lors de la génération du PDF:', error);
-      return null;
-    }
-  };
+  const genererPDFMutation = useGenererPDF();
 
   const handleDownload = async () => {
-    const pdfData = await generatePDF();
-    if (pdfData) {
+    try {
+      setIsGeneratingPDF(true);
+      const response = await devisAPI.genererPDF(devis.id);
+      
+      // Créer un blob à partir de la réponse (maintenant configurée avec responseType: 'blob')
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      
       // Créer un lien de téléchargement
       const link = document.createElement('a');
-      link.href = pdfData;
+      link.href = url;
       link.download = `devis-${devis.numero}.pdf`;
+      document.body.appendChild(link);
       link.click();
+      
+      // Nettoyer
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('PDF téléchargé avec succès');
+    } catch (error) {
+      console.error('Erreur lors du téléchargement du PDF:', error);
+      toast.error('Erreur lors du téléchargement du PDF');
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
   const handleSendEmail = async () => {
     try {
-      const pdfData = await generatePDF();
-      if (!pdfData) {
-        toast.error('Erreur lors de la génération du PDF');
-        return;
-      }
-
       await envoyerEmailPDFMutation.mutateAsync({
         id: devis.id,
         data: {
           email_destinataire: emailForm.email_destinataire,
           sujet: emailForm.sujet,
           message: emailForm.message,
-          pdf_data: pdfData
+          use_custom_template: emailForm.use_custom_template
         }
       });
 
@@ -104,7 +74,8 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
       setEmailForm({
         email_destinataire: devis?.client?.email || '',
         sujet: `Devis ${devis?.numero} - ${devis?.client?.nom_complet}`,
-        message: ''
+        message: '',
+        use_custom_template: true
       });
     } catch (error) {
       // L'erreur est gérée par le hook
@@ -119,16 +90,21 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
           <h2 className="text-xl font-semibold">Export PDF - Devis {devis.numero}</h2>
           <div className="flex gap-2">
             <button
-              onClick={handlePrint}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-600"
-            >
-              Imprimer
-            </button>
-            <button
               onClick={handleDownload}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              disabled={isGeneratingPDF}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Télécharger PDF
+              {isGeneratingPDF ? (
+                <>
+                  <Loader2 className="animate-spin" size={16} />
+                  Génération...
+                </>
+              ) : (
+                <>
+                  <Download size={16} />
+                  Télécharger PDF
+                </>
+              )}
             </button>
             <button
               onClick={() => setEmailDialogOpen(true)}
@@ -271,9 +247,9 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
               fontSize: '9px'
             }}>
               <thead>
-                <tr style={{ backgroundColor: '#edf2f7' }}>
+                <tr style={{ backgroundColor: '#f5f5f5' }}>
                   <th style={{ 
-                    border: '1px solid #cbd5e0', 
+                    border: '1px solid #2d3748', 
                     padding: '8px', 
                     textAlign: 'left',
                     fontWeight: 'bold',
@@ -282,18 +258,8 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                   }}>
                     Désignation
                   </th>
-                  {/* <th style={{ 
-                    border: '1px solid #cbd5e0', 
-                    padding: '8px', 
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '9px',
-                    textTransform: 'uppercase'
-                  }}>
-                    Type
-                  </th> */}
                   <th style={{ 
-                    border: '1px solid #cbd5e0', 
+                    border: '1px solid #2d3748', 
                     padding: '8px', 
                     textAlign: 'center',
                     fontWeight: 'bold',
@@ -303,7 +269,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     Qté
                   </th>
                   <th style={{ 
-                    border: '1px solid #cbd5e0', 
+                    border: '1px solid #2d3748', 
                     padding: '8px', 
                     textAlign: 'center',
                     fontWeight: 'bold',
@@ -313,7 +279,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     Unité
                   </th>
                   <th style={{ 
-                    border: '1px solid #cbd5e0', 
+                    border: '1px solid #2d3748', 
                     padding: '8px', 
                     textAlign: 'right',
                     fontWeight: 'bold',
@@ -323,7 +289,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     Prix unitaire
                   </th>
                   <th style={{ 
-                    border: '1px solid #cbd5e0', 
+                    border: '1px solid #2d3748', 
                     padding: '8px', 
                     textAlign: 'right',
                     fontWeight: 'bold',
@@ -342,201 +308,180 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
 
                   const rows: JSX.Element[] = [];
 
-                  // Grouper les prestations par service
+                  // Section PRESTATIONS
                   if (prestations.length > 0) {
-                    const groupedPrestations = prestations.reduce((acc: any, ligne: any) => {
-                      const serviceName = ligne.service?.intitule || 'Service non défini';
-                      if (!acc[serviceName]) {
-                        acc[serviceName] = [];
-                      }
-                      acc[serviceName].push(ligne);
-                      return acc;
-                    }, {});
+                    // En-tête de section PRESTATION
+                    rows.push(
+                      <tr key="header-prestations" style={{ backgroundColor: '#f5f5f5' }}>
+                        <td 
+                          colSpan={5} 
+                          style={{ 
+                            border: '1px solid #2d3748', 
+                            padding: '10px 8px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            fontSize: '11px',
+                            color: '#000',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px'
+                          }}
+                        >
+                          PRESTATION
+                        </td>
+                      </tr>
+                    );
 
-                    Object.entries(groupedPrestations).forEach(([serviceName, lines]: [string, any]) => {
-                      // En-tête de section pour les prestations
-                       rows.push(
-                         <tr key={`header-prestation-${serviceName}`} style={{ backgroundColor: '#f7fafc' }}>
-                           <td 
-                             colSpan={6} 
-                             style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               fontWeight: 'bold',
-                               textAlign: 'center',
-                               fontSize: '9px',
-                               color: '#4a5568'
-                             }}
-                           >
-                             {serviceName}
-                           </td>
-                         </tr>
-                       );
-                       // Lignes de prestations
-                       lines.forEach((ligne: any) => {
-                         rows.push(
-                           <tr key={ligne.id}>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'left'
-                             }}>
-                               <div style={{ fontWeight: '500' }}>
-                                 {ligne.activity?.intitule || 'Activité non définie'}
-                               </div>
-                               {ligne.description && (
-                                 <div style={{ 
-                                   fontSize: '8px', 
-                                   color: '#718096',
-                                   marginTop: '2px'
-                                 }}>
-                                   {ligne.description}
-                                 </div>
-                               )}
-                             </td>
-                             {/* <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'center',
-                               fontSize: '8px',
-                               color: '#4a5568'
-                             }}>
-                               Prestation
-                             </td> */}
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'center'
-                             }}>
-                               {ligne.quantite}
-                             </td>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'center',
-                               fontSize: '9px'
-                             }}>
-                               {ligne.unite?.code || '-'}
-                             </td>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'right'
-                             }}>
-                               {formatMontant(ligne.prix_unitaire_ht)}
-                             </td>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'right',
-                               fontWeight: 'bold'
-                             }}>
-                               {formatMontant(ligne.montant_ht)}
-                             </td>
-                           </tr>
-                         );
-                       });
+                    // Lignes de prestations
+                    prestations.forEach((ligne: any) => {
+                      rows.push(
+                        <tr key={ligne.id} style={{ backgroundColor: '#fff' }}>
+                          <td style={{ 
+                            border: '1px solid #2d3748', 
+                            padding: '8px',
+                            textAlign: 'left'
+                          }}>
+                            <div style={{ fontWeight: '500', fontSize: '10px' }}>
+                              {ligne.activity?.name || ligne.activity?.intitule || 'Activité non définie'}
+                            </div>
+                            {ligne.description && (
+                              <div style={{ 
+                                fontSize: '8px', 
+                                color: '#718096',
+                                marginTop: '2px'
+                              }}>
+                                {ligne.description}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #2d3748', 
+                            padding: '8px',
+                            textAlign: 'center',
+                            fontSize: '10px'
+                          }}>
+                            {ligne.quantite}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #000', 
+                            padding: '8px',
+                            textAlign: 'center',
+                            fontSize: '10px'
+                          }}>
+                            {ligne.unite?.code || 'EX'}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #2d3748', 
+                            padding: '8px',
+                            textAlign: 'right',
+                            fontSize: '10px'
+                          }}>
+                            {formatMontant(ligne.prix_unitaire_ht)}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #2d3748', 
+                            padding: '8px',
+                            textAlign: 'right',
+                            fontWeight: 'bold',
+                            fontSize: '10px'
+                          }}>
+                            {formatMontant(ligne.montant_ht)}
+                          </td>
+                        </tr>
+                      );
                     });
                   }
 
-                  // Grouper les frais par catégorie
+                  // Section FRAIS
                   if (frais.length > 0) {
-                    const groupedFrais = frais.reduce((acc: any, ligne: any) => {
-                      const categoryName = ligne.frais_category?.name || 'Catégorie non définie';
-                      if (!acc[categoryName]) {
-                        acc[categoryName] = [];
-                      }
-                      acc[categoryName].push(ligne);
-                      return acc;
-                    }, {});
+                    // En-tête de section FRAIS
+                    rows.push(
+                      <tr key="header-frais" style={{ backgroundColor: '#f5f5f5' }}>
+                        <td 
+                          colSpan={5} 
+                          style={{ 
+                            border: '1px solid #000',
+                            padding: '10px 8px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            fontSize: '11px',
+                            color: '#000',
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px'
+                          }}
+                        >
+                          FRAIS
+                        </td>
+                      </tr>
+                    );
 
-                    Object.entries(groupedFrais).forEach(([categoryName, lines]: [string, any]) => {
-                                             // En-tête de section pour les frais
-                       rows.push(
-                         <tr key={`header-frais-${categoryName}`} style={{ backgroundColor: '#fef3c7' }}>
-                           <td 
-                             colSpan={6} 
-                             style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               fontWeight: 'bold',
-                               textAlign: 'center',
-                               fontSize: '9px',
-                               color: '#92400e'
-                             }}
-                           >
-                             {categoryName}
-                           </td>
-                         </tr>
-                       );
-
-                        // Lignes de frais
-                       lines.forEach((ligne: any) => {
-                         const typeFraisLabel = ligne.type_frais === 'forfait' ? 'Forfait' : 
-                                               ligne.type_frais === 'offert' ? 'Offert' : 'Standard';
-                         
-                         rows.push(
-                           <tr key={ligne.id}>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'left'
-                             }}>
-                               <div style={{ fontWeight: '500' }}>
-                                 {ligne.ligne_frais?.description || 'Frais non défini'}
-                               </div>
-                               {ligne.description && (
-                                 <div style={{ 
-                                   fontSize: '8px', 
-                                   color: '#718096',
-                                   marginTop: '2px'
-                                 }}>
-                                   {ligne.description}
-                                 </div>
-                               )}
-                             </td>
-                             {/* <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'center',
-                               fontSize: '8px',
-                               color: '#92400e'
-                             }}>
-                               {typeFraisLabel}
-                             </td> */}
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'center'
-                             }}>
-                               {ligne.quantite}
-                             </td>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'center',
-                               fontSize: '9px'
-                             }}>
-                               {ligne.unite?.code || '-'}
-                             </td>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'right'
-                             }}>
-                               {formatMontant(ligne.prix_unitaire_ht)}
-                             </td>
-                             <td style={{ 
-                               border: '1px solid #cbd5e0', 
-                               padding: '6px 8px',
-                               textAlign: 'right',
-                               fontWeight: 'bold'
-                             }}>
-                               {formatMontant(ligne.montant_ht)}
-                             </td>
-                           </tr>
-                         );
-                       });
+                    // Lignes de frais
+                    frais.forEach((ligne: any) => {
+                      const typeFraisLabel = ligne.type_frais === 'forfait' ? 'forfait' : 
+                                            ligne.type_frais === 'offert' ? 'offert' : 'standard';
+                      
+                      rows.push(
+                        <tr key={ligne.id} style={{ backgroundColor: '#fff' }}>
+                          <td style={{ 
+                            border: '1px solid #000', 
+                            padding: '8px',
+                            textAlign: 'left',
+                          }}>
+                            <div style={{ fontWeight: '500', fontSize: '10px' }}>
+                              {ligne.ligne_frais?.description || 'Frais non défini'}
+                            </div>
+                            <div style={{ 
+                              fontSize: '8px', 
+                              color: '#000',
+                              marginTop: '2px',
+                              fontWeight: 'bold'
+                            }}>
+                              {typeFraisLabel}
+                            </div>
+                            {ligne.description && (
+                              <div style={{ 
+                                fontSize: '8px', 
+                                color: '#666',
+                                marginTop: '2px'
+                              }}>
+                                {ligne.description}
+                              </div>
+                            )}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #000', 
+                            padding: '8px',
+                            textAlign: 'center',
+                            fontSize: '10px'
+                          }}>
+                            {ligne.type_frais === 'forfait' ? 'Forfait' : ligne.quantite}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #000', 
+                            padding: '8px',
+                            textAlign: 'center',
+                            fontSize: '10px'
+                          }}>
+                            {ligne.type_frais === 'forfait' ? 'Forfait' : (ligne.unite?.code || 'EX')}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #000', 
+                            padding: '8px',
+                            textAlign: 'right',
+                            fontSize: '10px'
+                          }}>
+                            {ligne.type_frais === 'forfait' ? 'Forfait' : formatMontant(ligne.prix_unitaire_ht)}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid #000', 
+                            padding: '8px',
+                            textAlign: 'right',
+                            fontWeight: 'bold',
+                            fontSize: '10px'
+                          }}>
+                            {formatMontant(ligne.montant_ht)}
+                          </td>
+                        </tr>
+                      );
                     });
                   }
 
@@ -589,7 +534,6 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                 display: 'flex', 
                 justifyContent: 'space-between',
                 fontSize: '14px',
-                color: '#2563eb',
                 borderTop: '1px solid #e2e8f0',
                 paddingTop: '8px',
                 marginTop: '8px',
@@ -733,7 +677,8 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
             </div>
             <div className="bg-blue-50 p-4 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>Note :</strong> Le devis sera automatiquement généré en PDF et joint à l'email.
+                <strong>Note :</strong> Le devis sera automatiquement généré en PDF côté serveur et joint à l'email. 
+                Le PDF utilisera le template professionnel avec formatage optimisé.
               </p>
             </div>
           </div>

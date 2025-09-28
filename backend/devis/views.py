@@ -25,6 +25,7 @@ from .serializers import (
 )
 from catalog.models import Activity, TauxHoraire, LigneFrais
 from email_templates.services import EmailTemplateService
+from .services import DevisService
 
 logger = logging.getLogger(__name__)
 
@@ -178,65 +179,24 @@ class DevisViewSet(viewsets.ModelViewSet):
         devis.statut = 'envoye'
         devis.save()
         return Response({'status': 'Devis envoyé'})
-    
+        
     @action(detail=True, methods=['post'])
     def generer_pdf(self, request, pk=None):
         """Génère le PDF du devis"""
         devis = self.get_object()
         save_to_model = request.data.get('save', False)
         
-        try:
-            # Rendre le template HTML
-            html_string = render_to_string('devis/devis_pdf.html', {
-                'devis': devis
-            })
-            
-            # Configuration des polices
-            font_config = FontConfiguration()
-            
-            # Créer le PDF avec WeasyPrint
-            html_doc = HTML(string=html_string)
-            css = CSS(string='''
-                @page { size: A4; margin: 1.5cm; }
-                body { font-family: Arial, sans-serif; }
-                .page-break { page-break-before: always; }
-            ''', font_config=font_config)
-            
-            # Générer le PDF
-            pdf = html_doc.write_pdf(stylesheets=[css], font_config=font_config)
-            
-            # Créer le nom de fichier
-            filename = f"devis_{devis.numero}.pdf"
-            
-            # Sauvegarder le PDF dans le modèle si demandé
-            if save_to_model:
-                # TODO: Ajouter le champ pdf_file au modèle Devis si nécessaire
-                return Response({
-                    'message': 'PDF généré et sauvegardé avec succès',
-                    'filename': filename
-                })
-            
-            # Retourner le PDF directement
-            response = HttpResponse(pdf, content_type='application/pdf')
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f'Erreur lors de la génération du PDF pour le devis {devis.numero}: {str(e)}')
-            return Response(
-                {'error': f'Erreur lors de la génération du PDF: {str(e)}'},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+        # Utiliser le service pour générer le PDF
+        service = DevisService()
+        return service.generer_pdf(devis, save_to_model)
     
     @action(detail=True, methods=['post'])
     def envoyer_email_pdf(self, request, pk=None):
-        """Envoyer un devis par email avec le PDF généré par jsPDF"""
+        """Envoyer un devis par email avec le PDF généré automatiquement"""
         devis = self.get_object()
         
         # Récupérer les données de l'email
         email_destinataire = request.data.get('email_destinataire')
-        pdf_data = request.data.get('pdf_data')
         use_custom_template = request.data.get('use_custom_template', False)
         custom_sujet = request.data.get('sujet', '')
         custom_message = request.data.get('message', '')
@@ -244,25 +204,48 @@ class DevisViewSet(viewsets.ModelViewSet):
         if not email_destinataire:
             return Response({'error': 'Email destinataire requis'}, status=400)
         
-        if not pdf_data:
-            return Response({'error': 'Données PDF requises'}, status=400)
-        
-        # Décoder les données PDF base64
-        if pdf_data.startswith('data:application/pdf;base64,'):
-            pdf_base64 = pdf_data.split(',')[1]
-        else:
-            pdf_base64 = pdf_data
-        
-        pdf_content = base64.b64decode(pdf_base64)
+        # Générer le PDF du devis automatiquement
+        try:
+            pdf_content = self._generer_pdf_bytes(devis)
+        except Exception as e:
+            return Response({'error': f'Erreur lors de la génération du PDF: {str(e)}'}, status=500)
         
         try:
             # Utiliser le service de template d'email
             if use_custom_template and custom_sujet and custom_message:
                 # Utiliser le contenu personnalisé fourni
-                sujet = custom_sujet
-                message_complet = custom_message
+                from django.core.mail import EmailMessage
+                from django.conf import settings
+                
+                email = EmailMessage(
+                    subject=custom_sujet,
+                    body=custom_message,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[email_destinataire]
+                )
+                
+                # Attacher le PDF généré
+                email.attach(
+                    f'devis-{devis.numero}.pdf',
+                    pdf_content,
+                    'application/pdf'
+                )
+                
+                # Envoyer l'email
+                email.send()
+                
+                # Marquer le devis comme envoyé
+                devis.statut = 'envoye'
+                devis.save()
+                
+                return Response({
+                    'status': 'Email envoyé avec succès',
+                    'message': 'Le devis a été envoyé par email avec le PDF en pièce jointe'
+                })
             else:
                 # Utiliser le template par défaut
+                from email_templates.services import EmailTemplateService
+                
                 context = EmailTemplateService.prepare_devis_context(devis)
                 result = EmailTemplateService.send_templated_email(
                     'devis',
@@ -288,47 +271,38 @@ class DevisViewSet(viewsets.ModelViewSet):
                 else:
                     return Response({'error': result['error']}, status=500)
             
-            # Fallback : envoi manuel si template personnalisé
-            email = EmailMessage(
-                subject=sujet,
-                body=message_complet,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email_destinataire]
-            )
-            
-            # Attacher le PDF
-            email.attach(
-                f'devis-{devis.numero}.pdf',
-                pdf_content,
-                'application/pdf'
-            )
-        
-            # Envoyer l'email
-            email.send()
-            print("Email sent", email)
-            
-            # Nettoyer le fichier temporaire
-            os.unlink(temp_file_path)
-            
-            # Changer le statut du devis si ce n'est pas déjà fait
-            if devis.statut == 'brouillon':
-                devis.statut = 'envoye'
-                devis.save()
-            
-            return Response({
-                'status': 'Email envoyé avec succès',
-                'message': 'Le devis a été envoyé par email avec le PDF en pièce jointe'
-            })
-            
         except Exception as e:
-            # Nettoyer le fichier temporaire en cas d'erreur
-            if 'temp_file_path' in locals():
-                try:
-                    os.unlink(temp_file_path)
-                except:
-                    pass
-            
-            return Response({'error': str(e)}, status=400)
+            logger.error(f'Erreur lors de l\'envoi de l\'email pour le devis {devis.numero}: {str(e)}')
+            return Response({'error': f'Erreur lors de l\'envoi de l\'email: {str(e)}'}, status=500)
+    
+    def _generer_pdf_bytes(self, devis):
+        """Génère le PDF du devis et retourne les bytes"""
+        from collections import defaultdict
+        from django.template.loader import render_to_string
+        from weasyprint import HTML, CSS
+        from weasyprint.text.fonts import FontConfiguration
+        
+        service = DevisService()
+        # Rendre le template HTML
+        html_string = render_to_string('devis/devis_pdf.html', {
+            'devis': devis,
+            'prestations': service.grouper_prestations(devis),
+            'frais': devis.lignes.filter(type_ligne='frais')
+        })
+    
+        # Configuration des polices
+        font_config = FontConfiguration()
+        
+        # Créer le PDF avec WeasyPrint
+        html_doc = HTML(string=html_string)
+        css = CSS(string='''
+            @page { size: A4; margin: 1.5cm; }
+            body { font-family: Arial, sans-serif; }
+            .page-break { page-break-before: always; }
+        ''', font_config=font_config)
+        
+        # Générer et retourner le PDF en bytes
+        return html_doc.write_pdf(stylesheets=[css], font_config=font_config)
     
     def prepare_email_message(self, devis, message_personnalise=''):
         """Préparer le message email complet"""
@@ -620,3 +594,35 @@ class LigneDevisIntervenantViewSet(viewsets.ModelViewSet):
         """The serializer now handles devis_id automatically"""
         serializer.save()
 
+
+
+def print_devis(request):
+    devis = Devis.objects.get(id=3)
+    from collections import defaultdict
+    prestations_qs = devis.lignes.all()
+    prestations_grouped = defaultdict(list)
+    for ligne_devis in prestations_qs:
+        if ligne_devis.type_ligne == 'prestation':
+            key = ligne_devis.service.name if ligne_devis.service else "Sans service"
+            prestations_grouped['prestation'].append(ligne_devis)
+        elif ligne_devis.type_ligne == 'frais':
+            key = ligne_devis.frais_category.name if ligne_devis.frais_category else "Frais divers"
+            prestations_grouped['frais'].append(ligne_devis)
+
+    # Convertit en dict normal (plus prévisible dans le template)
+    prestations = dict(prestations_grouped)
+
+    # éventuel debug pour voir un objet
+    if prestations:
+        first_key = next(iter(prestations))
+        print("exemple prestation:", prestations[first_key][0].__dict__)
+    print("prestations", prestations)
+
+    return render(
+        request,
+        "devis/devis_pdf.html",
+        {
+            "devis": devis,
+            "prestations": prestations,
+        }
+    )

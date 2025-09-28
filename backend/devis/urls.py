@@ -1,6 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import DevisViewSet, LigneDevisViewSet, LigneDevisIntervenantViewSet
+from .views import print_devis
 
 # Router pour les devis
 router = DefaultRouter()
@@ -10,4 +11,5 @@ router.register(r'intervenants', LigneDevisIntervenantViewSet, basename='ligne-d
 
 urlpatterns = [
     path('', include(router.urls)),
+   
 ] 

@@ -527,18 +527,21 @@ export const devisAPI = {
     refuserDevis: (id: number) => api.post(`/devis/devis/${id}/refuser/`),
     calculerMontants: (id: number) => api.post(`/devis/devis/${id}/calculer_montants/`),
     createDevisAvecLignes: (data: any) => api.post('/devis/devis/creer_avec_lignes/', data),
-    
+    genererPDF: (id: number) => api.post(`/devis/devis/${id}/generer_pdf/`, {}, {
+        responseType: 'blob'
+    }),
     // Endpoint pour envoyer le PDF par email
     envoyerEmailPDF: (id: number, data: {
         email_destinataire: string;
         sujet: string;
         message: string;
-        pdf_data: string;
+        use_custom_template?: boolean;
     }) => api.post(`/devis/devis/${id}/envoyer_email_pdf/`, data),
     
     // Endpoint pour récupérer les services des devis liés à un contrat
     getServicesByContract: (contractId: number, projectId: string) => api.get(`/devis/devis/services_by_contract/?contract_id=${contractId}&project_id=${projectId}`),
 };
+
 
 // Lignes de devis
 export const lignesDevisAPI = {

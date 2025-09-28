@@ -191,8 +191,8 @@ class LigneDevis(models.Model):
     type_ligne = models.CharField(max_length=200, choices=TYPE_CHOICES)
     type_frais = models.CharField(max_length=200, choices=TYPE_CHOICES_FRAIS, blank=True, null=True)
     # Relations pour prestations
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
-    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='lignes_devis_services', blank=True, null=True)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='lignes_devis_activities', blank=True, null=True)
     # Relations pour frais
     frais_category = models.ForeignKey('catalog.FraisCategory', on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
     ligne_frais = models.ForeignKey('catalog.LigneFrais', on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
