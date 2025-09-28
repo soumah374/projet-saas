@@ -327,17 +327,12 @@ export function DevisDetailPage() {
           description: currentLigne.description,
           quantite: parseFloat(currentLigne.quantite),
           unite_id: parseInt(currentLigne.unite_id),
-        });
-
-        // Créer les intervenants
-        for (const intervenant of currentLigne.intervenants) {
-          await createIntervenantMutation.mutateAsync({
-            devis_id: devis.id,
+          intervenants: currentLigne.intervenants.map(intervenant => ({
             profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
             temps_intervenant: parseFloat(intervenant.temps_intervenant),
             taux_horaire: parseFloat(intervenant.taux_horaire),
-          });
-        }
+          }))
+        });
       } else if (currentLigne.type_ligne === 'frais') {
         // Pour les frais, utiliser l'API directe car useCreateLigneDevis ne supporte que les prestations
         await lignesDevisAPI.createLigne({
@@ -350,6 +345,11 @@ export function DevisDetailPage() {
           unite_id: parseInt(currentLigne.unite_id),
           prix_unitaire_ht: parseFloat(currentLigne.prix_unitaire || '0'),
           type_frais: currentLigne.type_frais || 'standard',
+          intervenants: currentLigne.intervenants.map(intervenant => ({
+            profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
+            temps_intervenant: parseFloat(intervenant.temps_intervenant),
+            taux_horaire: parseFloat(intervenant.taux_horaire),
+          }))
         });
       }
 

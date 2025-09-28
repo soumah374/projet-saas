@@ -1,0 +1,5 @@
+backend/devis/templates/*
+backend/devis/static/*
+backend/devis/media/*
+backend/devis/staticfiles/*
+backend/devis/staticfiles/*

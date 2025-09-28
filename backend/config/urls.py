@@ -7,6 +7,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from .views import api_root, health_check, print_contrat
+from devis.views import print_devis
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -16,7 +17,7 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('print/<int:pk>/', print_contrat, name='print_contrat'),
-    
+    path('print-devis/', print_devis, name='print_devis'),
     # API endpoints
     path('api/v1/', include([
         path('', api_root, name='api-root'),

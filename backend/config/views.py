@@ -14,7 +14,8 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
-
+# from django.shortcuts import render
+from devis.models import Devis, LigneDevis
 
 
 @api_view(['GET'])
@@ -171,3 +172,4 @@ def print_contrat(request, pk):
         return HttpResponse('Contrat introuvable', status=404)
     except Exception as e:
         return HttpResponse(f'Erreur lors de la génération du PDF: {str(e)}', status=500)
+ 

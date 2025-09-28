@@ -120,11 +120,20 @@ class LigneDevisCreateSerializer(serializers.ModelSerializer):
     frais_category_id = serializers.PrimaryKeyRelatedField(queryset=FraisCategory.objects.all(), source='frais_category', required=False, allow_null=True)
     ligne_frais_id = serializers.PrimaryKeyRelatedField(queryset=LigneFrais.objects.all(), source='ligne_frais', required=False, allow_null=True)
     unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite')
+    
+    # Champ pour les intervenants
+    intervenants = serializers.ListField(
+        child=serializers.DictField(),
+        write_only=True,
+        required=False,
+        allow_empty=True
+    )
+    
     class Meta:
         model = LigneDevis
         fields = [
             'devis_id', 'type_ligne', 'type_frais', 'service_id', 'activity_id', 'frais_category_id', 'ligne_frais_id',
-            'description', 'quantite', 'unite_id', 'prix_unitaire_ht'
+            'description', 'quantite', 'unite_id', 'prix_unitaire_ht', 'intervenants'
         ]
     def validate(self, data):
         type_ligne = data.get('type_ligne')
@@ -148,6 +157,30 @@ class LigneDevisCreateSerializer(serializers.ModelSerializer):
         else:
             raise serializers.ValidationError("type_ligne doit être 'prestation' ou 'frais'")
         return data
+    
+    def create(self, validated_data):
+        # Extraire les intervenants des données validées
+        intervenants_data = validated_data.pop('intervenants', [])
+        
+        # Créer la ligne de devis
+        ligne_devis = super().create(validated_data)
+        
+        if validated_data.pop('type_ligne') == 'prestation':
+            # Créer les intervenants associés
+            for intervenant_data in intervenants_data:
+                try:
+                    LigneDevisIntervenant.objects.create(
+                        ligne_devis=ligne_devis,
+                        profile_intervenant_id=intervenant_data['profile_intervenant_id'],
+                        temps_intervenant=intervenant_data['temps_intervenant'],
+                        taux_horaire=intervenant_data['taux_horaire']
+                    )
+                except KeyError as e:
+                    raise serializers.ValidationError(f"Champ manquant pour l'intervenant: {e}")
+                except Exception as e:
+                    raise serializers.ValidationError(f"Erreur lors de la création de l'intervenant: {e}")
+            
+        return ligne_devis
 
 
 class LigneDevisIntervenantCreateSerializer(serializers.ModelSerializer):
@@ -194,8 +227,11 @@ class LigneDevisIntervenantCreateSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         devis_id = validated_data.pop('devis_id')
-        ligne_devis = LigneDevis.objects.get(devis_id=devis_id)
-        validated_data['ligne_devis'] = ligne_devis
+        # Récupérer la ligne de devis la plus récemment créée pour ce devis
+        ligne_devis = LigneDevis.objects.filter(devis_id=devis_id).order_by('-created_at').first()
+        if not ligne_devis:
+            raise serializers.ValidationError(f"Aucune ligne de devis trouvée pour le devis {devis_id}")
+        validated_data['ligne_devis'] = ligne_devis  # Assigner l'instance, pas l'ID
         return super().create(validated_data)
 
 

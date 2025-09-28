@@ -102,7 +102,7 @@ export function TeamsPage() {
   });
 
   // Calculate team stats
-  const teamStats = useTeamStats(teamMembers?.results || []);
+  const teamStats = useTeamStats(teamMembers?.data?.results || []);
 
   // Mutations
   const createTeamMutation = useCreateTeam();
@@ -256,7 +256,7 @@ export function TeamsPage() {
     setIsDeleteTeamDialogOpen(true);
   };
 
-  const filteredTeams = teams?.results || [];
+  const filteredTeams = teams?.data?.results || [];
 
   if (teamsError) {
     return (
@@ -680,7 +680,7 @@ export function TeamsPage() {
                />
                {/* Members List */}
                <TeamMembersList
-                 members={teamMembers?.results || []}
+                 members={teamMembers?.data?.results || []}
                  isLoading={membersLoading}
                  onAddMember={() => setIsAddMemberDialogOpen(true)}
                  onRemoveMember={handleRemoveMember}
@@ -717,7 +717,7 @@ export function TeamsPage() {
                   <SelectValue placeholder="Sélectionner un utilisateur" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users?.results?.map(user => (
+                  {users?.data?.results?.map(user => (
                     <SelectItem key={user.id} value={user.id.toString()}>
                       {user.full_name} ({user.email})
                     </SelectItem>

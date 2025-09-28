@@ -173,13 +173,14 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
       
       {/* Liste des profils sélectionnés avec temps */}
       {profilesData.length > 0 && (
-        <div className="space-y-2">
+        <div className="space-y-2 pr-1">
           <label className="block text-sm font-medium">Profils sélectionnés :</label>
-          <div className="space-y-2">
+          {/* === MARQUEE: début de la zone marquée === */}
+          <div className="space-y-2 max-h-64 overflow-y-auto pb-2 pt-2 bg-grey-50 rounded-md border">
             {profilesData.map(profileData => {
               const profile = profiles.find(p => p.id === profileData.profile_intervenant_id);
               return profile ? (
-                <div key={profileData.profile_intervenant_id} className="flex items-center gap-2 p-2 border rounded">
+                <div key={profileData.profile_intervenant_id} className="flex items-center gap-2 p-2 border rounded w-full">
                   <Badge variant="secondary" className="text-xs">
                     {profile.name}
                   </Badge>
@@ -189,7 +190,7 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
                     placeholder="Temps (h)"
                     value={profileData.temps_intervenant}
                     onChange={(e) => onProfileTimeChange(profileData.profile_intervenant_id, e.target.value)}
-                    className="w-24 text-xs"
+                    className="w-30 text-xs"
                     required
                   />
                   <button
@@ -203,6 +204,7 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
               ) : null;
             })}
           </div>
+          {/* === MARQUEE: fin de la zone marquée === */}
         </div>
       )}
     </div>
@@ -1303,7 +1305,7 @@ export function ServiceDetailsPage() {
                 />
               </div>
             </div>
-            <div>
+            <div className="max-h-64 overflow-y-auto pr-1">
               <label className="block text-sm font-medium mb-2">Profils intervenant</label>
               <ProfileManager
                 profiles={profiles}

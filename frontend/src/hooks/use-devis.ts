@@ -270,7 +270,7 @@ export const useEnvoyerEmailPDF = () => {
         email_destinataire: string; 
         sujet: string; 
         message: string; 
-        pdf_data: string; 
+        use_custom_template?: boolean;
       } 
     }) => devisAPI.envoyerEmailPDF(id, data),
     onSuccess: (_, { id }) => {
@@ -355,6 +355,11 @@ export const useCreateLigneDevis = () => {
       description: string;
       quantite: number;
       unite_id: number;
+      intervenants?: Array<{
+        profile_intervenant_id: number;
+        temps_intervenant: number;
+        taux_horaire: number;
+      }>;
     }) => lignesDevisAPI.createLigne(data),
     onSuccess: (_, data) => {
       queryClient.invalidateQueries({ queryKey: ['devis', data.devis_id] });
@@ -453,7 +458,24 @@ export const useDeleteIntervenantLigne = () => {
       toast.error('Erreur lors de la suppression de l\'intervenant');
     },
   });
-}; 
+};
+
+export const useGenererPDF = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: number) => devisAPI.genererPDF(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devis'] });
+      toast.success('PDF généré avec succès');
+    },
+    onError: (error) => {
+      console.error('Erreur lors de la génération du PDF:', error);
+      toast.error('Erreur lors de la génération du PDF');
+    },
+  });
+};
+
 
 import { formatDate, formatMontantPDF } from '@/lib/formatters'; 
 
