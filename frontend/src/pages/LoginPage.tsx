@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useAuth } from '@/hooks/use-auth';
 import { toast } from 'sonner';
 import { Logo } from '@/components/Logo';
+import { usePublicAppConfig } from '@/hooks/use-app-config';
+import { useDynamicTitle } from '@/hooks/use-dynamic-title';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
@@ -16,6 +18,10 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  
+  // Utiliser la configuration publique pour le titre et l'apparence
+  const { data: config } = usePublicAppConfig();
+  useDynamicTitle('Connexion');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,13 +52,14 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-            <Lock className="w-6 h-6 text-white" />
-            {/* <Logo size="sm" showText={true} className="text-white" linkTo="" /> */}
+          <div className="mx-auto mb-4">
+            <Logo size="lg" showText={true} linkTo="" />
           </div>
-          <CardTitle className="text-2xl font-bold">Connexion saKom</CardTitle>
+          <CardTitle className="text-2xl font-bold">
+            Connexion {config?.app_name || 'saKom'}
+          </CardTitle>
           <CardDescription>
-            Connectez-vous à votre compte pour accéder à la plateforme
+            {config?.app_description || 'Connectez-vous à votre compte pour accéder à la plateforme'}
           </CardDescription>
         </CardHeader>
         <CardContent>

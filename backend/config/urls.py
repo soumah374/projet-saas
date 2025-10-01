@@ -34,6 +34,7 @@ urlpatterns = [
         path('billings/', include('billings.urls')),
         path('dashboard/', include('dashboard.urls')),
         path('email-templates/', include('email_templates.urls')),
+        path('app-config/', include('app_config.urls')),
     ])),
 ]
 
