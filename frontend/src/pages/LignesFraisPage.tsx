@@ -314,22 +314,22 @@ const LignesFraisPage: React.FC = () => {
                       <TableCell>
                         <div className="flex space-x-2">
                           {hasPermission('catalog.change_lignefrais') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleOpenEditDialog(ligne)}
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEditDialog(ligne)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
                           )}
                           {hasPermission('catalog.delete_lignefrais') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setDeletingLigne(ligne)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDeletingLigne(ligne)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           )}
                         </div>
                       </TableCell>

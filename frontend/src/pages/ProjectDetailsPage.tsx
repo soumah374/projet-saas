@@ -144,7 +144,7 @@ export function ProjectDetailsPage() {
             
           )}
           {project.status !== 'Terminé' && (
-            canManageProjects('can_edit_project') && (
+            hasPermission('projects.edit_project') && (
             <EditProjectModal 
               project={project as any} 
               onProjectUpdate={handleProjectUpdate}
@@ -156,7 +156,7 @@ export function ProjectDetailsPage() {
             </EditProjectModal>
             )
           )}
-          {canManageProjects('can_start_project') && (
+          {hasPermission('projects.start_project') && (
             <ProjectActionModals
               status={project.status}
               isStarting={startProjectMutation.isPending}
@@ -173,12 +173,12 @@ export function ProjectDetailsPage() {
       
 
       {/* Tableau de suivi du projet */}
-      {canManageProjects('can_sommary_project') && (
+      {hasPermission('projects.sommary_project') && (
         <ProjectTrackingTable project={project} />
       )}
       
       {/* Informations client et contrat */}
-      {canManageContrats('can_manage_project_members') && (
+      {hasPermission('projects.manage_project_members') && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {project.client_details && (
             <ClientDetailsCard client={project.client_details} />

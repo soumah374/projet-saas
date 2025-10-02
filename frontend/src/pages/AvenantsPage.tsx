@@ -14,13 +14,15 @@ import { AvenantCard } from '@/components/avenants/AvenantCard';
 import { CreateAvenantModal } from '@/components/avenants/CreateAvenantModal';
 import { SignerAvenantModal } from '@/components/avenants/SignerAvenantModal';
 import { Avenant } from '@/hooks/use-avenants';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export const AvenantsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedAvenantForSigning, setSelectedAvenantForSigning] = useState<Avenant | null>(null);
-
+  const { hasPermission } = usePermissions();
+  
   const { data: avenants, isLoading, error } = useAvenants();
 
   // Filtrer les avenants
@@ -78,10 +80,12 @@ export const AvenantsPage: React.FC = () => {
           <h1 className="text-2xl font-bold">Avenants</h1>
           <p className="text-gray-600">Gérez les avenants de vos contrats</p>
         </div>
+        {hasPermission('contrats.can_create_avenant') && (
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Créer un avenant
         </Button>
+        )}
       </div>
 
       {/* Statistiques */}

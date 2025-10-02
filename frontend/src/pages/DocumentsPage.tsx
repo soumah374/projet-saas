@@ -15,7 +15,6 @@ import {
   FileText,
   Download,
   Share2,
-  Edit,
   Trash2,
   Eye,
   Upload,

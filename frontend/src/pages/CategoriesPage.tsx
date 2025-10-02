@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface Category {
   id: number;
@@ -39,6 +40,8 @@ export function CategoriesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [totalItems, setTotalItems] = useState(0);
+
+  const { hasPermission } = usePermissions();
 
   // Fonctions de pagination améliorées
   const setPageSafely = (page: number) => {
@@ -167,11 +170,6 @@ export function CategoriesPage() {
     }
   };
 
-  const openDeleteDialog = (category: Category) => {
-    setCategoryToDelete(category);
-    setDeleteDialogOpen(true);
-  };
-
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(e.target.value);
     setCurrentPage(1);
@@ -204,7 +202,6 @@ export function CategoriesPage() {
             </div>
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                {/* <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button> */}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
@@ -240,9 +237,6 @@ export function CategoriesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nom</TableHead>
-                    {/* <TableHead>Prestations associées</TableHead> */}
-                    {/* <TableHead>Date de création</TableHead> */}
-                    {/* <TableHead>Dernière modification</TableHead> */}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -259,25 +253,12 @@ export function CategoriesPage() {
                           {category.name}
                         </Link>
                       </TableCell>
-                      {/* <TableCell>
-                        <Badge variant="secondary" className="bg-blue-100 text-blue-600">
-                          Voir prestations
-                        </Badge>
-                      </TableCell> */}
-                      {/* <TableCell>{formatDate(category.created_at)}</TableCell> */}
-                      {/* <TableCell>{formatDate(category.updated_at)}</TableCell> */}
                       <TableCell className="flex gap-2">
                         <Link to={`/categories-services/${category.id}`}>
                           <Button size="icon" variant="ghost" title="Voir les détails">
                             <Eye size={16}/>
                           </Button>
                         </Link>
-                        {/* <Button size="icon" variant="ghost" onClick={() => handleOpenDialog(category)}>
-                          <Edit size={16}/>
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(category)}>
-                          <Trash2 size={16}/>
-                        </Button> */}
                       </TableCell>
                     </TableRow>
                   ))}

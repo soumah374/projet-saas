@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from '@/hooks/use-permissions';
 import { 
   ArrowLeft, 
   Edit, 
@@ -61,6 +62,8 @@ export function CategoryDetailsPage() {
     name: ''
   });
   const [saving, setSaving] = useState(false);
+  
+  const { hasPermission } = usePermissions();
   
   // États de pagination pour les services
   const [currentPage, setCurrentPage] = useState(1);
@@ -252,10 +255,12 @@ export function CategoryDetailsPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="outline" onClick={handleOpenEditDialog}>
-            <Edit className="h-4 w-4 mr-2" />
-            Modifier
-          </Button>
+          {hasPermission('catalog.can_edit_category') && (
+            <Button size="sm" variant="outline" onClick={handleOpenEditDialog}>
+              <Edit className="h-4 w-4 mr-2" />
+              Modifier
+            </Button>
+          )}
         </div>
       </div>
 
@@ -366,12 +371,14 @@ export function CategoryDetailsPage() {
                             </Badge>
                           </TableCell>
                           <TableCell>
+                          {hasPermission('catalog.can_view_catalog') && (
                             <Link to={`/services/${service.id}`}>
                               <Button variant="outline" size="sm">
                                 <Activity className="h-4 w-4 mr-2" />
                                 Voir détails
                               </Button>
                             </Link>
+                          )}
                           </TableCell>
                         </TableRow>
                       ))}

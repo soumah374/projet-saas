@@ -265,7 +265,7 @@ export function ProjectManagement() {
 
   const renderActionButtons = (project: ProjectList) => (
     <div className="flex items-center gap-2">
-      {canManageProjects('view_project') && ( 
+      {hasPermission('projects.view_project') && ( 
         <Button
           variant="outline"
           size="sm"
@@ -283,32 +283,32 @@ export function ProjectManagement() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {canManageProjects('view_projectmember') && (
+          {hasPermission('projects.view_projectmember') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/team`)}>
             <Users className="h-4 w-4 mr-2" />
             Équipe
           </DropdownMenuItem>
           )}
-          {canManageProjects('view_project') && (
+          {hasPermission('projects.view_project') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}`)}>
             <Eye className="h-4 w-4 mr-2" />
             Détails
           </DropdownMenuItem>
           )}
-          {canManageProjects('can_view_project_reports') && (
+          {hasPermission('projects.can_view_project_reports') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/reports`)}>
             <BarChart3 className="h-4 w-4 mr-2" />
             Rapports
           </DropdownMenuItem>
           )}
 
-          {canManageProjects('view_projectevent') && (
+          {hasPermission('projects.view_projectevent') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/calendar`)}>
             <Calendar className="h-4 w-4 mr-2" />
             Calendrier
           </DropdownMenuItem>
           )}
-          {canManageDocuments('view_document') && (
+          {hasPermission('projects.view_document') && (
           <DropdownMenuItem onClick={() => navigate(`/projects/${project.id}/documents`)}>
             <FileText className="h-4 w-4 mr-2" />
             Documents
@@ -316,7 +316,7 @@ export function ProjectManagement() {
           )}
           
           <DropdownMenuSeparator />
-          {canManageProjects('delete_project') && (
+          {hasPermission('projects.delete_project') && (
             <DropdownMenuItem 
               className="text-red-600"
               onClick={() => handleProjectDelete(project)}
@@ -338,7 +338,7 @@ export function ProjectManagement() {
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
           <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets saKom</p>
         </div>
-        { hasPermission('projects.add_project') && (
+        { hasPermission('projects.create_project') && (
           <Button onClick={() => setShowCreateModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nouveau Projet
