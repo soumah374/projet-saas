@@ -63,7 +63,7 @@ class LigneDevisAdmin(admin.ModelAdmin):
     """Admin pour les lignes de devis"""
     list_display = ['id', 'devis', 'service', 'activity', 'quantite', 'unite', 'prix_unitaire_ht', 'montant_ht']
     list_filter = ['service', 'activity', 'unite', 'devis__statut']
-    search_fields = ['devis__numero', 'activity__intitule', 'description']
+    search_fields = ['devis__numero', 'activity__name', 'description']
     readonly_fields = ['prix_unitaire_ht', 'montant_ht']
     inlines = [LigneDevisIntervenantInline]
     
@@ -86,7 +86,7 @@ class LigneDevisIntervenantAdmin(admin.ModelAdmin):
     """Admin pour les intervenants de ligne de devis"""
     list_display = ['ligne_devis', 'profile_intervenant', 'temps_intervenant', 'taux_horaire', 'montant_intervenant']
     list_filter = ['profile_intervenant', 'ligne_devis__service', 'ligne_devis__activity']
-    search_fields = ['profile_intervenant__intitule', 'ligne_devis__devis__numero']
+    search_fields = ['profile_intervenant__name', 'ligne_devis__devis__numero']
     readonly_fields = ['montant_intervenant']
     
     fieldsets = (

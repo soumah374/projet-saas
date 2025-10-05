@@ -136,7 +136,6 @@ export function ProjectDetailsPage() {
         </div>
         <div className="flex items-center gap-2">
           {isProjectStarted && (
-
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">Projet démarré</span>
