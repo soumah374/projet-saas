@@ -562,8 +562,6 @@ export default function RoleDetailsPage() {
               </div>
             </CardHeader>
             <CardContent>
-
-              
               <Table>
                 <TableHeader>
                   <TableRow>

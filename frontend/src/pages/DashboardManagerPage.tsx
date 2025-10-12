@@ -22,7 +22,7 @@ const ROLES = [
 
 const DashboardManagerPage: React.FC = () => {
   const { user } = useAuth();
-  const [mode, setMode] = useState<'role' | 'user'>('role');
+  const [mode, setMode] = useState<'role' | 'user'>('user');
   const [selectedRole, setSelectedRole] = useState<string>(user?.role || 'Managing Director');
   const [userId, setUserId] = useState<string>('');
 
@@ -112,8 +112,8 @@ const DashboardManagerPage: React.FC = () => {
             <Select value={mode} onValueChange={(v: 'role' | 'user') => setMode(v)}>
               <SelectTrigger className="w-48"><SelectValue placeholder="Mode" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="role">Par rôle</SelectItem>
                 <SelectItem value="user">Par utilisateur</SelectItem>
+                <SelectItem value="role">Par rôle</SelectItem>
               </SelectContent>
             </Select>
             {mode === 'role' ? (

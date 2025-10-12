@@ -22,6 +22,7 @@ import { AssignManagerModal } from '@/components/departments/AssignManagerModal'
 import { ManagerHistoryModal } from '@/components/departments/ManagerHistoryModal'
 import { EditDepartmentModal } from '@/components/departments/EditDepartmentModal'
 import { DeleteDepartmentModal } from '@/components/departments/DeleteDepartmentModal'
+import { usePermissions } from '@/hooks/use-permissions'
 
 type SortField = 'name' | 'active_projects_count' | 'team_members_count' | 'created_at'
 type SortOrder = 'asc' | 'desc'
@@ -41,6 +42,8 @@ export default function DepartmentsPage() {
       setSelectedDepartment(null)
     },
   })
+
+  const { hasPermission } = usePermissions();
 
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<SortField>('name')
@@ -141,10 +144,12 @@ export default function DepartmentsPage() {
                 className="pl-8"
               />
             </div>
+            {hasPermission('departments.can_create_departments') && (
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Nouveau département
             </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -208,6 +213,7 @@ export default function DepartmentsPage() {
                       <TableCell>{formatDate(department.created_at)}</TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
+                          {hasPermission('departments.can_edit_departments') && (
                           <Button
                             variant="outline"
                             size="icon"
@@ -215,6 +221,8 @@ export default function DepartmentsPage() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
+                          )}
+                          {hasPermission('departments.can_assign_manager') && (
                           <Button
                             variant="outline"
                             size="icon"
@@ -222,6 +230,8 @@ export default function DepartmentsPage() {
                           >
                             <UserPlus className="h-4 w-4" />
                           </Button>
+                          )}
+                          {hasPermission('departments.can_show_history') && (
                           <Button
                             variant="outline"
                             size="icon"
@@ -229,6 +239,8 @@ export default function DepartmentsPage() {
                           >
                             <History className="h-4 w-4" />
                           </Button>
+                          )}
+                          {hasPermission('departments.can_toggle_active') && (
                           <Button
                             variant="outline"
                             size="icon"
@@ -236,6 +248,8 @@ export default function DepartmentsPage() {
                           >
                             <Power className="h-4 w-4" />
                           </Button>
+                          )}
+                          {hasPermission('departments.can_delete_departments') && (
                           <Button
                             variant="outline"
                             size="icon"
@@ -243,6 +257,7 @@ export default function DepartmentsPage() {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

@@ -18,7 +18,7 @@ class FactureAdmin(admin.ModelAdmin):
     ]
     search_fields = ['numero', 'client__nom_complet', 'contrat__numero']
     readonly_fields = [
-        'numero', 'montant_restant', 'jours_restants', 'est_en_retard',
+        'numero', 'date_emission', 'montant_restant', 'jours_restants', 'est_en_retard',
         'pourcentage_paye', 'created_at', 'updated_at'
     ]
     fieldsets = (

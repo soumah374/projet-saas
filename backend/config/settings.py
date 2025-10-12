@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'billings',
     'dashboard',
     'email_templates',
+    'app_config',
 ]
 
 MIDDLEWARE = [

@@ -216,12 +216,12 @@ export function ClientsPage() {
           <div className="flex flex-wrap gap-2 items-center">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                {hasPermission('clients.add_clientprofile') && (
+                {hasPermission('users.add_clientprofile') && (
                 <Button onClick={() => handleOpenDialog()} size="sm" className="gap-2"><Plus size={16}/> Ajouter</Button>
                 )}
               </DialogTrigger>
             </Dialog>
-            {hasPermission('clients.export_clientprofile') && ( 
+            {hasPermission('users.export_clientprofile') && ( 
               <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2"><Download size={16}/> Exporter CSV</Button>
             )}
           </div>

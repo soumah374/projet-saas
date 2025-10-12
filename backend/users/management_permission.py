@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from .models import UserProfile
 from projects.models import Project
 from billings.models import Facture
+from users.models import ClientProfile, ClientCategory
 
 User = get_user_model()
 
@@ -260,6 +261,97 @@ def create_custom_permissions():
     
     print("Permissions personnalisées créées")
 
+    # Permissions pour les contrats
+    try:
+        contrat_ct = ContentType.objects.get_for_model(Contrat)
+    except Exception:
+        contrat_ct = ContentType.objects.get(app_label='contrats', model='contrat')
+    contrat_permissions = [
+        ('can_download_contrat', 'Can download contrat'),
+        ('can_activer_contrat', 'Can activer contrat'),
+        ('can_archiver_contrat', 'Can activer contrat'),
+        ('can_cloturer_contrat', 'Can cloturer contrat'),
+        ('can_annuler_contrat', 'Can annuler contrat'),
+        ('can_suspendre_contrat', 'Can suspendre contrat'),
+        ('can_edit_contrat', 'Can edit contrat'),
+        ('can_delete_contrat', 'Can delete contrat'),
+        ('can_view_contrat', 'Can view contrat'),
+        ('can_envoyer_alerte', 'Can envoyer alerte'),
+        ('can_marquer_paye', 'Can marquer paye'),
+        ('can_generer_echeancier', 'Can generer echeancier'),
+        ('can_generer_factures', 'Can generer factures'),
+    ]
+
+    for codename, name in contrat_permissions:
+        Permission.objects.get_or_create(
+            codename=codename,
+            name=name,
+            content_type=contrat_ct
+        )
+    
+    # Permissions pour les devis
+    try:
+        devis_ct = ContentType.objects.get_for_model(Devis)
+    except Exception:
+        devis_ct = ContentType.objects.get(app_label='devis', model='devis')
+    devis_permissions = [
+        ('can_add_devis', 'Can add devis'),
+        ('can_edit_devis', 'Can edit devis'),
+        ('can_delete_devis', 'Can delete devis'),
+        ('can_view_devis', 'Can view devis'),
+    ]
+    for codename, name in devis_permissions:
+        Permission.objects.get_or_create(
+            codename=codename,
+            name=name,
+            content_type=devis_ct
+        )
+
+    # Permissions pour les avenants
+    try:
+        avenant_ct = ContentType.objects.get_for_model(Avenant)
+    except Exception:
+        avenant_ct = ContentType.objects.get(app_label='contrats', model='avenant')
+    avenant_permissions = [
+        ('can_create_avenant', 'Can create avenant'),
+        ('can_send_avenant', 'Can send avenant'),
+        ('can_edit_avenant', 'Can edit avenant'),
+        ('can_delete_avenant', 'Can delete avenant'),
+        ('can_download_avenant', 'Can download avenant'),
+        ('can_annuler_avenant', 'Can annuler avenant'),
+        ('can_sign_avenant', 'Can sign avenant'),
+        ('can_view_avenant', 'Can view avenant'),
+    ]
+    for codename, name in avenant_permissions:
+        Permission.objects.get_or_create(
+            codename=codename,
+            name=name,
+            content_type=avenant_ct
+        )
+
+    # Permissions pour les clients
+    try:
+        client_ct = ContentType.objects.get_for_model(ClientProfile)
+    except Exception:
+        client_ct = ContentType.objects.get(app_label='users', model='clientprofile')
+    client_permissions = [
+        ('can_view_clientprofile', 'Can view client profile'),
+        ('can_add_clientprofile', 'Can add client profile'),
+        ('can_change_clientprofile', 'Can change client profile'),
+        ('can_delete_clientprofile', 'Can delete client profile'),
+        ('can_import_clientprofile', 'Can import client profile'),
+        ('can_export_clientprofile', 'Can export client profile'),
+        ('can_view_clientcategory', 'Can view client category'),
+        ('can_add_clientcategory', 'Can add client category'),
+        ('export_clientprofile', 'Can export client profile'),
+        ('export_clientcategory', 'Can export client category'),
+    ]
+    for codename, name in client_permissions:
+        Permission.objects.get_or_create(
+            codename=codename,
+            name=name,
+            content_type=client_ct
+        )
 
 def initialize_permissions():
     """Initialiser complètement le système de permissions"""

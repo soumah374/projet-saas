@@ -12,7 +12,7 @@ import { EditAvenantModal } from './EditAvenantModal';
 import { SignerAvenantModal } from './SignerAvenantModal';
 import { Avenant } from '@/hooks/use-avenants';
 import { toast } from 'sonner';
-
+import { usePermissions } from '@/hooks/use-permissions';
 interface AvenantListProps {
   contratId: number;
   contratNumero: string;
@@ -43,7 +43,7 @@ export const AvenantList: React.FC<AvenantListProps> = ({
   const envoyerAvenantMutation = useEnvoyerAvenant();
   const downloadAvenantPDFMutation = useDownloadAvenantPDF();
   const annulerAvenantMutation = useAnnulerAvenant();
-
+  const { hasPermission } = usePermissions();
   // Fonctions de gestion des actions
   const handleDelete = (avenant: Avenant) => {
     setAvenantToDelete(avenant);
@@ -198,10 +198,12 @@ export const AvenantList: React.FC<AvenantListProps> = ({
             {avenantsArray.length} avenant(s) pour ce contrat
           </p>
         </div>
-        <Button onClick={() => setShowCreateModal(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Créer un avenant
-        </Button>
+        {hasPermission('contrats.can_create_avenant') && (
+          <Button onClick={() => setShowCreateModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Créer un avenant
+          </Button>
+        )}
       </div>
 
       {/* Liste des avenants */}
@@ -244,25 +246,33 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      {hasPermission('contrats.can_view_avenant') && (
                       <DropdownMenuItem onClick={() => handleShowDetails(avenant)}>
                         <Eye className="h-4 w-4 mr-2" />
                         Voir les détails
                       </DropdownMenuItem>
+                      )}
+                      {hasPermission('contrats.can_download_avenant') && (
                       <DropdownMenuItem onClick={() => handleDownload(avenant)}>
                         <Download className="h-4 w-4 mr-2" />
                         Télécharger PDF
                       </DropdownMenuItem>
-                      
+                      )}
                       {avenant.statut === 'brouillon' && (
                         <>
-                          <DropdownMenuItem onClick={() => handleEnvoyer(avenant)}>
+                          {hasPermission('contrats.can_send_avenant') && (
+                            <DropdownMenuItem onClick={() => handleEnvoyer(avenant)}>
                             <Send className="h-4 w-4 mr-2" />
                             Envoyer
                           </DropdownMenuItem>
+                          )}
+                          {hasPermission('contrats.can_edit_avenant') && (
                           <DropdownMenuItem onClick={() => handleEdit(avenant)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Modifier
                           </DropdownMenuItem>
+                          )}
+                          {hasPermission('contrats.can_delete_avenant') && (
                           <DropdownMenuItem 
                             onClick={() => handleDelete(avenant)}
                             className="text-red-600 focus:text-red-600"
@@ -271,30 +281,39 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                             <Trash2 className="h-4 w-4 mr-2" />
                             {deleteAvenantMutation.isPending ? 'Suppression...' : 'Supprimer'}
                           </DropdownMenuItem>
+                          )}
                         </>
                       )}
                       
                       {avenant.statut === 'envoye' && (
                         <>
-                          <DropdownMenuItem onClick={() => handleSign(avenant)}>
-                            <FileEdit className="h-4 w-4 mr-2" />
-                            Signer
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleAnnuler(avenant)}
-                            disabled={annulerAvenantMutation.isPending}
-                          >
-                            <X className="h-4 w-4 mr-2" />
-                            {annulerAvenantMutation.isPending ? 'Annulation...' : 'Annuler'}
-                          </DropdownMenuItem>
+                          {hasPermission('contrats.can_sign_avenant') && (
+                            <DropdownMenuItem onClick={() => handleSign(avenant)}>
+                              <FileEdit className="h-4 w-4 mr-2" />
+                              Signer
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission('contrats.can_annuler_avenant') && (
+                            <DropdownMenuItem 
+                              onClick={() => handleAnnuler(avenant)}
+                              disabled={annulerAvenantMutation.isPending}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              {annulerAvenantMutation.isPending ? 'Annulation...' : 'Annuler'}
+                            </DropdownMenuItem>
+                          )}
                         </>
                       )}
                       
                       {avenant.statut === 'signe' && (
-                        <DropdownMenuItem disabled>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Signé
-                        </DropdownMenuItem>
+                        <>
+                          {hasPermission('contrats.can_sign_avenant') && (
+                            <DropdownMenuItem disabled>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Signé
+                            </DropdownMenuItem>
+                          )}
+                        </>
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -441,6 +460,7 @@ export const AvenantList: React.FC<AvenantListProps> = ({
             <Button variant="outline" onClick={cancelSend} disabled={envoyerAvenantMutation.isPending}>
               Annuler
             </Button>
+            {hasPermission('contrats.can_send_avenant') && (
             <Button 
               onClick={confirmSend}
               disabled={envoyerAvenantMutation.isPending}
@@ -457,6 +477,7 @@ export const AvenantList: React.FC<AvenantListProps> = ({
                 </>
               )}
             </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -21,6 +21,7 @@ import {
 import { formatMontant } from '@/lib/formatters';
 import { generateMinimalDevisPDF } from '@/lib/pdfUtils';
 import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export function DevisPage() {
   const navigate = useNavigate();
@@ -50,6 +51,8 @@ export function DevisPage() {
   const envoyerDevisMutation = useEnvoyerDevis();
   const accepterDevisMutation = useAccepterDevis();
   const refuserDevisMutation = useRefuserDevis();
+
+  const { hasPermission } = usePermissions();
 
   // Paramètres pour la requête des devis
   const queryParams = {
@@ -102,26 +105,26 @@ export function DevisPage() {
     }
   };
 
-  const handleOpenDialog = (devis?: Devis) => {
-    if (devis) {
-      setEditDevis(devis);
-      setForm({
-        client_id: devis.client.id.toString(),
-        date_validite: devis.date_validite,
-        notes: devis.notes,
-        conditions: devis.conditions,
-      });
-    } else {
-      setEditDevis(null);
-      setForm({
-        client_id: '',
-        date_validite: '',
-        notes: '',
-        conditions: '',
-      });
-    }
-    setDialogOpen(true);
-  };
+  // const handleOpenDialog = (devis?: Devis) => {
+  //   if (devis) {
+  //     setEditDevis(devis);
+  //     setForm({
+  //       client_id: devis.client.id.toString(),
+  //       date_validite: devis.date_validite,
+  //       notes: devis.notes,
+  //       conditions: devis.conditions,
+  //     });
+  //   } else {
+  //     setEditDevis(null);
+  //     setForm({
+  //       client_id: '',
+  //       date_validite: '',
+  //       notes: '',
+  //       conditions: '',
+  //     });
+  //   }
+  //   setDialogOpen(true);
+  // };
 
   const handleCloseDialog = () => {
     setDialogOpen(false);
@@ -134,46 +137,46 @@ export function DevisPage() {
     });
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  //   setForm({ ...form, [e.target.name]: e.target.value });
+  // };
 
-  const handleSelectChange = (name: string, value: string) => {
-    setForm({ ...form, [name]: value });
-  };
+  // const handleSelectChange = (name: string, value: string) => {
+  //   setForm({ ...form, [name]: value });
+  // };
 
-  const handleSave = async () => {
-    if (editDevis) {
-      // Edition
-      try {
-        await updateDevisMutation.mutateAsync({
-          id: editDevis.id,
-          data: {
-            client_id: parseInt(form.client_id),
-            date_validite: form.date_validite,
-            notes: form.notes,
-            conditions: form.conditions,
-          }
-        });
-        handleCloseDialog();
-      } catch (err) {
-        // Les erreurs sont gérées par les hooks
-      }
-    } else {
-      // Création
-      try {
-        await createDevisMutation.mutateAsync({
-          client_id: parseInt(form.client_id),
-          date_validite: form.date_validite,
-          notes: form.notes,
-          conditions: form.conditions,
-        });
-        handleCloseDialog();
-      } catch (err) {
-        // Les erreurs sont gérées par les hooks
-      }
-    }
-  };
+  // const handleSave = async () => {
+  //   if (editDevis) {
+  //     // Edition
+  //     try {
+  //       await updateDevisMutation.mutateAsync({
+  //         id: editDevis.id,
+  //         data: {
+  //           client_id: parseInt(form.client_id),
+  //           date_validite: form.date_validite,
+  //           notes: form.notes,
+  //           conditions: form.conditions,
+  //         }
+  //       });
+  //       handleCloseDialog();
+  //     } catch (err) {
+  //       // Les erreurs sont gérées par les hooks
+  //     }
+  //   } else {
+  //     // Création
+  //     try {
+  //       await createDevisMutation.mutateAsync({
+  //         client_id: parseInt(form.client_id),
+  //         date_validite: form.date_validite,
+  //         notes: form.notes,
+  //         conditions: form.conditions,
+  //       });
+  //       handleCloseDialog();
+  //     } catch (err) {
+  //       // Les erreurs sont gérées par les hooks
+  //     }
+  //   }
+  // };
 
   const handleDelete = async (devis: Devis) => {
     try {
@@ -317,12 +320,16 @@ export function DevisPage() {
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
           <CardTitle>Gestion des Devis</CardTitle>
           <div className="flex flex-row gap-2 justify-end">
+            {hasPermission('devis.can_create_devis') && (
             <Button onClick={() => navigate('/devis/create')} size="sm" className="gap-2">
               <Plus size={16}/> Nouveau devis
             </Button>
+            )}
+            {hasPermission('devis.can_export_csv') && (
             <Button onClick={handleExportCSV} size="sm" variant="outline" className="gap-2">
               <Download size={16}/> Exporter CSV
             </Button>
+            )}
           </div>
         </CardHeader>
 
@@ -448,24 +455,32 @@ export function DevisPage() {
                           </Button>
                           {devis.statut === 'brouillon' && (
                             <>
+                              {hasPermission('devis.can_send_devis') && (
                               <Button size="icon" variant="ghost" onClick={() => openEnvoyerDialog(devis)}>
                                 <Send size={16}/>
                               </Button>
+                              )}
                             </>
                           )}
                           {devis.statut === 'envoye' && (
                             <>
+                              {hasPermission('devis.can_accept_devis') && (
                               <Button size="icon" variant="ghost" onClick={() => openAccepterDialog(devis)}>
                                 <Check size={16}/>
                               </Button>
+                              )}
+                              {hasPermission('devis.can_refuse_devis') && (
                               <Button size="icon" variant="ghost" onClick={() => handleRefuser(devis)}>
                                 <X size={16}/>
                               </Button>
+                              )}
                             </>
                           )}
+                          {hasPermission('devis.can_delete_devis') && (
                           <Button size="icon" variant="ghost" onClick={() => openDeleteDialog(devis)}>
                             <Trash2 size={16}/>
                           </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

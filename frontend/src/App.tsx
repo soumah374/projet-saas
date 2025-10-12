@@ -30,6 +30,7 @@ import { ContratsPage } from './pages/ContratsPage';
 import { ContratDetailPage } from './pages/ContratDetailPage';
 import { useAuth } from './hooks/use-auth';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { useDynamicTitle } from './hooks/use-dynamic-title';
 import DepartmentsPage from './pages/DepartmentsPage';
 import ClientCategoriesPage from './pages/ClientCategoriesPage';
 import FraisCategoriesPage from './pages/FraisCategoriesPage';
@@ -45,9 +46,13 @@ import ProfilePage from './pages/ProfilePage';
 import SearchPage from './pages/SearchPage';
 import DashboardManagerPage from './pages/DashboardManagerPage';
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage';
+import { AppConfigPage } from './pages/AppConfigPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
+  
+  // Utiliser la configuration dynamique pour le titre et favicon
+  useDynamicTitle();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Sauvegarder la page courante avant la déconnexion
@@ -306,6 +311,11 @@ function App() {
                 <Route path="/email-templates" element={
                   <ProtectedRoute roles={["Managing Director", "Finance/Admin", "Super Admin"]}>
                     <EmailTemplatesPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/app-config" element={
+                  <ProtectedRoute roles={["Managing Director", "Finance/Admin", "Super Admin"]}>
+                    <AppConfigPage />
                   </ProtectedRoute>
                 } />
                 

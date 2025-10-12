@@ -90,7 +90,6 @@ export const EditAvenantModal: React.FC<EditAvenantModalProps> = ({
 
     try {
       await updateAvenantMutation.mutateAsync({
-        contratId: avenant.contrat.id,
         id: avenant.id,
         data: {
           intitule_avenant: intituleAvenant,

@@ -269,7 +269,7 @@ class LigneDevisIntervenant(models.Model):
         unique_together = ['ligne_devis', 'profile_intervenant']
     
     def __str__(self):
-        return f"{self.profile_intervenant.intitule} - {self.temps_intervenant}h"
+        return f"{self.profile_intervenant.name} - {self.temps_intervenant}h"
     
     def save(self, *args, **kwargs):
         # Calculer le montant pour cet intervenant

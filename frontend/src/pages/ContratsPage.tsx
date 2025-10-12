@@ -26,13 +26,13 @@ import { formatDate, formatMontant } from '@/lib/formatters';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
 import { CreateContratModal } from '@/components/contrats/CreateContratModal';
 import { statutContrat } from '@/lib/utils';
-
+import { usePermissions } from '@/hooks/use-permissions';
 export function ContratsPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [pageSize, setPageSize] = useState(20);
-  
+  const { hasPermission } = usePermissions();
   // États pour les modals
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -155,135 +155,145 @@ export function ContratsPage() {
     return <Badge variant={variants[statut as keyof typeof variants]}>{statutContrat(statut)}</Badge>;
   };
 
-  const getActionButtons = (contrat: Contrat) => {
-    const buttons = [];
+  // const getActionButtons = (contrat: Contrat) => {
+  //   const buttons = [];
     
-    if (contrat.statut === 'brouillon') {
-      buttons.push(
-        <Button
-          key="activer"
-          size="sm"
-          onClick={() => handleActionContrat(contrat, 'activer')}
-          disabled={activerContratMutation.isPending}
-        >
-          <Play size={14} className="mr-1" />
-          Activer
-        </Button>
-      );
-    }
+  //   if (contrat.statut === 'brouillon') {
+  //     buttons.push(
+  //       <Button
+  //         key="activer"
+  //         size="sm"
+  //         onClick={() => handleActionContrat(contrat, 'activer')}
+  //         disabled={activerContratMutation.isPending}
+  //       >
+  //         <Play size={14} className="mr-1" />
+  //         Activer
+  //       </Button>
+  //     );
+  //   }
     
-    if (contrat.statut === 'actif') {
-      buttons.push(
-        <Button
-          key="cloturer"
-          size="sm"
-          variant="outline"
-          onClick={() => handleActionContrat(contrat, 'cloturer')}
-          disabled={cloturerContratMutation.isPending}
-        >
-          <Check size={14} className="mr-1" />
-          Clôturer
-        </Button>,
-        <Button
-          key="suspendre"
-          size="sm"
-          variant="outline"
-          onClick={() => handleActionContrat(contrat, 'suspendre')}
-          disabled={suspendreContratMutation.isPending}
-        >
-          <Pause size={14} className="mr-1" />
-          Suspendre
-        </Button>
-      );
-    }
+  //   if (contrat.statut === 'actif') {
+  //     buttons.push(
+  //       <Button
+  //         key="cloturer"
+  //         size="sm"
+  //         variant="outline"
+  //         onClick={() => handleActionContrat(contrat, 'cloturer')}
+  //         disabled={cloturerContratMutation.isPending}
+  //       >
+  //         <Check size={14} className="mr-1" />
+  //         Clôturer
+  //       </Button>,
+  //       <Button
+  //         key="suspendre"
+  //         size="sm"
+  //         variant="outline"
+  //         onClick={() => handleActionContrat(contrat, 'suspendre')}
+  //         disabled={suspendreContratMutation.isPending}
+  //       >
+  //         <Pause size={14} className="mr-1" />
+  //         Suspendre
+  //       </Button>
+  //     );
+  //   }
     
-    if (contrat.statut === 'suspendu') {
-      buttons.push(
-        <Button
-          key="activer"
-          size="sm"
-          onClick={() => handleActionContrat(contrat, 'activer')}
-          disabled={activerContratMutation.isPending}
-        >
-          <Play size={14} className="mr-1" />
-          Réactiver
-        </Button>
-      );
-    }
+  //   if (contrat.statut === 'suspendu') {
+  //     buttons.push(
+  //       <Button
+  //         key="activer"
+  //         size="sm"
+  //         onClick={() => handleActionContrat(contrat, 'activer')}
+  //         disabled={activerContratMutation.isPending}
+  //       >
+  //         <Play size={14} className="mr-1" />
+  //         Réactiver
+  //       </Button>
+  //     );
+  //   }
     
-    if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut)) {
-      buttons.push(
-        <Button
-          key="annuler"
-          size="sm"
-          variant="destructive"
-          onClick={() => handleActionContrat(contrat, 'annuler')}
-          disabled={annulerContratMutation.isPending}
-        >
-          <X size={14} className="mr-1" />
-          Annuler
-        </Button>
-      );
-    }
+  //   if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut)) {
+  //     buttons.push(
+  //       <Button
+  //         key="annuler"
+  //         size="sm"
+  //         variant="destructive"
+  //         onClick={() => handleActionContrat(contrat, 'annuler')}
+  //         disabled={annulerContratMutation.isPending}
+  //       >
+  //         <X size={14} className="mr-1" />
+  //         Annuler
+  //       </Button>
+  //     );
+  //   }
     
-    return buttons;
-  };
+  //   return buttons;
+  // };
 
   const getAvailableActions = (contrat: Contrat) => {
     const actions = [];
     
     // Actions de base toujours disponibles
+    if (hasPermission('contrats.view_contrat')) {
     actions.push({
       label: 'Voir les détails',
       icon: <Eye size={14} />,
       onClick: () => navigate(`/contrats/${contrat.id}`),
       disabled: false
     });
-    
+   }
+   if (hasPermission('contrats.edit_contrat')) {
     actions.push({
       label: 'Modifier',
       icon: <Edit size={14} />,
       onClick: () => openEditDialog(contrat),
       disabled: false
     });
-    
+   }    
     if (contrat.statut === 'cloture' || contrat.statut === 'signe') {
-      actions.push({
-        label: 'Archiver',
-        icon: <Archive size={14} />,
-        onClick: () => handleActionContrat(contrat, 'archiver'),
-        disabled: archiverContratMutation.isPending
-      }); 
+      if (hasPermission('contrats.archiver_contrat')) {
+        actions.push({
+          label: 'Archiver',
+          icon: <Archive size={14} />,
+          onClick: () => handleActionContrat(contrat, 'archiver'),
+          disabled: archiverContratMutation.isPending
+        }); 
+      }
     }
     
     if (contrat.statut === 'suspendu') {
-      actions.push({
-        label: 'Réactiver',
-        icon: <Play size={14} />,
-        onClick: () => handleActionContrat(contrat, 'activer'),
-        disabled: activerContratMutation.isPending
-      });
+      if (hasPermission('contrats.activer_contrat')) {
+        actions.push({
+          label: 'Réactiver',
+          icon: <Play size={14} />,
+          onClick: () => handleActionContrat(contrat, 'activer'),
+          disabled: activerContratMutation.isPending
+        });
+      }
     }
     
     // Actions destructives
     if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut)) {
-      actions.push({
-        label: 'Annuler',
-        icon: <X size={14} />,
-        onClick: () => handleActionContrat(contrat, 'annuler'),
-        disabled: annulerContratMutation.isPending,
-        destructive: true
-      });
+      if (hasPermission('contrats.annuler_contrat')) {
+        actions.push({
+          label: 'Annuler',
+          icon: <X size={14} />,
+          onClick: () => handleActionContrat(contrat, 'annuler'),
+          disabled: annulerContratMutation.isPending,
+          destructive: true
+        });
+      }
     }
     
     if (contrat.statut === 'brouillon') {
-      actions.push({
-        label: 'Supprimer',
-        icon: <Trash2 size={14} />,
-        onClick: () => openDeleteDialog(contrat),
-        disabled: deleteContratMutation.isPending,
-        destructive: true
-      });
+      if (hasPermission('contrats.delete_contrat')) {
+        actions.push({
+          label: 'Supprimer',
+          icon: <Trash2 size={14} />,
+          onClick: () => openDeleteDialog(contrat),
+          disabled: deleteContratMutation.isPending,
+          destructive: true
+        });
+      }
     }
     
     return actions;

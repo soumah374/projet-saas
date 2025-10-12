@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
+import { usePermissions } from '@/hooks/use-permissions';
+
 import {
   Table,
   TableBody,
@@ -38,8 +40,8 @@ import {
   LayoutGrid,
   List
 } from "lucide-react";
-import { projectTeamAPI, usersAPI } from '@/lib/api';
-import type { Project, User, ProjectMemberRole, ProjectMemberUpdate, ProjectMember } from '@/lib/types';
+import { projectTeamAPI } from '@/lib/api';
+import type { Project, ProjectMemberRole, ProjectMemberUpdate, ProjectMember } from '@/lib/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useUsers } from '@/hooks/use-users';
@@ -67,6 +69,7 @@ export function ProjectTeamPage() {
   const [editIsActive, setEditIsActive] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedAllocation, setSelectedAllocation] = useState(100); 
+  const { hasPermission } = usePermissions();
   // React Query hooks
   const { data: usersData, isLoading: usersLoading, error: usersError } = useUsers({
     is_active: true,
@@ -431,7 +434,7 @@ export function ProjectTeamPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                                          <Avatar className="w-12 h-12">
+                      <Avatar className="w-12 h-12">
                         <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
                           {member.user_details.first_name[0]}{member.user_details.last_name[0]}
                         </AvatarFallback>
@@ -474,6 +477,7 @@ export function ProjectTeamPage() {
                 </div>
 
                 <div className="flex gap-2 mt-4 pt-4 border-t">
+                  {hasPermission('projects.edit_projectmember') && (
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -493,6 +497,8 @@ export function ProjectTeamPage() {
                       </>
                     )}
                   </Button>
+                  )}
+                  {hasPermission('projects.delete_projectmember') && (
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -509,6 +515,7 @@ export function ProjectTeamPage() {
                       <Trash2 className="h-4 w-4" />
                     )}
                   </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -613,10 +620,14 @@ export function ProjectTeamPage() {
               }
             </p>
             {!searchTerm && roleFilter === 'all' && (
-              <Button onClick={() => setIsAddMemberDialogOpen(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Ajouter le premier membre
-              </Button>
+              <>
+                {hasPermission('projects.create_projectmember') && (
+                  <Button onClick={() => setIsAddMemberDialogOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Ajouter le premier membre
+                  </Button>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -663,22 +674,24 @@ export function ProjectTeamPage() {
             >
               Annuler
             </Button>
-            <Button
-              onClick={handleEditMember}
-              disabled={!editRole || updateMemberMutation.isPending}
-            >
-              {updateMemberMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Mise à jour...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Enregistrer les modifications
-                </>
-              )}
-            </Button>
+            {hasPermission('projects.edit_projectmember') && (
+              <Button
+                onClick={handleEditMember}
+                disabled={!editRole || updateMemberMutation.isPending}
+              >
+                {updateMemberMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Mise à jour...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Enregistrer les modifications
+                  </>
+                  )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -67,7 +67,7 @@ class LigneContratAdmin(admin.ModelAdmin):
 class LigneContratIntervenantAdmin(admin.ModelAdmin):
     list_display = ['ligne_contrat', 'profile_intervenant', 'temps_intervenant', 'taux_horaire', 'montant_intervenant']
     list_filter = ['ligne_contrat__type_ligne']
-    search_fields = ['ligne_contrat__contrat__numero', 'profile_intervenant__intitule']
+    search_fields = ['ligne_contrat__contrat__numero', 'profile_intervenant__name']
     readonly_fields = ['montant_intervenant']
 
 
