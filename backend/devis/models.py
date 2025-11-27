@@ -199,7 +199,7 @@ class LigneDevis(models.Model):
     # Informations de la ligne
     description = models.TextField(blank=True, default='')
     quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(0)])
-    unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
+    unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_devis')
     prix_unitaire_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -269,7 +269,7 @@ class LigneDevisIntervenant(models.Model):
         unique_together = ['ligne_devis', 'profile_intervenant']
     
     def __str__(self):
-        return f"{self.profile_intervenant.name} - {self.temps_intervenant}h"
+        return f"{self.profile_intervenant.intitule} - {self.temps_intervenant}h"
     
     def save(self, *args, **kwargs):
         # Calculer le montant pour cet intervenant
