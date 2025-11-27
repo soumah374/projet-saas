@@ -502,11 +502,6 @@ export function DevisDetailPage() {
                       {ligne.type_ligne === 'prestation'
                         ? ligne.activity?.intitule || '—'
                         : ligne.ligne_frais?.description || '—'}
-                        {ligne.type_ligne === 'prestation' && (
-                          <div className="text-sm text-muted-foreground">
-                            Intervenants
-                          </div>
-                        )}
                     </TableCell>
                     <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
