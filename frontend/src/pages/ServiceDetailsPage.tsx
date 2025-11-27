@@ -1183,19 +1183,17 @@ export function ServiceDetailsPage() {
                 required
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
-                <Input
-                  name="duree_standard"
-                  type="number"
-                  step="0.5"
-                  placeholder="0.0"
-                  value={createActivityForm.form.duree_standard}
-                  onChange={createActivityForm.handleChange}
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
+              <Input
+                name="duree_standard"
+                type="number"
+                step="0.5"
+                placeholder="0.0"
+                value={createActivityForm.form.duree_standard}
+                onChange={createActivityForm.handleChange}
+                required
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Profils intervenant</label>
@@ -1316,21 +1314,19 @@ export function ServiceDetailsPage() {
                 required
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
-                <Input
-                  name="duree_standard"
-                  type="number"
-                  step="0.5"
-                  placeholder="0.0"
-                  value={editActivityForm.form.duree_standard}
-                  onChange={editActivityForm.handleChange}
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
+              <Input
+                name="duree_standard"
+                type="number"
+                step="0.5"
+                placeholder="0.0"
+                value={editActivityForm.form.duree_standard}
+                onChange={editActivityForm.handleChange}
+                required
+              />
             </div>
-            <div className="max-h-64 overflow-y-auto pr-1">
+            <div>
               <label className="block text-sm font-medium mb-2">Profils intervenant</label>
               <ProfileManager
                 profiles={profiles}

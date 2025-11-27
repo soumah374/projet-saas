@@ -84,13 +84,13 @@ class ActivityViewSet(viewsets.ModelViewSet):
                     })
                     continue
                 
-                if not activity_data.get('duree_standard'):
-                    errors.append({
-                        'index': index,
-                        'name': activity_data.get('name', 'Nom inconnu'),
-                        'error': 'La durée standard est requise'
-                    })
-                    continue
+                # if not activity_data.get('duree_standard'):
+                #     errors.append({
+                #         'index': index,
+                #         'name': activity_data.get('name', 'Nom inconnu'),
+                #         'error': 'La durée standard est requise'
+                #     })
+                #     continue
                 
                 if not activity_data.get('service_id'):
                     errors.append({
@@ -123,7 +123,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
                 # Créer l'activité
                 activity = Activity.objects.create(
                     name=activity_data['name'],
-                    duree_standard=activity_data['duree_standard'],
+                    duree_standard = activities_data.get('duree_standard', 1),
                     service=service,
                     is_active=activity_data.get('is_active', True)
                 )
