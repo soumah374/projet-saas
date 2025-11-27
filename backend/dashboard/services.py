@@ -7,7 +7,7 @@ import logging
 from django.db.models import Value, DecimalField, FloatField
 
 from projects.models import Project, ProjectTask
-from users.models import User, ClientProfile
+from users.models import User
 from teams.models import Team
 from contrats.models import Contrat, EcheancierContrat
 from devis.models import Devis

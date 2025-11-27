@@ -15,8 +15,7 @@ import {
 } from 'lucide-react';
 import { Avenant } from '@/hooks/use-avenants';
 import { useDownloadAvenantPDF, useEnvoyerAvenant, useAnnulerAvenant } from '@/hooks/use-avenants';
-import { toast } from 'sonner';
-
+import { usePermissions } from '@/hooks/use-permissions';
 interface AvenantCardProps {
   avenant: Avenant;
   onEdit?: (avenant: Avenant) => void;
@@ -31,7 +30,7 @@ export const AvenantCard: React.FC<AvenantCardProps> = ({
   const downloadPDFMutation = useDownloadAvenantPDF();
   const envoyerMutation = useEnvoyerAvenant();
   const annulerMutation = useAnnulerAvenant();
-
+  const { hasPermission } = usePermissions();
   const getStatusIcon = () => {
     switch (avenant.statut) {
       case 'signe':
@@ -142,6 +141,7 @@ export const AvenantCard: React.FC<AvenantCardProps> = ({
 
         {/* Actions */}
         <div className="flex items-center space-x-2 pt-2">
+          {hasPermission('contrats.can_download_avenant') && (
           <Button
             variant="outline"
             size="sm"
@@ -151,45 +151,56 @@ export const AvenantCard: React.FC<AvenantCardProps> = ({
             <Download className="h-4 w-4 mr-1" />
             PDF
           </Button>
-
+          )}
           {avenant.statut === 'brouillon' && (
             <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={()=>handleEnvoyer(avenant)}
-                disabled={envoyerMutation.isPending}
-              >
-                <Send className="h-4 w-4 mr-1" />
-                Envoyer
-              </Button>
-              
-              {onEdit && (
+              {hasPermission('contrats.can_send_avenant') && (
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onEdit(avenant)}
+                  onClick={()=>handleEnvoyer(avenant)}
+                  disabled={envoyerMutation.isPending}
                 >
-                  <Edit className="h-4 w-4 mr-1" />
-                  Modifier
+                  <Send className="h-4 w-4 mr-1" />
+                  Envoyer
                 </Button>
+              )}
+              {onEdit && (
+                <>
+                {hasPermission('contrats.can_edit_avenant') && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onEdit(avenant)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Modifier
+                  </Button>
+                )}
+                </>
               )}
             </>
           )}
 
           {avenant.statut === 'envoye' && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={()=>handleAnnuler(avenant)}
-              disabled={annulerMutation.isPending}
-            >
-              <XCircle className="h-4 w-4 mr-1" />
-              Annuler
-            </Button>
+            <>
+            {hasPermission('contrats.can_annuler_avenant') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={()=>handleAnnuler(avenant)}
+                disabled={annulerMutation.isPending}
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Annuler
+              </Button>
+            )}
+            </>
           )}
 
           {onDelete && avenant.statut === 'brouillon' && (
+            <>
+            {hasPermission('contrats.can_delete_avenant') && (
             <Button
               variant="outline"
               size="sm"
@@ -198,6 +209,8 @@ export const AvenantCard: React.FC<AvenantCardProps> = ({
               <Trash2 className="h-4 w-4 mr-1" />
               Supprimer
             </Button>
+            )}
+            </>
           )}
         </div>
       </CardContent>

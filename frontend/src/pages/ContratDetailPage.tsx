@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { usePermissions } from '@/hooks/use-permissions';
 import { 
   ArrowLeft, 
   Edit, 
@@ -62,6 +63,8 @@ export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const contratId = parseInt(id || '0');
+
+  const { hasPermission } = usePermissions();
   
   // États pour les modals
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -440,38 +443,48 @@ export function ContratDetailPage() {
     
     if (contrat.statut === 'actif' || contrat.statut === 'envoye' || contrat.statut === 'signe') {
       buttons.push(
-        <Button
-          key="terminer"
-          variant="outline"
-          onClick={() => handleActionContrat('cloturer')}
-          disabled={cloturerContratMutation.isPending}
-        >
-          <Lock size={16} className="mr-2" />
-          Clôturer
-        </Button>,
-        <Button
-          key="suspendre"
-          variant="outline"
-          onClick={() => handleActionContrat('suspendre')}
-          disabled={suspendreContratMutation.isPending}
-        >
-          <Pause size={16} className="mr-2" />
-          Suspendre
-        </Button>
+        <>
+        {hasPermission('contrats.can_cloturer_contrat') && (
+          <Button
+            key="terminer"
+            variant="outline"
+            onClick={() => handleActionContrat('cloturer')}
+            disabled={cloturerContratMutation.isPending}
+          >
+            <Lock size={16} className="mr-2" />
+            Clôturer
+          </Button>
+        )}
+        </>,
+        <>
+        {hasPermission('contrats.can_suspendre_contrat') && (
+          <Button
+            key="suspendre"
+            variant="outline"
+            onClick={() => handleActionContrat('suspendre')}
+            disabled={suspendreContratMutation.isPending}
+          >
+            <Pause size={16} className="mr-2" />
+            Suspendre
+          </Button>
+        )}
+        </>,
       );
     }
 
     if (contrat.statut === 'envoye') {
       buttons.push(
         <React.Fragment key="cloturer-section">
-          <Button
-            key="cloturer"
-            variant="outline"
-            onClick={() => setShowSignModal(true)}
-          >
-            <Signature size={16} className="mr-2" />
-            Signer
-          </Button>
+          {hasPermission('contrats.can_signer_contrat') && (
+            <Button
+              key="cloturer"
+              variant="outline"
+              onClick={() => setShowSignModal(true)}
+            >
+              <Signature size={16} className="mr-2" />
+              Signer
+            </Button>
+          )}
           {/* Modal d'upload du contrat signé */}
           {showSignModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
@@ -546,6 +559,8 @@ export function ContratDetailPage() {
             </p>
           </div>
           {contrat.fichier_signe && (
+            <>
+            {hasPermission('contrats.can_download_contrat') && (
             <Button
               variant="outline"
               size="sm"
@@ -560,6 +575,8 @@ export function ContratDetailPage() {
               <FileText size={14} className="mr-2" />
               Télécharger
             </Button>
+            )}
+            </>
           )}
         </div>
       );
@@ -568,6 +585,8 @@ export function ContratDetailPage() {
 
     if (contrat.statut === 'cloture') {
       buttons.push(
+        <>
+        {hasPermission('contrats.can_archiver_contrat') && (
         <Button
           key="archiver"
           variant="outline"
@@ -577,11 +596,15 @@ export function ContratDetailPage() {
           <Archive size={16} className="mr-2" />
           Archiver
         </Button>
+        )}
+        </>
       )
     }
     
     if (contrat.statut === 'suspendu') {
       buttons.push(
+        <>
+        {hasPermission('contrats.can_activer_contrat') && (
         <Button
           key="activer"
           onClick={() => handleActionContrat('activer')}
@@ -590,20 +613,26 @@ export function ContratDetailPage() {
           <Play size={16} className="mr-2" />
           Réactiver
         </Button>
+        )}
+        </>
       );
     }
     
     if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut)) {
       buttons.push(
-        <Button
-          key="annuler"
-          variant="destructive"
-          onClick={() => handleActionContrat('annuler')}
-          disabled={annulerContratMutation.isPending}
-        >
-          <X size={16} className="mr-2" />
-          Annuler
-        </Button>
+        <>
+        {hasPermission('contrats.can_annuler_contrat') && (
+          <Button
+            key="annuler"
+            variant="destructive"
+            onClick={() => handleActionContrat('annuler')}
+            disabled={annulerContratMutation.isPending}
+          >
+            <X size={16} className="mr-2" />
+              Annuler
+            </Button>
+          )}
+        </>
       );
     }
     
@@ -644,23 +673,33 @@ export function ContratDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={openEditDialog} variant="outline" disabled={contrat.statut === 'archive'}>
-            <Edit size={16} className="mr-2" />
-            Modifier
-          </Button>
-          <Button onClick={() => setShowContractEditor(true)} variant="outline">
-            <FileText size={16} className="mr-2" />
-            Éditer contrat
-          </Button>
-          <Button onClick={handleOpenDevisSelection} variant="outline">
-            <Plus size={16} className="mr-2" />
-            Ajouter des devis
-          </Button>
-          {contrat.statut === 'brouillon' && (
-            <Button onClick={openDeleteDialog} variant="destructive">
-              <Trash2 size={16} className="mr-2" />
-              Supprimer
+          {hasPermission('contrats.can_edit_contrat') && (
+            <Button onClick={openEditDialog} variant="outline" disabled={contrat.statut === 'archive'}>
+              <Edit size={16} className="mr-2" />
+              Modifier
             </Button>
+          )}
+          {hasPermission('contrats.can_edit_contrat') && (
+            <Button onClick={() => setShowContractEditor(true)} variant="outline">
+              <FileText size={16} className="mr-2" />
+              Éditer contrat
+            </Button>
+          )}
+          {hasPermission('devis.can_add_devis') && (
+            <Button onClick={handleOpenDevisSelection} variant="outline">
+              <Plus size={16} className="mr-2" />
+              Ajouter des devis
+            </Button>
+          )}
+          {contrat.statut === 'brouillon' && (
+            <>
+              {hasPermission('contrats.delete_contrat') && (
+                <Button onClick={openDeleteDialog} variant="destructive">
+                  <Trash2 size={16} className="mr-2" />
+                    Supprimer
+                </Button>
+              )}
+            </>
           )}
           {getActionButtons()}
         </div>
@@ -753,6 +792,7 @@ export function ContratDetailPage() {
                         Fichier uploadé le {formatDate(contrat.updated_at)}
                       </p>
                     </div>
+                    {hasPermission('contrats.can_download_contrat') && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -767,6 +807,7 @@ export function ContratDetailPage() {
                       <FileText size={14} className="mr-2" />
                       Télécharger
                     </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -912,25 +953,30 @@ export function ContratDetailPage() {
                 {/* Boutons de génération d'échéancier et factures */}
                 {contrat.statut !== 'termine' && (
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => handleGenererEcheancier('standard')}
-                    disabled={isLoadingEcheances}
-                  >
-                    <Plus size={16} className="mr-2" />
-                    Générer échéancier
-                  </Button>
-                  
-                  {echeances && Array.isArray(echeances) && echeances.length > 0 && (
+                  {hasPermission('contrats.can_generer_echeancier') && (
                     <Button 
                       variant="outline" 
-                      onClick={handleGenererFactures}
+                      onClick={() => handleGenererEcheancier('standard')}
                       disabled={isLoadingEcheances}
-                      className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
                     >
-                      <FileText size={16} className="mr-2" />
-                      Générer factures
+                      <Plus size={16} className="mr-2" />
+                      Générer échéancier
                     </Button>
+                  )}                  
+                  {echeances && Array.isArray(echeances) && echeances.length > 0 && (
+                    <>
+                      {hasPermission('contrats.can_generer_factures') && (
+                        <Button 
+                          variant="outline" 
+                          onClick={handleGenererFactures}
+                          disabled={isLoadingEcheances}
+                          className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+                        >
+                          <FileText size={16} className="mr-2" />
+                          Générer factures
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
                 )}
@@ -1041,26 +1087,31 @@ export function ContratDetailPage() {
 
                         {echeance.statut === 'en_attente' && (
                           <div className="mt-4 flex gap-2">
-                            <Button 
-                              size="sm"
-                              onClick={() => handleMarquerPaye(echeance.id)}
-                              className="bg-green-600 hover:bg-green-700"
-                              disabled={contrat.statut === 'archive'}
-                            >
-                              <CheckCircle size={14} className="mr-1" />
-                              Marquer comme payé
-                            </Button>
-
-                            {echeance.doit_alerter && (
+                            {hasPermission('contrats.can_marquer_paye') && (
                               <Button 
                                 size="sm"
-                                variant="outline"
-                                onClick={() => handleEnvoyerAlerte(echeance.id)}
-                                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                onClick={() => handleMarquerPaye(echeance.id)}
+                                className="bg-green-600 hover:bg-green-700"
+                                disabled={contrat.statut === 'archive'}
                               >
-                                <Bell size={14} className="mr-1" />
-                                Envoyer alerte
+                                <CheckCircle size={14} className="mr-1" />
+                                Marquer comme payé
                               </Button>
+                            )}
+                            {echeance.doit_alerter && (
+                              <>
+                              {hasPermission('contrats.can_envoyer_alerte') && (
+                                <Button 
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEnvoyerAlerte(echeance.id)}
+                                  className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                                >
+                                  <Bell size={14} className="mr-1" />
+                                  Envoyer alerte
+                                </Button>
+                              )}
+                              </>
                             )}
                           </div>
                         )}

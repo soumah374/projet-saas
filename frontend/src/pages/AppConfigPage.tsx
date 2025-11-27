@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +38,7 @@ export function AppConfigPage() {
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
   // Initialiser le formulaire avec les données de configuration
-  useState(() => {
+  useEffect(() => {
     if (config) {
       setFormData({
         app_name: config.app_name,
@@ -149,7 +149,7 @@ export function AppConfigPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">

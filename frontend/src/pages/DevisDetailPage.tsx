@@ -38,8 +38,7 @@ import { useLignesFraisByCategory } from '@/hooks/use-lignes-frais';
 import { DevisDetailModals } from '@/components/devis/DevisDetailModals';
 import type { LigneFrais } from '@/lib/types';
 import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
-import { generateMinimalDevisPDF } from '@/lib/pdfUtils';
-
+import { usePermissions } from '@/hooks/use-permissions';
 interface LigneForm {
   type_ligne: 'prestation' | 'frais' | '';
   type_frais?: 'standard' | 'forfait' | 'offert';
@@ -83,6 +82,8 @@ export function DevisDetailPage() {
 
   const devisId = parseInt(id || '0');
   
+  const { hasPermission } = usePermissions();
+
   const { data: devis, isLoading, error } = useDevisById(devisId);
   const updateDevisMutation = useUpdateDevis();
   const envoyerDevisMutation = useEnvoyerDevis();
@@ -168,14 +169,12 @@ export function DevisDetailPage() {
   const handleConfirmEnvoyer = async () => {
     try {
       // await envoyerDevisMutation.mutateAsync(devisId);
-      const pdfData = generateMinimalDevisPDF(devis);
       await envoyerEmailPDFMutation.mutateAsync({
         id: devis.id,
         data: {
           email_destinataire: devis.client.email,
           sujet: `Devis ${devis.numero} - ${devis.client.nom_complet}`,
           message: 'Merci de bien vouloir signer le devis et de nous le retourner.',
-          // pdf_data: pdfData
         }
       });
       setEnvoyerDialogOpen(false);
@@ -382,43 +381,59 @@ export function DevisDetailPage() {
         <div className="flex items-center gap-2">
           {devis.statut === 'brouillon' && (
             <>
-              <Button onClick={() => setEditDialogOpen(true)} variant="outline">
-                <Edit size={16} className="mr-2" />
-                Modifier
-              </Button>
+              {hasPermission('devis.can_edit_devis') && (
+                <Button onClick={() => setEditDialogOpen(true)} variant="outline">
+                  <Edit size={16} className="mr-2" />
+                  Modifier
+                </Button>
+              )}
+              {hasPermission('devis.can_add_ligne_devis') && (
               <Button onClick={() => setAddLigneDialogOpen(true)} variant="outline">
-                <Plus size={16} className="mr-2" />
-                Ajouter ligne
-              </Button>
+                  <Plus size={16} className="mr-2" />
+                  Ajouter ligne
+                </Button>
+              )}
+              {hasPermission('devis.can_send_devis') && (
               <Button onClick={handleEnvoyer}>
                 <Send size={16} className="mr-2" />
                 Envoyer
               </Button>
+              )}
             </>
           )}
           
           {devis.statut === 'envoye' && (
             <>
+              {hasPermission('devis.can_accept_devis') && (
               <Button onClick={handleAccepter} variant="outline">
                 <Check size={16} className="mr-2" />
                 Accepter
               </Button>
+              )}
+              {hasPermission('devis.can_refuse_devis') && (
               <Button onClick={handleRefuser} variant="destructive">
                 <X size={16} className="mr-2" />
                 Refuser
               </Button>
+              )}
             </>
           )}
           {devis.statut === 'accepte' && devis.contrat && (
+            <>
+            {hasPermission('devis.can_view_contrat') && (
             <Button onClick={() => navigate(`/contrats/${devis.contrat.id}`)} variant="outline">
               <FileCheck size={16} className="mr-2" />
               Voir le contrat
             </Button>
+            )}
+          </>
           )}
+          {hasPermission('devis.can_export_pdf') && (
           <Button onClick={handleExportPDF} variant="outline">
             <Download size={16} className="mr-2" />
             Exporter PDF
           </Button>
+          )}
         </div>
       </div>
 

@@ -10,10 +10,11 @@ import { PerformanceChart } from '@/components/reports/PerformanceChart';
 import { useProjectReports, useExportReport, ReportFilters as FilterType } from '@/hooks/use-reports';
 import { useTeams } from '@/hooks/use-teams';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/use-permissions';
 
 export const ReportsPage = () => {
   const [filters, setFilters] = useState<FilterType>({});
-
+  const { hasPermission } = usePermissions();
   const {
     data: reportData,
     isLoading: projectsLoading,
@@ -80,10 +81,12 @@ export const ReportsPage = () => {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Rapports et statistiques</h1>
-        <Button onClick={handleExport} disabled={exportMutation.isPending}>
-          <Download className="w-4 h-4 mr-2" />
-          Exporter
-        </Button>
+        {hasPermission('projects.export_project_reports') && (
+          <Button onClick={handleExport} disabled={exportMutation.isPending}>
+            <Download className="w-4 h-4 mr-2" />
+            Exporter
+          </Button>
+        )}
       </div>
 
       <Card>

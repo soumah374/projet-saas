@@ -14,6 +14,7 @@ class ApplicationConfigDetailView(generics.RetrieveUpdateAPIView):
     """
     serializer_class = ApplicationConfigSerializer
     parser_classes = [MultiPartParser, FormParser]
+    queryset = ApplicationConfig.objects.all()
     
     def get_permissions(self):
         """

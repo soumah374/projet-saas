@@ -2,19 +2,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
-from django.db.models import Count, Q, Avg, Sum
 from django.utils import timezone
 from datetime import timedelta
 import json
 import logging
 
 from .services import DashboardMetricsService
-from projects.models import Project, ProjectTask
 from users.models import User
-from teams.models import Team
-from contrats.models import Contrat
-from devis.models import Devis
-from billings.models import Facture
 
 from .models import DashboardWidgetConfig
 
@@ -174,28 +168,33 @@ class DashboardCalendarView(DashboardWidgetPermissionMixin, APIView):
 
 
 class DashboardWidgetsCatalogView(DashboardWidgetPermissionMixin, APIView):
-    """Vue pour récupérer le catalogue des widgets disponibles"""
+    """
+    Vue pour récupérer le catalogue complet des widgets disponibles
+    Source unique de vérité servie depuis permission_widget.py
+    """
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request):
         try:
-            # Récupérer le catalogue des widgets disponibles
-            available_widgets = DashboardMetricsService.list_available_widgets()
-            
+            from .permission_widget import AVAILABLE_WIDGETS, WIDGET_GROUPS, ROLE_PRESETS
+
             # Debug logging
-            logger.info(f"Available widgets count: {len(available_widgets)}")
-            logger.info(f"Available widgets keys: {list(available_widgets.keys())[:5]}")
-            
-            # Récupérer les widgets autorisés pour l'utilisateur
-            authorized_widgets = self._get_authorized_widgets(request, None)
-            
-            # Retourner directement le catalogue des widgets disponibles
-            # Le frontend s'attend à recevoir un mapping direct de clés vers objets
-            return Response(available_widgets)
-            
+            logger.info(f"Available widgets count: {len(AVAILABLE_WIDGETS)}")
+            logger.info(f"Available widgets keys: {list(AVAILABLE_WIDGETS.keys())[:5]}")
+
+            # Retourner le catalogue complet avec groupes et presets
+            return Response({
+                'widgets': AVAILABLE_WIDGETS,
+                'groups': WIDGET_GROUPS,
+                'rolePresets': ROLE_PRESETS,
+            })
+
         except Exception as e:
             logger.error(f"Error in DashboardWidgetsCatalogView: {str(e)}")
-            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({
+                'error': str(e),
+                'message': 'Erreur lors de la récupération du catalogue des widgets'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class DashboardRoleConfigView(APIView):
@@ -269,56 +268,56 @@ class DashboardWidgetsConfigView(APIView):
     permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        # try:
-        # Utiliser le service pour récupérer la configuration
-        metrics_service = DashboardMetricsService(user=request.user)
-        authorized_widgets = metrics_service.get_authorized_widgets()
-        
-        # Récupérer la configuration actuelle
-        config = metrics_service._load_widget_config()
-        
-        
-        response_data = {
-            'authorized_widgets': authorized_widgets,
-            'user_roles': list(metrics_service.user_roles) if metrics_service.user_roles else [],
-            'total_available': len(DashboardMetricsService.list_available_widgets()),
-            'total_authorized': len(authorized_widgets)
-        }
-        
-        if config:
-            response_data.update({
-                'config_id': config.id,
-                'is_active': config.is_active,
-                'updated_at': config.updated_at.isoformat(),
-                'is_user_specific': config.user is not None,
-                'widgets': config.widgets
-            })
-        
-        return Response(response_data)
+        try:
+            # Utiliser le service pour récupérer la configuration
+            metrics_service = DashboardMetricsService(user=request.user)
+            authorized_widgets = metrics_service.get_authorized_widgets()
             
-        # except Exception as e:
-        #     return Response({
-        #         'error': str(e),
-        #         'message': 'Erreur lors de la récupération de la configuration des widgets'
-        #     }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
+            # Récupérer la configuration actuelle
+            config = metrics_service._load_widget_config()
+            
+            
+            response_data = {
+                'authorized_widgets': authorized_widgets,
+                'user_roles': list(metrics_service.user_roles) if metrics_service.user_roles else [],
+                'total_available': len(DashboardMetricsService.list_available_widgets()),
+                'total_authorized': len(authorized_widgets)
+            }
+            
+            if config:
+                response_data.update({
+                    'config_id': config.id,
+                    'is_active': config.is_active,
+                    'updated_at': config.updated_at.isoformat(),
+                    'is_user_specific': config.user is not None,
+                    'widgets': config.widgets
+                })
+            
+            return Response(response_data)
+            
+        except Exception as e:
+            return Response({
+                'error': str(e),
+                'message': 'Erreur lors de la récupération de la configuration des widgets'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
 
 
 class DashboardTestView(APIView):
     """Vue de test pour vérifier que le backend fonctionne correctement"""
     permission_classes = [IsAuthenticated]
-    
+
     def get(self, request):
         try:
             # Test simple pour vérifier que tout fonctionne
             available_widgets = DashboardMetricsService.list_available_widgets()
-            
+
             return Response({
                 'status': 'ok',
                 'available_widgets_count': len(available_widgets),
                 'sample_widgets': list(available_widgets.keys())[:5],
                 'sample_widget_data': dict(list(available_widgets.items())[:3])
             })
-            
+
         except Exception as e:
             logger.error(f"Error in DashboardTestView: {str(e)}")
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR) 
