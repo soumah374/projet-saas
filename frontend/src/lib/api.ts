@@ -1,3 +1,4 @@
+import { WidgetCatalog } from './../hooks/use-dashboard-config';
 import axios from 'axios';
 import { config } from './config';
 import type { 
@@ -695,7 +696,10 @@ export const dashboardAPI = {
     getWidgetsUserConfig: (params?: { user_id?: number }) => api.get('/dashboard/widgets/user-config/', { params }),
     saveWidgetsConfig: (data: { role?: string; user_id?: number; widgets: string[]; is_active?: boolean }) =>
         api.post('/dashboard/widgets/config/', data),
+    
 };
+
+// dashboard/src/lib/api.ts
 
 // PATCHs
 // 
