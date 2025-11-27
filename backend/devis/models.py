@@ -199,7 +199,7 @@ class LigneDevis(models.Model):
     # Informations de la ligne
     description = models.TextField(blank=True, default='')
     quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(0)])
-    unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_devis')
+    unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
     prix_unitaire_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)

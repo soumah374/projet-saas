@@ -92,15 +92,17 @@ class DevisViewSet(viewsets.ModelViewSet):
                     logger.info(f"Ligne {i+1} validée: {validated_ligne_data}")
                     
                     if validated_ligne_data['type_ligne'] == 'prestation':
-                        ligne = devis.ajouter_ligne(
-                            service_id=validated_ligne_data['service_id'].id,
-                            activity_id=validated_ligne_data['activity_id'].id,
+                        ligne = LigneDevis.objects.create(
+                            devis=devis,
+                            type_ligne='prestation',
+                            service=validated_ligne_data['service_id'],
+                            activity=validated_ligne_data['activity_id'],
                             description=validated_ligne_data.get('description', ''),
                             quantite=validated_ligne_data['quantite'],
-                            unite_id=validated_ligne_data['unite_id'].id,
-                            type_ligne='prestation'
+                            unite=validated_ligne_data['unite_id'],
+                            prix_unitaire_ht=validated_ligne_data.get('prix_unitaire_ht', Decimal('0'))
                         )
-                        logger.info(f"Ligne prestation créée avec ID: {ligne.id}")
+                        logger.info(f"Ligne prestation créée avec ID: {ligne.id}, prix_unitaire_ht: {ligne.prix_unitaire_ht}")
                         
                         # Créer les intervenants pour cette ligne
                         for j, intervenant_data in enumerate(ligne_data.get('intervenants', [])):
@@ -116,29 +118,6 @@ class DevisViewSet(viewsets.ModelViewSet):
                                 taux_horaire=taux_horaire
                             )
                             logger.info(f"Intervenant {j+1} créé pour la ligne {ligne.id}")
-                        
-                        # Recalculer le prix unitaire de la ligne après avoir ajouté tous les intervenants
-                        if ligne.intervenants.exists():
-                            # Calculer la somme des montants par intervenant
-                            total_intervenants = sum(interv.montant_intervenant for interv in ligne.intervenants.all())
-                            
-                            # Si plusieurs intervenants et unité spéciale, calculer le prix unitaire selon la règle métier
-                            if ligne.intervenants.count() > 1:
-                                unite_intitule = ligne.unite.intitule.lower()
-                                is_unite_jour = any(unite in unite_intitule for unite in ['heure', 'homme-jour', 'jour'])
-                                
-                                if is_unite_jour:
-                                    # Le prix unitaire est égal à la somme des montants divisée par la quantité
-                                    ligne.prix_unitaire_ht = total_intervenants / ligne.quantite if ligne.quantite > 0 else 0
-                                else:
-                                    # Logique normale pour les autres unités
-                                    ligne.prix_unitaire_ht = total_intervenants
-                            else:
-                                # Logique normale pour un seul intervenant
-                                ligne.prix_unitaire_ht = total_intervenants
-                            
-                            ligne.save()
-                            logger.info(f"Prix unitaire recalculé pour la ligne {ligne.id}: {ligne.prix_unitaire_ht}")
                             
                     elif validated_ligne_data['type_ligne'] == 'frais':
                         ligne = LigneDevis.objects.create(

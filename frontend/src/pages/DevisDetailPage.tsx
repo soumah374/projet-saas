@@ -13,10 +13,8 @@ import {
   useAccepterDevis,
   useRefuserDevis,
   useCreateLigneDevis,
-  useCreateIntervenantLigne,
   useDeleteLigneDevis,
   useActivitesParService,
-  useIntervenantsParActivite,
 } from '@/hooks/use-devis';
 import { useCreateContratFromDevis } from '@/hooks/use-contrats';
 import { lignesDevisAPI } from '@/lib/api';
@@ -53,14 +51,6 @@ interface LigneForm {
   quantite: string;
   unite_id: string;
   prix_unitaire?: string;
-  intervenants: IntervenantForm[];
-}
-
-interface IntervenantForm {
-  profile_intervenant_id: string;
-  temps_intervenant: string;
-  taux_horaire: string;
-  intitule: string;
 }
 
 export function DevisDetailPage() {
@@ -88,7 +78,7 @@ export function DevisDetailPage() {
     quantite: '1',
     unite_id: '',
     prix_unitaire: '',
-    intervenants: []
+    
   });
 
   const devisId = parseInt(id || '0');
@@ -99,7 +89,6 @@ export function DevisDetailPage() {
   const accepterDevisMutation = useAccepterDevis();
   const refuserDevisMutation = useRefuserDevis();
   const createLigneMutation = useCreateLigneDevis();
-  const createIntervenantMutation = useCreateIntervenantLigne();
   const deleteLigneMutation = useDeleteLigneDevis();
   const createContratMutation = useCreateContratFromDevis();
 
@@ -108,9 +97,6 @@ export function DevisDetailPage() {
   const { data: unitesData } = useUnitesStandards({ page_size: 1000, is_active: true });
   const { data: activitesData, refetch: refetchActivites, isLoading: isLoadingActivites } = useActivitesParService(
     parseInt(currentLigne.service_id) || 0
-  );
-  const { data: intervenantsData, refetch: refetchIntervenants, isLoading: isLoadingIntervenants } = useIntervenantsParActivite(
-    parseInt(currentLigne.activity_id) || 0
   );
   const { data: fraisCategories = [] } = useFraisCategories();
   const { data: lignesFraisRaw } = useLignesFraisByCategory(parseInt(currentLigne.frais_category_id || '0'));
@@ -123,7 +109,6 @@ export function DevisDetailPage() {
   const services = servicesData?.results || [];
   const unites = unitesData?.results || [];
   const activites = activitesData || [];
-  const intervenants = intervenantsData || [];
 
   useEffect(() => {
     if (devis) {
@@ -140,28 +125,16 @@ export function DevisDetailPage() {
     }
   }, [devis]);
 
-  // Réinitialiser l'activité et les intervenants quand le service change
+  // Réinitialiser l'activité quand le service change
   useEffect(() => {
     if (currentLigne.type_ligne === 'prestation' && currentLigne.service_id) {
       setCurrentLigne(prev => ({
         ...prev,
-        activity_id: '',
-        intervenants: []
+        activity_id: ''
       }));
       refetchActivites();
     }
   }, [currentLigne.type_ligne, currentLigne.service_id, refetchActivites]);
-
-  // Réinitialiser les intervenants quand l'activité change
-  useEffect(() => {
-    if (currentLigne.type_ligne === 'prestation' && currentLigne.activity_id) {
-      setCurrentLigne(prev => ({
-        ...prev,
-        intervenants: []
-      }));
-      refetchIntervenants();
-    }
-  }, [currentLigne.type_ligne, currentLigne.activity_id, refetchIntervenants]);
 
   const handleSave = async () => {
     try {
@@ -202,7 +175,7 @@ export function DevisDetailPage() {
           email_destinataire: devis.client.email,
           sujet: `Devis ${devis.numero} - ${devis.client.nom_complet}`,
           message: 'Merci de bien vouloir signer le devis et de nous le retourner.',
-          pdf_data: pdfData
+          // pdf_data: pdfData
         }
       });
       setEnvoyerDialogOpen(false);
@@ -253,57 +226,14 @@ export function DevisDetailPage() {
     setCurrentLigne({ ...currentLigne, [field]: value });
   };
 
-  const handleIntervenantChange = (index: number, field: keyof IntervenantForm, value: string) => {
-    const newIntervenants = [...currentLigne.intervenants];
-    newIntervenants[index] = { ...newIntervenants[index], [field]: value };
-    
-    // Si on change le profil intervenant, remplir automatiquement le temps, le taux et l'intitule
-    if (field === 'profile_intervenant_id' && value) {
-      const selectedIntervenant = intervenants.find(interv => interv.id.toString() === value);
-      if (selectedIntervenant) {
-        newIntervenants[index] = {
-          ...newIntervenants[index],
-          temps_intervenant: selectedIntervenant.temps_intervenant.toString(),
-          taux_horaire: selectedIntervenant.taux_horaire.toString(),
-          intitule: selectedIntervenant.intitule,
-        };
-      }
-    }
-    
-    setCurrentLigne({ ...currentLigne, intervenants: newIntervenants });
-  };
-
-  const addIntervenant = () => {
-    setCurrentLigne({
-      ...currentLigne,
-      intervenants: [
-        ...currentLigne.intervenants,
-        { profile_intervenant_id: '', temps_intervenant: '', taux_horaire: '', intitule: '' }
-      ]
-    });
-  };
-
-  const removeIntervenant = (index: number) => {
-    const newIntervenants = currentLigne.intervenants.filter((_, i) => i !== index);
-    setCurrentLigne({ ...currentLigne, intervenants: newIntervenants });
-  };
-
-
-
-  const calculateIntervenantMontant = (intervenant: IntervenantForm) => {
-    const temps = parseFloat(intervenant.temps_intervenant) || 0;
-    const taux = parseFloat(intervenant.taux_horaire) || 0;
-    return formatMontant(temps * taux);
-  };
-
   const handleAddLigne = async () => {
     if (currentLigne.type_ligne === 'prestation') {
       if (!currentLigne.service_id || !currentLigne.activity_id || !currentLigne.unite_id) {
         toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
-      if (currentLigne.intervenants.length === 0) {
-        toast.error('Veuillez ajouter au moins un intervenant');
+      if (!currentLigne.prix_unitaire) {
+        toast.error('Veuillez renseigner le prix unitaire pour la prestation');
         return;
       }
     } else if (currentLigne.type_ligne === 'frais') {
@@ -319,7 +249,7 @@ export function DevisDetailPage() {
     try {
       // Créer la ligne selon le type
       if (currentLigne.type_ligne === 'prestation') {
-        await createLigneMutation.mutateAsync({
+        const createdLigne: any = (await lignesDevisAPI.createLigne({
           devis_id: devis.id,
           type_ligne: 'prestation',
           service_id: parseInt(currentLigne.service_id!),
@@ -327,15 +257,18 @@ export function DevisDetailPage() {
           description: currentLigne.description,
           quantite: parseFloat(currentLigne.quantite),
           unite_id: parseInt(currentLigne.unite_id),
-          intervenants: currentLigne.intervenants.map(intervenant => ({
-            profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
-            temps_intervenant: parseFloat(intervenant.temps_intervenant),
-            taux_horaire: parseFloat(intervenant.taux_horaire),
-          }))
-        });
+          prix_unitaire_ht: parseFloat(currentLigne.prix_unitaire || '0'),
+        })).data;
+
+        // Si des intervenants ont été ajoutés, les créer explicitement liés à la ligne créée
+        // (intervenants retirés du formulaire; pas d'actions supplémentaires)
+
       } else if (currentLigne.type_ligne === 'frais') {
-        // Pour les frais, utiliser l'API directe car useCreateLigneDevis ne supporte que les prestations
-        await lignesDevisAPI.createLigne({
+        // Pour les frais, utiliser l'API directe
+        // Si le type de frais est 'offert', forcer le prix unitaire à 0
+        const prixUnitaireNumeric = currentLigne.type_frais === 'offert' ? 0 : parseFloat(currentLigne.prix_unitaire || '0');
+
+        const createdFrais: any = await lignesDevisAPI.createLigne({
           devis_id: devis.id,
           type_ligne: 'frais',
           frais_category_id: parseInt(currentLigne.frais_category_id!),
@@ -343,14 +276,11 @@ export function DevisDetailPage() {
           description: currentLigne.description,
           quantite: parseFloat(currentLigne.quantite),
           unite_id: parseInt(currentLigne.unite_id),
-          prix_unitaire_ht: parseFloat(currentLigne.prix_unitaire || '0'),
+          prix_unitaire_ht: prixUnitaireNumeric,
           type_frais: currentLigne.type_frais || 'standard',
-          intervenants: currentLigne.intervenants.map(intervenant => ({
-            profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
-            temps_intervenant: parseFloat(intervenant.temps_intervenant),
-            taux_horaire: parseFloat(intervenant.taux_horaire),
-          }))
         });
+
+        // (intervenants retirés du formulaire; pas d'actions supplémentaires)
       }
 
       // Réinitialiser le formulaire
@@ -365,7 +295,7 @@ export function DevisDetailPage() {
         quantite: '1',
         unite_id: '',
         prix_unitaire: '',
-        intervenants: []
+        
       });
 
       setAddLigneDialogOpen(false);
@@ -374,8 +304,9 @@ export function DevisDetailPage() {
       // Actualiser les données du devis
       queryClient.invalidateQueries({ queryKey: ['devis', devisId] });
     } catch (error) {
-      console.error('Erreur lors de l\'ajout de la ligne:', error);
-      toast.error('Erreur lors de l\'ajout de la ligne');
+      console.error("Erreur lors de l'ajout de la ligne:", error);
+      // Si une erreur provient d'une mutation en particulier, la gestion d'erreur du hook peut afficher les détails.
+      toast.error("Erreur lors de l'ajout de la ligne");
     }
   };
 
@@ -783,7 +714,7 @@ export function DevisDetailPage() {
               </div>
               {currentLigne.type_ligne === 'prestation' && (
                 <>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Service *</Label>
                     <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
                       <SelectTrigger>
@@ -798,7 +729,7 @@ export function DevisDetailPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Activité *</Label>
                     <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
                       <SelectTrigger>
@@ -856,6 +787,24 @@ export function DevisDetailPage() {
                       value={currentLigne.quantite} 
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Prix unitaire HT</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={currentLigne.prix_unitaire}
+                      onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Montant HT</Label>
+                    <Input
+                      readOnly
+                      value={formatMontant((parseFloat(currentLigne.quantite || '0') || 0) * (parseFloat(currentLigne.prix_unitaire || '0') || 0))}
+                      className="bg-gray-50 text-gray-700"
                     />
                   </div>
                 </>
@@ -944,106 +893,14 @@ export function DevisDetailPage() {
               )}
             </div>
 
-            {/* Intervenants - seulement pour les prestations */}
-            {currentLigne.type_ligne === 'prestation' && (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">Intervenants</Label>
-                  <Button size="sm" onClick={addIntervenant}>
-                    <Plus size={16} className="mr-2" />
-                    Ajouter intervenant
-                  </Button>
-                </div>
-                {currentLigne.intervenants.map((intervenant, index) => (
-                  <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                    <div>
-                      <Label className="text-sm font-medium">Profil *</Label>
-                      <Select 
-                        value={intervenant.profile_intervenant_id} 
-                        onValueChange={(value) => handleIntervenantChange(index, 'profile_intervenant_id', value)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder={
-                            !currentLigne.activity_id 
-                              ? "Sélectionnez d'abord une activité" 
-                              : isLoadingIntervenants 
-                                ? "Chargement des intervenants..." 
-                                : "Sélectionner un profil"
-                          } />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {!currentLigne.activity_id ? (
-                            <SelectItem value="no-activity" disabled>
-                              Sélectionnez d'abord une activité
-                            </SelectItem>
-                          ) : isLoadingIntervenants ? (
-                            <SelectItem value="loading-intervenants" disabled>
-                              Chargement...
-                            </SelectItem>
-                          ) : intervenants.length === 0 ? (
-                            <SelectItem value="no-intervenants" disabled>
-                              Aucun intervenant trouvé pour cette activité
-                            </SelectItem>
-                          ) : (
-                            intervenants.map(interv => (
-                              <SelectItem key={interv.id} value={interv.id.toString()}>
-                                {interv.intitule}
-                                {/* {interv.intitule} ({interv.temps_intervenant}h - {interv.taux_horaire} GNF/h) */}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Temps (h) *</Label>
-                      <Input 
-                        type="number"
-                        step="0.01"
-                        value={intervenant.temps_intervenant} 
-                        onChange={(e) => handleIntervenantChange(index, 'temps_intervenant', e.target.value)}
-                        placeholder="0"
-                        className={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "border-green-200 bg-green-50" : ""}
-                        title={intervenant.profile_intervenant_id && intervenant.temps_intervenant ? "Valeur pré-remplie automatiquement" : ""}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Taux horaire (GNF) *</Label>
-                      <Input 
-                        type="number"
-                        step="0.01"
-                        value={intervenant.taux_horaire} 
-                        onChange={(e) => handleIntervenantChange(index, 'taux_horaire', e.target.value)}
-                        placeholder="0"
-                        className={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "border-green-200 bg-green-50" : ""}
-                        title={intervenant.profile_intervenant_id && intervenant.taux_horaire ? "Valeur pré-remplie automatiquement" : ""}
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Montant</Label>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          value={calculateIntervenantMontant(intervenant)}
-                          readOnly
-                          className="bg-gray-50 text-gray-700"
-                          placeholder="0,00 €"
-                        />
-                        <Button size="icon" variant="ghost" onClick={() => removeIntervenant(index)}>
-                          <Trash2 size={16}/>
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* Intervenants retirés du formulaire — gestion centralisée côté devis */}
           </div>
           <DialogFooter>
             <Button 
               onClick={handleAddLigne} 
-              disabled={createLigneMutation.isPending || createIntervenantMutation.isPending}
+              disabled={createLigneMutation.isPending}
             >
-              {(createLigneMutation.isPending || createIntervenantMutation.isPending) ? 
+              {createLigneMutation.isPending ? 
                 <Loader2 className="animate-spin" size={16}/> : 'Ajouter la ligne'
               }
             </Button>

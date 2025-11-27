@@ -37,7 +37,7 @@ class LigneDevisSerializer(serializers.ModelSerializer):
     ligne_frais = LigneFraisSerializer(read_only=True)
     ligne_frais_id = serializers.PrimaryKeyRelatedField(queryset=LigneFrais.objects.all(), source='ligne_frais', write_only=True, required=False, allow_null=True)
     unite = UniteStandardSerializer(read_only=True)
-    unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite', write_only=True)
+    unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite', write_only=True, required=False, allow_null=True)
     intitule = serializers.CharField(read_only=True)
     profile_intervenant = LigneDevisIntervenantSerializer(many=True, read_only=True)
     class Meta:
@@ -119,7 +119,7 @@ class LigneDevisCreateSerializer(serializers.ModelSerializer):
     activity_id = serializers.PrimaryKeyRelatedField(queryset=Activity.objects.all(), source='activity', required=False, allow_null=True)
     frais_category_id = serializers.PrimaryKeyRelatedField(queryset=FraisCategory.objects.all(), source='frais_category', required=False, allow_null=True)
     ligne_frais_id = serializers.PrimaryKeyRelatedField(queryset=LigneFrais.objects.all(), source='ligne_frais', required=False, allow_null=True)
-    unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite')
+    unite_id = serializers.PrimaryKeyRelatedField(queryset=UniteStandard.objects.all(), source='unite', required=False, allow_null=True)
     
     # Champ pour les intervenants
     intervenants = serializers.ListField(
