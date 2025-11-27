@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Upload, FileSpreadsheet, Check, X, Tag, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { api } from '@/lib/api';
+
+import {activitiesAPI} from '@/lib/api';
 
 interface Service {
   id: number;
@@ -71,8 +74,6 @@ export function ImportActivitiesModal({
           }
           // const jsonData = XLSX.utils.sheet_to_json(worksheet) as ImportActivityRawData[];
           const rawData = XLSX.utils.sheet_to_json(worksheet) as ImportActivityRawData[];
-
-          console.log(rawData)
 
           if (rawData.length === 0) {
             throw new Error('Le fichier Excel est vide');
@@ -160,15 +161,56 @@ export function ImportActivitiesModal({
       return;
     }
 
+    if (unassignedCount > 0) {
+      toast.error('Toutes les activités doivent avoir un service assigné');
+      return;
+    }
+
     setImportStep('importing');
     setImportingStatus('importing');
 
     try {
+      // Construire les données pour le backend
+      const activitiesData = importData.map((activity) => ({
+        name: activity.name,
+        duree_standard: activity.duree_standard,
+        service_id: activity.service_id,
+        is_active: activity.is_active,
+      }));
+
+      // Envoyer au backend
+      const response = await activitiesAPI.bulkimportActivities(activitiesData);
+  
+      const { success_count, error_count, imported_activities, errors } = response.data;
+
+      // Afficher les résultats
+      if (success_count > 0) {
+        toast.success(`${success_count} activité(s) importée(s) avec succès`);
+      }
+
+      if (error_count > 0) {
+        const errorMessages = errors.map((err: any) => 
+          `Ligne ${err.index + 1} (${err.name || 'Activité'}): ${err.error}`
+        ).join('\n');
+        
+        toast.error(`${error_count} activité(s) n'ont pas pu être importées`, {
+          description: errorMessages.substring(0, 200) + (errorMessages.length > 200 ? '...' : '')
+        });
+      }
+
+      // Appeler le callback de succès
       await onImportSuccess(importData);
       handleCloseImportDialog();
     } catch (err: any) {
       setImportingStatus('idle');
-      toast.error('Erreur lors de l\'import');
+      setImportStep('preview');
+      
+      const errorMessage = err.response?.data?.error || 
+                          err.response?.data?.message || 
+                          'Erreur lors de l\'import des activités';
+      
+      toast.error(errorMessage);
+      console.error('Erreur import:', err);
     }
   };
 

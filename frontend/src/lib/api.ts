@@ -699,6 +699,44 @@ export const dashboardAPI = {
     
 };
 
+//Activites
+export const activitiesAPI = {
+    getActivities: (params?: {
+        search?: string;
+        type?: string;
+        is_active?: boolean;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/activities/', { params }),
+    
+    getActivity: (id: number) => 
+        api.get(`/activities/${id}/`),
+    
+    createActivity: (data: { 
+        name: string;
+        description?: string;
+        type: string;
+        is_active?: boolean;
+    }) => api.post('/activities/', data),
+    
+    updateActivity: (id: number, data: {
+        name?: string;
+        description?: string;
+        type?: string;
+        is_active?: boolean;
+    }) => api.patch(`/activities/${id}/`, data),
+    
+    deleteActivity: (id: number) => 
+        api.delete(`/activities/${id}/`),
+    //Implement
+    bulkimportActivities: (activities: Array<{
+        name: string;
+        duree_standard: number;
+        service_id: number | null;
+        is_active: boolean;
+    }>) => api.post('/catalog/activities/bulk-import/', { activities }),
+}
 // dashboard/src/lib/api.ts
 
 // PATCHs

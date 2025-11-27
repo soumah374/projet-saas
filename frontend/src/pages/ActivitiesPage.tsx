@@ -325,6 +325,11 @@ export function ActivitiesPage() {
     }
   };
 
+  const importedActivities = async (importedActivities: Activity[]) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    fetchActivities(currentPage);
+  }
+
   return (
     <div className="max-w-10xl mx-auto space-y-6">
       {/* Header avec bouton retour */}
@@ -503,6 +508,7 @@ export function ActivitiesPage() {
               onImportSuccess={async (importedActivities) => {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 fetchActivities(currentPage);
+                console.log(importedActivities)
               }}
             />
           </div>
