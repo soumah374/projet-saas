@@ -123,7 +123,7 @@ class ActivityViewSet(viewsets.ModelViewSet):
                 # Créer l'activité
                 activity = Activity.objects.create(
                     name=activity_data['name'],
-                    duree_standard = activities_data.get('duree_standard', 1),
+                    duree_standard=activity_data.get('duree_standard', 1),
                     service=service,
                     is_active=activity_data.get('is_active', True)
                 )

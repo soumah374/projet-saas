@@ -10,12 +10,14 @@ import { Badge } from '@/components/ui/badge';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package, UserPlus, Loader2 } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package, UserPlus, Loader2, LayoutGrid, List } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
 import { useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
 import { useProject } from '@/hooks/use-projects';
 import { toast } from 'sonner';
+import { ProjectKanbanView } from './ProjectKanbanView';
+import { QuickTaskCreate } from './QuickTaskCreate';
 
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
@@ -52,6 +54,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
   
   // États pour l'assignation des tâches
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
@@ -185,6 +188,10 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
               <div className="text-sm text-muted-foreground mb-4">
                 <span className="font-medium">ℹ️</span> Toutes les activités sont créées à partir des services du catalogue dans l'onglet "Activités standards"
               </div>
+
+              {/* Création rapide de tâche */}
+              <QuickTaskCreate projectId={projectId} />
+
               <div className="flex justify-between items-center mb-4">
                 <div className="flex-1 flex gap-4">
                   <div className="relative flex-1">
@@ -209,12 +216,39 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
+                {/* Toggle vue Liste/Kanban */}
+                <div className="flex gap-2 ml-4">
+                  <Button
+                    variant={taskViewMode === 'list' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setTaskViewMode('list')}
+                    title="Vue liste"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={taskViewMode === 'kanban' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setTaskViewMode('kanban')}
+                    title="Vue Kanban"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
 
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-4">
-                  {filteredTasks?.map((task) => {
+              {/* Vue Kanban ou Liste */}
+              {taskViewMode === 'kanban' ? (
+                <ProjectKanbanView
+                  tasks={filteredTasks || []}
+                  projectId={projectId}
+                  onOpenAssignmentDialog={handleOpenAssignmentDialog}
+                />
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-4">
+                    {filteredTasks?.map((task) => {
                     const extendedTask = {
                       ...task,
                       assigned_to: task.assigned_to_name ? {
@@ -316,6 +350,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                   })}
                 </div>
               </ScrollArea>
+              )}
             </TabsContent>
             
             <TabsContent value="team" className="space-y-4">

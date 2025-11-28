@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProjectListSkeleton, ProjectGridSkeleton, ProjectStatsSkeleton } from "@/components/projects/ProjectSkeleton";
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from "@/hooks/use-projects";
 import { useBackendStatus } from "@/hooks/use-backend-status";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -112,6 +113,19 @@ export function ProjectManagement() {
   // Mettre à jour itemsPerPage quand viewMode change
   useEffect(() => {
     setItemsPerPage(viewMode === 'list' ? 9 : 10);
+  }, [viewMode]);
+
+  // Adapter le mode d'affichage sur mobile
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768 && viewMode === 'list') {
+        setViewMode('grid'); // Forcer la vue grille sur mobile
+      }
+    };
+
+    handleResize(); // Vérifier au montage
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [viewMode]);
 
   // React Query hook
@@ -384,10 +398,10 @@ export function ProjectManagement() {
       </Dialog>
 
       {/* Statistics Cards */}
-      {!projectsLoading && summary && (
-        <>
-          {hasPermission('projects.can_sommary_project') && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {projectsLoading ? (
+        <ProjectStatsSkeleton />
+      ) : summary && hasPermission('projects.can_sommary_project') && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Total Projets</CardTitle>
@@ -438,13 +452,12 @@ export function ProjectManagement() {
                 </CardContent>
               </Card>
             </div>
-          )}
-        </>
       )}
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-4">
+        {/* Search bar */}
+        <div className="relative w-full">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
           <Input
             placeholder="Rechercher un projet..."
@@ -453,64 +466,76 @@ export function ProjectManagement() {
             className="pl-10"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les statuts</SelectItem>
-            <SelectItem value="Prospection">Prospection</SelectItem>
-            <SelectItem value="Devis">Devis</SelectItem>
-            <SelectItem value="Production">Production</SelectItem>
-            <SelectItem value="Livraison">Livraison</SelectItem>
-            <SelectItem value="Terminé">Terminé</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les types</SelectItem>
-            <SelectItem value="Externe">Externe</SelectItem>
-            <SelectItem value="Interne">Interne</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Priorité" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les priorités</SelectItem>
-            <SelectItem value="Urgente">Urgente</SelectItem>
-            <SelectItem value="Haute">Haute</SelectItem>
-            <SelectItem value="Normale">Normale</SelectItem>
-            <SelectItem value="Basse">Basse</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="flex gap-2">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('grid')}
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setViewMode('list')}
-          >
-            <List className="h-4 w-4" />
-          </Button>
+
+        {/* Filters row */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+          <div className="flex gap-2 flex-1">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="flex-1 sm:w-[180px]">
+                <SelectValue placeholder="Statut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les statuts</SelectItem>
+                <SelectItem value="Prospection">Prospection</SelectItem>
+                <SelectItem value="Devis">Devis</SelectItem>
+                <SelectItem value="Production">Production</SelectItem>
+                <SelectItem value="Livraison">Livraison</SelectItem>
+                <SelectItem value="Terminé">Terminé</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="flex-1 sm:w-[180px]">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les types</SelectItem>
+                <SelectItem value="Externe">Externe</SelectItem>
+                <SelectItem value="Interne">Interne</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-2">
+            <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+              <SelectTrigger className="flex-1 sm:w-[180px]">
+                <SelectValue placeholder="Priorité" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Toutes les priorités</SelectItem>
+                <SelectItem value="Urgente">Urgente</SelectItem>
+                <SelectItem value="Haute">Haute</SelectItem>
+                <SelectItem value="Normale">Normale</SelectItem>
+                <SelectItem value="Basse">Basse</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* View mode buttons - hidden on mobile */}
+            <div className="hidden sm:flex gap-2">
+              <Button
+                variant={viewMode === 'grid' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('grid')}
+                title="Vue grille"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="icon"
+                onClick={() => setViewMode('list')}
+                title="Vue liste"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
       
       {/* Projects List/Grid */}
       {projectsLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-        </div>
+        viewMode === 'list' ? <ProjectListSkeleton /> : <ProjectGridSkeleton />
       ) : projectsError ? (
         <div className="text-center py-12">
           <p className="text-red-600">Erreur lors du chargement des projets</p>

@@ -19,6 +19,7 @@ import { EditProjectModal } from '@/components/EditProjectModal';
 import type { CreateProjectForm } from '@/lib/types';
 import { ProjectActionModals } from '@/components/projects/ProjectActionModals';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ProjectDetailsSkeleton } from '@/components/projects/ProjectSkeleton';
 
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
@@ -91,8 +92,8 @@ export function ProjectDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="container mx-auto py-6">
+        <ProjectDetailsSkeleton />
       </div>
     );
   }
