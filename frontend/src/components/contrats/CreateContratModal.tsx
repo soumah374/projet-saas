@@ -88,8 +88,8 @@ export function CreateContratModal({
 
   // Hooks pour récupérer les données
   const { data: clientsData } = useClients({ page_size: 100 });
-  const { data: devisDisponiblesData } = useDevisDisponibles();
-  
+  const { data: devisDisponiblesData, isLoading: isLoadingDevisClient } = useDevisDisponibles(selectedClientId || undefined);
+
   const clients = clientsData?.results || [];
   const allDevisDisponibles = devisDisponiblesData || [];
 
@@ -99,6 +99,17 @@ export function CreateContratModal({
       resetForm();
     }
   }, [open]);
+
+  // Réinitialiser les devis sélectionnés quand le client change
+  useEffect(() => {
+    if (selectedClientId) {
+      setCreateForm(prev => ({
+        ...prev,
+        devis_ids: [],
+        devis_principal_id: null
+      }));
+    }
+  }, [selectedClientId]);
 
   const resetForm = () => {
     setCreateForm({
@@ -330,10 +341,13 @@ export function CreateContratModal({
                         role="combobox"
                         aria-expanded={devisSearchOpen}
                         className="w-full justify-between"
+                        disabled={isLoadingDevisClient}
                       >
-                        {createForm.devis_ids.length > 0 
-                          ? `${createForm.devis_ids.length} devis sélectionné(s)`
-                          : "Sélectionner les devis..."
+                        {isLoadingDevisClient
+                          ? "Chargement des devis..."
+                          : createForm.devis_ids.length > 0
+                            ? `${createForm.devis_ids.length} devis sélectionné(s)`
+                            : "Sélectionner les devis..."
                         }
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -342,11 +356,15 @@ export function CreateContratModal({
                       <Command>
                         <CommandInput placeholder="Rechercher des devis..." />
                         <CommandList>
-                          <CommandEmpty>Aucun devis trouvé.</CommandEmpty>
+                          {isLoadingDevisClient ? (
+                            <CommandEmpty>Chargement des devis...</CommandEmpty>
+                          ) : allDevisDisponibles.length === 0 ? (
+                            <CommandEmpty>Aucun devis disponible pour ce client.</CommandEmpty>
+                          ) : (
+                            <CommandEmpty>Aucun devis trouvé.</CommandEmpty>
+                          )}
                           <CommandGroup>
-                            {allDevisDisponibles
-                              .filter(devis => devis.client.id === selectedClientId)
-                              .map((devis) => (
+                            {allDevisDisponibles.map((devis) => (
                                 <CommandItem
                                   key={devis.id}
                                   value={`${devis.numero} ${devis.client.nom_complet}`}

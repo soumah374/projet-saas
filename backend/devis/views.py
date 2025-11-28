@@ -168,11 +168,42 @@ class DevisViewSet(viewsets.ModelViewSet):
 
             # Retourner le devis complet
             return Response(DevisSerializer(devis).data, status=201)
-            
+
         except Exception as e:
             logger.error(f"Erreur générale lors de la création du devis: {str(e)}")
             return Response({'error': 'Erreur lors de la création du devis', 'details': str(e)}, status=400)
-    
+
+    @action(detail=False, methods=['get'])
+    def par_client(self, request):
+        """Récupérer les devis d'un client spécifique"""
+        client_id = request.query_params.get('client_id')
+
+        if not client_id:
+            return Response(
+                {'error': 'Le paramètre client_id est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Récupérer les devis du client
+            devis = self.queryset.filter(client_id=client_id).order_by('-date_creation')
+
+            # Optionnel : filtrer par statut si spécifié
+            statut = request.query_params.get('statut')
+            if statut:
+                devis = devis.filter(statut=statut)
+
+            # Sérialiser et retourner
+            serializer = self.get_serializer(devis, many=True)
+            return Response(serializer.data)
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des devis du client {client_id}: {str(e)}")
+            return Response(
+                {'error': f'Erreur lors de la récupération des devis: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['post'])
     def envoyer(self, request, pk=None):
         """Envoyer un devis (changer le statut en 'envoye')"""

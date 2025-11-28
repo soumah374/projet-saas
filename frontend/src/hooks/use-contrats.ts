@@ -364,11 +364,14 @@ export const useDevisDisponibles = (clientId?: number) => {
   return useQuery({
     queryKey: ['devis-disponibles', clientId],
     queryFn: async () => {
-      const response = await contratsAPI.getDevisDisponibles();
-      // Si un clientId est spécifié, filtrer les devis par client
+      // Si un clientId est spécifié, utiliser l'endpoint optimisé
       if (clientId) {
-        return response.data.filter((devis: any) => devis.client.id === clientId);
+        const { devisAPI } = await import('@/lib/api');
+        const response = await devisAPI.getDevisByClient(clientId, 'accepte');
+        return response.data;
       }
+      // Sinon, récupérer tous les devis disponibles
+      const response = await contratsAPI.getDevisDisponibles();
       return response.data;
     },
     enabled: true, // Toujours activé, même si clientId n'est pas défini

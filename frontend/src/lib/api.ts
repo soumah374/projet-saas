@@ -501,7 +501,15 @@ export const devisAPI = {
     }) => api.get('/devis/devis/', { params }),
     
     getDevisById: (id: number) => api.get(`/devis/devis/${id}/`),
-    
+
+    getDevisByClient: (clientId: number, statut?: string) =>
+        api.get('/devis/devis/par_client/', {
+            params: {
+                client_id: clientId,
+                ...(statut && { statut })
+            }
+        }),
+
     createDevis: (data: {
         client_id: number;
         date_validite: string;
