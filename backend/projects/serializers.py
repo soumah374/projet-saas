@@ -144,7 +144,7 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
             'actual_hours', 'is_template', 'template_category',
             'completion_percentage', 'assigned_to_name', 'ligne_devis', 'created_at'
         ]
-        read_only_fields = ['id', 'actual_hours']
+        read_only_fields = ['id', 'actual_hours', 'project']
     
     @extend_schema_field(int)
     def get_completion_percentage(self, obj):

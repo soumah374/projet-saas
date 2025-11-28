@@ -12,7 +12,7 @@ import { DocumentManager } from '@/components/projects/DocumentManager';
 import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
 import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
 import { useProject, useStartProject, useUpdateProject } from '@/hooks/use-projects';
-import { ArrowLeft, Loader2, Edit, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Edit, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { EditProjectModal } from '@/components/EditProjectModal';
