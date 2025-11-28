@@ -4,7 +4,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Loader2, Plus, Edit, Trash2, Download, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Loader2, Plus, Edit, Trash2, Download, Eye, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { 
   useClients, 
   useCreateClient, 
@@ -34,14 +34,30 @@ export function ClientsPage() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [clientToDelete, setClientToDelete] = useState<ClientProfile | null>(null);
+  const [sortField, setSortField] = useState<string>('nom');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Hooks pour les opérations CRUD
   const createClientMutation = useCreateClient();
   const updateClientMutation = useUpdateClient();
   const deleteClientMutation = useDeleteClient();
-  const { 
+  const {
     hasPermission
   } = usePermissions();
+
+  // Fonction pour gérer le tri
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  // Calculer la valeur de ordering pour l'API
+  const orderingValue = sortOrder === 'desc' ? `-${sortField}` : sortField;
+
   // Paramètres pour la requête des clients
   const queryParams = {
     page: Math.max(1, currentPage), // Ensure page is never less than 1
@@ -52,6 +68,7 @@ export function ClientsPage() {
     statut_commercial: statutCommercialFilter || undefined,
     ville: villeFilter || undefined,
     pays: paysFilter || undefined,
+    ordering: orderingValue,
   };
 
   // Hook pour récupérer les clients
@@ -208,6 +225,31 @@ export function ClientsPage() {
   const villes = Array.from(new Set(clients.map(c => c.ville).filter(Boolean))) as string[];
   const paysList = Array.from(new Set(clients.map(c => c.pays).filter(Boolean))) as string[];
 
+  // Compter le nombre de filtres actifs
+  const activeFiltersCount = [search, statusFilter, typeFilter, statutCommercialFilter, villeFilter, paysFilter]
+    .filter(Boolean).length;
+
+  // Composant pour les en-têtes de colonnes triables
+  const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        {sortField === field ? (
+          sortOrder === 'desc' ? (
+            <ArrowDown className="h-4 w-4" />
+          ) : (
+            <ArrowUp className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  );
+
   return (
     <div className="max-w-8xl mx-auto space-y-8">
       <Card>
@@ -231,50 +273,72 @@ export function ClientsPage() {
             <div className="flex justify-center py-10"><Loader2 className="animate-spin" size={32}/></div>
           ) : (
             <>
-              <div className="flex flex-wrap gap-2 mb-4 items-center">
-                <Input
-                  placeholder="Recherche (nom, prénom, email, téléphone, raison sociale, RCCM/NIF)"
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); resetToFirstPage(); }}
-                  className="w-64"
-                />
-                <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
-                  <option value="">Tous statuts</option>
-                  <option value="actif">Actifs</option>
-                  <option value="inactif">Inactifs</option>
-                </select>
-                <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
-                  <option value="">Tous types</option>
-                  <option value="personne_physique">Personne physique</option>
-                  <option value="personne_morale">Personne morale</option>
-                </select>
-                <select value={statutCommercialFilter} onChange={e => { setStatutCommercialFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
-                  <option value="">Tous statuts commerciaux</option>
-                  <option value="prospect">Prospect</option>
-                  <option value="actif">Actif</option>
-                  <option value="inactif">Inactif</option>
-                  <option value="bloque">Bloqué</option>
-                </select>
-                <select value={villeFilter} onChange={e => { setVilleFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
-                  <option value="">Toutes villes</option>
-                  {villes.map(v => <option key={v} value={v}>{v}</option>)}
-                </select>
-                <select value={paysFilter} onChange={e => { setPaysFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-2 py-1">
-                  <option value="">Tous pays</option>
-                  {paysList.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+              <div className="space-y-3 mb-4">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Input
+                    placeholder="Recherche (nom, prénom, email, téléphone, raison sociale, RCCM/NIF)"
+                    value={search}
+                    onChange={e => { setSearch(e.target.value); resetToFirstPage(); }}
+                    className="flex-1 min-w-[300px]"
+                  />
+                  {activeFiltersCount > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSearch('');
+                        setStatusFilter('');
+                        setTypeFilter('');
+                        setStatutCommercialFilter('');
+                        setVilleFilter('');
+                        setPaysFilter('');
+                        resetToFirstPage();
+                      }}
+                      className="whitespace-nowrap"
+                    >
+                      Réinitialiser ({activeFiltersCount})
+                    </Button>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-3 py-2 text-sm">
+                    <option value="">Tous statuts</option>
+                    <option value="actif">Actifs</option>
+                    <option value="inactif">Inactifs</option>
+                  </select>
+                  <select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-3 py-2 text-sm">
+                    <option value="">Tous types</option>
+                    <option value="personne_physique">Personne physique</option>
+                    <option value="personne_morale">Personne morale</option>
+                  </select>
+                  <select value={statutCommercialFilter} onChange={e => { setStatutCommercialFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-3 py-2 text-sm">
+                    <option value="">Tous statuts commerciaux</option>
+                    <option value="prospect">Prospect</option>
+                    <option value="actif">Actif</option>
+                    <option value="inactif">Inactif</option>
+                    <option value="bloque">Bloqué</option>
+                  </select>
+                  <select value={villeFilter} onChange={e => { setVilleFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-3 py-2 text-sm">
+                    <option value="">Toutes villes</option>
+                    {villes.map(v => <option key={v} value={v}>{v}</option>)}
+                  </select>
+                  <select value={paysFilter} onChange={e => { setPaysFilter(e.target.value); resetToFirstPage(); }} className="border rounded px-3 py-2 text-sm">
+                    <option value="">Tous pays</option>
+                    {paysList.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
               </div>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nom complet</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Téléphone</TableHead>
-                    <TableHead>Type</TableHead>
+                    <SortableHeader field="nom">Nom complet</SortableHeader>
+                    <SortableHeader field="email">Email</SortableHeader>
+                    <SortableHeader field="telephone">Téléphone</SortableHeader>
+                    <SortableHeader field="type_client">Type</SortableHeader>
                     <TableHead>Catégorie</TableHead>
-                    <TableHead>Statut commercial</TableHead>
-                    <TableHead>Ville</TableHead>
-                    <TableHead>Pays</TableHead>
+                    <SortableHeader field="statut_commercial">Statut commercial</SortableHeader>
+                    <SortableHeader field="ville">Ville</SortableHeader>
+                    <SortableHeader field="pays">Pays</SortableHeader>
                     <TableHead>Statut</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>

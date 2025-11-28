@@ -169,7 +169,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
             return ServiceDetailSerializer
         return ServiceSerializer
     
-    @action(detail=False, methods=['get'],url_path='category/(?P<category_id>\d+)/services')
+    @action(detail=False, methods=['get'],url_path=r'category/(?P<category_id>\d+)/services')
     def get_services_by_category(self, request, category_id=None):
         services = Service.objects.filter(category=category_id)
         serializer = ServiceSerializer(services, many=True)

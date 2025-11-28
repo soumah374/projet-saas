@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { notificationsAPI } from '../lib/api';
+import { notificationsAPI, api } from '../lib/api';
 import type { Notification, PaginatedResponse } from '../lib/types';
 
 // Query keys
@@ -65,4 +65,33 @@ export const useNotifications = (params?: {
     markAllAsRead: markAllAsReadMutation.mutate,
     refetch,
   };
-}; 
+};
+
+// Nouveaux hooks simplifiés pour le NotificationCenter
+export function useMarkAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (notificationId: number) => {
+      const response = await api.post(`/projects/notifications/${notificationId}/mark_as_read/`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+}
+
+export function useMarkAllAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.post('/projects/notifications/mark_all_as_read/');
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: notificationKeys.all });
+    },
+  });
+} 

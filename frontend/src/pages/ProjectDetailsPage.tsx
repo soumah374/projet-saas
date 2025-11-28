@@ -11,6 +11,7 @@ import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { DocumentManager } from '@/components/projects/DocumentManager';
 import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
 import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
+import { TimesheetTimer } from '@/components/projects/TimesheetTimer';
 import { useProject, useStartProject, useUpdateProject } from '@/hooks/use-projects';
 import { ArrowLeft, Edit, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -169,16 +170,16 @@ export function ProjectDetailsPage() {
         </div>
       </div>
       
-      <ProjectTrackingAlerts projectId={projectId} />
+      {/* <ProjectTrackingAlerts projectId={projectId} /> */}
       
 
       {/* Tableau de suivi du projet */}
-      {hasPermission('projects.sommary_project') && (
+      {/* {hasPermission('projects.sommary_project') && (
         <ProjectTrackingTable project={project} />
-      )}
+      )} */}
       
       {/* Informations client et contrat */}
-      {hasPermission('projects.manage_project_members') && (
+      {/* {hasPermission('projects.manage_project_members') && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {project.client_details && (
             <ClientDetailsCard client={project.client_details} />
@@ -191,7 +192,7 @@ export function ProjectDetailsPage() {
             />
           )}
         </div>
-      )}
+      )} */}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
@@ -215,7 +216,14 @@ export function ProjectDetailsPage() {
         
         <TabsContent value="timesheets">
           {hasPermission('projects.view_timesheet') && (
-            <ProjectTimesheets projectId={projectId} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <ProjectTimesheets projectId={projectId} />
+              </div>
+              <div>
+                <TimesheetTimer projectId={projectId} />
+              </div>
+            </div>
           )}
         </TabsContent>
         

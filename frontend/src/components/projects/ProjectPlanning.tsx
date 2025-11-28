@@ -18,6 +18,7 @@ import { useProject } from '@/hooks/use-projects';
 import { toast } from 'sonner';
 import { ProjectKanbanView } from './ProjectKanbanView';
 import { QuickTaskCreate } from './QuickTaskCreate';
+import { TaskDetailModal } from './TaskDetailModal';
 
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
@@ -60,6 +61,8 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [selectedTaskForAssignment, setSelectedTaskForAssignment] = useState<any>(null);
   const [selectedMemberForAssignment, setSelectedMemberForAssignment] = useState<string>('');
+  const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<any>(null);
+  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   
   const { 
     teamMembers,
@@ -336,11 +339,16 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                                 </TaskModal>
                               )}
                               
-                              <TaskModal projectId={projectId} task={extendedTask} mode="view">
-                                <Button variant="ghost" size="icon">
-                                  <View className="h-4 w-4" />
-                                </Button>
-                              </TaskModal>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSelectedTaskForDetails(extendedTask);
+                                  setIsTaskDetailOpen(true);
+                                }}
+                              >
+                                <View className="h-4 w-4" />
+                              </Button>
                             
                             </div>
                           </div>
@@ -586,6 +594,14 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Task Detail Modal with Comments - Phase 3 */}
+      <TaskDetailModal
+        task={selectedTaskForDetails}
+        projectId={projectId}
+        open={isTaskDetailOpen}
+        onOpenChange={setIsTaskDetailOpen}
+      />
     </>
   );
 } 

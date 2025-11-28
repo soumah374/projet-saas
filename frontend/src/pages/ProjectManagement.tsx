@@ -21,10 +21,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
+import {
+  Plus,
+  Search,
+  Filter,
   Calendar,
   Users,
   DollarSign,
@@ -42,7 +42,10 @@ import {
   LayoutGrid,
   List,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { CreateProjectModal } from "@/components/projects/CreateProjectModal";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -108,6 +111,8 @@ export function ProjectManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<ProjectList | null>(null);
+  const [sortField, setSortField] = useState<string>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const navigate = useNavigate();
 
   // Mettre à jour itemsPerPage quand viewMode change
@@ -128,6 +133,21 @@ export function ProjectManagement() {
     return () => window.removeEventListener('resize', handleResize);
   }, [viewMode]);
 
+  // Fonction pour gérer le tri
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      // Si on clique sur la même colonne, inverser l'ordre
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nouvelle colonne, tri descendant par défaut
+      setSortField(field);
+      setSortOrder('desc');
+    }
+  };
+
+  // Calculer la valeur de ordering pour l'API
+  const orderingValue = sortOrder === 'desc' ? `-${sortField}` : sortField;
+
   // React Query hook
   const { data: backendStatus } = useBackendStatus();
   const { data: projectsData, isLoading: projectsLoading, error: projectsError } = useProjects({
@@ -135,7 +155,7 @@ export function ProjectManagement() {
     status: statusFilter !== 'all' ? statusFilter as ProjectStatus : undefined,
     type: typeFilter !== 'all' ? typeFilter as ProjectType : undefined,
     priority: priorityFilter !== 'all' ? priorityFilter as ProjectPriority : undefined,
-    ordering: '-created_at',
+    ordering: orderingValue,
     page: currentPage,
     page_size: itemsPerPage
   } as ExtendedProjectFilters);
@@ -276,6 +296,27 @@ export function ProjectManagement() {
     }
   };
 
+
+  // Composant pour les en-têtes de colonnes triables
+  const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <TableHead
+      className="cursor-pointer hover:bg-gray-50 select-none"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-2">
+        {children}
+        {sortField === field ? (
+          sortOrder === 'desc' ? (
+            <ArrowDown className="h-4 w-4" />
+          ) : (
+            <ArrowUp className="h-4 w-4" />
+          )
+        ) : (
+          <ArrowUpDown className="h-4 w-4 opacity-30" />
+        )}
+      </div>
+    </TableHead>
+  );
 
   const renderActionButtons = (project: ProjectList) => (
     <div className="flex items-center gap-2">
@@ -468,7 +509,7 @@ export function ProjectManagement() {
         </div>
 
         {/* Filters row */}
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 items-start sm:items-center">
           <div className="flex gap-2 flex-1">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="flex-1 sm:w-[180px]">
@@ -530,6 +571,25 @@ export function ProjectManagement() {
               </Button>
             </div>
           </div>
+
+          {/* Reset filters button */}
+          {(searchTerm || statusFilter !== 'all' || typeFilter !== 'all' || priorityFilter !== 'all') && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setTypeFilter('all');
+                setPriorityFilter('all');
+                setCurrentPage(1);
+              }}
+              className="whitespace-nowrap"
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Réinitialiser les filtres
+            </Button>
+          )}
         </div>
       </div>
       
@@ -555,63 +615,67 @@ export function ProjectManagement() {
         <div className="space-y-6">
           {viewMode === 'list' ? (
             <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Projet</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Priorité</TableHead>
-                    <TableHead>Progression</TableHead>
-                    <TableHead>Échéance</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {projects.map((project) => (
-                    <TableRow key={project.id}>
-                      <TableCell className="font-medium">{project.title}</TableCell>
-                      <TableCell>{project.client_details.nom_complet}</TableCell>
-                      <TableCell>{project.type}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(project.status)}>
-                          {project.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={getPriorityColor(project.priority)}>
-                          {project.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className={`text-sm font-medium ${getProgressColor(project.progress)}`}>
-                            {project.progress}%
-                          </div>
-                          <div className="w-24 h-2 bg-gray-200 rounded-full mt-1">
-                            <div 
-                              className={`h-2 rounded-full ${getProgressBgColor(project.progress)}`}
-                              style={{ width: `${project.progress}%` }}
-                            />
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <span className={project.is_overdue ? 'text-red-600' : ''}>
-                            {formatDate(project.deadline)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {renderActionButtons(project)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Card>
+                <CardContent className="flex justify-between items-center">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <SortableHeader field="title">Projet</SortableHeader>
+                        <TableHead>Client</TableHead>
+                        <SortableHeader field="type">Type</SortableHeader>
+                        <SortableHeader field="status">Statut</SortableHeader>
+                        <SortableHeader field="priority">Priorité</SortableHeader>
+                        <SortableHeader field="progress">Progression</SortableHeader>
+                        <SortableHeader field="deadline">Échéance</SortableHeader>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {projects.map((project) => (
+                        <TableRow key={project.id}>
+                          <TableCell className="font-medium">{project.title}</TableCell>
+                          <TableCell>{project.client_details.nom_complet}</TableCell>
+                          <TableCell>{project.type}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(project.status)}>
+                              {project.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getPriorityColor(project.priority)}>
+                              {project.priority}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className={`text-sm font-medium ${getProgressColor(project.progress)}`}>
+                                {project.progress}%
+                              </div>
+                              <div className="w-24 h-2 bg-gray-200 rounded-full mt-1">
+                                <div 
+                                  className={`h-2 rounded-full ${getProgressBgColor(project.progress)}`}
+                                  style={{ width: `${project.progress}%` }}
+                                />
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4 text-gray-400" />
+                              <span className={project.is_overdue ? 'text-red-600' : ''}>
+                                {formatDate(project.deadline)}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {renderActionButtons(project)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

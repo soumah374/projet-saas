@@ -274,10 +274,8 @@ export function DevisCreatePage() {
     let quantiteCalculee = parseFloat(currentLigne.quantite) || 1;
 
     if (currentLigne.type_ligne === 'prestation') {
-      // Utiliser la fonction utilitaire pour calculer quantité et prix unitaire
-      const { quantite, prixUnitaire: prixCalc } = calculateQuantiteAndPrixUnitaire(currentLigne.intervenants, currentLigne.unite_id);
-      quantiteCalculee = quantite;
-      prixUnitaire = prixCalc;
+      // Utiliser le prix unitaire saisi manuellement
+      prixUnitaire = parseFloat(currentLigne.prix_unitaire || '0');
       montant = prixUnitaire * quantiteCalculee;
     } else if (currentLigne.type_ligne === 'frais') {
       prixUnitaire = parseFloat(currentLigne.prix_unitaire || '0');
@@ -351,9 +349,9 @@ export function DevisCreatePage() {
       if (!currentLigne.unite_id) {
         newLigneErrors.unite_id = "L'unité est obligatoire";
       }
-      if (currentLigne.intervenants.length === 0) {
-        newLigneErrors.intervenants = 'Au moins un intervenant est obligatoire';
-      }
+      // if (currentLigne.intervenants.length === 0) {
+      //   newLigneErrors.intervenants = 'Au moins un intervenant est obligatoire';
+      // }
     }
     
     if (currentLigne.type_ligne === 'frais') {
@@ -621,16 +619,6 @@ export function DevisCreatePage() {
                           ? ligne.activity_intitule || '—'
                           : ligne.ligne_frais_description || '—'
                         }
-                        {ligne.type_ligne==='prestation' && (
-                          <div className="text-sm text-muted-foreground">
-                            {ligne.intervenants
-                              .map(intervenant => {
-                                return `${intervenant.intitule} (${intervenant.temps_intervenant}h @ ${ formatMontant(parseFloat(intervenant.taux_horaire))})`
-                              })
-                              .join(', ')
-                            }
-                          </div>
-                        )}
                       </TableCell>
                       <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                       <TableCell>{ligne.quantite}</TableCell>
@@ -704,10 +692,10 @@ export function DevisCreatePage() {
                     <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
                       <SelectTrigger className={ligneErrors.activity_id ? 'border-red-500 focus:border-red-500' : currentLigne.activity_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder={
-                          !currentLigne.service_id 
-                            ? "Sélectionnez d'abord un service" 
-                            : isLoadingActivites 
-                              ? "Chargement des activités..." 
+                          !currentLigne.service_id
+                            ? "Sélectionnez d'abord un service"
+                            : isLoadingActivites
+                              ? "Chargement des activités..."
                               : "Sélectionner une activité"
                         } />
                       </SelectTrigger>
@@ -755,14 +743,40 @@ export function DevisCreatePage() {
                     )}
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Quantité</Label>
-                    <Input 
+                    <Label className="text-sm font-medium">Quantité *</Label>
+                    <Input
                       type="number"
                       step="0.01"
-                      value={currentLigne.quantite} 
+                      value={currentLigne.quantite}
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
                       className={currentLigne.quantite && parseFloat(currentLigne.quantite) > 0 ? 'border-green-500 bg-green-50' : ''}
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className={`text-sm font-medium ${ligneErrors.prix_unitaire ? 'text-red-600' : ''}`}>
+                      Prix unitaire HT (GNF) *
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={currentLigne.prix_unitaire || ''}
+                      onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
+                      placeholder="0"
+                      className={ligneErrors.prix_unitaire ? 'border-red-500 focus:border-red-500' : currentLigne.prix_unitaire ? 'border-green-500 bg-green-50' : ''}
+                    />
+                    {ligneErrors.prix_unitaire && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.prix_unitaire}</p>
+                    )}
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Montant HT (GNF)</Label>
+                    <Input
+                      type="text"
+                      value={formatMontant((parseFloat(currentLigne.quantite) || 0) * (parseFloat(currentLigne.prix_unitaire || '0')))}
+                      readOnly
+                      className="bg-gray-50 text-gray-700 font-medium"
+                      placeholder="0,00 GNF"
                     />
                   </div>
                 </>
@@ -849,13 +863,23 @@ export function DevisCreatePage() {
                   </div>
                   <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Quantité</Label>
-                    <Input 
+                    <Input
                       type="number"
                       step="0.01"
-                      value={currentLigne.quantite} 
+                      value={currentLigne.quantite}
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
                       className={currentLigne.quantite && parseFloat(currentLigne.quantite) > 0 ? 'border-green-500 bg-green-50' : ''}
+                    />
+                  </div>
+                  <div className="md:col-span-1">
+                    <Label className="text-sm font-medium">Montant HT (GNF)</Label>
+                    <Input
+                      type="text"
+                      value={formatMontant((parseFloat(currentLigne.quantite) || 0) * (parseFloat(currentLigne.prix_unitaire || '0')))}
+                      readOnly
+                      className="bg-gray-50 text-gray-700 font-medium"
+                      placeholder="0,00 GNF"
                     />
                   </div>
                   {/* <div className="md:col-span-1">
