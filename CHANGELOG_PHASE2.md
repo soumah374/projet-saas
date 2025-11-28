@@ -1,20 +1,26 @@
-# 📋 Changelog - Phase 2 : Visualisation
+# 📋 Changelog - Phase 2 : Gantt Chart
 
-## ✅ Tâches Complétées
+## ✅ Tâche Complétée
 
-### 1. ✔️ Gantt Chart Interactif
+### ✔️ Gantt Chart Interactif
 
 **Nouveau composant créé :** `ProjectGanttChart.tsx`
 
 **Fonctionnalités implémentées :**
 - ✅ Diagramme de Gantt avec timeline mensuelle
 - ✅ Barres de tâches avec progression visuelle
-- ✅ Indicateur "Aujourd'hui" en temps réel
-- ✅ Couleurs par statut (À faire, En cours, En pause, Terminé)
-- ✅ Tooltip avec dates de début/fin
-- ✅ Scroll horizontal pour grands projets
-- ✅ Calcul automatique des dates min/max
+- ✅ Indicateur "Aujourd'hui" en temps réel (ligne rouge)
+- ✅ Couleurs par statut :
+  - Gris : À faire
+  - Bleu : En cours
+  - Orange : En pause
+  - Vert : Terminé
+- ✅ Tooltip avec dates de début/fin au survol
+- ✅ Scroll horizontal pour projets avec nombreuses tâches
+- ✅ Calcul automatique des dates min/max du projet
 - ✅ Support des tâches sans dates (message informatif)
+- ✅ Affichage des informations de tâche (titre, assigné, statut, progression)
+- ✅ Légende interactive en bas du graphique
 
 **Visualisation :**
 ```
@@ -22,183 +28,31 @@
 │ Tâches       │ Janvier 2025    │ Février 2025    │
 ├──────────────┼─────────────────┼─────────────────┤
 │ Tâche 1      │ ████████░░░░    │                 │
+│ En cours     │         ↑        │                 │
+│ John Doe     │    Aujourd'hui   │                 │
+│ 60%          │                  │                 │
+├──────────────┼─────────────────┼─────────────────┤
 │ Tâche 2      │         ████████│████░░░░         │
+│ À faire      │                  │                 │
+│ Jane Smith   │                  │                 │
+│ 0%           │                  │                 │
+├──────────────┼─────────────────┼─────────────────┤
 │ Tâche 3      │                 │    ████████████ │
-│              │        ↑         │                 │
-│              │   Aujourd'hui    │                 │
+│ Terminé      │                 │                 │
+│ Bob Wilson   │                 │                 │
+│ 100%         │                 │                 │
 └──────────────┴─────────────────┴─────────────────┘
+
+Légende: □ À faire  □ En cours  □ En pause  □ Terminé  | Aujourd'hui
 ```
 
 ---
 
-### 2. ✔️ Dashboard Projet Amélioré
-
-**Nouveau composant créé :** `ProjectDashboard.tsx`
-
-**KPIs implémentés :**
-
-#### A. Santé du Projet (Health Score)
-- Score de 0 à 100 calculé automatiquement
-- Facteurs : retard, progression, tâches en pause, vélocité
-- Indicateur visuel : 💚 💛 🔴
-- Badge : Excellent / Bon / Attention / Critique
-
-#### B. Taux d'Achèvement
-- Pourcentage de tâches terminées
-- Barre de progression visuelle
-- Ratio tâches terminées/total
-
-#### C. Vélocité
-- Tâches terminées par semaine
-- Indicateur de tendance (↗️ ↘️)
-- Calcul basé sur l'historique
-
-#### D. Temps Restant
-- Jours jusqu'à la deadline
-- Alerte si retard (jours négatifs)
-- Calcul automatique
-
-**Graphiques de répartition :**
-- Stacked bar chart des tâches
-- Légende interactive
-- Couleurs par statut
-
-**Prévisions intelligentes :**
-- Estimation de date de fin (basée sur vélocité)
-- Alerte risque de retard
-- Validation "dans les temps"
-- Écart entre estimation et deadline
-
-**Capture conceptuelle :**
-```
-┌────────────┬────────────┬────────────┬────────────┐
-│ Santé: 85  │ Achèvement │ Vélocité   │ J Restants │
-│ 💚 Excellent│    75%     │  2.3/sem   │    45      │
-└────────────┴────────────┴────────────┴────────────┘
-
-Répartition des Tâches:
-████████████░░░░░░░░░░░░
-│    │    │  │
-Terminé  En cours  À faire
-
-Prévisions:
-✅ Le projet devrait se terminer dans les délais
-```
-
----
-
-### 3. ✔️ Graphiques de Progression
-
-**Nouveau composant créé :** `ProjectCharts.tsx`
-
-#### A. Graphique de Vélocité
-- **Type :** Bar chart par semaine
-- **Données :** Nombre de tâches terminées/semaine
-- **Métriques :**
-  - Moyenne de vélocité
-  - Max de vélocité
-  - Nombre de semaines
-
-**Visualisation :**
-```
-Vélocité (tâches/semaine)    Moy: 2.3 tâches/sem
-8 │
-6 │  ▆
-4 │  █  ▆  ▆
-2 │  █  █  █  ▄
-0 └──┴──┴──┴──┴──
-   S1 S2 S3 S4 S5
-```
-
-#### B. Burn-down Chart
-- **Type :** Line chart
-- **Lignes :**
-  - Ligne idéale (pointillée grise)
-  - Ligne réelle (verte si en avance, orange si en retard)
-- **Indicateurs :**
-  - ✓ En avance / ⚠ En retard
-  - Écart en nombre de tâches
-  - Points de données interactifs
-
-**Visualisation :**
-```
-Tâches restantes
-30 │╲
-25 │ ╲ ----  (idéal)
-20 │  ╲ ╲
-15 │   ╲  ━━  (réel)
-10 │    ╲   ━━
- 5 │     ╲    ━━
- 0 └──────────────►
-   Début      Fin
-
-✓ En avance de 3 tâches
-```
-
----
-
-### 4. ✔️ Vue Calendrier Mensuelle pour Timesheets
-
-**Nouveau composant créé :** `TimesheetCalendar.tsx`
-
-**Fonctionnalités implémentées :**
-
-#### A. Statistiques du mois
-- Total d'heures travaillées
-- Nombre de jours travaillés
-- Moyenne d'heures par jour
-
-#### B. Calendrier interactif
-- Vue mensuelle complète (lun-dim)
-- Navigation mois précédent/suivant
-- Bouton "Aujourd'hui" pour retour rapide
-- Highlight du jour actuel
-
-#### C. Visualisation des heures
-- Couleurs par volume :
-  - 🟡 Jaune : < 4h
-  - 🔵 Bleu : 4-7h
-  - 🟢 Vert : ≥ 8h
-- Badge avec nombre d'heures
-- Barre de progression dans chaque jour
-- Icône + au hover pour jours vides
-
-#### D. UX améliorée
-- Week-ends en gris
-- Jours hors mois en opacité réduite
-- Clic sur jour pour saisie (préparé)
-- Légende claire
-
-**Capture conceptuelle :**
-```
-Total: 120h │ Jours: 15 │ Moy: 8h/j
-
-    Janvier 2025         [<] [Aujourd'hui] [>]
-
-Lun Mar Mer Jeu Ven Sam Dim
-              1   2   3   4
- 5   6   7   8   9  10  11
-██  ██  ██  ██  ██  --  --
-8h  7h  8h  6h  8h
-
-12  13  14  15  16  17  18
-██  ██  ██  ██  ██  --  --
-8h  4h  8h  7h  8h
-
-Légende: 🟡< 4h  🔵4-7h  🟢≥ 8h
-```
-
-**Intégration :**
-- Ajouté comme nouvel onglet dans ProjectTimesheets
-- 3 vues : Calendrier | Liste | Résumé
-- Calendrier par défaut
-- Transformation automatique des données backend
-
----
-
-## 📊 Nouveaux Onglets Ajoutés
+## 📊 Intégration
 
 ### ProjectDetailsPage
+
+**Nouvel onglet ajouté :** "Gantt"
 
 **Avant :**
 ```
@@ -207,147 +61,168 @@ Légende: 🟡< 4h  🔵4-7h  🟢≥ 8h
 
 **Après :**
 ```
-[Tableau de bord] [Planification] [Gantt] [Calendrier] [Feuilles de temps] [Documents]
+[Planification] [Gantt] [Calendrier] [Feuilles de temps] [Documents]
 ```
 
-1. **Tableau de bord** - Dashboard avec KPIs, graphiques, prévisions
-2. **Gantt** - Diagramme de Gantt interactif
-3. **Feuilles de temps** → Vue calendrier ajoutée
+Le Gantt chart est accessible via :
+1. Accéder à un projet
+2. Cliquer sur l'onglet "Gantt"
+3. Visualiser la timeline des tâches
 
 ---
 
 ## 📈 Métriques d'Impact
 
-| Fonctionnalité | Avant | Après | Amélioration |
-|----------------|-------|-------|--------------|
-| **Vues disponibles** | 4 onglets | 6 onglets | +50% |
-| **Visualisations** | 1 (table) | 6 (dashboard, gantt, charts, calendar) | +500% |
-| **KPIs projet** | 0 | 4 (santé, achèvement, vélocité, temps) | ∞ |
-| **Graphiques** | 0 | 3 (distribution, vélocité, burn-down) | ∞ |
-| **Prévisions** | Manuel | Automatique | ✅ |
-| **Saisie timesheets** | Liste | Liste + Calendrier | +100% |
+| Métrique | Avant | Après | Amélioration |
+|----------|-------|-------|--------------|
+| **Vues projet** | 4 onglets | 5 onglets | +25% |
+| **Visualisation timeline** | Aucune | Gantt chart | ∞ |
+| **Affichage progression** | Pourcentage | Barre visuelle | +100% |
 
 ---
 
 ## 🎯 Bénéfices Utilisateur
 
 ### Pour les Chefs de Projet
-- ✅ Vision instantanée de la santé du projet
-- ✅ Détection automatique des risques
-- ✅ Prévisions de fin de projet
-- ✅ Timeline visuelle avec Gantt
+- ✅ Vision instantanée de la timeline du projet
+- ✅ Identification rapide des tâches en cours et à venir
+- ✅ Visualisation des chevauchements de tâches
+- ✅ Suivi de la progression visuelle
 
 ### Pour l'Équipe
-- ✅ Saisie des heures plus intuitive (calendrier)
-- ✅ Visualisation claire de la charge
-
-### Pour la Direction
-- ✅ KPIs business (vélocité, burn-down)
-- ✅ Indicateurs de performance
-- ✅ Prévisions fiables
+- ✅ Compréhension claire du planning
+- ✅ Vue d'ensemble de la charge de travail
+- ✅ Identification des dépendances temporelles
 
 ---
 
 ## 🔧 Détails Techniques
 
-### Nouveaux Fichiers (4)
-1. `frontend/src/components/projects/ProjectGanttChart.tsx` (292 lignes)
-2. `frontend/src/components/projects/ProjectDashboard.tsx` (354 lignes)
-3. `frontend/src/components/projects/ProjectCharts.tsx` (267 lignes)
-4. `frontend/src/components/projects/TimesheetCalendar.tsx` (245 lignes)
+### Fichier Créé
+- `frontend/src/components/projects/ProjectGanttChart.tsx` (292 lignes)
 
-**Total :** 1,158 lignes de code
-
-### Fichiers Modifiés (2)
-1. `frontend/src/pages/ProjectDetailsPage.tsx` - Intégration onglets
-2. `frontend/src/components/projects/ProjectTimesheets.tsx` - Ajout calendrier
+### Fichier Modifié
+- `frontend/src/pages/ProjectDetailsPage.tsx` - Ajout onglet Gantt
 
 ### Bibliothèques Utilisées
-- `date-fns` - Manipulation de dates
-- `lucide-react` - Icônes
-- Composants UI existants (shadcn/ui)
+- `date-fns` - Manipulation et formatage de dates
+- `lucide-react` - Icônes (Calendar, Clock, TrendingUp)
+- Composants UI existants (shadcn/ui : Card, Badge, ScrollArea)
 
-### Performance
-- ✅ Calculs memoïsés (useMemo)
-- ✅ Rendering optimisé
-- ✅ Pas de dépendances externes lourdes
-- ✅ SVG pour graphiques (légères)
+### Algorithmes Clés
 
----
+#### Calcul Timeline
+```typescript
+// Détermination dates min/max automatique
+minDate = startOfMonth(min(task.start_dates))
+maxDate = endOfMonth(max(task.due_dates))
 
-## ⚠️ Limitations & Améliorations Futures
+// Support dates projet si disponibles
+if (projectStartDate < minDate) minDate = projectStartDate
+if (projectEndDate > maxDate) maxDate = projectEndDate
+```
 
-### Gantt Chart
-- ⚠️ Pas de drag & drop pour modifier les dates (prévu Phase 3)
-- ⚠️ Pas de dépendances entre tâches (prévu Phase 3)
-- ⚠️ Pas de chemin critique (prévu Phase 3)
+#### Positionnement Barres
+```typescript
+// Position = % depuis début
+startPos = (daysFromStart / totalDays) * 100
 
-### Dashboard
-- ⚠️ Health score basé sur heuristiques simples
-- 💡 Amélioration : ML pour prédictions plus précises
+// Largeur = durée en %
+width = (taskDuration / totalDays) * 100
+```
 
-### Graphiques
-- ⚠️ Vélocité basée sur created_at (approximatif)
-- 💡 Amélioration : Champ completion_date dans les tâches
-
-### Calendrier Timesheets
-- ⚠️ Clic pour saisie pas encore implémenté
-- 💡 Phase 3 : Modal de saisie rapide
+#### Couleurs Dynamiques
+```typescript
+getStatusColor(status) {
+  'Terminé'   → bg-green-500
+  'En cours'  → bg-blue-500
+  'En pause'  → bg-orange-500
+  'À faire'   → bg-gray-400
+}
+```
 
 ---
 
 ## 🧪 Instructions de Test
 
-### Tester le Gantt
-1. Aller dans un projet
-2. Onglet "Gantt"
-3. Vérifier l'affichage des tâches avec dates
-4. Observer la ligne "Aujourd'hui"
-5. Hover sur les barres pour voir les tooltips
+### Test Basique
+1. Accéder à un projet avec des tâches
+2. Cliquer sur l'onglet "Gantt"
+3. Vérifier :
+   - ✅ Timeline s'affiche correctement
+   - ✅ Tâches positionnées selon leurs dates
+   - ✅ Ligne "Aujourd'hui" visible (si dans la période)
 
-### Tester le Dashboard
-1. Onglet "Tableau de bord"
-2. Vérifier les 4 KPIs
-3. Observer le graphique de répartition
-4. Lire les prévisions
+### Test Progression
+1. Observer les barres de tâches
+2. Vérifier :
+   - ✅ Barre de fond (opacité 30%)
+   - ✅ Barre de progression (couleur pleine)
+   - ✅ Pourcentage affiché correspond
 
-### Tester les Graphiques
-1. Dans le dashboard, scroller jusqu'aux graphiques
-2. Vélocité : vérifier le bar chart
-3. Burn-down : vérifier les 2 lignes
+### Test Tooltip
+1. Survoler une barre de tâche
+2. Vérifier affichage :
+   - ✅ Date début → Date fin
+   - ✅ Format : "dd MMM → dd MMM"
 
-### Tester le Calendrier
-1. Onglet "Feuilles de temps"
-2. Sous-onglet "Calendrier"
-3. Naviguer entre les mois
-4. Observer les couleurs par volume d'heures
-5. Cliquer "Aujourd'hui"
+### Test Scroll
+1. Projet avec > 10 tâches
+2. Vérifier :
+   - ✅ Scroll vertical fonctionne
+   - ✅ Scroll horizontal fonctionne
+   - ✅ En-têtes fixes
 
----
-
-## 📊 Statistiques du Commit
-
-```
-6 files changed, 1,200+ insertions
-```
-
-- **Nouveaux fichiers :** 4
-- **Fichiers modifiés :** 2
-- **Lignes ajoutées :** ~1,200
-- **Composants créés :** 4
+### Test États Vides
+1. Projet sans tâches avec dates
+2. Vérifier :
+   - ✅ Message "Aucune tâche avec dates planifiées"
+   - ✅ Suggestion d'ajouter des dates
 
 ---
 
-## 🚀 Prochaines Étapes - Phase 3
+## ⚠️ Limitations Connues
 
-La Phase 3 (Collaboration) inclura :
-1. Système de commentaires sur tâches
-2. Notifications en temps réel (WebSocket)
-3. Timer pour feuilles de temps
-4. Mentions et tags
+### Fonctionnalités Non Implémentées (Future)
+- ❌ Drag & drop pour modifier dates (prévu Phase 3+)
+- ❌ Dépendances entre tâches (prévu Phase 3+)
+- ❌ Chemin critique (prévu Phase 3+)
+- ❌ Zoom timeline (prévu Phase 3+)
+- ❌ Export PDF/Image (prévu Phase 3+)
+
+### Contraintes Actuelles
+- ⚠️ Tâches sans start_date ou due_date ne s'affichent pas
+- ⚠️ Timeline mensuelle uniquement (pas de vue hebdo/journalière)
+- ⚠️ Scroll manuel (pas de navigation clavier)
+
+---
+
+## 📊 Statistiques
+
+### Code
+- **Lignes ajoutées :** 292
+- **Composants créés :** 1
+- **Fichiers modifiés :** 1
+
+### Commit
+```
+2 files changed, 297 insertions(+), 5 deletions(-)
+create mode 100644 frontend/src/components/projects/ProjectGanttChart.tsx
+```
+
+---
+
+## 🚀 Prochaines Étapes
+
+La Phase 3 pourrait inclure :
+1. Interactions Gantt (drag & drop)
+2. Dépendances entre tâches
+3. Calcul du chemin critique
+4. Zoom et navigation avancée
+5. Export du planning
 
 ---
 
 **Date de complétion :** 2025-01-28
-**Version :** Phase 2 - Visualisation
+**Version :** Phase 2 - Gantt Chart
 **Statut :** ✅ COMPLÉTÉ

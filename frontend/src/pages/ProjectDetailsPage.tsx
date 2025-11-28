@@ -21,7 +21,6 @@ import { ProjectActionModals } from '@/components/projects/ProjectActionModals';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ProjectDetailsSkeleton } from '@/components/projects/ProjectSkeleton';
 import { ProjectGanttChart } from '@/components/projects/ProjectGanttChart';
-import { ProjectDashboard } from '@/components/projects/ProjectDashboard';
 
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
@@ -196,18 +195,13 @@ export function ProjectDetailsPage() {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="dashboard">Tableau de bord</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="planning">Planification</TabsTrigger>
           <TabsTrigger value="gantt">Gantt</TabsTrigger>
           <TabsTrigger value="calendar">Calendrier</TabsTrigger>
           <TabsTrigger value="timesheets">Feuilles de temps</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="dashboard">
-          <ProjectDashboard project={project} />
-        </TabsContent>
 
         <TabsContent value="planning">
           {hasPermission('projects.view_projecttask') && (
