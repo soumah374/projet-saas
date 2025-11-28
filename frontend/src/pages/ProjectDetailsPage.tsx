@@ -20,7 +20,6 @@ import type { CreateProjectForm } from '@/lib/types';
 import { ProjectActionModals } from '@/components/projects/ProjectActionModals';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ProjectDetailsSkeleton } from '@/components/projects/ProjectSkeleton';
-import { ProjectGanttChart } from '@/components/projects/ProjectGanttChart';
 
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
@@ -195,9 +194,8 @@ export function ProjectDetailsPage() {
       )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="planning">Planification</TabsTrigger>
-          <TabsTrigger value="gantt">Gantt</TabsTrigger>
           <TabsTrigger value="calendar">Calendrier</TabsTrigger>
           <TabsTrigger value="timesheets">Feuilles de temps</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
@@ -206,16 +204,6 @@ export function ProjectDetailsPage() {
         <TabsContent value="planning">
           {hasPermission('projects.view_projecttask') && (
             <ProjectPlanning projectId={projectId} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="gantt">
-          {hasPermission('projects.view_projecttask') && (
-            <ProjectGanttChart
-              tasks={project.tasks || []}
-              projectStartDate={project.start_date}
-              projectEndDate={project.deadline}
-            />
           )}
         </TabsContent>
 

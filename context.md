@@ -232,10 +232,10 @@ Phase 1 (Sprint 1-2) - Quick Wins
 
 Phase 2 (Sprint 3-4) - Visualisation
 
-1. ✅ Implémenter Gantt chart
-2. ❌ Dashboard projet amélioré (retiré - trop complexe)
-3. ❌ Graphiques de progression (retiré - trop complexe)
-4. ❌ Vue calendrier mensuelle pour timesheets (retiré - trop complexe)
+1. Implémenter Gantt chart
+2. Dashboard projet amélioré
+3. Graphiques de progression
+4. Vue calendrier mensuelle pour timesheets
 
 Phase 3 (Sprint 5-6) - Collaboration
 
