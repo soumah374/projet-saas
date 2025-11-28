@@ -4,13 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TimeSheetList } from '../TimeSheetList';
 import { useTimesheets } from '@/hooks/use-timesheets';
 import { TimeSheet } from '@/lib/api';
+import { TimesheetCalendar } from './TimesheetCalendar';
 
 interface ProjectTimesheetsProps {
   projectId: string;
 }
 
 export const ProjectTimesheets = ({ projectId }: ProjectTimesheetsProps) => {
-  const [view, setView] = useState<'list' | 'summary'>('list');
+  const [view, setView] = useState<'calendar' | 'list' | 'summary'>('calendar');
   const { data: timesheetsData } = useTimesheets(projectId);
   const timeSheets = timesheetsData?.results || [];
 
@@ -46,10 +47,22 @@ export const ProjectTimesheets = ({ projectId }: ProjectTimesheetsProps) => {
       </CardHeader>
       <CardContent>
         <Tabs value={view} onValueChange={(value: any) => setView(value)} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="calendar">Calendrier</TabsTrigger>
             <TabsTrigger value="list">Liste</TabsTrigger>
             <TabsTrigger value="summary">Résumé</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="calendar">
+            <TimesheetCalendar
+              projectId={projectId}
+              timesheets={timeSheets.map(ts => ({
+                date: ts.date,
+                hours: ts.hours,
+                task: ts.task_details?.title
+              }))}
+            />
+          </TabsContent>
 
           <TabsContent value="list">
             <TimeSheetList projectId={projectId} />
