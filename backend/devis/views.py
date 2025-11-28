@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.mail import EmailMessage
-from django.conf import settings
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML, CSS
@@ -98,7 +97,9 @@ class DevisViewSet(viewsets.ModelViewSet):
                             description=validated_ligne_data.get('description', ''),
                             quantite=validated_ligne_data['quantite'],
                             unite_id=validated_ligne_data['unite_id'].id,
-                            type_ligne='prestation'
+                            type_ligne='prestation',
+                            prix_unitaire_ht=validated_ligne_data.get('prix_unitaire_ht',0),
+                            montant_ht= validated_ligne_data.get('montant_ht', 0)                        
                         )
                         logger.info(f"Ligne prestation créée avec ID: {ligne.id}")
                         

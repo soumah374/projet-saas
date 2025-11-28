@@ -391,6 +391,8 @@ export function DevisCreatePage() {
     
     try {
       // Préparer les données des lignes avec leurs intervenants
+
+      console.log(lignes)
       const lignesData = lignes.map(ligne => {
         if (ligne.type_ligne === 'prestation') {
           return {
@@ -401,6 +403,7 @@ export function DevisCreatePage() {
             quantite: parseFloat(ligne.quantite),
             unite_id: parseInt(ligne.unite_id),
             prix_unitaire_ht: parseFloat(ligne.prix_unitaire || '0'),
+            montant_ht: parseFloat(ligne.montant || '0'),
             intervenants: ligne.intervenants.map(intervenant => ({
               profile_intervenant_id: parseInt(intervenant.profile_intervenant_id),
               temps_intervenant: parseFloat(intervenant.temps_intervenant),
@@ -882,7 +885,7 @@ export function DevisCreatePage() {
                       placeholder="0,00 GNF"
                     />
                   </div>
-                  {/* <div className="md:col-span-1">
+                  <div className="md:col-span-1">
                     <Label className={`text-sm font-medium ${ligneErrors.unite_id ? 'text-red-600' : ''}`}>
                       Unité *
                     </Label>
@@ -901,7 +904,7 @@ export function DevisCreatePage() {
                     {ligneErrors.unite_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.unite_id}</p>
                     )}
-                  </div> */}
+                  </div>
                 </>
               )}
             </div>
