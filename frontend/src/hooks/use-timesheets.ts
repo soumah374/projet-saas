@@ -92,8 +92,8 @@ export const useValidateTimesheet = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ projectId, timesheetId }: { projectId: string; timesheetId: number }) => {
-      const response = await projectApi.validateTimeSheet(projectId, timesheetId);
+    mutationFn: async ({ projectId, timesheetId, comment }: { projectId: string; timesheetId: number; comment?: string }) => {
+      const response = await projectApi.validateTimeSheet(projectId, timesheetId, comment);
       return response.data;
     },
     onSuccess: (_, { projectId }) => {

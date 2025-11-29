@@ -105,6 +105,7 @@ export interface TimeSheet {
     validated_by: number | null;
     validator_name?: string;
     validated_at: string | null;
+    validation_comment?: string;
     created_at: string;
     updated_at: string;
 }
@@ -159,8 +160,8 @@ export const projectApi = {
         api.patch<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`, data),
     deleteProjectTimeSheet: (projectId: string, timeSheetId: number) => 
         api.delete(`/projects/${projectId}/timesheets/${timeSheetId}/`),
-    validateTimeSheet: (projectId: string, timeSheetId: number) =>
-        api.post<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/validate/`),
+    validateTimeSheet: (projectId: string, timeSheetId: number, comment?: string) =>
+        api.post<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/validate/`, { comment: comment || '' }),
     getTimeSheetSummary: (projectId: string) =>
         api.get(`/projects/${projectId}/timesheets/summary/`),
     

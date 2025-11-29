@@ -396,13 +396,14 @@ class TimeSheet(models.Model):
     )
     description = models.TextField(blank=True)
     validated_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name='validated_timesheets'
     )
     validated_at = models.DateTimeField(null=True, blank=True)
+    validation_comment = models.TextField(blank=True, help_text="Commentaire du chef de projet lors de la validation")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -415,29 +416,30 @@ class TimeSheet(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.project.title} - {self.date}"
     
-    def validate(self, validator):
+    def validate(self, validator, comment=''):
         """Valider une feuille de temps"""
         if self.validated_by:
             raise ValueError("Cette feuille de temps est déjà validée")
-        
+
         if not self.user.is_superuser:
             if validator == self.user:
                 raise ValueError("Un utilisateur ne peut pas valider sa propre feuille de temps")
-            
+
         # Vérifier que le validateur a les droits (chef de projet ou admin)
         is_project_manager = ProjectMember.objects.filter(
             project=self.project,
             user=validator,
             role='Chef de projet'
         ).exists()
-        
+
         if not (is_project_manager or validator.is_staff):
             raise ValueError("Seuls les chefs de projet et les administrateurs peuvent valider les feuilles de temps")
-        
+
         self.validated_by = validator
         self.validated_at = timezone.now()
+        self.validation_comment = comment
         self.save()
-        
+
         # Mettre à jour les heures réelles de la tâche
         self.task.update_actual_hours()
         

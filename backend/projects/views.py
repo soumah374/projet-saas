@@ -526,9 +526,10 @@ class TimeSheetViewSet(viewsets.ModelViewSet):
     def validate(self, request, project_pk=None, pk=None):
         """Valider une feuille de temps"""
         timesheet = self.get_object()
-        
+        comment = request.data.get('comment', '')
+
         try:
-            timesheet.validate(request.user)
+            timesheet.validate(request.user, comment=comment)
             serializer = self.get_serializer(timesheet)
             return Response(serializer.data)
         except ValueError as e:

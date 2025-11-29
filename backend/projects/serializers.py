@@ -48,7 +48,7 @@ class TimeSheetSerializer(serializers.ModelSerializer):
     class Meta:
         model = TimeSheet
         fields = '__all__'
-        read_only_fields = ['validated_by', 'validated_at', 'user_name', 'validator_name', 'can_edit']
+        read_only_fields = ['validated_by', 'validated_at', 'validation_comment', 'user_name', 'validator_name', 'can_edit']
     
     @extend_schema_field(str)
     def get_user_name(self, obj):
@@ -321,21 +321,6 @@ class ProjectBudgetSerializer(serializers.ModelSerializer):
         fields = ['id', 'project', 'production', 'personnel', 'marketing', 'other', 'total']
         read_only_fields = ['id', 'total']
 
-class TimeSheetSerializer(serializers.ModelSerializer):
-    task_details = serializers.SerializerMethodField()
-    class Meta:
-        model = TimeSheet
-        fields = [
-            'id', 'project', 'task', 'user', 'date', 'hours',
-            'description', 'validated_by', 'validated_at',
-            'created_at', 'updated_at', 'task_details'
-        ]
-        read_only_fields = ['id', 'validated_by', 'validated_at', 'created_at', 'updated_at']
-    
-    @extend_schema_field(dict)
-    def get_task_details(self, obj):
-        return obj.details_task()
-        
 
 class ProjectSerializer(serializers.ModelSerializer):
     team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
