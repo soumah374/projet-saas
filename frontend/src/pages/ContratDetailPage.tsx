@@ -442,9 +442,8 @@ export function ContratDetailPage() {
     }
     
     if (contrat.statut === 'actif' || contrat.statut === 'envoye' || contrat.statut === 'signe') {
-      buttons.push(
-        <>
-        {hasPermission('contrats.can_cloturer_contrat') && (
+      if (hasPermission('contrats.can_cloturer_contrat')) {
+        buttons.push(
           <Button
             key="terminer"
             variant="outline"
@@ -454,10 +453,10 @@ export function ContratDetailPage() {
             <Lock size={16} className="mr-2" />
             Clôturer
           </Button>
-        )}
-        </>,
-        <>
-        {hasPermission('contrats.can_suspendre_contrat') && (
+        );
+      }
+      if (hasPermission('contrats.can_suspendre_contrat')) {
+        buttons.push(
           <Button
             key="suspendre"
             variant="outline"
@@ -467,9 +466,8 @@ export function ContratDetailPage() {
             <Pause size={16} className="mr-2" />
             Suspendre
           </Button>
-        )}
-        </>,
-      );
+        );
+      }
     }
 
     if (contrat.statut === 'envoye') {

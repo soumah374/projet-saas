@@ -473,7 +473,7 @@ export function ContratsPage() {
                       {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {contrat.devis.appliquer_frais_agence ? `${contrat.devis.taux_frais_agence}%` : '—'}
+                      {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
                     </TableCell>
                     <TableCell className="font-medium">{formatMontant(contrat.montant_ttc)}</TableCell>
                     <TableCell>
