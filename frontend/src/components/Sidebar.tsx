@@ -76,6 +76,8 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
   // Auto-ouvrir les menus basés sur la route actuelle
   useEffect(() => {
     const path = location.pathname;
+
+    console.log(hasPermission('catalog.view_tauxhoraire'))
     
     // Prestations menu
     if (path.includes('/services') || path.includes('/activities') || path.includes('/taux-horaires') || 
@@ -146,30 +148,38 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                 </button>
               {openMenus.prestations && (
                 <div className="ml-8 space-y-2">
-                  <Link to="/categories-services" className={cn(
-                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
-                    location.pathname.includes('/categories-services') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
-                  )}>
-                    <List className="h-4 w-4" /> Catégories des prestations
-                  </Link>
-                  <Link to="/services" className={cn(
-                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
-                    location.pathname.includes('/services') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
-                  )}>
-                    <List className="h-4 w-4" /> Catalogue des prestations
-                  </Link>
-                  <Link to="/taux-horaires" className={cn(
-                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
-                    location.pathname.includes('/taux-horaires') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
-                  )}>
-                    <Currency className="h-4 w-4" /> Taux horaires GNF
-                  </Link>
-                  <Link to="/unites-standards" className={cn(
-                    "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
-                    location.pathname.includes('/unites-standards') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
-                  )}>
-                    <Ruler className="h-4 w-4" /> Unités standards
-                  </Link>
+                  {hasPermission('catalog.view_category') && (
+                    <Link to="/categories-services" className={cn(
+                      "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                      location.pathname.includes('/categories-services') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                    )}>
+                      <List className="h-4 w-4" /> Catégories des prestations
+                    </Link>
+                  )}
+                  {hasPermission('catalog.view_service') && (
+                    <Link to="/services" className={cn(
+                      "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                      location.pathname.includes('/services') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                    )}>
+                      <List className="h-4 w-4" /> Catalogue des prestations
+                    </Link>
+                  )}
+                  {/* {!hasPermission('catalog.view_tauxhoraire') && (
+                    <Link to="/taux-horaires" className={cn(
+                      "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                      location.pathname.includes('/taux-horaires') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                    )}>
+                      <Currency className="h-4 w-4" /> Taux horaires GNF
+                    </Link>
+                  )} */}
+                  {hasPermission('catalog.view_unitestandard') && (
+                    <Link to="/unites-standards" className={cn(
+                      "flex items-center gap-2 text-sm h-8 px-2 py-1 rounded transition-colors",
+                      location.pathname.includes('/unites-standards') ? "bg-blue-50 text-blue-600 font-medium" : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
+                    )}>
+                      <Ruler className="h-4 w-4" /> Unités standards
+                    </Link>
+                  )}
                   
                   {/* Sous-menu Frais */}
                   <div className="space-y-1">
