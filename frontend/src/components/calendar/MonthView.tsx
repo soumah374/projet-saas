@@ -150,11 +150,11 @@ export const MonthView = ({ events = [], onEventClick }: MonthViewProps) => {
                           <span className="text-xs text-gray-500">{event.time}</span>
                         )}
                       </div>
-                      {/* {event.participants && event.participants.length > 0 && (
+                      {event.participants && event.participants.length > 0 && (
                         <div className="text-xs text-gray-500 mt-1 truncate">
                           👥 {event.participants.join(', ')}
                         </div>
-                      )} */}
+                      )}
                       {event.location && (
                         <div className="text-xs text-gray-500 mt-1 truncate">
                           📍 {event.location}
