@@ -125,7 +125,8 @@ class ContratSerializer(serializers.ModelSerializer):
             'id', 'numero', 'devis', 'devis_principal', 'devis_ids', 'devis_principal_id', 'client', 'client_id',
             'date_creation', 'date_debut', 'date_fin', 'statut',
             'taux_tva', 'appliquer_tva', 'montant_ht', 'montant_tva', 'montant_ttc',
-            'conditions', 'notes', 'contenu_personnalise', 'variables_personnalisees',
+            'conditions', 'notes', 'contenu_personnalise', 'variables_personnalisees', 'appliquer_frais_agence',
+            'taux_frais_agence', 'montant_frais_agence',
             'echeances_contrat', 'lignes', 'echeances', 'created_at', 'updated_at','fichier_signe'
         ]
         read_only_fields = [

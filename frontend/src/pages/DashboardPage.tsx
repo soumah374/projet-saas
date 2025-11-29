@@ -22,6 +22,8 @@ import { useDashboardMetrics } from '@/hooks/use-dashboard-metrics';
 import { useDashboardConfig } from '@/hooks/use-dashboard-config';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatMontant } from '@/lib/formatters';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   RefreshCw,
@@ -606,6 +608,33 @@ const DashboardPage: React.FC = () => {
                   userSelected={userSelected}
                 />
               </DashboardLayout>
+
+              {/* Indicateurs financiers - tableau synthétique */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Indicateurs financiers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="p-4 bg-gray-50 rounded">
+                      <p className="text-sm text-gray-500">Total factures</p>
+                      <p className="text-lg font-semibold">{formatMontant(data?.financial?.total_factures_amount || 0)}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded">
+                      <p className="text-sm text-gray-500">Total payés</p>
+                      <p className="text-lg font-semibold">{formatMontant(data?.financial?.total_paid_amount || 0)}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded">
+                      <p className="text-sm text-gray-500">Total impayés</p>
+                      <p className="text-lg font-semibold">{formatMontant(data?.financial?.total_impayees_amount || 0)}</p>
+                    </div>
+                    <div className="p-4 bg-gray-50 rounded">
+                      <p className="text-sm text-gray-500">Taux de recouvrement</p>
+                      <p className="text-lg font-semibold">{Number(data?.financial?.taux_recouvrement ?? 0).toFixed(1)}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Prévisions Financières */}
               {data?.financial?.revenue_trend && data.financial.revenue_trend.length > 0 && isSelected('advanced.forecasting') && (

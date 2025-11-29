@@ -1,14 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Upload, FileSpreadsheet, Check, X } from 'lucide-react';
+import { Loader2, Upload, FileSpreadsheet, Check, X, Tag, AlertCircle } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useBulkImportServices } from '@/hooks/use-services';
-
+import * as XLSX from 'xlsx';
 interface Category {
   id: number;
   name: string;
@@ -66,18 +66,14 @@ export function ImportExcelModal({ open, onClose, categories, onImportSuccess }:
     reader.onload = (e) => {
       try {
         // Note: This would work with the xlsx library
-        // const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        // const workbook = XLSX.read(data, { type: 'array' });
-        // const sheetName = workbook.SheetNames[0];
-        // const worksheet = workbook.Sheets[sheetName];
-        // const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
+        const data = new Uint8Array(e.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
         
         // Pour le moment, simulons des données d'exemple
-        const simulatedData: ExcelRow[] = [
-          { name: 'Développement Web', description: 'Création de sites web', price: 5000, duration: 30, category: 'Développement', status: 'active' },
-          { name: 'Design Graphique', description: 'Création de logos et identité visuelle', price: 2000, duration: 15, category: 'Design', status: 'active' },
-          { name: 'SEO', description: 'Optimisation pour moteurs de recherche', price: 1500, duration: 10, category: 'Marketing', status: 'active' }
-        ];
+        const simulatedData: ExcelRow[] = jsonData;
         
         setImportData(simulatedData);
         
@@ -108,6 +104,24 @@ export function ImportExcelModal({ open, onClose, categories, onImportSuccess }:
     newImportServices[index].category_id = categoryId === 'none' ? null : parseInt(categoryId);
     setImportServices(newImportServices);
   };
+
+  // Calculer le nombre de lignes associées à chaque catégorie
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string | number, number> = {};
+    counts['none'] = 0;
+    
+    importServices.forEach((service) => {
+      const categoryKey = service.category_id || 'none';
+      counts[categoryKey] = (counts[categoryKey] || 0) + 1;
+    });
+    
+    return counts;
+  }, [importServices]);
+
+  // Calculer le nombre de lignes sans catégorie
+  const unassignedCount = useMemo(() => {
+    return importServices.filter(service => !service.category_id).length;
+  }, [importServices]);
 
   const handleImportServices = async () => {
     setImportStep('importing');
@@ -251,6 +265,42 @@ export function ImportExcelModal({ open, onClose, categories, onImportSuccess }:
             <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded">
               <p>⚠️ Veuillez vérifier et assigner une catégorie à chaque prestation avant l'import.</p>
             </div>
+
+            {/* Avertissement si des lignes ne sont pas assignées */}
+            {unassignedCount > 0 && (
+              <div className="text-sm text-red-700 bg-red-50 border border-red-200 p-4 rounded-lg flex items-start gap-3">
+                <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold">Erreur : {unassignedCount} prestation(s) sans catégorie</p>
+                  <p className="text-red-600 mt-1">Toutes les prestations doivent être assignées à une catégorie avant l'import.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Résumé des catégories avec compteurs */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Tag size={18} className="text-blue-600" />
+                <h4 className="font-semibold text-blue-900">Résumé par catégorie</h4>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                <div className="bg-white border border-blue-100 rounded p-3 text-center">
+                  <p className="text-xs text-gray-600">Aucune catégorie</p>
+                  <p className="text-2xl font-bold text-blue-600">{categoryCounts['none'] || 0}</p>
+                  <p className="text-xs text-gray-500">ligne(s)</p>
+                </div>
+                {categories.map((category) => (
+                  <div
+                    key={category.id}
+                    className="bg-white border border-blue-100 rounded p-3 text-center hover:border-blue-300 transition-colors"
+                  >
+                    <p className="text-xs text-gray-600 truncate">{category.name}</p>
+                    <p className="text-2xl font-bold text-green-600">{categoryCounts[category.id] || 0}</p>
+                    <p className="text-xs text-gray-500">ligne(s)</p>
+                  </div>
+                ))}
+              </div>
+            </div>
             
             <div className="max-h-96 overflow-y-auto border rounded">
               <Table>
@@ -263,8 +313,13 @@ export function ImportExcelModal({ open, onClose, categories, onImportSuccess }:
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {importData.map((row, index) => (
-                    <TableRow key={index}>
+                  {importData.map((row, index) => {
+                    const isUnassigned = !importServices[index]?.category_id;
+                    return (
+                    <TableRow 
+                      key={index}
+                      className={isUnassigned ? 'bg-red-50 hover:bg-red-100' : ''}
+                    >
                       <TableCell className="font-medium">{row.name}</TableCell>
                       <TableCell className="max-w-xs truncate">{row.description}</TableCell>
                       <TableCell>
@@ -272,26 +327,36 @@ export function ImportExcelModal({ open, onClose, categories, onImportSuccess }:
                           value={importServices[index]?.category_id?.toString() || 'none'}
                           onValueChange={(value) => handleCategoryChange(index, value)}
                         >
-                          <SelectTrigger className="w-40">
+                          <SelectTrigger className={`w-40 ${isUnassigned ? 'border-red-500 bg-red-100' : ''}`}>
                             <SelectValue placeholder="Choisir..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="none">Aucune catégorie</SelectItem>
+                            <SelectItem value="none">
+                              Aucune catégorie {categoryCounts['none'] ? `(${categoryCounts['none']})` : ''}
+                            </SelectItem>
                             {categories.map((category) => (
                               <SelectItem key={category.id} value={category.id.toString()}>
-                                {category.name}
+                                {category.name} {categoryCounts[category.id] ? `(${categoryCounts[category.id]})` : ''}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={importServices[index]?.is_active ? "default" : "secondary"}>
-                          {importServices[index]?.is_active ? "Actif" : "Inactif"}
-                        </Badge>
+                        {isUnassigned ? (
+                          <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                            <AlertCircle size={14} />
+                            Non assignée
+                          </Badge>
+                        ) : (
+                          <Badge variant={importServices[index]?.is_active ? "default" : "secondary"}>
+                            {importServices[index]?.is_active ? "Actif" : "Inactif"}
+                          </Badge>
+                        )}
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
@@ -322,12 +387,17 @@ export function ImportExcelModal({ open, onClose, categories, onImportSuccess }:
               </Button>
               <Button 
                 onClick={handleImportServices}
-                disabled={importLoading}
+                disabled={importLoading || unassignedCount > 0}
               >
                 {importLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Import en cours...
+                  </>
+                ) : unassignedCount > 0 ? (
+                  <>
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    Importer {importServices.length} prestation(s) - {unassignedCount} non assignée(s)
                   </>
                 ) : (
                   <>

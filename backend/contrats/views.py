@@ -157,8 +157,6 @@ class ContratViewSet(viewsets.ModelViewSet):
                     statut='brouillon'
                 )
                 
-                print('contrat', contrat.numero)
-                print('contrat', contrat.numero)
                 # Sauvegarder d'abord le contrat pour obtenir un ID
                 contrat.save()
                 
@@ -254,23 +252,10 @@ class ContratViewSet(viewsets.ModelViewSet):
     def devis_disponibles(self, request):
         """Récupérer les devis disponibles pour créer un contrat"""
         try:
-            # Récupérer les devis acceptés qui n'ont pas encore de contrat
+            # Récupérer tous les devis acceptés (un devis peut être utilisé dans plusieurs contrats)
             devis_disponibles = Devis.objects.filter(
                 statut='accepte'
-            )
-            
-            # Exclure les devis qui ont déjà des contrats (si la relation existe)
-            if hasattr(Devis, 'contrats'):
-                devis_disponibles = devis_disponibles.exclude(
-                    contrats__isnull=False
-                )
-            else:
-                # Fallback pour l'ancien système
-                devis_disponibles = devis_disponibles.filter(
-                    contrat__isnull=True
-                )
-            
-            devis_disponibles = devis_disponibles.select_related('client').order_by('-date_creation')
+            ).select_related('client').order_by('-date_creation')
             
             # Sérialiser les devis avec les informations nécessaires
             devis_data = []

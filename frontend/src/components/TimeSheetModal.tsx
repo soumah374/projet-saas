@@ -48,6 +48,7 @@ export const TimeSheetModal = ({
   const [taskId, setTaskId] = useState(timeSheet?.task?.toString() || '');
   const [description, setDescription] = useState(timeSheet?.description || '');
   const [errors, setErrors] = useState<FormErrors>({});
+  const [validationComment, setValidationComment] = useState('');
 
   const { toast } = useToast();
   const { data: tasksData } = useProjectTasks(projectId);
@@ -182,16 +183,18 @@ export const TimeSheetModal = ({
   const [errorValidate, setErrorValidate] = useState<string | null>(null);
   const handleValidate = async () => {
     if (!timeSheet) return;
-    
+
     try {
       await validateTimesheet.mutateAsync({
         projectId,
-        timesheetId: timeSheet.id
+        timesheetId: timeSheet.id,
+        comment: validationComment
       });
       toast({
         title: 'Feuille de temps validée',
         description: 'La feuille de temps a été validée avec succès.'
       });
+      setValidationComment('');
       setOpen(false);
       onClose?.();
     } catch (error: any) {
@@ -226,14 +229,22 @@ export const TimeSheetModal = ({
         
         <div className="space-y-4">
           {timeSheet?.validated_by && (
-            <div className="flex items-center justify-between">
-              <Badge className="bg-green-100 text-green-800">
-                <Check className="h-3 w-3 mr-1" />
-                Validé par {timeSheet.validator_name}
-              </Badge>
-              <span className="text-sm text-gray-500">
-                le {format(new Date(timeSheet.validated_at!), 'dd/MM/yyyy', { locale: fr })}
-              </span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Badge className="bg-green-100 text-green-800">
+                  <Check className="h-3 w-3 mr-1" />
+                  Validé par {timeSheet.validator_name}
+                </Badge>
+                <span className="text-sm text-gray-500">
+                  le {format(new Date(timeSheet.validated_at!), 'dd/MM/yyyy', { locale: fr })}
+                </span>
+              </div>
+              {timeSheet.validation_comment && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="text-sm font-medium text-blue-900 mb-1">Commentaire de validation:</div>
+                  <div className="text-sm text-blue-800">{timeSheet.validation_comment}</div>
+                </div>
+              )}
             </div>
           )}
 
@@ -336,7 +347,21 @@ export const TimeSheetModal = ({
               <span className="text-sm text-red-500">{errors.description}</span>
             )}
           </div>
-          
+
+          {mode === 'view' && timeSheet && !timeSheet.validated_by && (
+            <div>
+              <Label htmlFor="validationComment">Commentaire de validation (optionnel)</Label>
+              <Textarea
+                id="validationComment"
+                value={validationComment}
+                onChange={(e) => setValidationComment(e.target.value)}
+                placeholder="Ajoutez un commentaire concernant cette feuille de temps..."
+                className="min-h-[80px]"
+              />
+              <span className="text-sm text-gray-500">Ce commentaire sera visible par l'utilisateur</span>
+            </div>
+          )}
+
           <div className="flex justify-end gap-2">
             {!isReadOnly && (
               <Button

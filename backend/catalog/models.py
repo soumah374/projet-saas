@@ -60,7 +60,7 @@ class Service(models.Model):
 
 class Activity(models.Model):
     name = models.CharField(max_length=200, verbose_name="Nom de l'activité")
-    duree_standard = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Durée standard (heures)")
+    duree_standard = models.DecimalField(max_digits=5, decimal_places=2, verbose_name="Durée standard (heures)", null=True, blank=True)
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="activities", verbose_name="Prestation")
     profiles_intervenant = models.ManyToManyField(
         IntervenantProfile, 

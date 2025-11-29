@@ -396,13 +396,14 @@ class TimeSheet(models.Model):
     )
     description = models.TextField(blank=True)
     validated_by = models.ForeignKey(
-        User, 
-        on_delete=models.SET_NULL, 
-        null=True, 
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
         related_name='validated_timesheets'
     )
     validated_at = models.DateTimeField(null=True, blank=True)
+    validation_comment = models.TextField(blank=True, help_text="Commentaire du chef de projet lors de la validation")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -415,28 +416,30 @@ class TimeSheet(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name()} - {self.project.title} - {self.date}"
     
-    def validate(self, validator):
+    def validate(self, validator, comment=''):
         """Valider une feuille de temps"""
         if self.validated_by:
             raise ValueError("Cette feuille de temps est déjà validée")
-        
-        if validator == self.user:
-            raise ValueError("Un utilisateur ne peut pas valider sa propre feuille de temps")
-            
+
+        if not self.user.is_superuser:
+            if validator == self.user:
+                raise ValueError("Un utilisateur ne peut pas valider sa propre feuille de temps")
+
         # Vérifier que le validateur a les droits (chef de projet ou admin)
         is_project_manager = ProjectMember.objects.filter(
             project=self.project,
             user=validator,
             role='Chef de projet'
         ).exists()
-        
+
         if not (is_project_manager or validator.is_staff):
             raise ValueError("Seuls les chefs de projet et les administrateurs peuvent valider les feuilles de temps")
-        
+
         self.validated_by = validator
         self.validated_at = timezone.now()
+        self.validation_comment = comment
         self.save()
-        
+
         # Mettre à jour les heures réelles de la tâche
         self.task.update_actual_hours()
         
@@ -646,4 +649,164 @@ class ProjectEvent(models.Model):
     def clean(self):
         from django.core.exceptions import ValidationError
         if self.end_date < self.start_date:
-            raise ValidationError("La date de fin ne peut pas être antérieure à la date de début") 
+            raise ValidationError("La date de fin ne peut pas être antérieure à la date de début")
+
+
+class TaskComment(models.Model):
+    """Modèle pour les commentaires sur les tâches"""
+
+    task = models.ForeignKey(ProjectTask, on_delete=models.CASCADE, related_name='comments')
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='task_comments')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
+    mentions = models.ManyToManyField(User, related_name='mentioned_in_comments', blank=True)
+    attachments = models.JSONField(default=list, blank=True, help_text="URLs des pièces jointes")
+
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Commentaire'
+        verbose_name_plural = 'Commentaires'
+
+    def __str__(self):
+        return f"Commentaire de {self.author.get_full_name()} sur {self.task.title}"
+
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+
+        # Créer des notifications pour les mentions
+        if is_new:
+            self.create_mention_notifications()
+
+    def create_mention_notifications(self):
+        """Créer des notifications pour les utilisateurs mentionnés"""
+        for mentioned_user in self.mentions.all():
+            ProjectNotification.objects.create(
+                recipient=mentioned_user,
+                notification_type='mention',
+                title=f"{self.author.get_full_name()} vous a mentionné",
+                message=f"Dans un commentaire sur la tâche '{self.task.title}'",
+                related_task=self.task,
+                related_comment=self
+            )
+
+
+class ProjectNotification(models.Model):
+    """Modèle pour les notifications du projet"""
+
+    NOTIFICATION_TYPES = [
+        ('task_assigned', 'Tâche assignée'),
+        ('task_completed', 'Tâche terminée'),
+        ('task_status_changed', 'Statut de tâche modifié'),
+        ('deadline_approaching', 'Échéance proche'),
+        ('comment_added', 'Commentaire ajouté'),
+        ('mention', 'Mention'),
+        ('budget_exceeded', 'Budget dépassé'),
+        ('timesheet_validated', 'Feuille de temps validée'),
+        ('timesheet_rejected', 'Feuille de temps rejetée'),
+    ]
+
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Relations optionnelles
+    related_project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    related_task = models.ForeignKey(ProjectTask, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    related_comment = models.ForeignKey(TaskComment, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    related_timesheet = models.ForeignKey(TimeSheet, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
+
+    def __str__(self):
+        return f"{self.notification_type} pour {self.recipient.get_full_name()}"
+
+    def mark_as_read(self):
+        """Marquer la notification comme lue"""
+        self.is_read = True
+        self.save()
+
+
+class TimesheetTimer(models.Model):
+    """Modèle pour le timer de feuilles de temps"""
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='timesheet_timers')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='timers')
+    task = models.ForeignKey(ProjectTask, on_delete=models.CASCADE, related_name='timers')
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField(null=True, blank=True)
+    description = models.TextField(blank=True)
+    is_running = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-start_time']
+        verbose_name = 'Timer de feuille de temps'
+        verbose_name_plural = 'Timers de feuilles de temps'
+
+    def __str__(self):
+        return f"Timer de {self.user.get_full_name()} sur {self.task.title}"
+
+    def stop(self):
+        """Arrêter le timer et créer/mettre à jour une feuille de temps"""
+        if not self.is_running:
+            raise ValueError("Ce timer est déjà arrêté")
+
+        self.end_time = timezone.now()
+        self.is_running = False
+        self.save()
+
+        # Calculer les heures
+        duration = self.end_time - self.start_time
+        hours = round(duration.total_seconds() / 3600, 1)
+
+        # Vérifier s'il existe déjà une feuille de temps pour cette date
+        timesheet, created = TimeSheet.objects.get_or_create(
+            user=self.user,
+            project=self.project,
+            task=self.task,
+            date=self.start_time.date(),
+            defaults={
+                'hours': hours,
+                'description': self.description
+            }
+        )
+
+        # Si la feuille de temps existait déjà, ajouter les heures
+        if not created:
+            timesheet.hours += Decimal(str(hours))
+            # Ajouter la description si elle n'est pas vide
+            if self.description:
+                if timesheet.description:
+                    timesheet.description += f"\n---\n{self.description}"
+                else:
+                    timesheet.description = self.description
+            timesheet.save()
+
+        return timesheet
+
+    def get_elapsed_time(self):
+        """Obtenir le temps écoulé en secondes"""
+        if self.end_time:
+            return (self.end_time - self.start_time).total_seconds()
+        return (timezone.now() - self.start_time).total_seconds()
+
+    def save(self, *args, **kwargs):
+        # Vérifier qu'il n'y a pas d'autre timer en cours pour cet utilisateur
+        if self.is_running and not self.pk:
+            existing_timer = TimesheetTimer.objects.filter(
+                user=self.user,
+                is_running=True
+            ).first()
+            if existing_timer:
+                raise ValueError("Vous avez déjà un timer en cours. Arrêtez-le avant d'en démarrer un nouveau.")
+
+        super().save(*args, **kwargs) 

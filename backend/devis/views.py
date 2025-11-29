@@ -5,7 +5,6 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.core.mail import EmailMessage
-from django.conf import settings
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML, CSS
@@ -98,7 +97,9 @@ class DevisViewSet(viewsets.ModelViewSet):
                             description=validated_ligne_data.get('description', ''),
                             quantite=validated_ligne_data['quantite'],
                             unite_id=validated_ligne_data['unite_id'].id,
-                            type_ligne='prestation'
+                            type_ligne='prestation',
+                            prix_unitaire_ht=validated_ligne_data.get('prix_unitaire_ht',0),
+                            montant_ht= validated_ligne_data.get('montant_ht', 0)                        
                         )
                         logger.info(f"Ligne prestation créée avec ID: {ligne.id}")
                         
@@ -167,11 +168,42 @@ class DevisViewSet(viewsets.ModelViewSet):
 
             # Retourner le devis complet
             return Response(DevisSerializer(devis).data, status=201)
-            
+
         except Exception as e:
             logger.error(f"Erreur générale lors de la création du devis: {str(e)}")
             return Response({'error': 'Erreur lors de la création du devis', 'details': str(e)}, status=400)
-    
+
+    @action(detail=False, methods=['get'])
+    def par_client(self, request):
+        """Récupérer les devis d'un client spécifique"""
+        client_id = request.query_params.get('client_id')
+
+        if not client_id:
+            return Response(
+                {'error': 'Le paramètre client_id est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Récupérer les devis du client
+            devis = self.queryset.filter(client_id=client_id).order_by('-date_creation')
+
+            # Optionnel : filtrer par statut si spécifié
+            statut = request.query_params.get('statut')
+            if statut:
+                devis = devis.filter(statut=statut)
+
+            # Sérialiser et retourner
+            serializer = self.get_serializer(devis, many=True)
+            return Response(serializer.data)
+
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération des devis du client {client_id}: {str(e)}")
+            return Response(
+                {'error': f'Erreur lors de la récupération des devis: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['post'])
     def envoyer(self, request, pk=None):
         """Envoyer un devis (changer le statut en 'envoye')"""

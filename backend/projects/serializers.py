@@ -4,7 +4,8 @@ from django.utils import timezone
 from django.db import models
 from drf_spectacular.utils import extend_schema_field
 from .models import (
-    Project, ProjectMember, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget
+    Project, ProjectMember, ProjectTask, TimeSheet, ProjectEvent, ProjectBudget,
+    TaskComment, ProjectNotification, TimesheetTimer
 )
 from users.serializers import UserSerializer  # Import UserSerializer from users app
 from users.models import ClientProfile
@@ -47,7 +48,7 @@ class TimeSheetSerializer(serializers.ModelSerializer):
     class Meta:
         model = TimeSheet
         fields = '__all__'
-        read_only_fields = ['validated_by', 'validated_at', 'user_name', 'validator_name', 'can_edit']
+        read_only_fields = ['validated_by', 'validated_at', 'validation_comment', 'user_name', 'validator_name', 'can_edit']
     
     @extend_schema_field(str)
     def get_user_name(self, obj):
@@ -144,7 +145,7 @@ class ProjectTaskSerializer(serializers.ModelSerializer):
             'actual_hours', 'is_template', 'template_category',
             'completion_percentage', 'assigned_to_name', 'ligne_devis', 'created_at'
         ]
-        read_only_fields = ['id', 'actual_hours']
+        read_only_fields = ['id', 'actual_hours', 'project']
     
     @extend_schema_field(int)
     def get_completion_percentage(self, obj):
@@ -291,7 +292,7 @@ class ProjectEventSerializer(serializers.ModelSerializer):
         model = ProjectEvent
         fields = [
             'id', 'project', 'title', 'description', 'event_type',
-            'start_date', 'end_date', 'location', 'participants',
+            'start_date', 'end_date', 'location','participants',
             'created_by', 'created_by_name', 'created_at', 'updated_at',
             'is_all_day'
         ]
@@ -320,21 +321,6 @@ class ProjectBudgetSerializer(serializers.ModelSerializer):
         fields = ['id', 'project', 'production', 'personnel', 'marketing', 'other', 'total']
         read_only_fields = ['id', 'total']
 
-class TimeSheetSerializer(serializers.ModelSerializer):
-    task_details = serializers.SerializerMethodField()
-    class Meta:
-        model = TimeSheet
-        fields = [
-            'id', 'project', 'task', 'user', 'date', 'hours',
-            'description', 'validated_by', 'validated_at',
-            'created_at', 'updated_at', 'task_details'
-        ]
-        read_only_fields = ['id', 'validated_by', 'validated_at', 'created_at', 'updated_at']
-    
-    @extend_schema_field(dict)
-    def get_task_details(self, obj):
-        return obj.details_task()
-        
 
 class ProjectSerializer(serializers.ModelSerializer):
     team_members = ProjectMemberSerializer(source='project_members', many=True, read_only=True)
@@ -351,4 +337,94 @@ class ProjectSerializer(serializers.ModelSerializer):
             'contract', 'contract_details', 'tags', 'team_members',
             'budget_details', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at'] 
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+
+class TaskCommentSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les commentaires sur les tâches"""
+
+    author_details = UserSerializer(source='author', read_only=True)
+    mentioned_users = UserSerializer(source='mentions', many=True, read_only=True)
+    replies = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TaskComment
+        fields = [
+            'id', 'task', 'author', 'author_details', 'content',
+            'created_at', 'updated_at', 'parent', 'mentions',
+            'mentioned_users', 'attachments', 'replies'
+        ]
+        read_only_fields = ['id', 'author', 'created_at', 'updated_at']
+
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_replies(self, obj):
+        if obj.replies.exists():
+            return TaskCommentSerializer(obj.replies.all(), many=True).data
+        return []
+
+    def create(self, validated_data):
+        validated_data['author'] = self.context['request'].user
+        mentions = validated_data.pop('mentions', [])
+        comment = TaskComment.objects.create(**validated_data)
+        comment.mentions.set(mentions)
+        return comment
+
+
+class ProjectNotificationSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les notifications"""
+
+    related_task_title = serializers.SerializerMethodField()
+    related_project_title = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProjectNotification
+        fields = [
+            'id', 'recipient', 'notification_type', 'title', 'message',
+            'is_read', 'created_at', 'related_project', 'related_task',
+            'related_comment', 'related_timesheet', 'related_task_title',
+            'related_project_title'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    @extend_schema_field(str)
+    def get_related_task_title(self, obj):
+        return obj.related_task.title if obj.related_task else None
+
+    @extend_schema_field(str)
+    def get_related_project_title(self, obj):
+        return obj.related_project.title if obj.related_project else None
+
+
+class TimesheetTimerSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les timers de feuilles de temps"""
+
+    user_name = serializers.SerializerMethodField()
+    task_title = serializers.SerializerMethodField()
+    elapsed_time = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TimesheetTimer
+        fields = [
+            'id', 'user', 'user_name', 'project', 'task', 'task_title',
+            'start_time', 'end_time', 'description', 'is_running',
+            'created_at', 'elapsed_time'
+        ]
+        read_only_fields = ['id', 'user', 'start_time', 'created_at', 'elapsed_time']
+
+    @extend_schema_field(str)
+    def get_user_name(self, obj):
+        return obj.user.get_full_name()
+
+    @extend_schema_field(str)
+    def get_task_title(self, obj):
+        return obj.task.title
+
+    @extend_schema_field(int)
+    def get_elapsed_time(self, obj):
+        return int(obj.get_elapsed_time())
+
+    def create(self, validated_data):
+        print("2025-11-28T15:41:44.246Z", validated_data)
+        validated_data['user'] = self.context['request'].user
+        validated_data['start_time'] = timezone.now()
+        return super().create(validated_data) 

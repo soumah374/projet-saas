@@ -257,221 +257,226 @@ export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">Documents</h2>
-          <p className="text-sm text-gray-500">
-            Gérez les documents associés à ce projet
-          </p>
-        </div>
-        <Button onClick={() => setUploadDialogOpen(true)}>
-          <Upload className="w-4 h-4 mr-2" />
-          Uploader
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <Input
-            placeholder="Rechercher un document..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="max-w-sm"
-          />
-        </div>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Catégorie" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Tous">Tous</SelectItem>
-            <SelectItem value="proposal">Propositions</SelectItem>
-            <SelectItem value="report">Rapports</SelectItem>
-            <SelectItem value="presentation">Présentations</SelectItem>
-            <SelectItem value="design">Design</SelectItem>
-            <SelectItem value="other">Autres</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Uploader un document</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleUpload} className="space-y-4">
-            <div className="space-y-4">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  id="file"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mp3,.zip"
-                />
-                <label
-                  htmlFor="file"
-                  className="cursor-pointer flex flex-col items-center justify-center"
-                >
-                  <Upload className="h-8 w-8 text-gray-400" />
-                  <span className="mt-2 text-sm text-gray-500">
-                    Cliquez pour sélectionner un fichier
-                  </span>
-                </label>
-                {selectedFile && (
-                  <p className="mt-2 text-sm text-gray-500">
-                    Fichier sélectionné: {selectedFile.name}
-                  </p>
-                )}
-                <p className="text-xs text-gray-400 mt-2">
-                  PDF, DOC, XLS, PPT, Images, Vidéos, Audio, Archives (Max: 50MB)
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="title">Titre</Label>
-                <Input
-                  id="title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Catégorie</Label>
-                <Select value={category} onValueChange={handleCategoryChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionnez une catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="proposal">Proposition</SelectItem>
-                    <SelectItem value="report">Rapport</SelectItem>
-                    <SelectItem value="presentation">Présentation</SelectItem>
-                    <SelectItem value="design">Design</SelectItem>
-                    <SelectItem value="other">Autre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="tags">Tags</Label>
-                <Input
-                  id="tags"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  placeholder="tag1, tag2, tag3"
-                />
-                <p className="text-xs text-gray-500">
-                  Séparez les tags par des virgules
-                </p>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="is_public"
-                  checked={isPublic}
-                  onCheckedChange={(checked) => setIsPublic(checked as boolean)}
-                />
-                <Label htmlFor="is_public">Document public</Label>
-              </div>
+    <Card>
+      <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-semibold tracking-tight">Documents</h2>
+              <p className="text-sm text-gray-500">
+                Gérez les documents associés à ce projet
+              </p>
             </div>
+            <Button onClick={() => setUploadDialogOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Uploader
+            </Button>
+          </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Rechercher un document..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Catégorie" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Tous">Tous</SelectItem>
+                <SelectItem value="proposal">Propositions</SelectItem>
+                <SelectItem value="report">Rapports</SelectItem>
+                <SelectItem value="presentation">Présentations</SelectItem>
+                <SelectItem value="design">Design</SelectItem>
+                <SelectItem value="other">Autres</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setUploadDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button type="submit">Uploader</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+          <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Uploader un document</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleUpload} className="space-y-4">
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      id="file"
+                      className="hidden"
+                      onChange={handleFileChange}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mp3,.zip"
+                    />
+                    <label
+                      htmlFor="file"
+                      className="cursor-pointer flex flex-col items-center justify-center"
+                    >
+                      <Upload className="h-8 w-8 text-gray-400" />
+                      <span className="mt-2 text-sm text-gray-500">
+                        Cliquez pour sélectionner un fichier
+                      </span>
+                    </label>
+                    {selectedFile && (
+                      <p className="mt-2 text-sm text-gray-500">
+                        Fichier sélectionné: {selectedFile.name}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-2">
+                      PDF, DOC, XLS, PPT, Images, Vidéos, Audio, Archives (Max: 50MB)
+                    </p>
+                  </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDocuments.map((doc) => (
-          <div
-            key={doc.id}
-            className="p-4 border rounded-lg space-y-3 hover:border-gray-400 transition-colors"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-3">
-                {getFileIcon(doc.document_type)}
-                <div>
-                  <h3 className="font-medium truncate max-w-[200px]">{doc.title}</h3>
-                  <p className="text-sm text-gray-500 truncate max-w-[200px]">
-                    {doc.description || 'Aucune description'}
-                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Titre</Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="category">Catégorie</Label>
+                    <Select value={category} onValueChange={handleCategoryChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez une catégorie" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="proposal">Proposition</SelectItem>
+                        <SelectItem value="report">Rapport</SelectItem>
+                        <SelectItem value="presentation">Présentation</SelectItem>
+                        <SelectItem value="design">Design</SelectItem>
+                        <SelectItem value="other">Autre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="tags">Tags</Label>
+                    <Input
+                      id="tags"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                      placeholder="tag1, tag2, tag3"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Séparez les tags par des virgules
+                    </p>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="is_public"
+                      checked={isPublic}
+                      onCheckedChange={(checked) => setIsPublic(checked as boolean)}
+                    />
+                    <Label htmlFor="is_public">Document public</Label>
+                  </div>
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setUploadDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button type="submit">Uploader</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredDocuments.map((doc) => (
+              <div
+                key={doc.id}
+                className="p-4 border rounded-lg space-y-3 hover:border-gray-400 transition-colors"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-3">
+                    {getFileIcon(doc.document_type)}
+                    <div>
+                      <h3 className="font-medium truncate max-w-[200px]">{doc.title}</h3>
+                      <p className="text-sm text-gray-500 truncate max-w-[200px]">
+                        {doc.description || 'Aucune description'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedDocument(doc);
+                        setShowDetails(true);
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteClick(doc)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">{doc.document_type.toUpperCase()}</Badge>
+                  <Badge>{doc.category}</Badge>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setSelectedDocument(doc);
-                    setShowDetails(true);
-                  }}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDeleteClick(doc)}
-                >
-                  <Trash2 className="h-4 w-4 text-red-500" />
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">{doc.document_type.toUpperCase()}</Badge>
-              <Badge>{doc.category}</Badge>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {selectedDocument && (
-        <DocumentDetailsModal
-          document={selectedDocument}
-          open={showDetails}
-          onOpenChange={(open) => {
-            setShowDetails(open);
-            if (!open) setSelectedDocument(null);
-          }}
-        />
-      )}
+          {selectedDocument && (
+            <DocumentDetailsModal
+              document={selectedDocument}
+              open={showDetails}
+              onOpenChange={(open) => {
+                setShowDetails(open);
+                if (!open) setSelectedDocument(null);
+              }}
+            />
+          )}
 
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Cette action est irréversible. Le document{' '}
-              <span className="font-medium">{documentToDelete?.title}</span> sera définitivement supprimé.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setDocumentToDelete(null)}>
-              Annuler
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+          <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action est irréversible. Le document{' '}
+                  <span className="font-medium">{documentToDelete?.title}</span> sera définitivement supprimé.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDocumentToDelete(null)}>
+                  Annuler
+                </AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </CardContent>
+    </Card>
   );
 };

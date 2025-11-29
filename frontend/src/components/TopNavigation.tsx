@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { NotificationDropdown } from './NotificationDropdown';
+import { NotificationCenter } from './projects/NotificationCenter';
 import { Logo } from './Logo';
 
 interface User {
@@ -88,8 +88,8 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
       </div>
 
       <div className="flex items-center gap-4 min-w-0">
-        {/* Notifications */}
-        <NotificationDropdown />
+        {/* Notifications - Phase 3 Collaboration */}
+        <NotificationCenter />
 
         {/* Menu utilisateur */}
         <DropdownMenu>

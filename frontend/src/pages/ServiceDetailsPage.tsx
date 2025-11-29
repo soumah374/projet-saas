@@ -12,10 +12,8 @@ import {
   Edit, 
   Clock, 
   Users, 
-  Euro, 
   Activity, 
   Loader2, 
-  Calendar,
   Building2,
   FileText,
   Plus,
@@ -111,8 +109,12 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
   onNewProfileNameChange,
   onAddNewProfile
 }) => {
+  // Local state to track select value so we can show the "other" input only when chosen
+  const [selectedOption, setSelectedOption] = useState<string>('');
+
   const handleProfileChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value;
+    setSelectedOption(value);
     if (value === 'other' || !value) return;
     
     const profileId = parseInt(value);
@@ -122,10 +124,30 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
     const existingProfile = profilesData.find(p => p.profile_intervenant_id === profileId);
     if (existingProfile) {
       toast.error('Ce profil est déjà ajouté');
+      // reset selection so user can choose again
+      setSelectedOption('');
       return;
     }
     
     onProfileAdd(profileId);
+    // reset selection after adding
+    setSelectedOption('');
+  };
+
+  // Handler to trigger creation of a new profile and reset selection afterwards
+  const handleAddNewProfileClick = async () => {
+    if (!onAddNewProfile) return;
+    try {
+      const maybePromise: any = onAddNewProfile ? (onAddNewProfile as any)() : null;
+      if (maybePromise && typeof maybePromise.then === 'function') {
+        await maybePromise;
+      }
+      // After successful creation, reset the select so it doesn't stay on 'other'
+      setSelectedOption('');
+    } catch (err) {
+      // onAddNewProfile should show errors via toast; still ensure select reset is safe
+      setSelectedOption('');
+    }
   };
 
   const { 
@@ -139,7 +161,7 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
         <select 
           className="flex-1 border rounded-md px-3 py-2 text-sm"
           onChange={handleProfileChange}
-          value=""
+          value={selectedOption}
         >
           <option value="">Sélectionner un profil</option>
           {profiles.map(profile => (
@@ -152,16 +174,17 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
       </div>
       
       {/* Champ pour créer un nouveau profil */}
-      {onAddNewProfile && (
+      {/* Show new profile input only when the user selected "other" */}
+      {onAddNewProfile && selectedOption === 'other' && (
         <div className="flex gap-2">
           <Input
             placeholder="Nouveau profil intervenant"
             value={newProfileName}
             onChange={(e) => onNewProfileNameChange?.(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && onAddNewProfile()}
+            onKeyPress={(e) => e.key === 'Enter' && handleAddNewProfileClick()}
           />
           <Button 
-            onClick={onAddNewProfile} 
+            onClick={() => handleAddNewProfileClick()} 
             size="sm" 
             variant="outline"
             disabled={!newProfileName.trim()}
@@ -210,6 +233,8 @@ const ProfileManager: React.FC<ProfileManagerProps> = ({
     </div>
   );
 };
+
+// (no exported helpers)
 
 // Hook personnalisé pour la gestion des activités
 const useActivityForm = (profiles: IntervenantProfile[], setProfiles?: React.Dispatch<React.SetStateAction<IntervenantProfile[]>>) => {
@@ -1158,19 +1183,17 @@ export function ServiceDetailsPage() {
                 required
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
-                <Input
-                  name="duree_standard"
-                  type="number"
-                  step="0.5"
-                  placeholder="0.0"
-                  value={createActivityForm.form.duree_standard}
-                  onChange={createActivityForm.handleChange}
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
+              <Input
+                name="duree_standard"
+                type="number"
+                step="0.5"
+                placeholder="0.0"
+                value={createActivityForm.form.duree_standard}
+                onChange={createActivityForm.handleChange}
+                required
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Profils intervenant</label>
@@ -1291,21 +1314,19 @@ export function ServiceDetailsPage() {
                 required
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
-                <Input
-                  name="duree_standard"
-                  type="number"
-                  step="0.5"
-                  placeholder="0.0"
-                  value={editActivityForm.form.duree_standard}
-                  onChange={editActivityForm.handleChange}
-                  required
-                />
-              </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Durée standard (h)</label>
+              <Input
+                name="duree_standard"
+                type="number"
+                step="0.5"
+                placeholder="0.0"
+                value={editActivityForm.form.duree_standard}
+                onChange={editActivityForm.handleChange}
+                required
+              />
             </div>
-            <div className="max-h-64 overflow-y-auto pr-1">
+            <div>
               <label className="block text-sm font-medium mb-2">Profils intervenant</label>
               <ProfileManager
                 profiles={profiles}

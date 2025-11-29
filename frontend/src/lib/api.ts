@@ -105,6 +105,7 @@ export interface TimeSheet {
     validated_by: number | null;
     validator_name?: string;
     validated_at: string | null;
+    validation_comment?: string;
     created_at: string;
     updated_at: string;
 }
@@ -159,8 +160,8 @@ export const projectApi = {
         api.patch<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`, data),
     deleteProjectTimeSheet: (projectId: string, timeSheetId: number) => 
         api.delete(`/projects/${projectId}/timesheets/${timeSheetId}/`),
-    validateTimeSheet: (projectId: string, timeSheetId: number) =>
-        api.post<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/validate/`),
+    validateTimeSheet: (projectId: string, timeSheetId: number, comment?: string) =>
+        api.post<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/validate/`, { comment: comment || '' }),
     getTimeSheetSummary: (projectId: string) =>
         api.get(`/projects/${projectId}/timesheets/summary/`),
     
@@ -501,7 +502,15 @@ export const devisAPI = {
     }) => api.get('/devis/devis/', { params }),
     
     getDevisById: (id: number) => api.get(`/devis/devis/${id}/`),
-    
+
+    getDevisByClient: (clientId: number, statut?: string) =>
+        api.get('/devis/devis/par_client/', {
+            params: {
+                client_id: clientId,
+                ...(statut && { statut })
+            }
+        }),
+
     createDevis: (data: {
         client_id: number;
         date_validite: string;
@@ -699,6 +708,44 @@ export const dashboardAPI = {
     
 };
 
+//Activites
+export const activitiesAPI = {
+    getActivities: (params?: {
+        search?: string;
+        type?: string;
+        is_active?: boolean;
+        ordering?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/activities/', { params }),
+    
+    getActivity: (id: number) => 
+        api.get(`/activities/${id}/`),
+    
+    createActivity: (data: { 
+        name: string;
+        description?: string;
+        type: string;
+        is_active?: boolean;
+    }) => api.post('/activities/', data),
+    
+    updateActivity: (id: number, data: {
+        name?: string;
+        description?: string;
+        type?: string;
+        is_active?: boolean;
+    }) => api.patch(`/activities/${id}/`, data),
+    
+    deleteActivity: (id: number) => 
+        api.delete(`/activities/${id}/`),
+    //Implement
+    bulkimportActivities: (activities: Array<{
+        name: string;
+        duree_standard: number;
+        service_id: number | null;
+        is_active: boolean;
+    }>) => api.post('/catalog/activities/bulk-import/', { activities }),
+}
 // dashboard/src/lib/api.ts
 
 // PATCHs

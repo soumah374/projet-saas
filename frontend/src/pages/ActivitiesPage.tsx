@@ -7,9 +7,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, ArrowLeft, Upload } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { ImportActivitiesModal } from '@/components/ImportActivitiesModal';
 
 interface IntervenantProfile {
   id: number;
@@ -83,21 +84,7 @@ export function ActivitiesPage() {
   const [togglingActivities, setTogglingActivities] = useState<Set<number>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activityToDelete, setActivityToDelete] = useState<Activity | null>(null);
-
-
-
-  // Charger les profils intervenant
-  useEffect(() => {
-    const fetchProfiles = async () => {
-      try {
-        const res = await api.get('/catalog/profiles/');
-        setProfiles(res.data.results || res.data);
-      } catch (err) {
-        setProfiles([]);
-      }
-    };
-    fetchProfiles();
-  }, [dialogOpen]);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Charger les services
   useEffect(() => {
@@ -110,7 +97,7 @@ export function ActivitiesPage() {
       }
     };
     fetchServices();
-  }, [dialogOpen]);
+  }, [dialogOpen, importDialogOpen]);
 
   const fetchActivities = async (page = 1) => {
     setLoading(true);
@@ -338,6 +325,11 @@ export function ActivitiesPage() {
     }
   };
 
+  const importedActivities = async (importedActivities: Activity[]) => {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    fetchActivities(currentPage);
+  }
+
   return (
     <div className="max-w-10xl mx-auto space-y-6">
       {/* Header avec bouton retour */}
@@ -501,6 +493,24 @@ export function ActivitiesPage() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="gap-2" 
+              onClick={() => setImportDialogOpen(true)}
+            >
+              <Upload size={16}/> Importer
+            </Button>
+            <ImportActivitiesModal 
+              open={importDialogOpen} 
+              onClose={() => setImportDialogOpen(false)} 
+              services={services}
+              onImportSuccess={async (importedActivities) => {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                fetchActivities(currentPage);
+                console.log(importedActivities)
+              }}
+            />
           </div>
         </CardHeader>
         <CardContent>

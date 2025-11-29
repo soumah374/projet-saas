@@ -5,20 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProjectPlanning } from '@/components/projects/ProjectPlanning';
 import { ProjectTimesheets } from '@/components/projects/ProjectTimesheets';
-import { ProjectTrackingAlerts } from '@/components/projects/ProjectTrackingAlerts';
-import { ProjectTrackingTable } from '@/components/projects/ProjectTrackingTable';
 import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { DocumentManager } from '@/components/projects/DocumentManager';
-import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
-import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
+import { TimesheetTimer } from '@/components/projects/TimesheetTimer';
 import { useProject, useStartProject, useUpdateProject } from '@/hooks/use-projects';
-import { ArrowLeft, Loader2, Edit, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Edit, CheckCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { EditProjectModal } from '@/components/EditProjectModal';
 import type { CreateProjectForm } from '@/lib/types';
 import { ProjectActionModals } from '@/components/projects/ProjectActionModals';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ProjectDetailsSkeleton } from '@/components/projects/ProjectSkeleton';
 
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
@@ -41,8 +39,6 @@ export function ProjectDetailsPage() {
   const [activeTab, setActiveTab] = useState('planning');
 
   const { 
-    canManageProjects,
-    canManageContrats,
     hasPermission
   } = usePermissions();
   
@@ -91,8 +87,8 @@ export function ProjectDetailsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="container mx-auto py-6">
+        <ProjectDetailsSkeleton />
       </div>
     );
   }
@@ -168,16 +164,16 @@ export function ProjectDetailsPage() {
         </div>
       </div>
       
-      <ProjectTrackingAlerts projectId={projectId} />
+      {/* <ProjectTrackingAlerts projectId={projectId} /> */}
       
 
       {/* Tableau de suivi du projet */}
-      {hasPermission('projects.sommary_project') && (
+      {/* {hasPermission('projects.sommary_project') && (
         <ProjectTrackingTable project={project} />
-      )}
+      )} */}
       
       {/* Informations client et contrat */}
-      {hasPermission('projects.manage_project_members') && (
+      {/* {hasPermission('projects.manage_project_members') && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {project.client_details && (
             <ClientDetailsCard client={project.client_details} />
@@ -190,7 +186,7 @@ export function ProjectDetailsPage() {
             />
           )}
         </div>
-      )}
+      )} */}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-4">
@@ -199,13 +195,13 @@ export function ProjectDetailsPage() {
           <TabsTrigger value="timesheets">Feuilles de temps</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="planning">
           {hasPermission('projects.view_projecttask') && (
             <ProjectPlanning projectId={projectId} />
           )}
         </TabsContent>
-        
+
         <TabsContent value="calendar">
           {hasPermission('projects.view_projectevent') && (
             <ProjectCalendar project={project} />
@@ -214,7 +210,14 @@ export function ProjectDetailsPage() {
         
         <TabsContent value="timesheets">
           {hasPermission('projects.view_timesheet') && (
-            <ProjectTimesheets projectId={projectId} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-2">
+                <ProjectTimesheets projectId={projectId} />
+              </div>
+              <div>
+                <TimesheetTimer projectId={projectId} />
+              </div>
+            </div>
           )}
         </TabsContent>
         

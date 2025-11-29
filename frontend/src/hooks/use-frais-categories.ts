@@ -8,7 +8,7 @@ export const useFraisCategories = () => {
     queryKey: ['frais-categories'],
     queryFn: async (): Promise<FraisCategory[]> => {
       const response = await api.get('/catalog/frais-categories/');
-      return response.data.results;
+      return response.data.results || response.data;
     },
   });
 };

@@ -5,7 +5,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Plus, Trash2, Download, Eye, Send, Check, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { Loader2, Plus, Trash2, Download, Eye, Send, Check, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { ClientFilter } from '@/components/ui/ClientFilter';
 import { DevisModals } from '@/components/devis/DevisModals';
 import { 
@@ -37,6 +37,8 @@ export function DevisPage() {
   const [search, setSearch] = useState('');
   const [statutFilter, setStatutFilter] = useState('');
   const [clientFilter, setClientFilter] = useState('');
+  const [sortBy, setSortBy] = useState<string>('date_creation');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [devisToDelete, setDevisToDelete] = useState<Devis | null>(null);
   const [envoyerDialogOpen, setEnvoyerDialogOpen] = useState(false);
@@ -60,7 +62,7 @@ export function DevisPage() {
     search: search || undefined,
     statut: statutFilter || undefined,
     client: clientFilter ? parseInt(clientFilter) : undefined,
-    ordering: '-date_creation', // Default ordering as per backend
+    ordering: `${sortDir === 'desc' ? '-' : ''}${sortBy}`,
   };
 
   // Hook pour récupérer les devis
@@ -78,6 +80,18 @@ export function DevisPage() {
 
   // Reset to first page when filters change
   const resetToFirstPage = () => setCurrentPage(1);
+
+  // Update sort and reset to first page
+  const applySort = (field: string) => {
+    if (sortBy === field) {
+      // toggle direction
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortDir('asc');
+    }
+    resetToFirstPage();
+  };
 
   // Handle pagination errors
   React.useEffect(() => {
@@ -399,12 +413,40 @@ export function DevisPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Numéro</TableHead>
-                    <TableHead>Client</TableHead>
-                    <TableHead>Date création</TableHead>
-                    <TableHead>Date validité</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Montant TTC</TableHead>
+                    <TableHead>
+                      <button className="flex items-center gap-1" onClick={() => applySort('numero')}>
+                        Numéro
+                        {sortBy === 'numero' ? (
+                          sortDir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                        ) : null}
+                      </button>
+                    </TableHead>
+                        <TableHead>Client</TableHead>
+                        <TableHead>
+                          <button className="flex items-center gap-1" onClick={() => applySort('date_creation')}>
+                            Date création
+                            {sortBy === 'date_creation' ? (
+                              sortDir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                            ) : null}
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button className="flex items-center gap-1" onClick={() => applySort('date_validite')}>
+                            Date validité
+                            {sortBy === 'date_validite' ? (
+                              sortDir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                            ) : null}
+                          </button>
+                        </TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead>
+                          <button className="flex items-center gap-1" onClick={() => applySort('montant_ttc')}>
+                            Montant TTC
+                            {sortBy === 'montant_ttc' ? (
+                              sortDir === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} />
+                            ) : null}
+                          </button>
+                        </TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>

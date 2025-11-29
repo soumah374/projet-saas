@@ -1,0 +1,247 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Users,
+  Calendar as CalendarIcon,
+  Clock,
+  Edit,
+  Play,
+  Eye,
+  UserPlus,
+  GripVertical
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { TaskModal } from '../TaskModal';
+import { StartTaskProjectModal } from '../StartTaskProjectModal';
+import type { ProjectTask } from '@/lib/types';
+
+interface ProjectKanbanViewProps {
+  tasks: ProjectTask[];
+  projectId: string;
+  onOpenAssignmentDialog?: (task: ProjectTask) => void;
+}
+
+interface KanbanColumn {
+  id: string;
+  title: string;
+  status: string;
+  color: string;
+  bgColor: string;
+}
+
+const columns: KanbanColumn[] = [
+  {
+    id: 'todo',
+    title: 'À faire',
+    status: 'À faire',
+    color: 'text-gray-700',
+    bgColor: 'bg-gray-50'
+  },
+  {
+    id: 'in-progress',
+    title: 'En cours',
+    status: 'En cours',
+    color: 'text-blue-700',
+    bgColor: 'bg-blue-50'
+  },
+  {
+    id: 'paused',
+    title: 'En pause',
+    status: 'En pause',
+    color: 'text-orange-700',
+    bgColor: 'bg-orange-50'
+  },
+  {
+    id: 'done',
+    title: 'Terminé',
+    status: 'Terminé',
+    color: 'text-green-700',
+    bgColor: 'bg-green-50'
+  }
+];
+
+export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: ProjectKanbanViewProps) {
+  const [draggedTask, setDraggedTask] = useState<ProjectTask | null>(null);
+
+  const getTasksByStatus = (status: string) => {
+    return tasks?.filter(task => task.status === status) || [];
+  };
+
+  const handleDragStart = (task: ProjectTask) => {
+    setDraggedTask(task);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTask(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (status: string) => {
+    if (!draggedTask) return;
+
+    // TODO: Appeler l'API pour mettre à jour le statut
+    console.log(`Moving task ${draggedTask.id} to ${status}`);
+
+    setDraggedTask(null);
+  };
+
+  const renderTask = (task: ProjectTask) => {
+    const extendedTask = {
+      ...task,
+      assigned_to: task.assigned_to_name ? {
+        id: task.assigned_to as number,
+        first_name: task.assigned_to_name.split(' ')[0],
+        last_name: task.assigned_to_name.split(' ')[1] || '',
+        email: '',
+        username: '',
+        profile: {
+          is_active: true,
+          created_at: '',
+          updated_at: ''
+        },
+        full_name: task.assigned_to_name,
+        project_count: '0',
+        is_active: true,
+        groups: []
+      } : null
+    };
+
+    return (
+      <Card
+        key={task.id}
+        draggable
+        onDragStart={() => handleDragStart(task)}
+        onDragEnd={handleDragEnd}
+        className="mb-3 cursor-move hover:shadow-md transition-shadow"
+      >
+        <CardContent className="p-4">
+          <div className="space-y-3">
+            {/* En-tête de la tâche */}
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-2 flex-1">
+                <GripVertical className="h-4 w-4 text-gray-400 mt-1 flex-shrink-0" />
+                <h4 className="font-medium text-sm leading-tight">{task.title}</h4>
+              </div>
+            </div>
+
+            {/* Description */}
+            {task.description && (
+              <p className="text-xs text-gray-600 line-clamp-2">{task.description}</p>
+            )}
+
+            {/* Métadonnées */}
+            <div className="flex flex-wrap gap-2 text-xs text-gray-500">
+              {task.assigned_to_name && (
+                <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
+                  <Users className="h-3 w-3" />
+                  <span>{task.assigned_to_name}</span>
+                </div>
+              )}
+
+              {task.due_date && (
+                <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
+                  <CalendarIcon className="h-3 w-3" />
+                  <span>{format(new Date(task.due_date), 'dd MMM', { locale: fr })}</span>
+                </div>
+              )}
+
+              {task.estimated_hours && (
+                <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
+                  <Clock className="h-3 w-3" />
+                  <span>{task.estimated_hours / 8}J</span>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-1 pt-2 border-t border-gray-100">
+              {task.status !== 'Terminé' && onOpenAssignmentDialog && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onOpenAssignmentDialog(task)}
+                  className="h-7 px-2"
+                >
+                  <UserPlus className="h-3 w-3" />
+                </Button>
+              )}
+
+              {task.status !== 'Terminé' && (
+                <StartTaskProjectModal task={task} projectId={projectId}>
+                  <Button variant="ghost" size="sm" className="h-7 px-2">
+                    <Play className="h-3 w-3" />
+                  </Button>
+                </StartTaskProjectModal>
+              )}
+
+              {task.status !== 'Terminé' && (
+                <TaskModal projectId={projectId} task={extendedTask} mode="edit">
+                  <Button variant="ghost" size="sm" className="h-7 px-2">
+                    <Edit className="h-3 w-3" />
+                  </Button>
+                </TaskModal>
+              )}
+
+              <TaskModal projectId={projectId} task={extendedTask} mode="view">
+                <Button variant="ghost" size="sm" className="h-7 px-2">
+                  <Eye className="h-3 w-3" />
+                </Button>
+              </TaskModal>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {columns.map((column) => {
+        const columnTasks = getTasksByStatus(column.status);
+
+        return (
+          <div
+            key={column.id}
+            className="flex flex-col"
+            onDragOver={handleDragOver}
+            onDrop={() => handleDrop(column.status)}
+          >
+            {/* En-tête de colonne */}
+            <Card className={`${column.bgColor} border-2`}>
+              <CardHeader className="p-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className={`text-sm font-semibold ${column.color}`}>
+                    {column.title}
+                  </CardTitle>
+                  <Badge variant="secondary" className="ml-2">
+                    {columnTasks.length}
+                  </Badge>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Liste des tâches */}
+            <ScrollArea className="flex-1 mt-4" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+              <div className="pr-4">
+                {columnTasks.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-gray-400">
+                    <p>Aucune tâche</p>
+                  </div>
+                ) : (
+                  columnTasks.map(renderTask)
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        );
+      })}
+    </div>
+  );
+}

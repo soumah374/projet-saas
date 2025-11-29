@@ -152,26 +152,26 @@ class Devis(models.Model):
         self.montant_ttc = self.montant_ht + self.montant_tva + self.montant_frais_agence
         self.save()
     
-    def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id, type_ligne):
+    def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id, type_ligne, prix_unitaire_ht=0, montant_ht=0):
         """Ajouter une ligne au devis"""
         from catalog.models import Service, Activity, UniteStandard
-        
+
         service = Service.objects.get(id=service_id)
         activity = Activity.objects.get(id=activity_id)
         unite = UniteStandard.objects.get(id=unite_id)
-        
-        # Créer la ligne avec un prix unitaire initial de 0
+
+        # Créer la ligne avec le prix unitaire et montant fournis
         ligne = self.lignes.create(
             service=service,
             activity=activity,
             description=description,
             quantite=quantite,
             unite=unite,
-            prix_unitaire_ht=0,
-            type_ligne=type_ligne
-            # Sera recalculé quand les intervenants seront ajoutés
+            prix_unitaire_ht=prix_unitaire_ht,
+            type_ligne=type_ligne,
+            montant_ht=montant_ht
         )
-        
+
         return ligne
 
 
@@ -269,7 +269,7 @@ class LigneDevisIntervenant(models.Model):
         unique_together = ['ligne_devis', 'profile_intervenant']
     
     def __str__(self):
-        return f"{self.profile_intervenant.name} - {self.temps_intervenant}h"
+        return f"{self.profile_intervenant.intitule} - {self.temps_intervenant}h"
     
     def save(self, *args, **kwargs):
         # Calculer le montant pour cet intervenant

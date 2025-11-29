@@ -10,12 +10,14 @@ from django.http import HttpResponse
 from rest_framework import serializers
 
 from .models import (
-    Project, ProjectMember, ProjectTask, ProjectEvent, TimeSheet, Department
+    Project, ProjectMember, ProjectTask, ProjectEvent, TimeSheet, Department,
+    TaskComment, ProjectNotification, TimesheetTimer
 )
 from .serializers import (
     ProjectListSerializer, ProjectDetailSerializer, ProjectCreateSerializer,
     ProjectUpdateSerializer, ProjectMemberSerializer,
-    ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer
+    ProjectTaskSerializer, ProjectEventSerializer, TimeSheetSerializer,
+    TaskCommentSerializer, ProjectNotificationSerializer, TimesheetTimerSerializer
 )
 from notifications.serializers import NotificationSerializer
 from django.contrib.auth import get_user_model
@@ -524,9 +526,10 @@ class TimeSheetViewSet(viewsets.ModelViewSet):
     def validate(self, request, project_pk=None, pk=None):
         """Valider une feuille de temps"""
         timesheet = self.get_object()
-        
+        comment = request.data.get('comment', '')
+
         try:
-            timesheet.validate(request.user)
+            timesheet.validate(request.user, comment=comment)
             serializer = self.get_serializer(timesheet)
             return Response(serializer.data)
         except ValueError as e:
@@ -694,3 +697,112 @@ class ProjectEventViewSet(viewsets.ModelViewSet):
         ).order_by('date', 'start_time')
         serializer = self.get_serializer(upcoming, many=True)
         return Response(serializer.data)
+
+
+class TaskCommentViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les commentaires sur les tâches"""
+
+    serializer_class = TaskCommentSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering = ['created_at']
+
+    def get_queryset(self):
+        """Filtrer les commentaires par tâche"""
+        task_id = self.kwargs.get('task_pk')
+        if task_id:
+            return TaskComment.objects.filter(task_id=task_id, parent__isnull=True)
+        return TaskComment.objects.none()
+
+    def perform_create(self, serializer):
+        """Créer un commentaire avec l'auteur"""
+        task_id = self.kwargs.get('task_pk')
+        serializer.save(task_id=task_id)
+
+        # Créer une notification pour l'assigné de la tâche
+        task = ProjectTask.objects.get(id=task_id)
+        if task.assigned_to and task.assigned_to != self.request.user:
+            ProjectNotification.objects.create(
+                recipient=task.assigned_to,
+                notification_type='comment_added',
+                title='Nouveau commentaire',
+                message=f"{self.request.user.get_full_name()} a ajouté un commentaire sur la tâche '{task.title}'",
+                related_task=task,
+                related_comment=serializer.instance
+            )
+
+
+class ProjectNotificationViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les notifications"""
+
+    queryset = ProjectNotification.objects.all()
+    serializer_class = ProjectNotificationSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
+    filterset_fields = ['is_read', 'notification_type']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        """Filtrer les notifications pour l'utilisateur connecté"""
+        return super().get_queryset().filter(recipient=self.request.user)
+
+    @action(detail=True, methods=['post'], url_path='mark_as_read', url_name='mark-as-read')
+    def mark_as_read(self, request, pk=None, project_pk=None):
+        """Marquer une notification comme lue"""
+        notification = self.get_object()
+        notification.mark_as_read()
+        return Response({'status': 'marked as read'})
+
+    @action(detail=False, methods=['post'], url_path='mark_all_as_read', url_name='mark-all-as-read')
+    def mark_all_as_read(self, request, project_pk=None):
+        """Marquer toutes les notifications comme lues"""
+        self.get_queryset().update(is_read=True)
+        return Response({'status': 'all marked as read'})
+
+    @action(detail=False, methods=['get'], url_path='unread_count', url_name='unread-count')
+    def unread_count(self, request, project_pk=None):
+        """Obtenir le nombre de notifications non lues"""
+        count = self.get_queryset().filter(is_read=False).count()
+        return Response({'count': count})
+
+
+class TimesheetTimerViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les timers de feuilles de temps"""
+
+    queryset = TimesheetTimer.objects.all()
+    serializer_class = TimesheetTimerSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter, DjangoFilterBackend]
+    filterset_fields = ['is_running', 'project', 'task']
+    ordering = ['-start_time']
+
+    def get_queryset(self):
+        """Filtrer les timers pour l'utilisateur connecté"""
+        return super().get_queryset().filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        """Créer un timer avec l'utilisateur connecté"""
+        serializer.save(user=self.request.user, start_time=timezone.now())
+    
+    @action(detail=False, methods=['get'], url_path='active', url_name='active')
+    def active(self, request, project_pk=None):
+        """Obtenir le timer actif"""
+        timer = self.get_queryset().filter(is_running=True).first()
+        if timer:
+            serializer = self.get_serializer(timer)
+            return Response(serializer.data)
+        return Response({'status': 'no active timer'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'], url_path='stop', url_name='stop')
+    def stop(self, request, pk=None, project_pk=None):
+        """Arrêter un timer"""
+        timer = self.get_object()
+        try:
+            timesheet = timer.stop()
+            return Response({
+                'status': 'timer stopped',
+                'timesheet_id': timesheet.id,
+                'hours': float(timesheet.hours)
+            })
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
