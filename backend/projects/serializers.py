@@ -281,18 +281,18 @@ class ProjectUpdateSerializer(serializers.ModelSerializer):
 class ProjectEventSerializer(serializers.ModelSerializer):
     """Sérialiseur pour les événements de projet"""
     
-    participants = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=User.objects.all(),
-        required=False
-    )
+    # participants = serializers.PrimaryKeyRelatedField(
+    #     many=True,
+    #     queryset=User.objects.all(),
+    #     required=False
+    # )
     created_by_name = serializers.SerializerMethodField()
     
     class Meta:
         model = ProjectEvent
         fields = [
             'id', 'project', 'title', 'description', 'event_type',
-            'start_date', 'end_date', 'location', 'participants',
+            'start_date', 'end_date', 'location',
             'created_by', 'created_by_name', 'created_at', 'updated_at',
             'is_all_day'
         ]
