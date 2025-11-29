@@ -292,7 +292,7 @@ class ProjectEventSerializer(serializers.ModelSerializer):
         model = ProjectEvent
         fields = [
             'id', 'project', 'title', 'description', 'event_type',
-            'start_date', 'end_date', 'location',
+            'start_date', 'end_date', 'location','participants',
             'created_by', 'created_by_name', 'created_at', 'updated_at',
             'is_all_day'
         ]
