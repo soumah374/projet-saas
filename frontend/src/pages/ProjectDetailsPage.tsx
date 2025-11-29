@@ -5,12 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProjectPlanning } from '@/components/projects/ProjectPlanning';
 import { ProjectTimesheets } from '@/components/projects/ProjectTimesheets';
-import { ProjectTrackingAlerts } from '@/components/projects/ProjectTrackingAlerts';
-import { ProjectTrackingTable } from '@/components/projects/ProjectTrackingTable';
 import { ProjectCalendar } from '@/components/projects/ProjectCalendar';
 import { DocumentManager } from '@/components/projects/DocumentManager';
-import { ClientDetailsCard } from '@/components/clients/ClientDetailsCard';
-import { ContratDetailsCard } from '@/components/contrats/ContratDetailsCard';
 import { TimesheetTimer } from '@/components/projects/TimesheetTimer';
 import { useProject, useStartProject, useUpdateProject } from '@/hooks/use-projects';
 import { ArrowLeft, Edit, CheckCircle } from 'lucide-react';
@@ -43,8 +39,6 @@ export function ProjectDetailsPage() {
   const [activeTab, setActiveTab] = useState('planning');
 
   const { 
-    canManageProjects,
-    canManageContrats,
     hasPermission
   } = usePermissions();
   
