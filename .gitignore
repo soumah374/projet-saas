@@ -6,3 +6,6 @@
 .vscode/
 .vscode/
 data-mailpit/
+backend/media/documents/projects/*
+backend/media/documents/general/*
+backend/media/comments/*
