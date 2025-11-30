@@ -342,6 +342,7 @@ export function DevisDetailPage() {
 
   const openDeleteDialog = (ligne: any) => {
     setLigneToDelete(ligne);
+    console.log(ligne)
     setDeleteLigneDialogOpen(true);
   };
 
@@ -931,13 +932,17 @@ export function DevisDetailPage() {
             {ligneToDelete && (
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="grid grid-cols-2 gap-4 text-sm">
+                    {ligneToDelete.type_ligne === 'prestation' && (
+                      <div>
+                        <span className="font-medium">Service :</span>
+                        <p className="text-gray-600">{ligneToDelete?.service?.name}</p>
+                      </div>
+                    )}
                   <div>
-                    <span className="font-medium">Service :</span>
-                    <p className="text-gray-600">{ligneToDelete.service.intitule}</p>
-                  </div>
-                  <div>
-                    <span className="font-medium">Activité :</span>
-                    <p className="text-gray-600">{ligneToDelete.activity.intitule}</p>
+                    <span className="font-medium">{ligneToDelete.type_ligne === 'prestation' ? 'Activité :' : 'Frais'}</span>
+                    <p className="text-gray-600">{ligneToDelete.type_ligne === 'prestation'
+                        ? ligneToDelete.activity?.intitule || '—'
+                        : ligneToDelete.ligne_frais?.description || '—'}</p>
                   </div>
                   <div>
                     <span className="font-medium">Description :</span>

@@ -538,6 +538,7 @@ export const projectTeamAPI = {
 // Services
 export const servicesAPI = {
     getServices: () => api.get('/catalog/services/'),
+    getService: (id: number) => api.get(`/catalog/services/${id}/`),
 };
 
 // Devis
