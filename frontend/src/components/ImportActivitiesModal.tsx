@@ -32,14 +32,14 @@ interface ImportActivityRawData {
 interface ImportActivitiesModalProps {
   open: boolean;
   onClose: () => void;
-  services: Service[];
+  serviceSelect: Service[];
   onImportSuccess: (activities: ImportActivityData[]) => Promise<void>;
 }
 
 export function ImportActivitiesModal({
   open,
   onClose,
-  services,
+  serviceSelect,
   onImportSuccess
 }: ImportActivitiesModalProps) {
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -426,7 +426,7 @@ export function ImportActivitiesModal({
                             }`}
                           >
                             <option value="none">Aucun service</option>
-                            {services.map((service) => (
+                            {serviceSelect.map((service) => (
                               <option key={service.id} value={service.id.toString()}>
                                 {service.name}
                               </option>

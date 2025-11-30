@@ -10,10 +10,11 @@ import { format, addDays, eachDayOfInterval, differenceInDays, addMonths, subMon
 import { fr } from 'date-fns/locale';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ProjectTask } from '@/lib/types';
+import { Project, ProjectTask } from '@/lib/types';
 
 interface GanttViewProps {
   projectId: string;
+  project?: Project;
 }
 
 interface GanttTask {

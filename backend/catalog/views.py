@@ -193,8 +193,6 @@ class ServiceViewSet(viewsets.ModelViewSet):
         }
         """
         services_data = request.data.get('services', [])
-        print("Received services data for import:", services_data)
-        print("Received services data for import:", services_data)
         if not services_data:
             return Response(
                 {'error': 'Aucune prestation fournie pour l\'import'},

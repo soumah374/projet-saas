@@ -8,9 +8,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, ArrowLeft, Upload } from 'lucide-react';
-import { api } from '@/lib/api';
+import { api, servicesAPI } from '@/lib/api';
 import { toast } from 'sonner';
 import { ImportActivitiesModal } from '@/components/ImportActivitiesModal';
+import { useSearchParams } from "react-router-dom";
 
 interface IntervenantProfile {
   id: number;
@@ -85,6 +86,10 @@ export function ActivitiesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [activityToDelete, setActivityToDelete] = useState<Activity | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [serviceSelect, setServiceSelect] = useState<Service[] | []>([]);
+
+  const [searchParams] = useSearchParams();
+  const serviceFilterId = searchParams.get("service_filter");
 
   // Charger les services
   useEffect(() => {
@@ -92,6 +97,9 @@ export function ActivitiesPage() {
       try {
         const res = await api.get('/catalog/services/');
         setServices(res.data.results || res.data);
+        const responseService = await servicesAPI.getService(parseInt(serviceFilterId));
+        setServiceSelect([responseService.data])
+
       } catch (err) {
         setServices([]);
       }
@@ -127,6 +135,7 @@ export function ActivitiesPage() {
 
   const handleOpenDialog = (activity?: Activity) => {
     if (activity) {
+      
       setEditActivity(activity);
       setForm(activity);
       setServiceId(activity.service?.id || null);
@@ -504,7 +513,7 @@ export function ActivitiesPage() {
             <ImportActivitiesModal 
               open={importDialogOpen} 
               onClose={() => setImportDialogOpen(false)} 
-              services={services}
+              serviceSelect={serviceSelect}
               onImportSuccess={async (importedActivities) => {
                 await new Promise(resolve => setTimeout(resolve, 500));
                 fetchActivities(currentPage);
