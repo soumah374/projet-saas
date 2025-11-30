@@ -799,6 +799,3 @@ export const activitiesAPI = {
     }>) => api.post('/catalog/activities/bulk-import/', { activities }),
 }
 // dashboard/src/lib/api.ts
-
-// PATCHs
-// 

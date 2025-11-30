@@ -7,8 +7,8 @@ import os
 def document_upload_path(instance, filename):
     """Générer le chemin de sauvegarde pour les documents"""
     if instance.project:
-        return f'media/documents/projects/{instance.project.id}/{filename}'
-    return f'media/documents/general/{filename}'
+        return f'documents/projects/{instance.project.id}/{filename}'
+    return f'documents/general/{filename}'
 
 
 class Document(models.Model):

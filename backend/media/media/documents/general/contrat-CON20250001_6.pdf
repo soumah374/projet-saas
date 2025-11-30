@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <script type="module">import { injectIntoGlobalHook } from "/@react-refresh";
+injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;</script>
+
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>saKom - Gestion de projets collaborative</title>
+    <meta name="description" content="Plateforme de gestion de projets collaborative saKom" />
+    <meta name="author" content="saKom" />
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <meta property="og:title" content="saKom - Gestion de projets collaborative" />
+    <meta property="og:description" content="Plateforme de gestion de projets collaborative saKom" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/Logo-saKom-1.ico" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@sakom" />
+    <meta name="twitter:image" content="/Logo-saKom-1.ico" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx?t=1764504947866"></script>
+  </body>
+</html>
