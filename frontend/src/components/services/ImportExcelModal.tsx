@@ -128,21 +128,20 @@ export function ImportExcelModal({ open, onClose, categories, onImportSuccess }:
     setImportLoading(true);
     
     try {
+      console.log(importServices)
       const validServices = importServices.filter(service => 
         service.name.trim() && service.description.trim()
       );
-      
-      if (validServices.length === 0) {
-        toast.error('Aucune prestation valide à importer');
-        return;
-      }
+      // console.log(validServices)
+      // if (validServices.length === 0) {
+      //   toast.error('Aucune prestation valide à importer');
+      //   return;
+      // }
 
       // Utiliser l'endpoint d'import en lot
       // Appel de l'endpoint d'import en lot, qui retourne un objet avec les résultats
-      const response = await bulkImportServices.mutateAsync({ services: validServices });
+      const response = await bulkImportServices.mutateAsync({ services: importServices });
       const { success_count, error_count, errors } = response;
-
-      console.log(response);
       
       if (success_count > 0) {
         toast.success(`${success_count} prestation(s) importée(s) avec succès`);
