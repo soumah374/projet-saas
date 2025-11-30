@@ -108,9 +108,16 @@ export function useUploadAttachment(projectId: string, taskId: number) {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Supprimer le Content-Type par défaut pour permettre à axios de le définir automatiquement
+      // avec le boundary correct pour multipart/form-data
       const response = await api.post(
         `/projects/${projectId}/tasks/${taskId}/comments/upload_attachment/`,
-        formData
+        formData,
+        {
+          headers: {
+            'Content-Type': undefined as any,
+          },
+        }
       );
       return response.data as {
         name: string;

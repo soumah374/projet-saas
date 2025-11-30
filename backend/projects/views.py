@@ -764,47 +764,91 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
         Upload un fichier pour un commentaire
         POST /api/v1/projects/{project_id}/tasks/{task_id}/comments/upload_attachment/
         """
+        import logging
         from django.core.files.storage import default_storage
         from django.conf import settings
         import os
 
-        file = request.FILES.get('file')
-        if not file:
-            return Response({'error': 'Aucun fichier fourni'}, status=400)
+        logger = logging.getLogger(__name__)
 
-        # Valider la taille (max 10MB)
-        if file.size > 10 * 1024 * 1024:
-            return Response({'error': 'Fichier trop volumineux (max 10MB)'}, status=400)
+        try:
+            file = request.FILES.get('file')
+            if not file:
+                logger.error("Aucun fichier fourni dans la requête")
+                return Response({'error': 'Aucun fichier fourni'}, status=400)
 
-        # Valider le type
-        allowed_types = [
-            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-            'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'application/vnd.ms-excel',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'text/plain'
-        ]
+            logger.info(f"Tentative d'upload du fichier: {file.name}, taille: {file.size}, type: {file.content_type}")
 
-        if file.content_type not in allowed_types:
-            return Response({'error': 'Type de fichier non autorisé'}, status=400)
+            # Valider la taille (max 10MB)
+            if file.size > 10 * 1024 * 1024:
+                logger.warning(f"Fichier trop volumineux: {file.size} bytes")
+                return Response({'error': 'Fichier trop volumineux (max 10MB)'}, status=400)
 
-        # Générer un nom unique
-        import uuid
-        ext = os.path.splitext(file.name)[1]
-        filename = f"comments/{task_pk}/{uuid.uuid4()}{ext}"
+            # Valider le type
+            allowed_types = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'text/plain'
+            ]
 
-        # Sauvegarder le fichier
-        path = default_storage.save(filename, file)
-        url = default_storage.url(path)
+            if file.content_type not in allowed_types:
+                logger.warning(f"Type de fichier non autorisé: {file.content_type}")
+                return Response({'error': f'Type de fichier non autorisé: {file.content_type}'}, status=400)
 
-        return Response({
-            'name': file.name,
-            'url': url,
-            'type': file.content_type,
-            'size': file.size
-        }, status=201)
+            # Générer un nom unique
+            import uuid
+            ext = os.path.splitext(file.name)[1]
+            filename = f"comments/{task_pk}/{uuid.uuid4()}{ext}"
+
+            logger.info(f"MEDIA_ROOT: {settings.MEDIA_ROOT}")
+            logger.info(f"Sauvegarde du fichier vers: {filename}")
+
+            # Créer le répertoire s'il n'existe pas
+            directory = os.path.join(settings.MEDIA_ROOT, 'comments', str(task_pk))
+            os.makedirs(directory, exist_ok=True)
+            logger.info(f"Répertoire créé/vérifié: {directory}")
+            logger.info(f"Le répertoire existe: {os.path.exists(directory)}")
+
+            # Sauvegarder le fichier directement avec un chemin complet
+            full_filename = os.path.join(directory, os.path.basename(filename))
+            logger.info(f"Chemin complet de sauvegarde: {full_filename}")
+
+            # Écrire le fichier manuellement
+            with open(full_filename, 'wb+') as destination:
+                for chunk in file.chunks():
+                    destination.write(chunk)
+
+            logger.info(f"Fichier écrit, vérification...")
+
+            # Vérifier que le fichier existe
+            if os.path.exists(full_filename):
+                file_size = os.path.getsize(full_filename)
+                logger.info(f"✓ Fichier sauvegardé avec succès: {full_filename} (taille: {file_size} bytes)")
+            else:
+                logger.error(f"✗ Le fichier n'a pas été trouvé après sauvegarde: {full_filename}")
+                raise Exception("Le fichier n'a pas été sauvegardé correctement")
+
+            # Construire l'URL relative
+            relative_path = filename
+            url = f"{settings.MEDIA_URL}{relative_path}"
+            logger.info(f"URL du fichier: {url}")
+
+            return Response({
+                'name': file.name,
+                'url': url,
+                'type': file.content_type,
+                'size': file.size
+            }, status=201)
+
+        except Exception as e:
+            logger.error(f"Erreur lors de l'upload du fichier: {str(e)}", exc_info=True)
+            return Response({
+                'error': f'Erreur lors de la sauvegarde du fichier: {str(e)}'
+            }, status=500)
 
 
 class ProjectNotificationViewSet(viewsets.ModelViewSet):

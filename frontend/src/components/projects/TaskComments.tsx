@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { MentionTextarea } from './MentionTextarea';
 import { useToast } from '@/components/ui/use-toast';
+import { downloadFile } from '@/lib/api';
 
 interface TaskCommentsProps {
   taskId: number;
@@ -25,11 +26,21 @@ export function TaskComments({ taskId, projectId }: TaskCommentsProps) {
     size: number;
   }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const commentsEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const { data: comments = [], isLoading } = useTaskComments(projectId, taskId);
   const createCommentMutation = useCreateComment(projectId, taskId);
   const uploadAttachmentMutation = useUploadAttachment(projectId, taskId);
+
+  // Scroll vers le bas quand les commentaires changent
+  const scrollToBottom = () => {
+    commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [comments]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -90,6 +101,8 @@ export function TaskComments({ taskId, projectId }: TaskCommentsProps) {
         title: 'Commentaire ajouté',
         description: 'Votre commentaire a été publié avec succès'
       });
+      // Scroll vers le bas après ajout du commentaire
+      setTimeout(scrollToBottom, 100);
     } catch (error: any) {
       console.error('Erreur lors de la création du commentaire:', error);
       toast({
@@ -115,6 +128,26 @@ export function TaskComments({ taskId, projectId }: TaskCommentsProps) {
     return <FileText className="h-4 w-4" />;
   };
 
+  const handleDownloadAttachment = async (attachment: typeof attachments[0]) => {
+    await downloadFile({
+      url: attachment.url,
+      filename: attachment.name,
+      onSuccess: (filename) => {
+        toast({
+          title: 'Téléchargement réussi',
+          description: `${filename} a été téléchargé`
+        });
+      },
+      onError: () => {
+        toast({
+          title: 'Erreur',
+          description: 'Impossible de télécharger le fichier',
+          variant: 'destructive'
+        });
+      }
+    });
+  };
+
   const renderAttachment = (attachment: typeof attachments[0], showRemove = false, onRemove?: () => void) => (
     <div className="flex items-center gap-2 p-2 bg-gray-100 rounded border">
       <div className="flex-shrink-0">
@@ -125,18 +158,18 @@ export function TaskComments({ taskId, projectId }: TaskCommentsProps) {
         <div className="text-xs text-gray-500">{formatFileSize(attachment.size)}</div>
       </div>
       <div className="flex gap-1">
-        <a
-          href={attachment.url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => handleDownloadAttachment(attachment)}
           className="p-1 hover:bg-gray-200 rounded"
+          title="Télécharger le fichier"
         >
           <Download className="h-4 w-4 text-gray-600" />
-        </a>
+        </button>
         {showRemove && onRemove && (
           <button
             onClick={onRemove}
             className="p-1 hover:bg-red-100 rounded"
+            title="Supprimer le fichier"
           >
             <X className="h-4 w-4 text-red-600" />
           </button>
@@ -248,7 +281,10 @@ export function TaskComments({ taskId, projectId }: TaskCommentsProps) {
               <p className="text-sm">Soyez le premier à commenter</p>
             </div>
           ) : (
-            comments.map((comment: Comment) => renderComment(comment))
+            <>
+              {comments.map((comment: Comment) => renderComment(comment))}
+              <div ref={commentsEndRef} />
+            </>
           )}
         </div>
 
