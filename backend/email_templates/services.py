@@ -104,7 +104,7 @@ class EmailTemplateService:
             'client_nom': getattr(contrat.client, 'nom', ''),
             'client_prenom': getattr(contrat.client, 'prenom', ''),
             'client_raison_sociale': getattr(contrat.client, 'raison_sociale', ''),
-            'montant_total': str(contrat.montant_total or '0.00'),
+            'montant_total': str(contrat.montant_ht or '0.00'),
             'date_debut': contrat.date_debut.strftime('%d/%m/%Y') if contrat.date_debut else '',
             'date_fin': contrat.date_fin.strftime('%d/%m/%Y') if contrat.date_fin else ''
         }
