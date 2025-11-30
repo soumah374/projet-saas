@@ -106,7 +106,7 @@ interface BulkImportResponse {
 
 export function useBulkImportServices() {
   return useMutation({
-    mutationFn: (data: { services: ImportService[] }) => apiRequest<BulkImportResponse>('/services/bulk-import/', {
+    mutationFn: (data: { services: ImportService[] }) => apiRequest<BulkImportResponse>('/services/bulk-import-prestations/', {
       method: 'POST',
       body: JSON.stringify(data),
     }),

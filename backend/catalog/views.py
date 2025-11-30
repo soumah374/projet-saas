@@ -175,8 +175,8 @@ class ServiceViewSet(viewsets.ModelViewSet):
         serializer = ServiceSerializer(services, many=True)
         return Response(serializer.data)
     
-    @action(detail=False, methods=['post'], url_path='bulk-import')
-    def bulk_import(self, request):
+    @action(detail=False, methods=['post'], url_path='bulk-import-prestations')
+    def bulk_import_prestation(self, request):
         """
         Import multiple prestations at once.
         Expected payload:
