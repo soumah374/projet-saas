@@ -16,13 +16,15 @@ project_router = routers.NestedDefaultRouter(router, r'', lookup='project')
 project_router.register(r'tasks', ProjectTaskViewSet, basename='project-tasks')
 project_router.register(r'events', ProjectEventViewSet, basename='project-events')
 project_router.register(r'timesheets', TimeSheetViewSet, basename='project-timesheets')
-# Create separate routers for notifications and timers
 project_router.register(r'notifications', ProjectNotificationViewSet, basename='project-notifications')
 project_router.register(r'timers', TimesheetTimerViewSet, basename='project-timers')
-# Create nested routers for task comments
-project_router.register(r'comments', TaskCommentViewSet, basename='task-comments')
+
+# Create nested routers for task comments (sous les tâches)
+task_router = routers.NestedDefaultRouter(project_router, r'tasks', lookup='task')
+task_router.register(r'comments', TaskCommentViewSet, basename='task-comments')
 
 urlpatterns = [
     path('', include(router.urls)),
     path('', include(project_router.urls)),
+    path('', include(task_router.urls)),
 ] 

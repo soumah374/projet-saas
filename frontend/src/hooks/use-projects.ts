@@ -305,6 +305,18 @@ export function useUpdateTask() {
 }
 
 // Project Team Members
+export function useProjectMembers(projectId: string) {
+  return useQuery({
+    queryKey: ['project-members', projectId],
+    queryFn: async () => {
+      const data = await apiRequest<ProjectMember[]>(`/${projectId}/team/`);
+      // Wrap in a results object to match the expected format
+      return { results: data };
+    },
+    enabled: !!projectId
+  });
+}
+
 export function useProjectTeam(projectId: string, userId: number) {
   return useQuery({
     queryKey: ['project-team', projectId],

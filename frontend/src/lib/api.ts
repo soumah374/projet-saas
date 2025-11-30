@@ -49,6 +49,58 @@ api.interceptors.response.use(
   }
 );
 
+// Fonction utilitaire pour télécharger des fichiers
+export interface DownloadFileOptions {
+  url: string;
+  filename: string;
+  onSuccess?: (filename: string) => void;
+  onError?: (error: Error) => void;
+}
+
+export const downloadFile = async ({ url, filename, onSuccess, onError }: DownloadFileOptions): Promise<void> => {
+  try {
+    // Construire l'URL complète du fichier
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+    const backendUrl = baseUrl.replace('/api/v1', '');
+    const fileUrl = url.startsWith('http') ? url : `${backendUrl}${url}`;
+
+    // Fetch the file
+    const response = await fetch(fileUrl);
+    if (!response.ok) throw new Error('Échec du téléchargement');
+
+    // Get the blob
+    const blob = await response.blob();
+
+    // Create a temporary URL
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    // Create a temporary link and trigger download
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    // Cleanup
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+
+    // Callback de succès
+    if (onSuccess) {
+      onSuccess(filename);
+    }
+  } catch (error) {
+    console.error('Erreur de téléchargement:', error);
+
+    // Callback d'erreur
+    if (onError) {
+      onError(error instanceof Error ? error : new Error('Erreur de téléchargement'));
+    } else {
+      throw error;
+    }
+  }
+};
+
 // Types
 export interface Project {
     id: string;

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Avg, Sum, F, ExpressionWrapper, fields, Max
 from django.utils import timezone
@@ -716,11 +717,25 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Créer un commentaire avec l'auteur"""
+        import re
         task_id = self.kwargs.get('task_pk')
-        serializer.save(task_id=task_id)
+        task = ProjectTask.objects.get(id=task_id)
+
+        # Extraire les mentions (@username) du contenu
+        content = self.request.data.get('content', '')
+        usernames = re.findall(r'@(\w+)', content)
+
+        # Convertir les usernames en IDs
+        mentioned_users = User.objects.filter(username__in=usernames)
+
+        # Sauvegarder avec l'auteur et la tâche
+        comment = serializer.save(author=self.request.user, task=task)
+
+        # Ajouter les mentions
+        if mentioned_users.exists():
+            comment.mentions.set(mentioned_users)
 
         # Créer une notification pour l'assigné de la tâche
-        task = ProjectTask.objects.get(id=task_id)
         if task.assigned_to and task.assigned_to != self.request.user:
             ProjectNotification.objects.create(
                 recipient=task.assigned_to,
@@ -728,8 +743,112 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
                 title='Nouveau commentaire',
                 message=f"{self.request.user.get_full_name()} a ajouté un commentaire sur la tâche '{task.title}'",
                 related_task=task,
-                related_comment=serializer.instance
+                related_comment=comment
             )
+
+        # Créer des notifications pour les utilisateurs mentionnés
+        for user in mentioned_users:
+            if user != self.request.user:
+                ProjectNotification.objects.create(
+                    recipient=user,
+                    notification_type='mention',
+                    title='Vous avez été mentionné',
+                    message=f"{self.request.user.get_full_name()} vous a mentionné dans un commentaire",
+                    related_task=task,
+                    related_comment=comment
+                )
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_attachment(self, request, project_pk=None, task_pk=None):
+        """
+        Upload un fichier pour un commentaire
+        POST /api/v1/projects/{project_id}/tasks/{task_id}/comments/upload_attachment/
+        """
+        import logging
+        from django.core.files.storage import default_storage
+        from django.conf import settings
+        import os
+
+        logger = logging.getLogger(__name__)
+
+        try:
+            file = request.FILES.get('file')
+            if not file:
+                logger.error("Aucun fichier fourni dans la requête")
+                return Response({'error': 'Aucun fichier fourni'}, status=400)
+
+            logger.info(f"Tentative d'upload du fichier: {file.name}, taille: {file.size}, type: {file.content_type}")
+
+            # Valider la taille (max 10MB)
+            if file.size > 10 * 1024 * 1024:
+                logger.warning(f"Fichier trop volumineux: {file.size} bytes")
+                return Response({'error': 'Fichier trop volumineux (max 10MB)'}, status=400)
+
+            # Valider le type
+            allowed_types = [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                'application/pdf',
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'text/plain'
+            ]
+
+            if file.content_type not in allowed_types:
+                logger.warning(f"Type de fichier non autorisé: {file.content_type}")
+                return Response({'error': f'Type de fichier non autorisé: {file.content_type}'}, status=400)
+
+            # Générer un nom unique
+            import uuid
+            ext = os.path.splitext(file.name)[1]
+            filename = f"comments/{task_pk}/{uuid.uuid4()}{ext}"
+
+            logger.info(f"MEDIA_ROOT: {settings.MEDIA_ROOT}")
+            logger.info(f"Sauvegarde du fichier vers: {filename}")
+
+            # Créer le répertoire s'il n'existe pas
+            directory = os.path.join(settings.MEDIA_ROOT, 'comments', str(task_pk))
+            os.makedirs(directory, exist_ok=True)
+            logger.info(f"Répertoire créé/vérifié: {directory}")
+            logger.info(f"Le répertoire existe: {os.path.exists(directory)}")
+
+            # Sauvegarder le fichier directement avec un chemin complet
+            full_filename = os.path.join(directory, os.path.basename(filename))
+            logger.info(f"Chemin complet de sauvegarde: {full_filename}")
+
+            # Écrire le fichier manuellement
+            with open(full_filename, 'wb+') as destination:
+                for chunk in file.chunks():
+                    destination.write(chunk)
+
+            logger.info(f"Fichier écrit, vérification...")
+
+            # Vérifier que le fichier existe
+            if os.path.exists(full_filename):
+                file_size = os.path.getsize(full_filename)
+                logger.info(f"✓ Fichier sauvegardé avec succès: {full_filename} (taille: {file_size} bytes)")
+            else:
+                logger.error(f"✗ Le fichier n'a pas été trouvé après sauvegarde: {full_filename}")
+                raise Exception("Le fichier n'a pas été sauvegardé correctement")
+
+            # Construire l'URL relative
+            relative_path = filename
+            url = f"{settings.MEDIA_URL}{relative_path}"
+            logger.info(f"URL du fichier: {url}")
+
+            return Response({
+                'name': file.name,
+                'url': url,
+                'type': file.content_type,
+                'size': file.size
+            }, status=201)
+
+        except Exception as e:
+            logger.error(f"Erreur lors de l'upload du fichier: {str(e)}", exc_info=True)
+            return Response({
+                'error': f'Erreur lors de la sauvegarde du fichier: {str(e)}'
+            }, status=500)
 
 
 class ProjectNotificationViewSet(viewsets.ModelViewSet):
