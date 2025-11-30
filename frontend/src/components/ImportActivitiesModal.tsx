@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Upload, FileSpreadsheet, Check, X, Tag, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
-import { api } from '@/lib/api';
 
 import {activitiesAPI} from '@/lib/api';
 

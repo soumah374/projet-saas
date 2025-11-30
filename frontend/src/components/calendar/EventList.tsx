@@ -1,4 +1,3 @@
-
 import { Badge } from '@/components/ui/badge';
 import { Event } from './types';
 import { getEventTypeColor, getEventTypeIcon } from './utils';

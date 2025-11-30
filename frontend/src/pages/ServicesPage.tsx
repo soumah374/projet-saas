@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { ImportExcelModal } from '@/components/services/ImportExcelModal';
 import { usePermissions } from '@/hooks/use-permissions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Category {
   id: number;
@@ -53,7 +54,8 @@ export function ServicesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
-  const pageSize = 20;
+  const [pageSize, setPageSize] = useState(20);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [categoryId, setCategoryId] = useState<number | 'other' | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [togglingServices, setTogglingServices] = useState<Set<number>>(new Set());
@@ -80,8 +82,9 @@ export function ServicesPage() {
     fetchCategories();
   }, []);
 
-  const fetchServices = async (page = 1) => {
+  const fetchServices = useCallback(async (page = 1) => {
     setLoading(true);
+    setIsTransitioning(true);
     try {
       const params: any = { page, page_size: pageSize };
       if (search) params.search = search;
@@ -89,22 +92,27 @@ export function ServicesPage() {
       if (statusFilter) params.is_active = statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined;
       const res = await api.get('/catalog/services/', { params });
       const data: PaginatedResponse = res.data;
-      setServices(data.results);
-      setTotalPages(Math.ceil(data.count / pageSize));
-      setHasNext(!!data.next);
-      setHasPrev(!!data.previous);
-      setTotalItems(data.count);
+
+      // Animation de transition
+      setTimeout(() => {
+        setServices(data.results);
+        setTotalPages(Math.ceil(data.count / pageSize));
+        setHasNext(!!data.next);
+        setHasPrev(!!data.previous);
+        setTotalItems(data.count);
+        setIsTransitioning(false);
+      }, 150);
     } catch (err) {
       toast.error('Erreur lors du chargement des prestations');
+      setIsTransitioning(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, categoryFilter, statusFilter, pageSize]);
 
   useEffect(() => {
     fetchServices(currentPage);
-    // eslint-disable-next-line
-  }, [search, categoryFilter, statusFilter, currentPage]);
+  }, [fetchServices, currentPage]);
 
   const handleOpenDialog = (service?: Service) => {
     if (service) {
@@ -222,8 +230,8 @@ export function ServicesPage() {
   };
 
 
-  // Fonctions de pagination améliorées
-  const setPageSafely = (page: number) => {
+  // Fonctions de pagination améliorées avec optimisation
+  const setPageSafely = useCallback((page: number) => {
     const safePage = Math.max(1, page);
     if (totalPages > 0) {
       const maxPage = Math.max(1, totalPages);
@@ -231,12 +239,12 @@ export function ServicesPage() {
     } else {
       setCurrentPage(safePage);
     }
-  };
+  }, [totalPages]);
 
-  const getPageNumbers = () => {
+  const getPageNumbers = useMemo(() => {
     const pages = [];
     const maxVisiblePages = 5;
-    
+
     if (totalPages <= maxVisiblePages) {
       for (let i = 1; i <= totalPages; i++) {
         pages.push(i);
@@ -244,18 +252,31 @@ export function ServicesPage() {
     } else {
       let start = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
       let end = Math.min(totalPages, start + maxVisiblePages - 1);
-      
+
       if (end === totalPages) {
         start = Math.max(1, end - maxVisiblePages + 1);
       }
-      
+
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
     }
-    
+
     return pages;
-  };
+  }, [currentPage, totalPages]);
+
+  // Gestionnaire de changement de taille de page
+  const handlePageSizeChange = useCallback((value: string) => {
+    setPageSize(Number(value));
+    setCurrentPage(1); // Retour à la première page lors du changement de taille
+  }, []);
+
+  // Calcul des informations de pagination
+  const paginationInfo = useMemo(() => {
+    const start = (currentPage - 1) * pageSize + 1;
+    const end = Math.min(currentPage * pageSize, totalItems);
+    return { start, end };
+  }, [currentPage, pageSize, totalItems]);
 
   return (
     <div className="max-w-10xl mx-auto">
@@ -353,21 +374,22 @@ export function ServicesPage() {
             <div className="flex justify-center py-10"><Loader2 className="animate-spin" size={32}/></div>
           ) : (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Catégorie</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {services.length === 0 ? (
-                    <TableRow><TableCell colSpan={7} className="text-center">Aucune prestation</TableCell></TableRow>
-                  ) : services.map(service => (
-                    <TableRow key={service.id}>
+              <div className={`transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {services.length === 0 ? (
+                      <TableRow><TableCell colSpan={7} className="text-center">Aucune prestation</TableCell></TableRow>
+                    ) : services.map(service => (
+                      <TableRow key={service.id} className="transition-all duration-200 hover:bg-gray-50">
                       <TableCell>
                         <Link 
                           to={`/services/${service.id}`}
@@ -412,100 +434,132 @@ export function ServicesPage() {
                         )}
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6">
-                  {/* Informations de pagination */}
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <span>
-                      Page {currentPage} sur {totalPages}
-                    </span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="hidden sm:inline">
-                      {totalItems} prestations au total
-                    </span>
-                  </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-                  {/* Contrôles de pagination */}
+              {/* Pagination améliorée */}
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t">
+                {/* Informations de pagination et sélecteur de taille */}
+                <div className="flex flex-col sm:flex-row items-center gap-4 text-sm">
                   <div className="flex items-center gap-2">
-                    {/* Boutons de navigation rapide */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageSafely(1)}
-                      disabled={currentPage === 1}
-                      className="hidden sm:flex"
-                    >
-                      <ChevronsLeft size={16} />
-                      <span className="ml-1 hidden lg:inline">Première</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageSafely(currentPage - 1)}
-                      disabled={!hasPrev || currentPage === 1}
-                    >
-                      <ChevronLeft size={16} />
-                      <span className="ml-1 hidden lg:inline">Précédent</span>
-                    </Button>
-
-                    {/* Numéros de page */}
-                    <div className="flex items-center gap-1">
-                      {getPageNumbers().map(pageNum => (
-                        <Button
-                          key={pageNum}
-                          variant={currentPage === pageNum ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setPageSafely(pageNum)}
-                          className="w-8 h-8 text-xs hidden sm:flex"
-                        >
-                          {pageNum}
-                        </Button>
-                      ))}
-                      {/* Version mobile avec sélecteur */}
-                      <div className="sm:hidden flex items-center gap-2">
-                        <span className="text-sm text-gray-600">Page</span>
-                        <select
-                          value={currentPage}
-                          onChange={(e) => setPageSafely(parseInt(e.target.value))}
-                          className="border rounded px-2 py-1 text-sm"
-                        >
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-                            <option key={pageNum} value={pageNum}>
-                              {pageNum}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="text-sm text-gray-600">sur {totalPages}</span>
-                      </div>
-                    </div>
-
-                    {/* Boutons de navigation rapide */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageSafely(currentPage + 1)}
-                      disabled={!hasNext || currentPage === totalPages}
-                    >
-                      <span className="mr-1 hidden lg:inline">Suivant</span>
-                      <ChevronRight size={16} />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageSafely(totalPages)}
-                      disabled={currentPage === totalPages}
-                      className="hidden sm:flex"
-                    >
-                      <span className="mr-1 hidden lg:inline">Dernière</span>
-                      <ChevronsRight size={16} />
-                    </Button>
+                    <span className="text-gray-600">Afficher</span>
+                    <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                      <SelectTrigger className="w-20 h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="20">20</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                        <SelectItem value="100">100</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-gray-600">par page</span>
+                  </div>
+                  <div className="hidden sm:flex items-center gap-2 text-gray-600">
+                    <span>•</span>
+                    <span>
+                      Affichage de <span className="font-semibold text-gray-900">{paginationInfo.start}</span> à{' '}
+                      <span className="font-semibold text-gray-900">{paginationInfo.end}</span> sur{' '}
+                      <span className="font-semibold text-gray-900">{totalItems}</span> résultats
+                    </span>
                   </div>
                 </div>
-              )}
+
+                {/* Contrôles de pagination améliorés */}
+                <div className="flex items-center gap-2">
+                  {/* Bouton Première page */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageSafely(1)}
+                    disabled={currentPage === 1}
+                    className="hidden sm:flex h-9 transition-all duration-200 hover:scale-105"
+                    title="Première page"
+                  >
+                    <ChevronsLeft size={16} />
+                    <span className="ml-1 hidden lg:inline">Première</span>
+                  </Button>
+
+                  {/* Bouton Précédent */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageSafely(currentPage - 1)}
+                    disabled={!hasPrev || currentPage === 1}
+                    className="h-9 transition-all duration-200 hover:scale-105"
+                    title="Page précédente"
+                  >
+                    <ChevronLeft size={16} />
+                    <span className="ml-1 hidden lg:inline">Précédent</span>
+                  </Button>
+
+                  {/* Numéros de page */}
+                  <div className="flex items-center gap-1">
+                    {getPageNumbers.map(pageNum => (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPageSafely(pageNum)}
+                        className={`w-9 h-9 hidden sm:flex transition-all duration-200 ${
+                          currentPage === pageNum
+                            ? 'scale-110 shadow-md'
+                            : 'hover:scale-105'
+                        }`}
+                      >
+                        {pageNum}
+                      </Button>
+                    ))}
+
+                    {/* Version mobile avec sélecteur amélioré */}
+                    <div className="sm:hidden flex items-center gap-2">
+                      <span className="text-sm text-gray-600">Page</span>
+                      <Select value={currentPage.toString()} onValueChange={(val) => setPageSafely(parseInt(val))}>
+                        <SelectTrigger className="w-16 h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+                            <SelectItem key={pageNum} value={pageNum.toString()}>
+                              {pageNum}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-sm text-gray-600">/ {totalPages}</span>
+                    </div>
+                  </div>
+
+                  {/* Bouton Suivant */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageSafely(currentPage + 1)}
+                    disabled={!hasNext || currentPage === totalPages}
+                    className="h-9 transition-all duration-200 hover:scale-105"
+                    title="Page suivante"
+                  >
+                    <span className="mr-1 hidden lg:inline">Suivant</span>
+                    <ChevronRight size={16} />
+                  </Button>
+
+                  {/* Bouton Dernière page */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageSafely(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="hidden sm:flex h-9 transition-all duration-200 hover:scale-105"
+                    title="Dernière page"
+                  >
+                    <span className="mr-1 hidden lg:inline">Dernière</span>
+                    <ChevronsRight size={16} />
+                  </Button>
+                </div>
+              </div>
             </>
           )}
         </CardContent>
