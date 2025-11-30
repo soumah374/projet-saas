@@ -4,84 +4,76 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Loader2, Search, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClients } from '@/hooks/use-clients';
 
-interface Client {
+interface Activity {
   id: number;
-  nom_complet: string;
-  email?: string;
-  telephone?: string;
+  intitule: string;
+  description?: string;
 }
 
-interface ClientAutocompleteProps {
+interface ActivityAutocompleteProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   showClearButton?: boolean;
-  onClientSelect?: (client: Client | null) => void;
+  activities: Activity[];
+  isLoading?: boolean;
+  onActivitySelect?: (activity: Activity | null) => void;
+  serviceSelected?: boolean;
 }
 
-export function ClientAutocomplete({
+export function ActivityAutocomplete({
   value = '',
   onValueChange,
-  placeholder = "Rechercher un client...",
+  placeholder = "Rechercher une activité...",
   className = "w-full",
   disabled = false,
   showClearButton = true,
-  onClientSelect
-}: ClientAutocompleteProps) {
+  activities = [],
+  isLoading = false,
+  onActivitySelect,
+  serviceSelected = false
+}: ActivityAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
-  // Hook pour rechercher les clients
-  const { data: clientsData, isLoading } = useClients({ 
-    search: debouncedSearch || undefined,
-    page_size: 10
-  });
-
-  const clients = clientsData?.results || [];
-
-  // Debounce pour la recherche
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
+  // Filtrer les activités selon la recherche
+  const filteredActivities = activities.filter(activity =>
+    activity.intitule.toLowerCase().includes(search.toLowerCase()) ||
+    activity.description?.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
-    if (value && !selectedClient) {
-      // Si on a une valeur mais pas de client sélectionné, essayer de le trouver
-      const client = clients.find(c => c.id.toString() === value);
-      if (client) {
-        setSelectedClient(client);
-        setSearch(client.nom_complet);
+    if (value && !selectedActivity) {
+      // Si on a une valeur mais pas d'activité sélectionnée, essayer de la trouver
+      const activity = activities.find(a => a.id.toString() === value);
+      if (activity) {
+        setSelectedActivity(activity);
+        setSearch(activity.intitule);
       }
-    } else if (!value && selectedClient) {
-      setSelectedClient(null);
+    } else if (!value && selectedActivity) {
+      setSelectedActivity(null);
       setSearch('');
     }
-  }, [value, clients, selectedClient]);
+  }, [value, activities, selectedActivity]);
 
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setSearch(client.nom_complet);
-    onValueChange(client.id.toString());
-    onClientSelect?.(client);
+  const handleActivitySelect = (activity: Activity) => {
+    setSelectedActivity(activity);
+    setSearch(activity.intitule);
+    onValueChange(activity.id.toString());
+    onActivitySelect?.(activity);
     setOpen(false);
   };
 
   const handleClear = () => {
-    setSelectedClient(null);
+    setSelectedActivity(null);
     setSearch('');
     onValueChange('');
-    onClientSelect?.(null);
+    onActivitySelect?.(null);
   };
 
   const handleSearchChange = (newSearch: string) => {
@@ -89,6 +81,16 @@ export function ClientAutocomplete({
     if (!newSearch) {
       handleClear();
     }
+  };
+
+  const getPlaceholder = () => {
+    if (!serviceSelected) {
+      return "Sélectionnez d'abord un service";
+    }
+    if (isLoading) {
+      return "Chargement des activités...";
+    }
+    return placeholder;
   };
 
   return (
@@ -100,10 +102,10 @@ export function ClientAutocomplete({
             role="combobox"
             aria-expanded={open}
             className={cn("justify-between text-left font-normal", className)}
-            disabled={disabled}
+            disabled={disabled || !serviceSelected}
           >
             <span className="truncate flex-1">
-              {selectedClient ? selectedClient.nom_complet : placeholder}
+              {selectedActivity ? selectedActivity.intitule : getPlaceholder()}
             </span>
             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -111,7 +113,7 @@ export function ClientAutocomplete({
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Rechercher un client..."
+              placeholder="Rechercher une activité..."
               value={search}
               onValueChange={handleSearchChange}
             />
@@ -120,33 +122,41 @@ export function ClientAutocomplete({
                 {isLoading ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Recherche en cours...</span>
+                    <span className="ml-2">Chargement...</span>
+                  </div>
+                ) : !serviceSelected ? (
+                  <div className="py-6 text-center text-sm pr-2 pl-2">
+                    Veuillez d'abord sélectionner un service.
+                  </div>
+                ) : activities.length === 0 ? (
+                  <div className="py-6 text-center text-sm pr-2 pl-2">
+                    Aucune activité trouvée pour ce service.
                   </div>
                 ) : (
                   <div className="py-6 text-center text-sm pr-2 pl-2">
-                    Aucun client trouvé. Commencez à taper pour rechercher.
+                    Aucune activité trouvée. Commencez à taper pour rechercher.
                   </div>
                 )}
               </CommandEmpty>
               <CommandGroup>
-                {clients.map((client) => (
+                {filteredActivities.map((activity) => (
                   <CommandItem
-                    key={client.id}
-                    value={client.nom_complet}
-                    onSelect={() => handleClientSelect(client)}
+                    key={activity.id}
+                    value={activity.intitule}
+                    onSelect={() => handleActivitySelect(activity)}
                     className="cursor-pointer"
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4 shrink-0",
-                        selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                        selectedActivity?.id === activity.id ? "opacity-100" : "opacity-0"
                       )}
                     />
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-medium">{client.nom_complet}</span>
-                      {client.email && (
+                      <span className="truncate font-medium">{activity.intitule}</span>
+                      {activity.description && (
                         <span className="text-xs text-muted-foreground truncate">
-                          {client.email}
+                          {activity.description}
                         </span>
                       )}
                     </div>
@@ -157,7 +167,7 @@ export function ClientAutocomplete({
           </Command>
         </PopoverContent>
       </Popover>
-      {showClearButton && selectedClient && (
+      {showClearButton && selectedActivity && (
         <Button
           variant="ghost"
           size="sm"
@@ -170,4 +180,4 @@ export function ClientAutocomplete({
       )}
     </div>
   );
-} 
+}

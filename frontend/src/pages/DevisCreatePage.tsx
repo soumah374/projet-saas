@@ -10,7 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, ArrowLeft, Plus, Trash2, Save } from 'lucide-react';
 import { DateInput } from '@/components/ui/DateInput';
 import { ClientAutocomplete } from '@/components/ui/ClientAutocomplete';
-import { 
+import { ServiceAutocomplete } from '@/components/ui/ServiceAutocomplete';
+import { ActivityAutocomplete } from '@/components/ui/ActivityAutocomplete';
+import { UniteAutocomplete } from '@/components/ui/UniteAutocomplete';
+import { FraisCategoryAutocomplete } from '@/components/ui/FraisCategoryAutocomplete';
+import { LigneFraisAutocomplete } from '@/components/ui/LigneFraisAutocomplete';
+import {
   useCreateDevisAvecLignes,
   useActivitesParService,
   useIntervenantsParActivite,
@@ -190,14 +195,24 @@ export function DevisCreatePage() {
 
   const handleLigneChange = (field: keyof LigneForm, value: string) => {
     const newLigne = { ...currentLigne, [field]: value };
-    
+
+    // Si on change le service, réinitialiser l'activité
+    if (field === 'service_id') {
+      newLigne.activity_id = '';
+    }
+
+    // Si on change la catégorie de frais, réinitialiser la ligne de frais
+    if (field === 'frais_category_id') {
+      newLigne.ligne_frais_id = '';
+    }
+
     // Si on change l'unité, recalculer automatiquement la quantité et le prix unitaire
     if (field === 'unite_id' && newLigne.type_ligne === 'prestation' && newLigne.intervenants.length > 1) {
       const { quantite, prixUnitaire } = calculateQuantiteAndPrixUnitaire(newLigne.intervenants, value);
       newLigne.quantite = quantite.toString();
       newLigne.prix_unitaire = prixUnitaire.toString();
     }
-    
+
     setCurrentLigne(newLigne);
   };
 
@@ -672,18 +687,13 @@ export function DevisCreatePage() {
                     <Label className={`text-sm font-medium ${ligneErrors.service_id ? 'text-red-600' : ''}`}>
                       Service *
                     </Label>
-                    <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
-                      <SelectTrigger className={ligneErrors.service_id ? 'border-red-500 focus:border-red-500' : currentLigne.service_id ? 'border-green-500 bg-green-50' : ''}>
-                        <SelectValue placeholder="Sélectionner un service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {services.map(service => (
-                          <SelectItem key={service.id} value={service.id.toString()}>
-                            {service.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ServiceAutocomplete
+                      value={currentLigne.service_id}
+                      onValueChange={(value) => handleLigneChange('service_id', value)}
+                      services={services}
+                      placeholder="Rechercher un service..."
+                      className={ligneErrors.service_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.service_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                    />
                     {ligneErrors.service_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.service_id}</p>
                     )}
@@ -692,55 +702,30 @@ export function DevisCreatePage() {
                     <Label className={`text-sm font-medium ${ligneErrors.activity_id ? 'text-red-600' : ''}`}>
                       Activité *
                     </Label>
-                    <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
-                      <SelectTrigger className={ligneErrors.activity_id ? 'border-red-500 focus:border-red-500' : currentLigne.activity_id ? 'border-green-500 bg-green-50' : ''}>
-                        <SelectValue placeholder={
-                          !currentLigne.service_id
-                            ? "Sélectionnez d'abord un service"
-                            : isLoadingActivites
-                              ? "Chargement des activités..."
-                              : "Sélectionner une activité"
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {!currentLigne.service_id ? (
-                          <SelectItem value="no-service" disabled>
-                            Sélectionnez d'abord un service
-                          </SelectItem>
-                        ) : isLoadingActivites ? (
-                          <SelectItem value="loading" disabled>
-                            Chargement...
-                          </SelectItem>
-                        ) : activites.length === 0 ? (
-                          <SelectItem value="no-activities" disabled>
-                            Aucune activité trouvée pour ce service
-                          </SelectItem>
-                        ) : (
-                          activites.map(activite => (
-                            <SelectItem key={activite.id} value={activite.id.toString()}>
-                              {activite.intitule}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <ActivityAutocomplete
+                      value={currentLigne.activity_id}
+                      onValueChange={(value) => handleLigneChange('activity_id', value)}
+                      activities={activites}
+                      isLoading={isLoadingActivites}
+                      serviceSelected={!!currentLigne.service_id}
+                      placeholder="Rechercher une activité..."
+                      className={ligneErrors.activity_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.activity_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                    />
+                    {ligneErrors.activity_id && (
+                      <p className="text-sm text-red-600 mt-1">{ligneErrors.activity_id}</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
                     <Label className={`text-sm font-medium ${ligneErrors.unite_id ? 'text-red-600' : ''}`}>
                       Unité *
                     </Label>
-                    <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                      <SelectTrigger className={ligneErrors.unite_id ? 'border-red-500 focus:border-red-500' : currentLigne.unite_id ? 'border-green-500 bg-green-50' : ''}>
-                        <SelectValue placeholder="Sélectionner une unité" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unites.map(unite => (
-                          <SelectItem key={unite.id} value={unite.id.toString()}>
-                            {unite.intitule} ({unite.code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <UniteAutocomplete
+                      value={currentLigne.unite_id}
+                      onValueChange={(value) => handleLigneChange('unite_id', value)}
+                      unites={unites}
+                      placeholder="Rechercher une unité..."
+                      className={ligneErrors.unite_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.unite_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                    />
                     {ligneErrors.unite_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.unite_id}</p>
                     )}
@@ -808,20 +793,13 @@ export function DevisCreatePage() {
                     <Label className={`text-sm font-medium ${ligneErrors.frais_category_id ? 'text-red-600' : ''}`}>
                       Catégorie de frais *
                     </Label>
-                    <Select value={currentLigne.frais_category_id} onValueChange={(value) => handleLigneChange('frais_category_id', value)}>
-                      <SelectTrigger className={ligneErrors.frais_category_id ? 'border-red-500 focus:border-red-500' : currentLigne.frais_category_id ? 'border-green-500 bg-green-50' : ''}>
-                        <SelectValue placeholder="Sélectionner une catégorie de frais" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fraisCategories.length === 0 ? (
-                          <SelectItem value="no-category" disabled>Aucune catégorie trouvée</SelectItem>
-                        ) : (
-                          fraisCategories.map(cat => (
-                            <SelectItem key={cat.id} value={cat.id.toString()}>{cat.name}</SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <FraisCategoryAutocomplete
+                      value={currentLigne.frais_category_id}
+                      onValueChange={(value) => handleLigneChange('frais_category_id', value)}
+                      categories={fraisCategories}
+                      placeholder="Rechercher une catégorie..."
+                      className={ligneErrors.frais_category_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.frais_category_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                    />
                     {ligneErrors.frais_category_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.frais_category_id}</p>
                     )}
@@ -830,20 +808,14 @@ export function DevisCreatePage() {
                     <Label className={`text-sm font-medium ${ligneErrors.ligne_frais_id ? 'text-red-600' : ''}`}>
                       Ligne de frais *
                     </Label>
-                    <Select value={currentLigne.ligne_frais_id} onValueChange={(value) => handleLigneChange('ligne_frais_id', value)}>
-                      <SelectTrigger className={ligneErrors.ligne_frais_id ? 'border-red-500 focus:border-red-500' : currentLigne.ligne_frais_id ? 'border-green-500 bg-green-50' : ''}>
-                        <SelectValue placeholder="Sélectionner une ligne de frais" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lignesFrais.length === 0 ? (
-                          <SelectItem value="no-ligne" disabled>Aucune ligne de frais</SelectItem>
-                        ) : (
-                          lignesFrais.map(lf => (
-                            <SelectItem key={lf.id} value={lf.id.toString()}>{lf.description}</SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <LigneFraisAutocomplete
+                      value={currentLigne.ligne_frais_id}
+                      onValueChange={(value) => handleLigneChange('ligne_frais_id', value)}
+                      lignesFrais={lignesFrais}
+                      categorySelected={!!currentLigne.frais_category_id}
+                      placeholder="Rechercher une ligne de frais..."
+                      className={ligneErrors.ligne_frais_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.ligne_frais_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                    />
                     {ligneErrors.ligne_frais_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.ligne_frais_id}</p>
                     )}
@@ -889,18 +861,13 @@ export function DevisCreatePage() {
                     <Label className={`text-sm font-medium ${ligneErrors.unite_id ? 'text-red-600' : ''}`}>
                       Unité *
                     </Label>
-                    <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                      <SelectTrigger className={ligneErrors.unite_id ? 'border-red-500 focus:border-red-500' : currentLigne.unite_id ? 'border-green-500 bg-green-50' : ''}>
-                        <SelectValue placeholder="Sélectionner une unité" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unites.map(unite => (
-                          <SelectItem key={unite.id} value={unite.id.toString()}>
-                            {unite.intitule} ({unite.code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <UniteAutocomplete
+                      value={currentLigne.unite_id}
+                      onValueChange={(value) => handleLigneChange('unite_id', value)}
+                      unites={unites}
+                      placeholder="Rechercher une unité..."
+                      className={ligneErrors.unite_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.unite_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                    />
                     {ligneErrors.unite_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.unite_id}</p>
                     )}

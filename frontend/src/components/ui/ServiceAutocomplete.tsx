@@ -4,84 +4,74 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Loader2, Search, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClients } from '@/hooks/use-clients';
 
-interface Client {
+interface Service {
   id: number;
-  nom_complet: string;
-  email?: string;
-  telephone?: string;
+  name: string;
+  description?: string;
 }
 
-interface ClientAutocompleteProps {
+interface ServiceAutocompleteProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   showClearButton?: boolean;
-  onClientSelect?: (client: Client | null) => void;
+  services: Service[];
+  isLoading?: boolean;
+  onServiceSelect?: (service: Service | null) => void;
 }
 
-export function ClientAutocomplete({
+export function ServiceAutocomplete({
   value = '',
   onValueChange,
-  placeholder = "Rechercher un client...",
+  placeholder = "Rechercher un service...",
   className = "w-full",
   disabled = false,
   showClearButton = true,
-  onClientSelect
-}: ClientAutocompleteProps) {
+  services = [],
+  isLoading = false,
+  onServiceSelect
+}: ServiceAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  // Hook pour rechercher les clients
-  const { data: clientsData, isLoading } = useClients({ 
-    search: debouncedSearch || undefined,
-    page_size: 10
-  });
-
-  const clients = clientsData?.results || [];
-
-  // Debounce pour la recherche
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
+  // Filtrer les services selon la recherche
+  const filteredServices = services.filter(service =>
+    service.name.toLowerCase().includes(search.toLowerCase()) ||
+    service.description?.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
-    if (value && !selectedClient) {
-      // Si on a une valeur mais pas de client sélectionné, essayer de le trouver
-      const client = clients.find(c => c.id.toString() === value);
-      if (client) {
-        setSelectedClient(client);
-        setSearch(client.nom_complet);
+    if (value && !selectedService) {
+      // Si on a une valeur mais pas de service sélectionné, essayer de le trouver
+      const service = services.find(s => s.id.toString() === value);
+      if (service) {
+        setSelectedService(service);
+        setSearch(service.name);
       }
-    } else if (!value && selectedClient) {
-      setSelectedClient(null);
+    } else if (!value && selectedService) {
+      setSelectedService(null);
       setSearch('');
     }
-  }, [value, clients, selectedClient]);
+  }, [value, services, selectedService]);
 
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setSearch(client.nom_complet);
-    onValueChange(client.id.toString());
-    onClientSelect?.(client);
+  const handleServiceSelect = (service: Service) => {
+    setSelectedService(service);
+    setSearch(service.name);
+    onValueChange(service.id.toString());
+    onServiceSelect?.(service);
     setOpen(false);
   };
 
   const handleClear = () => {
-    setSelectedClient(null);
+    setSelectedService(null);
     setSearch('');
     onValueChange('');
-    onClientSelect?.(null);
+    onServiceSelect?.(null);
   };
 
   const handleSearchChange = (newSearch: string) => {
@@ -103,7 +93,7 @@ export function ClientAutocomplete({
             disabled={disabled}
           >
             <span className="truncate flex-1">
-              {selectedClient ? selectedClient.nom_complet : placeholder}
+              {selectedService ? selectedService.name : placeholder}
             </span>
             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -111,7 +101,7 @@ export function ClientAutocomplete({
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Rechercher un client..."
+              placeholder="Rechercher un service..."
               value={search}
               onValueChange={handleSearchChange}
             />
@@ -120,33 +110,33 @@ export function ClientAutocomplete({
                 {isLoading ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Recherche en cours...</span>
+                    <span className="ml-2">Chargement...</span>
                   </div>
                 ) : (
                   <div className="py-6 text-center text-sm pr-2 pl-2">
-                    Aucun client trouvé. Commencez à taper pour rechercher.
+                    Aucun service trouvé. Commencez à taper pour rechercher.
                   </div>
                 )}
               </CommandEmpty>
               <CommandGroup>
-                {clients.map((client) => (
+                {filteredServices.map((service) => (
                   <CommandItem
-                    key={client.id}
-                    value={client.nom_complet}
-                    onSelect={() => handleClientSelect(client)}
+                    key={service.id}
+                    value={service.name}
+                    onSelect={() => handleServiceSelect(service)}
                     className="cursor-pointer"
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4 shrink-0",
-                        selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                        selectedService?.id === service.id ? "opacity-100" : "opacity-0"
                       )}
                     />
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-medium">{client.nom_complet}</span>
-                      {client.email && (
+                      <span className="truncate font-medium">{service.name}</span>
+                      {service.description && (
                         <span className="text-xs text-muted-foreground truncate">
-                          {client.email}
+                          {service.description}
                         </span>
                       )}
                     </div>
@@ -157,7 +147,7 @@ export function ClientAutocomplete({
           </Command>
         </PopoverContent>
       </Popover>
-      {showClearButton && selectedClient && (
+      {showClearButton && selectedService && (
         <Button
           variant="ghost"
           size="sm"
@@ -170,4 +160,4 @@ export function ClientAutocomplete({
       )}
     </div>
   );
-} 
+}

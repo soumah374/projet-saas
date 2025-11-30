@@ -4,84 +4,74 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Loader2, Search, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClients } from '@/hooks/use-clients';
 
-interface Client {
+interface LigneFrais {
   id: number;
-  nom_complet: string;
-  email?: string;
-  telephone?: string;
+  description: string;
+  type_frais?: string;
 }
 
-interface ClientAutocompleteProps {
+interface LigneFraisAutocompleteProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   showClearButton?: boolean;
-  onClientSelect?: (client: Client | null) => void;
+  lignesFrais: LigneFrais[];
+  isLoading?: boolean;
+  onLigneFraisSelect?: (ligneFrais: LigneFrais | null) => void;
+  categorySelected?: boolean;
 }
 
-export function ClientAutocomplete({
+export function LigneFraisAutocomplete({
   value = '',
   onValueChange,
-  placeholder = "Rechercher un client...",
+  placeholder = "Rechercher une ligne de frais...",
   className = "w-full",
   disabled = false,
   showClearButton = true,
-  onClientSelect
-}: ClientAutocompleteProps) {
+  lignesFrais = [],
+  isLoading = false,
+  onLigneFraisSelect,
+  categorySelected = false
+}: LigneFraisAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedLigneFrais, setSelectedLigneFrais] = useState<LigneFrais | null>(null);
 
-  // Hook pour rechercher les clients
-  const { data: clientsData, isLoading } = useClients({ 
-    search: debouncedSearch || undefined,
-    page_size: 10
-  });
-
-  const clients = clientsData?.results || [];
-
-  // Debounce pour la recherche
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
+  // Filtrer les lignes de frais selon la recherche
+  const filteredLignesFrais = lignesFrais.filter(ligne =>
+    ligne.description.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
-    if (value && !selectedClient) {
-      // Si on a une valeur mais pas de client sélectionné, essayer de le trouver
-      const client = clients.find(c => c.id.toString() === value);
-      if (client) {
-        setSelectedClient(client);
-        setSearch(client.nom_complet);
+    if (value && !selectedLigneFrais) {
+      const ligne = lignesFrais.find(lf => lf.id.toString() === value);
+      if (ligne) {
+        setSelectedLigneFrais(ligne);
+        setSearch(ligne.description);
       }
-    } else if (!value && selectedClient) {
-      setSelectedClient(null);
+    } else if (!value && selectedLigneFrais) {
+      setSelectedLigneFrais(null);
       setSearch('');
     }
-  }, [value, clients, selectedClient]);
+  }, [value, lignesFrais, selectedLigneFrais]);
 
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setSearch(client.nom_complet);
-    onValueChange(client.id.toString());
-    onClientSelect?.(client);
+  const handleLigneFraisSelect = (ligne: LigneFrais) => {
+    setSelectedLigneFrais(ligne);
+    setSearch(ligne.description);
+    onValueChange(ligne.id.toString());
+    onLigneFraisSelect?.(ligne);
     setOpen(false);
   };
 
   const handleClear = () => {
-    setSelectedClient(null);
+    setSelectedLigneFrais(null);
     setSearch('');
     onValueChange('');
-    onClientSelect?.(null);
+    onLigneFraisSelect?.(null);
   };
 
   const handleSearchChange = (newSearch: string) => {
@@ -89,6 +79,16 @@ export function ClientAutocomplete({
     if (!newSearch) {
       handleClear();
     }
+  };
+
+  const getPlaceholder = () => {
+    if (!categorySelected) {
+      return "Sélectionnez d'abord une catégorie";
+    }
+    if (isLoading) {
+      return "Chargement des lignes de frais...";
+    }
+    return placeholder;
   };
 
   return (
@@ -100,10 +100,10 @@ export function ClientAutocomplete({
             role="combobox"
             aria-expanded={open}
             className={cn("justify-between text-left font-normal", className)}
-            disabled={disabled}
+            disabled={disabled || !categorySelected}
           >
             <span className="truncate flex-1">
-              {selectedClient ? selectedClient.nom_complet : placeholder}
+              {selectedLigneFrais ? selectedLigneFrais.description : getPlaceholder()}
             </span>
             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -111,7 +111,7 @@ export function ClientAutocomplete({
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Rechercher un client..."
+              placeholder="Rechercher une ligne de frais..."
               value={search}
               onValueChange={handleSearchChange}
             />
@@ -120,36 +120,37 @@ export function ClientAutocomplete({
                 {isLoading ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Recherche en cours...</span>
+                    <span className="ml-2">Chargement...</span>
+                  </div>
+                ) : !categorySelected ? (
+                  <div className="py-6 text-center text-sm pr-2 pl-2">
+                    Veuillez d'abord sélectionner une catégorie.
+                  </div>
+                ) : lignesFrais.length === 0 ? (
+                  <div className="py-6 text-center text-sm pr-2 pl-2">
+                    Aucune ligne de frais trouvée pour cette catégorie.
                   </div>
                 ) : (
                   <div className="py-6 text-center text-sm pr-2 pl-2">
-                    Aucun client trouvé. Commencez à taper pour rechercher.
+                    Aucune ligne trouvée. Commencez à taper pour rechercher.
                   </div>
                 )}
               </CommandEmpty>
               <CommandGroup>
-                {clients.map((client) => (
+                {filteredLignesFrais.map((ligne) => (
                   <CommandItem
-                    key={client.id}
-                    value={client.nom_complet}
-                    onSelect={() => handleClientSelect(client)}
+                    key={ligne.id}
+                    value={ligne.description}
+                    onSelect={() => handleLigneFraisSelect(ligne)}
                     className="cursor-pointer"
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4 shrink-0",
-                        selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                        selectedLigneFrais?.id === ligne.id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-medium">{client.nom_complet}</span>
-                      {client.email && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {client.email}
-                        </span>
-                      )}
-                    </div>
+                    <span className="truncate font-medium">{ligne.description}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -157,7 +158,7 @@ export function ClientAutocomplete({
           </Command>
         </PopoverContent>
       </Popover>
-      {showClearButton && selectedClient && (
+      {showClearButton && selectedLigneFrais && (
         <Button
           variant="ghost"
           size="sm"
@@ -170,4 +171,4 @@ export function ClientAutocomplete({
       )}
     </div>
   );
-} 
+}

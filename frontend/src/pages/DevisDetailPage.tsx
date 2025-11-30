@@ -23,6 +23,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ServiceAutocomplete } from '@/components/ui/ServiceAutocomplete';
+import { ActivityAutocomplete } from '@/components/ui/ActivityAutocomplete';
+import { UniteAutocomplete } from '@/components/ui/UniteAutocomplete';
+import { FraisCategoryAutocomplete } from '@/components/ui/FraisCategoryAutocomplete';
+import { LigneFraisAutocomplete } from '@/components/ui/LigneFraisAutocomplete';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
@@ -66,6 +71,7 @@ export function DevisDetailPage() {
   const [envoyerDialogOpen, setEnvoyerDialogOpen] = useState(false);
   const [accepterDialogOpen, setAccepterDialogOpen] = useState(false);
   const [refuserDialogOpen, setRefuserDialogOpen] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [currentLigne, setCurrentLigne] = useState<LigneForm>({
     type_ligne: '',
     type_frais: 'standard',
@@ -77,7 +83,7 @@ export function DevisDetailPage() {
     quantite: '1',
     unite_id: '',
     prix_unitaire: '',
-    
+
   });
 
   const devisId = parseInt(id || '0');
@@ -222,27 +228,61 @@ export function DevisDetailPage() {
   };
 
   const handleLigneChange = (field: keyof LigneForm, value: string) => {
-    setCurrentLigne({ ...currentLigne, [field]: value });
+    const newLigne = { ...currentLigne, [field]: value };
+
+    // Si on change le service, réinitialiser l'activité
+    if (field === 'service_id') {
+      newLigne.activity_id = '';
+    }
+
+    // Si on change la catégorie de frais, réinitialiser la ligne de frais
+    if (field === 'frais_category_id') {
+      newLigne.ligne_frais_id = '';
+    }
+
+    // Réinitialiser l'erreur du champ modifié
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({ ...prev, [field]: false }));
+    }
+
+    setCurrentLigne(newLigne);
   };
 
   const handleAddLigne = async () => {
+    // Réinitialiser les erreurs
+    const errors: Record<string, boolean> = {};
+
+    if (!currentLigne.type_ligne) {
+      errors.type_ligne = true;
+      setFieldErrors(errors);
+      toast.error('Veuillez sélectionner un type de ligne');
+      return;
+    }
+
     if (currentLigne.type_ligne === 'prestation') {
-      if (!currentLigne.service_id || !currentLigne.activity_id || !currentLigne.unite_id) {
+      // Vérifier les champs obligatoires pour les prestations
+      if (!currentLigne.service_id) errors.service_id = true;
+      if (!currentLigne.activity_id) errors.activity_id = true;
+      if (!currentLigne.unite_id) errors.unite_id = true;
+      if (!currentLigne.prix_unitaire) errors.prix_unitaire = true;
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
-      if (!currentLigne.prix_unitaire) {
-        toast.error('Veuillez renseigner le prix unitaire pour la prestation');
-        return;
-      }
     } else if (currentLigne.type_ligne === 'frais') {
-      if (!currentLigne.frais_category_id || !currentLigne.ligne_frais_id || !currentLigne.unite_id || !currentLigne.prix_unitaire) {
+      // Vérifier les champs obligatoires pour les frais
+      if (!currentLigne.frais_category_id) errors.frais_category_id = true;
+      if (!currentLigne.ligne_frais_id) errors.ligne_frais_id = true;
+      if (!currentLigne.unite_id) errors.unite_id = true;
+      if (!currentLigne.prix_unitaire) errors.prix_unitaire = true;
+
+      if (Object.keys(errors).length > 0) {
+        setFieldErrors(errors);
         toast.error('Veuillez remplir tous les champs obligatoires pour la ligne de frais');
         return;
       }
-    } else {
-      toast.error('Veuillez sélectionner un type de ligne');
-      return;
     }
 
     try {
@@ -294,8 +334,9 @@ export function DevisDetailPage() {
         quantite: '1',
         unite_id: '',
         prix_unitaire: '',
-        
+
       });
+      setFieldErrors({});
 
       setAddLigneDialogOpen(false);
       toast.success('Ligne ajoutée avec succès');
@@ -698,7 +739,12 @@ export function DevisDetailPage() {
       </Dialog>
 
       {/* Dialog d'ajout de ligne */}
-      <Dialog open={addLigneDialogOpen} onOpenChange={setAddLigneDialogOpen}>
+      <Dialog open={addLigneDialogOpen} onOpenChange={(open) => {
+        setAddLigneDialogOpen(open);
+        if (!open) {
+          setFieldErrors({});
+        }
+      }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Ajouter une ligne de devis</DialogTitle>
@@ -709,7 +755,7 @@ export function DevisDetailPage() {
               <div className="md:col-span-4">
                 <Label className="text-sm font-medium">Type de ligne *</Label>
                 <Select value={currentLigne.type_ligne} onValueChange={(value) => handleLigneChange('type_ligne', value)}>
-                  <SelectTrigger>
+                  <SelectTrigger className={fieldErrors.type_ligne ? 'border-red-500 focus:ring-red-500' : ''}>
                     <SelectValue placeholder="Sélectionner un type de ligne" />
                   </SelectTrigger>
                   <SelectContent>
@@ -717,7 +763,12 @@ export function DevisDetailPage() {
                     <SelectItem value="frais">Frais</SelectItem>
                   </SelectContent>
                 </Select>
-                {!currentLigne.type_ligne && (
+                {fieldErrors.type_ligne && (
+                  <p className="text-sm text-red-600 mt-1">
+                    Ce champ est obligatoire
+                  </p>
+                )}
+                {!currentLigne.type_ligne && !fieldErrors.type_ligne && (
                   <p className="text-sm text-muted-foreground mt-1">
                     💡 Choisissez le type de ligne pour afficher les champs correspondants
                   </p>
@@ -727,58 +778,36 @@ export function DevisDetailPage() {
                 <>
                   <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Service *</Label>
-                    <Select value={currentLigne.service_id} onValueChange={(value) => handleLigneChange('service_id', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner un service" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {services.map(service => (
-                          <SelectItem key={service.id} value={service.id.toString()}>
-                            {service.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ServiceAutocomplete
+                      value={currentLigne.service_id}
+                      onValueChange={(value) => handleLigneChange('service_id', value)}
+                      services={services}
+                      placeholder="Rechercher un service..."
+                      className={fieldErrors.service_id ? 'w-full border-red-500' : 'w-full'}
+                    />
+                    {fieldErrors.service_id && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
                   </div>
                   <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Activité *</Label>
-                    <Select value={currentLigne.activity_id} onValueChange={(value) => handleLigneChange('activity_id', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder={
-                          !currentLigne.service_id 
-                            ? "Sélectionnez d'abord un service" 
-                            : isLoadingActivites 
-                              ? "Chargement des activités..." 
-                              : "Sélectionner une activité"
-                        } />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {!currentLigne.service_id ? (
-                          <SelectItem value="no-service" disabled>
-                            Sélectionnez d'abord un service
-                          </SelectItem>
-                        ) : isLoadingActivites ? (
-                          <SelectItem value="loading" disabled>
-                            Chargement...
-                          </SelectItem>
-                        ) : activites.length === 0 ? (
-                          <SelectItem value="no-activities" disabled>
-                            Aucune activité trouvée pour ce service
-                          </SelectItem>
-                        ) : (
-                          activites.map(activite => (
-                            <SelectItem key={activite.id} value={activite.id.toString()}>
-                              {activite.intitule}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <ActivityAutocomplete
+                      value={currentLigne.activity_id}
+                      onValueChange={(value) => handleLigneChange('activity_id', value)}
+                      activities={activites}
+                      isLoading={isLoadingActivites}
+                      serviceSelected={!!currentLigne.service_id}
+                      placeholder="Rechercher une activité..."
+                      className={fieldErrors.activity_id ? 'w-full border-red-500' : 'w-full'}
+                    />
+                    {fieldErrors.activity_id && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Unité *</Label>
                     <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={fieldErrors.unite_id ? 'border-red-500 focus:ring-red-500' : ''}>
                         <SelectValue placeholder="Sélectionner une unité" />
                       </SelectTrigger>
                       <SelectContent>
@@ -789,28 +818,35 @@ export function DevisDetailPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {fieldErrors.unite_id && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Quantité</Label>
-                    <Input 
+                    <Input
                       type="number"
                       step="0.01"
-                      value={currentLigne.quantite} 
+                      value={currentLigne.quantite}
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
                     />
                   </div>
-                  <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Prix unitaire HT</Label>
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium">Prix unitaire HT *</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={currentLigne.prix_unitaire}
                       onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
                       placeholder="0"
+                      className={fieldErrors.prix_unitaire ? 'border-red-500 focus:ring-red-500' : ''}
                     />
+                    {fieldErrors.prix_unitaire && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Montant HT</Label>
                     <Input
                       readOnly
@@ -822,7 +858,7 @@ export function DevisDetailPage() {
               )}
               {currentLigne.type_ligne === 'frais' && (
                 <>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Type de frais *</Label>
                     <Select value={currentLigne.type_frais || ''} onValueChange={(value) => handleLigneChange('type_frais', value)}>
                       <SelectTrigger>
@@ -835,70 +871,78 @@ export function DevisDetailPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Catégorie de frais *</Label>
-                    <Select value={currentLigne.frais_category_id} onValueChange={(value) => handleLigneChange('frais_category_id', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une catégorie de frais" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {fraisCategories.map(category => (
-                          <SelectItem key={category.id} value={category.id.toString()}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FraisCategoryAutocomplete
+                      value={currentLigne.frais_category_id}
+                      onValueChange={(value) => handleLigneChange('frais_category_id', value)}
+                      categories={fraisCategories}
+                      placeholder="Rechercher une catégorie..."
+                      className={fieldErrors.frais_category_id ? 'w-full border-red-500' : 'w-full'}
+                    />
+                    {fieldErrors.frais_category_id && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Ligne de frais *</Label>
-                    <Select value={currentLigne.ligne_frais_id} onValueChange={(value) => handleLigneChange('ligne_frais_id', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une ligne de frais" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lignesFrais.map(ligneFrais => (
-                          <SelectItem key={ligneFrais.id} value={ligneFrais.id.toString()}>
-                            {ligneFrais.description}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <LigneFraisAutocomplete
+                      value={currentLigne.ligne_frais_id}
+                      onValueChange={(value) => handleLigneChange('ligne_frais_id', value)}
+                      lignesFrais={lignesFrais}
+                      categorySelected={!!currentLigne.frais_category_id}
+                      placeholder="Rechercher une ligne de frais..."
+                      className={fieldErrors.ligne_frais_id ? 'w-full border-red-500' : 'w-full'}
+                    />
+                    {fieldErrors.ligne_frais_id && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Prix unitaire *</Label>
-                    <Input 
+                    <Input
                       type="number"
                       step="0.01"
                       value={currentLigne.prix_unitaire}
                       onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
                       placeholder="0"
+                      className={fieldErrors.prix_unitaire ? 'border-red-500 focus:ring-red-500' : ''}
                     />
+                    {fieldErrors.prix_unitaire && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
                   </div>
                   <div className="md:col-span-1">
                     <Label className="text-sm font-medium">Quantité</Label>
-                    <Input 
+                    <Input
                       type="number"
                       step="0.01"
-                      value={currentLigne.quantite} 
+                      value={currentLigne.quantite}
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
                     />
                   </div>
                   <div className="md:col-span-1">
-                    <Label className="text-sm font-medium">Unité</Label>
-                    <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionner une unité" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {unites.map(unite => (
-                          <SelectItem key={unite.id} value={unite.id.toString()}>
-                            {unite.intitule} ({unite.code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-medium">Unité *</Label>
+                    <UniteAutocomplete
+                      value={currentLigne.unite_id}
+                      onValueChange={(value) => handleLigneChange('unite_id', value)}
+                      unites={unites}
+                      placeholder="Rechercher une unité..."
+                      className={fieldErrors.unite_id ? 'w-full border-red-500' : 'w-full'}
+                    />
+                    {fieldErrors.unite_id && (
+                      <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                    )}
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label className="text-sm font-medium">Montant HT</Label>
+                    <Input
+                      readOnly
+                      value={formatMontant((parseFloat(currentLigne.quantite || '0') || 0) * (parseFloat(currentLigne.prix_unitaire || '0') || 0))}
+                      className="bg-gray-50 text-gray-700 font-medium"
+                      placeholder="0,00 GNF"
+                    />
                   </div>
                 </>
               )}
