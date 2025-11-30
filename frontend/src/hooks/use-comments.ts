@@ -21,7 +21,12 @@ export interface Comment {
     first_name: string;
     last_name: string;
   }>;
-  attachments: string[];
+  attachments: Array<{
+    name: string;
+    url: string;
+    type: string;
+    size: number;
+  }>;
   replies: Comment[];
 }
 
@@ -29,6 +34,12 @@ export interface CreateCommentData {
   content: string;
   parent?: number | null;
   mentions?: number[];
+  attachments?: Array<{
+    name: string;
+    url: string;
+    type: string;
+    size: number;
+  }>;
 }
 
 export function useTaskComments(projectId: string, taskId: number) {
@@ -87,6 +98,26 @@ export function useDeleteComment(projectId: string, taskId: number, commentId: n
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['comments', projectId, taskId] });
+    },
+  });
+}
+
+export function useUploadAttachment(projectId: string, taskId: number) {
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await api.post(
+        `/projects/${projectId}/tasks/${taskId}/comments/upload_attachment/`,
+        formData
+      );
+      return response.data as {
+        name: string;
+        url: string;
+        type: string;
+        size: number;
+      };
     },
   });
 }

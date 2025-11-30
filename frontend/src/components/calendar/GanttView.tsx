@@ -43,8 +43,8 @@ export const GanttView = ({ projectId }: GanttViewProps) => {
   
   const dateRange = useMemo(() => {
     const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    // const end = addDays(start, visibleDays - 1);
-    const end = addDays(start, visibleDays);
+    const end = addDays(start, visibleDays - 1);
+    // const end = addDays(start, visibleDays);
     return { start, end, days: eachDayOfInterval({ start, end }) };
   }, [currentDate, visibleDays]);
 

@@ -2,6 +2,7 @@ from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import MultiPartParser, FormParser
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Q, Count, Avg, Sum, F, ExpressionWrapper, fields, Max
 from django.utils import timezone
@@ -716,11 +717,25 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Créer un commentaire avec l'auteur"""
+        import re
         task_id = self.kwargs.get('task_pk')
-        serializer.save(task_id=task_id)
+        task = ProjectTask.objects.get(id=task_id)
+
+        # Extraire les mentions (@username) du contenu
+        content = self.request.data.get('content', '')
+        usernames = re.findall(r'@(\w+)', content)
+
+        # Convertir les usernames en IDs
+        mentioned_users = User.objects.filter(username__in=usernames)
+
+        # Sauvegarder avec l'auteur et la tâche
+        comment = serializer.save(author=self.request.user, task=task)
+
+        # Ajouter les mentions
+        if mentioned_users.exists():
+            comment.mentions.set(mentioned_users)
 
         # Créer une notification pour l'assigné de la tâche
-        task = ProjectTask.objects.get(id=task_id)
         if task.assigned_to and task.assigned_to != self.request.user:
             ProjectNotification.objects.create(
                 recipient=task.assigned_to,
@@ -728,8 +743,68 @@ class TaskCommentViewSet(viewsets.ModelViewSet):
                 title='Nouveau commentaire',
                 message=f"{self.request.user.get_full_name()} a ajouté un commentaire sur la tâche '{task.title}'",
                 related_task=task,
-                related_comment=serializer.instance
+                related_comment=comment
             )
+
+        # Créer des notifications pour les utilisateurs mentionnés
+        for user in mentioned_users:
+            if user != self.request.user:
+                ProjectNotification.objects.create(
+                    recipient=user,
+                    notification_type='mention',
+                    title='Vous avez été mentionné',
+                    message=f"{self.request.user.get_full_name()} vous a mentionné dans un commentaire",
+                    related_task=task,
+                    related_comment=comment
+                )
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def upload_attachment(self, request, project_pk=None, task_pk=None):
+        """
+        Upload un fichier pour un commentaire
+        POST /api/v1/projects/{project_id}/tasks/{task_id}/comments/upload_attachment/
+        """
+        from django.core.files.storage import default_storage
+        from django.conf import settings
+        import os
+
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'error': 'Aucun fichier fourni'}, status=400)
+
+        # Valider la taille (max 10MB)
+        if file.size > 10 * 1024 * 1024:
+            return Response({'error': 'Fichier trop volumineux (max 10MB)'}, status=400)
+
+        # Valider le type
+        allowed_types = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'application/vnd.ms-excel',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'text/plain'
+        ]
+
+        if file.content_type not in allowed_types:
+            return Response({'error': 'Type de fichier non autorisé'}, status=400)
+
+        # Générer un nom unique
+        import uuid
+        ext = os.path.splitext(file.name)[1]
+        filename = f"comments/{task_pk}/{uuid.uuid4()}{ext}"
+
+        # Sauvegarder le fichier
+        path = default_storage.save(filename, file)
+        url = default_storage.url(path)
+
+        return Response({
+            'name': file.name,
+            'url': url,
+            'type': file.content_type,
+            'size': file.size
+        }, status=201)
 
 
 class ProjectNotificationViewSet(viewsets.ModelViewSet):

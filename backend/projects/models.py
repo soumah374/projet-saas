@@ -662,7 +662,7 @@ class TaskComment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='replies')
     mentions = models.ManyToManyField(User, related_name='mentioned_in_comments', blank=True)
-    attachments = models.JSONField(default=list, blank=True, help_text="URLs des pièces jointes")
+    attachments = models.JSONField(default=list, blank=True, help_text="Liste des pièces jointes (nom, url, type, taille)")
 
     class Meta:
         ordering = ['created_at']

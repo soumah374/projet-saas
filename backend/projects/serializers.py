@@ -354,7 +354,7 @@ class TaskCommentSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'parent', 'mentions',
             'mentioned_users', 'attachments', 'replies'
         ]
-        read_only_fields = ['id', 'author', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'task', 'author', 'created_at', 'updated_at']
 
     @extend_schema_field(serializers.ListField(child=serializers.DictField()))
     def get_replies(self, obj):
@@ -363,7 +363,7 @@ class TaskCommentSerializer(serializers.ModelSerializer):
         return []
 
     def create(self, validated_data):
-        validated_data['author'] = self.context['request'].user
+        # L'auteur et la tâche sont définis dans perform_create du ViewSet
         mentions = validated_data.pop('mentions', [])
         comment = TaskComment.objects.create(**validated_data)
         comment.mentions.set(mentions)
