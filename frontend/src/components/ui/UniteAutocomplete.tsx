@@ -4,84 +4,73 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Loader2, Search, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClients } from '@/hooks/use-clients';
 
-interface Client {
+interface Unite {
   id: number;
-  nom_complet: string;
-  email?: string;
-  telephone?: string;
+  intitule: string;
+  code: string;
 }
 
-interface ClientAutocompleteProps {
+interface UniteAutocompleteProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   showClearButton?: boolean;
-  onClientSelect?: (client: Client | null) => void;
+  unites: Unite[];
+  isLoading?: boolean;
+  onUniteSelect?: (unite: Unite | null) => void;
 }
 
-export function ClientAutocomplete({
+export function UniteAutocomplete({
   value = '',
   onValueChange,
-  placeholder = "Rechercher un client...",
+  placeholder = "Rechercher une unité...",
   className = "w-full",
   disabled = false,
   showClearButton = true,
-  onClientSelect
-}: ClientAutocompleteProps) {
+  unites = [],
+  isLoading = false,
+  onUniteSelect
+}: UniteAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedUnite, setSelectedUnite] = useState<Unite | null>(null);
 
-  // Hook pour rechercher les clients
-  const { data: clientsData, isLoading } = useClients({ 
-    search: debouncedSearch || undefined,
-    page_size: 10
-  });
-
-  const clients = clientsData?.results || [];
-
-  // Debounce pour la recherche
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
+  // Filtrer les unités selon la recherche
+  const filteredUnites = unites.filter(unite =>
+    unite.intitule.toLowerCase().includes(search.toLowerCase()) ||
+    unite.code.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
-    if (value && !selectedClient) {
-      // Si on a une valeur mais pas de client sélectionné, essayer de le trouver
-      const client = clients.find(c => c.id.toString() === value);
-      if (client) {
-        setSelectedClient(client);
-        setSearch(client.nom_complet);
+    if (value && !selectedUnite) {
+      const unite = unites.find(u => u.id.toString() === value);
+      if (unite) {
+        setSelectedUnite(unite);
+        setSearch(`${unite.intitule} (${unite.code})`);
       }
-    } else if (!value && selectedClient) {
-      setSelectedClient(null);
+    } else if (!value && selectedUnite) {
+      setSelectedUnite(null);
       setSearch('');
     }
-  }, [value, clients, selectedClient]);
+  }, [value, unites, selectedUnite]);
 
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setSearch(client.nom_complet);
-    onValueChange(client.id.toString());
-    onClientSelect?.(client);
+  const handleUniteSelect = (unite: Unite) => {
+    setSelectedUnite(unite);
+    setSearch(`${unite.intitule} (${unite.code})`);
+    onValueChange(unite.id.toString());
+    onUniteSelect?.(unite);
     setOpen(false);
   };
 
   const handleClear = () => {
-    setSelectedClient(null);
+    setSelectedUnite(null);
     setSearch('');
     onValueChange('');
-    onClientSelect?.(null);
+    onUniteSelect?.(null);
   };
 
   const handleSearchChange = (newSearch: string) => {
@@ -103,7 +92,7 @@ export function ClientAutocomplete({
             disabled={disabled}
           >
             <span className="truncate flex-1">
-              {selectedClient ? selectedClient.nom_complet : placeholder}
+              {selectedUnite ? `${selectedUnite.intitule} (${selectedUnite.code})` : placeholder}
             </span>
             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -111,7 +100,7 @@ export function ClientAutocomplete({
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Rechercher un client..."
+              placeholder="Rechercher une unité..."
               value={search}
               onValueChange={handleSearchChange}
             />
@@ -120,35 +109,31 @@ export function ClientAutocomplete({
                 {isLoading ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Recherche en cours...</span>
+                    <span className="ml-2">Chargement...</span>
                   </div>
                 ) : (
                   <div className="py-6 text-center text-sm pr-2 pl-2">
-                    Aucun client trouvé. Commencez à taper pour rechercher.
+                    Aucune unité trouvée. Commencez à taper pour rechercher.
                   </div>
                 )}
               </CommandEmpty>
               <CommandGroup>
-                {clients.map((client) => (
+                {filteredUnites.map((unite) => (
                   <CommandItem
-                    key={client.id}
-                    value={client.nom_complet}
-                    onSelect={() => handleClientSelect(client)}
+                    key={unite.id}
+                    value={`${unite.intitule} (${unite.code})`}
+                    onSelect={() => handleUniteSelect(unite)}
                     className="cursor-pointer"
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4 shrink-0",
-                        selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                        selectedUnite?.id === unite.id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-medium">{client.nom_complet}</span>
-                      {client.email && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {client.email}
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="truncate font-medium">{unite.intitule}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">({unite.code})</span>
                     </div>
                   </CommandItem>
                 ))}
@@ -157,7 +142,7 @@ export function ClientAutocomplete({
           </Command>
         </PopoverContent>
       </Popover>
-      {showClearButton && selectedClient && (
+      {showClearButton && selectedUnite && (
         <Button
           variant="ghost"
           size="sm"
@@ -170,4 +155,4 @@ export function ClientAutocomplete({
       )}
     </div>
   );
-} 
+}

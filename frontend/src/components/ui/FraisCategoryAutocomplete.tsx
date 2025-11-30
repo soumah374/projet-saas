@@ -4,84 +4,71 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Loader2, Search, Check, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useClients } from '@/hooks/use-clients';
 
-interface Client {
+interface FraisCategory {
   id: number;
-  nom_complet: string;
-  email?: string;
-  telephone?: string;
+  name: string;
 }
 
-interface ClientAutocompleteProps {
+interface FraisCategoryAutocompleteProps {
   value?: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   className?: string;
   disabled?: boolean;
   showClearButton?: boolean;
-  onClientSelect?: (client: Client | null) => void;
+  categories: FraisCategory[];
+  isLoading?: boolean;
+  onCategorySelect?: (category: FraisCategory | null) => void;
 }
 
-export function ClientAutocomplete({
+export function FraisCategoryAutocomplete({
   value = '',
   onValueChange,
-  placeholder = "Rechercher un client...",
+  placeholder = "Rechercher une catégorie de frais...",
   className = "w-full",
   disabled = false,
   showClearButton = true,
-  onClientSelect
-}: ClientAutocompleteProps) {
+  categories = [],
+  isLoading = false,
+  onCategorySelect
+}: FraisCategoryAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<FraisCategory | null>(null);
 
-  // Hook pour rechercher les clients
-  const { data: clientsData, isLoading } = useClients({ 
-    search: debouncedSearch || undefined,
-    page_size: 10
-  });
-
-  const clients = clientsData?.results || [];
-
-  // Debounce pour la recherche
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(search);
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [search]);
+  // Filtrer les catégories selon la recherche
+  const filteredCategories = categories.filter(category =>
+    category.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
-    if (value && !selectedClient) {
-      // Si on a une valeur mais pas de client sélectionné, essayer de le trouver
-      const client = clients.find(c => c.id.toString() === value);
-      if (client) {
-        setSelectedClient(client);
-        setSearch(client.nom_complet);
+    if (value && !selectedCategory) {
+      const category = categories.find(c => c.id.toString() === value);
+      if (category) {
+        setSelectedCategory(category);
+        setSearch(category.name);
       }
-    } else if (!value && selectedClient) {
-      setSelectedClient(null);
+    } else if (!value && selectedCategory) {
+      setSelectedCategory(null);
       setSearch('');
     }
-  }, [value, clients, selectedClient]);
+  }, [value, categories, selectedCategory]);
 
-  const handleClientSelect = (client: Client) => {
-    setSelectedClient(client);
-    setSearch(client.nom_complet);
-    onValueChange(client.id.toString());
-    onClientSelect?.(client);
+  const handleCategorySelect = (category: FraisCategory) => {
+    setSelectedCategory(category);
+    setSearch(category.name);
+    onValueChange(category.id.toString());
+    onCategorySelect?.(category);
     setOpen(false);
   };
 
   const handleClear = () => {
-    setSelectedClient(null);
+    setSelectedCategory(null);
     setSearch('');
     onValueChange('');
-    onClientSelect?.(null);
+    onCategorySelect?.(null);
   };
 
   const handleSearchChange = (newSearch: string) => {
@@ -103,7 +90,7 @@ export function ClientAutocomplete({
             disabled={disabled}
           >
             <span className="truncate flex-1">
-              {selectedClient ? selectedClient.nom_complet : placeholder}
+              {selectedCategory ? selectedCategory.name : placeholder}
             </span>
             <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
@@ -111,7 +98,7 @@ export function ClientAutocomplete({
         <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="Rechercher un client..."
+              placeholder="Rechercher une catégorie..."
               value={search}
               onValueChange={handleSearchChange}
             />
@@ -120,36 +107,33 @@ export function ClientAutocomplete({
                 {isLoading ? (
                   <div className="flex items-center justify-center py-6">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="ml-2">Recherche en cours...</span>
+                    <span className="ml-2">Chargement...</span>
+                  </div>
+                ) : categories.length === 0 ? (
+                  <div className="py-6 text-center text-sm pr-2 pl-2">
+                    Aucune catégorie de frais trouvée.
                   </div>
                 ) : (
                   <div className="py-6 text-center text-sm pr-2 pl-2">
-                    Aucun client trouvé. Commencez à taper pour rechercher.
+                    Aucune catégorie trouvée. Commencez à taper pour rechercher.
                   </div>
                 )}
               </CommandEmpty>
               <CommandGroup>
-                {clients.map((client) => (
+                {filteredCategories.map((category) => (
                   <CommandItem
-                    key={client.id}
-                    value={client.nom_complet}
-                    onSelect={() => handleClientSelect(client)}
+                    key={category.id}
+                    value={category.name}
+                    onSelect={() => handleCategorySelect(category)}
                     className="cursor-pointer"
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4 shrink-0",
-                        selectedClient?.id === client.id ? "opacity-100" : "opacity-0"
+                        selectedCategory?.id === category.id ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    <div className="flex flex-col flex-1 min-w-0">
-                      <span className="truncate font-medium">{client.nom_complet}</span>
-                      {client.email && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          {client.email}
-                        </span>
-                      )}
-                    </div>
+                    <span className="truncate font-medium">{category.name}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -157,7 +141,7 @@ export function ClientAutocomplete({
           </Command>
         </PopoverContent>
       </Popover>
-      {showClearButton && selectedClient && (
+      {showClearButton && selectedCategory && (
         <Button
           variant="ghost"
           size="sm"
@@ -170,4 +154,4 @@ export function ClientAutocomplete({
       )}
     </div>
   );
-} 
+}
