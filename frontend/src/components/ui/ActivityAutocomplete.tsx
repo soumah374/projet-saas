@@ -22,6 +22,7 @@ interface ActivityAutocompleteProps {
   isLoading?: boolean;
   onActivitySelect?: (activity: Activity | null) => void;
   serviceSelected?: boolean;
+  onSearchChange?: (search: string) => void; // Nouvelle prop pour la recherche côté serveur
 }
 
 export function ActivityAutocomplete({
@@ -34,17 +35,21 @@ export function ActivityAutocomplete({
   activities = [],
   isLoading = false,
   onActivitySelect,
-  serviceSelected = false
+  serviceSelected = false,
+  onSearchChange
 }: ActivityAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
 
-  // Filtrer les activités selon la recherche
-  const filteredActivities = activities.filter(activity =>
-    activity.intitule.toLowerCase().includes(search.toLowerCase()) ||
-    activity.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Si onSearchChange est fourni, ne pas filtrer côté client (recherche côté serveur)
+  // Sinon, filtrer les activités selon la recherche (comportement par défaut)
+  const filteredActivities = onSearchChange
+    ? activities
+    : activities.filter(activity =>
+        activity.intitule.toLowerCase().includes(search.toLowerCase()) ||
+        activity.description?.toLowerCase().includes(search.toLowerCase())
+      );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
@@ -82,6 +87,17 @@ export function ActivityAutocomplete({
       handleClear();
     }
   };
+
+  // Effet pour la recherche côté serveur avec debounce
+  useEffect(() => {
+    if (onSearchChange) {
+      const timeoutId = setTimeout(() => {
+        onSearchChange(search);
+      }, 300); // Debounce de 300ms
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [search, onSearchChange]);
 
   const getPlaceholder = () => {
     if (!serviceSelected) {

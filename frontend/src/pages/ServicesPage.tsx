@@ -54,7 +54,7 @@ export function ServicesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [categoryId, setCategoryId] = useState<number | 'other' | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');

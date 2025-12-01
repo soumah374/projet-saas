@@ -2,12 +2,25 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 import { FraisCategory, FraisCategoryCreateData, FraisCategoryUpdateData } from '../lib/types';
 
+interface FraisCategoryFilters {
+  search?: string;
+  ordering?: string;
+  page?: number;
+  page_size?: number;
+}
+
 // Récupérer toutes les catégories de frais
-export const useFraisCategories = () => {
+export const useFraisCategories = (filters?: FraisCategoryFilters) => {
   return useQuery({
     queryKey: ['frais-categories'],
     queryFn: async (): Promise<FraisCategory[]> => {
       const response = await api.get('/catalog/frais-categories/');
+      const params = new URLSearchParams();
+      if (filters?.search) params.append('search', filters.search);
+      if (filters?.ordering) params.append('ordering', filters.ordering);
+      if (filters?.page) params.append('page', filters.page.toString());
+      if (filters?.page_size) params.append('page_size', filters.page_size.toString());
+      
       return response.data.results || response.data;
     },
   });

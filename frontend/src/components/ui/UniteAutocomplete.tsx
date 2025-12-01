@@ -21,6 +21,7 @@ interface UniteAutocompleteProps {
   unites: Unite[];
   isLoading?: boolean;
   onUniteSelect?: (unite: Unite | null) => void;
+  onSearchChange?: (search: string) => void; // Nouvelle prop pour la recherche côté serveur
 }
 
 export function UniteAutocomplete({
@@ -32,17 +33,21 @@ export function UniteAutocomplete({
   showClearButton = true,
   unites = [],
   isLoading = false,
-  onUniteSelect
+  onUniteSelect,
+  onSearchChange
 }: UniteAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedUnite, setSelectedUnite] = useState<Unite | null>(null);
 
-  // Filtrer les unités selon la recherche
-  const filteredUnites = unites.filter(unite =>
-    unite.intitule.toLowerCase().includes(search.toLowerCase()) ||
-    unite.code.toLowerCase().includes(search.toLowerCase())
-  );
+  // Si onSearchChange est fourni, ne pas filtrer côté client (recherche côté serveur)
+  // Sinon, filtrer les unités selon la recherche (comportement par défaut)
+  const filteredUnites = onSearchChange
+    ? unites
+    : unites.filter(unite =>
+        unite.intitule.toLowerCase().includes(search.toLowerCase()) ||
+        unite.code.toLowerCase().includes(search.toLowerCase())
+      );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
@@ -79,6 +84,17 @@ export function UniteAutocomplete({
       handleClear();
     }
   };
+
+  // Effet pour la recherche côté serveur avec debounce
+  useEffect(() => {
+    if (onSearchChange) {
+      const timeoutId = setTimeout(() => {
+        onSearchChange(search);
+      }, 300); // Debounce de 300ms
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [search, onSearchChange]);
 
   return (
     <div className="flex items-center gap-2 w-full">

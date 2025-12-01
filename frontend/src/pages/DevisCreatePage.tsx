@@ -23,7 +23,7 @@ import {
 import { useServices } from '@/hooks/use-services';
 import { useUnitesStandards } from '@/hooks/use-unites';
 import { useFraisCategories } from '@/hooks/use-frais-categories';
-import { useLignesFraisByCategory } from '@/hooks/use-lignes-frais';
+import { useLignesFrais } from '@/hooks/use-lignes-frais';
 import { toast } from 'sonner';
 import { formatMontant } from '@/lib/formatters';
 import type { LigneFrais } from '@/lib/types';
@@ -100,17 +100,32 @@ export function DevisCreatePage() {
 
   // Hooks
   const createDevisWithLignesMutation = useCreateDevisAvecLignes();
-  
-  const { data: servicesData } = useServices({ page_size: 1000 });
-  const { data: unitesData } = useUnitesStandards({ page_size: 1000, is_active: true });
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [fraisCategorySearch, setFraisCategorySearch] = useState('');
+  const [ligneFraisSearch, setLigneFraisSearch] = useState('');
+
+  const { data: servicesData } = useServices({
+    search: serviceSearch,
+    page_size: 100
+  });
+  const { data: unitesData } = useUnitesStandards({ page_size: 100, is_active: true });
   const { data: activitesData, refetch: refetchActivites, isLoading: isLoadingActivites } = useActivitesParService(
     parseInt(currentLigne.service_id) || 0
   );
   const { data: intervenantsData, refetch: refetchIntervenants, isLoading: isLoadingIntervenants } = useIntervenantsParActivite(
     parseInt(currentLigne.activity_id) || 0
   );
-  const { data: fraisCategories = [] } = useFraisCategories();
-  const { data: lignesFraisRaw } = useLignesFraisByCategory(parseInt(currentLigne.frais_category_id || '0'));
+  const { data: fraisCategories = [] } = useFraisCategories({
+    search: fraisCategorySearch,
+    page_size: 100
+  });
+  const { data: lignesFraisRaw } = useLignesFrais(
+    1,
+    100,
+    ligneFraisSearch,
+    undefined,
+    currentLigne.frais_category_id || undefined
+  );
   const lignesFrais: LigneFrais[] = Array.isArray(lignesFraisRaw)
     ? lignesFraisRaw
     : Array.isArray((lignesFraisRaw as any)?.results)
@@ -693,6 +708,7 @@ export function DevisCreatePage() {
                       services={services}
                       placeholder="Rechercher un service..."
                       className={ligneErrors.service_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.service_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                      onSearchChange={setServiceSearch}
                     />
                     {ligneErrors.service_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.service_id}</p>
@@ -799,6 +815,7 @@ export function DevisCreatePage() {
                       categories={fraisCategories}
                       placeholder="Rechercher une catégorie..."
                       className={ligneErrors.frais_category_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.frais_category_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                      onSearchChange={setFraisCategorySearch}
                     />
                     {ligneErrors.frais_category_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.frais_category_id}</p>
@@ -815,6 +832,7 @@ export function DevisCreatePage() {
                       categorySelected={!!currentLigne.frais_category_id}
                       placeholder="Rechercher une ligne de frais..."
                       className={ligneErrors.ligne_frais_id ? 'border-red-500 focus:border-red-500 w-full' : currentLigne.ligne_frais_id ? 'border-green-500 bg-green-50 w-full' : 'w-full'}
+                      onSearchChange={setLigneFraisSearch}
                     />
                     {ligneErrors.ligne_frais_id && (
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.ligne_frais_id}</p>
