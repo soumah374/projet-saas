@@ -51,12 +51,12 @@ interface CreateContratModalProps {
   isLoading?: boolean;
 }
 
-export function CreateContratModal({ 
-  open, 
-  onOpenChange, 
-  onSave, 
+export function CreateContratModal({
+  open,
+  onOpenChange,
+  onSave,
   isLoadingDevis = false,
-  isLoading = false 
+  isLoading = false
 }: CreateContratModalProps) {
   const [createForm, setCreateForm] = useState({
     client_id: null as number | null,
@@ -76,7 +76,10 @@ export function CreateContratModal({
       commentaire: string;
     }>
   });
-  
+
+  // État pour gérer les erreurs de validation
+  const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
+
   // Dates pour les calendriers
   const [dateDebut, setDateDebut] = useState<Date | undefined>(undefined);
   const [dateFin, setDateFin] = useState<Date | undefined>(undefined);
@@ -127,6 +130,7 @@ export function CreateContratModal({
     setDateDebut(undefined);
     setDateFin(undefined);
     setSelectedClientId(null);
+    setFieldErrors({});
   };
 
   // Fonction pour obtenir le devis sélectionné
@@ -228,28 +232,65 @@ export function CreateContratModal({
   }, [createForm.echeancier_type, createForm.nombre_echeances, createForm.date_debut, createForm.date_fin]);
 
   const handleSave = async () => {
+    // Réinitialiser les erreurs
+    const errors: Record<string, boolean> = {};
+
+    // Validation du client
     if (!selectedClientId) {
+      errors.client_id = true;
+      setFieldErrors(errors);
       toast.error('Veuillez sélectionner un client');
       return;
     }
 
+    // Validation des devis
     if (!createForm.devis_ids.length) {
+      errors.devis_ids = true;
+      setFieldErrors(errors);
       toast.error('Veuillez sélectionner au moins un devis');
       return;
     }
 
+    // Validation du devis principal
     if (!createForm.devis_principal_id) {
+      errors.devis_principal_id = true;
+      setFieldErrors(errors);
       toast.error('Veuillez sélectionner un devis principal');
       return;
     }
 
-    if (!createForm.date_debut || !createForm.date_fin) {
+    // Validation des dates
+    if (!createForm.date_debut) errors.date_debut = true;
+    if (!createForm.date_fin) errors.date_fin = true;
+
+    if (errors.date_debut || errors.date_fin) {
+      setFieldErrors(errors);
       toast.error('Veuillez sélectionner les dates de début et de fin');
       return;
     }
 
+    // Validation de la cohérence des dates
     if (new Date(createForm.date_fin) <= new Date(createForm.date_debut)) {
+      errors.date_fin = true;
+      setFieldErrors(errors);
       toast.error('La date de fin doit être après la date de début');
+      return;
+    }
+
+    // Validation des échéances (obligatoire)
+    if (createForm.echeances.length === 0) {
+      errors.echeances = true;
+      setFieldErrors(errors);
+      toast.error('Veuillez créer au moins une échéance de paiement');
+      return;
+    }
+
+    // Validation du total des pourcentages
+    const totalPourcentage = createForm.echeances.reduce((sum, e) => sum + e.pourcentage, 0);
+    if (Math.abs(totalPourcentage - 100) > 0.01) {
+      errors.echeances = true;
+      setFieldErrors(errors);
+      toast.error('Le total des pourcentages des échéances doit être égal à 100%');
       return;
     }
 
@@ -264,7 +305,7 @@ export function CreateContratModal({
         notes: createForm.notes,
         echeances: createForm.echeances
       });
-      
+
       onOpenChange(false);
       resetForm();
     } catch (error) {
@@ -274,7 +315,12 @@ export function CreateContratModal({
 
   return (
     <div>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(isOpen) => {
+        onOpenChange(isOpen);
+        if (!isOpen) {
+          setFieldErrors({});
+        }
+      }}>
         <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Créer un nouveau contrat</DialogTitle>
@@ -291,7 +337,7 @@ export function CreateContratModal({
                       variant="outline"
                       role="combobox"
                       aria-expanded={clientSearchOpen}
-                      className="w-full justify-between"
+                      className={`w-full h-10 justify-between ${fieldErrors.client_id ? 'border-red-500' : ''}`}
                     >
                       {selectedClientId ? (
                         clients.find(client => client.id === selectedClientId)?.nom_complet || "Client sélectionné"
@@ -301,7 +347,7 @@ export function CreateContratModal({
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                     <Command>
                       <CommandInput placeholder="Rechercher un client..." />
                       <CommandList>
@@ -315,6 +361,10 @@ export function CreateContratModal({
                                 setSelectedClientId(client.id);
                                 setCreateForm({ ...createForm, client_id: client.id });
                                 setClientSearchOpen(false);
+                                // Réinitialiser l'erreur du champ client
+                                if (fieldErrors.client_id) {
+                                  setFieldErrors(prev => ({ ...prev, client_id: false }));
+                                }
                               }}
                             >
                               <div className="flex flex-col">
@@ -328,6 +378,9 @@ export function CreateContratModal({
                     </Command>
                   </PopoverContent>
                 </Popover>
+                {fieldErrors.client_id && (
+                  <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                )}
               </div>
 
               {/* Sélection des devis */}
@@ -340,7 +393,7 @@ export function CreateContratModal({
                         variant="outline"
                         role="combobox"
                         aria-expanded={devisSearchOpen}
-                        className="w-full justify-between"
+                        className={`w-full h-10 justify-between ${fieldErrors.devis_ids ? 'border-red-500' : ''}`}
                         disabled={isLoadingDevisClient}
                       >
                         {isLoadingDevisClient
@@ -352,7 +405,7 @@ export function CreateContratModal({
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Rechercher des devis..." />
                         <CommandList>
@@ -386,6 +439,10 @@ export function CreateContratModal({
                                         devis_ids: newDevisIds,
                                         devis_principal_id: createForm.devis_principal_id || devis.id
                                       });
+                                      // Réinitialiser l'erreur du champ devis
+                                      if (fieldErrors.devis_ids) {
+                                        setFieldErrors(prev => ({ ...prev, devis_ids: false }));
+                                      }
                                     }
                                   }}
                                 >
@@ -408,18 +465,27 @@ export function CreateContratModal({
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {fieldErrors.devis_ids && (
+                    <p className="text-sm text-red-600 mt-1">Veuillez sélectionner au moins un devis</p>
+                  )}
                 </div>
               )}
 
               {/* Sélection du devis principal */}
               {createForm.devis_ids.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Devis principal</Label>
-                  <Select 
-                    value={createForm.devis_principal_id?.toString() || ''} 
-                    onValueChange={(value) => setCreateForm({ ...createForm, devis_principal_id: parseInt(value) })}
+                  <Label>Devis principal *</Label>
+                  <Select
+                    value={createForm.devis_principal_id?.toString() || ''}
+                    onValueChange={(value) => {
+                      setCreateForm({ ...createForm, devis_principal_id: parseInt(value) });
+                      // Réinitialiser l'erreur du champ devis_principal_id
+                      if (fieldErrors.devis_principal_id) {
+                        setFieldErrors(prev => ({ ...prev, devis_principal_id: false }));
+                      }
+                    }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className={fieldErrors.devis_principal_id ? 'border-red-500 focus:ring-red-500' : ''}>
                       <SelectValue placeholder="Sélectionner le devis principal" />
                     </SelectTrigger>
                     <SelectContent>
@@ -433,6 +499,9 @@ export function CreateContratModal({
                       })}
                     </SelectContent>
                   </Select>
+                  {fieldErrors.devis_principal_id && (
+                    <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                  )}
                 </div>
               )}
 
@@ -481,12 +550,15 @@ export function CreateContratModal({
                 <Label>Date de début *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={`w-full h-10 justify-start text-left font-normal ${fieldErrors.date_debut ? 'border-red-500' : ''}`}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateDebut ? format(dateDebut, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" 
+                  <PopoverContent className="w-auto p-0"
                     align="start"
                     side="bottom"
                     sideOffset={4}
@@ -497,23 +569,33 @@ export function CreateContratModal({
                       onSelect={(date) => {
                         setDateDebut(date);
                         setCreateForm({ ...createForm, date_debut: date ? date.toISOString().split('T')[0] : '' });
+                        // Réinitialiser l'erreur du champ date_debut
+                        if (fieldErrors.date_debut) {
+                          setFieldErrors(prev => ({ ...prev, date_debut: false }));
+                        }
                       }}
                       initialFocus
                       locale={fr}
                     />
                   </PopoverContent>
                 </Popover>
+                {fieldErrors.date_debut && (
+                  <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                )}
               </div>
               <div>
                 <Label>Date de fin *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <Button
+                      variant="outline"
+                      className={`w-full h-10 justify-start text-left font-normal ${fieldErrors.date_fin ? 'border-red-500' : ''}`}
+                    >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {dateFin ? format(dateFin, "PPP", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" 
+                  <PopoverContent className="w-auto p-0"
                     align="start"
                     side="bottom"
                     sideOffset={4}
@@ -524,12 +606,19 @@ export function CreateContratModal({
                       onSelect={(date) => {
                         setDateFin(date);
                         setCreateForm({ ...createForm, date_fin: date ? date.toISOString().split('T')[0] : '' });
+                        // Réinitialiser l'erreur du champ date_fin
+                        if (fieldErrors.date_fin) {
+                          setFieldErrors(prev => ({ ...prev, date_fin: false }));
+                        }
                       }}
                       initialFocus
                       locale={fr}
                     />
                   </PopoverContent>
                 </Popover>
+                {fieldErrors.date_fin && (
+                  <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
+                )}
               </div>
             </div>
 
@@ -558,15 +647,21 @@ export function CreateContratModal({
             </div>
 
             {/* Section Échéanciers */}
-            <div className="space-y-4">
+            <div className={`space-y-4 p-4 rounded-lg border-2 ${fieldErrors.echeances ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between">
-                <Label className="text-lg font-semibold">Échéancier de paiement</Label>
+                <Label className="text-lg font-semibold">Échéancier de paiement *</Label>
                 <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={generateStandardEcheances}
+                    onClick={() => {
+                      generateStandardEcheances();
+                      // Réinitialiser l'erreur des échéances
+                      if (fieldErrors.echeances) {
+                        setFieldErrors(prev => ({ ...prev, echeances: false }));
+                      }
+                    }}
                   >
                     Standard (30-40-30)
                   </Button>
@@ -574,12 +669,21 @@ export function CreateContratModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={generateTranchesEcheances}
+                    onClick={() => {
+                      generateTranchesEcheances();
+                      // Réinitialiser l'erreur des échéances
+                      if (fieldErrors.echeances) {
+                        setFieldErrors(prev => ({ ...prev, echeances: false }));
+                      }
+                    }}
                   >
                     Tranches égales
                   </Button>
                 </div>
               </div>
+              {fieldErrors.echeances && createForm.echeances.length === 0 && (
+                <p className="text-sm text-red-600">Veuillez créer au moins une échéance de paiement</p>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -619,6 +723,16 @@ export function CreateContratModal({
                 )}
               </div>
 
+              {/* Message d'aide si aucune échéance */}
+              {createForm.echeances.length === 0 && !fieldErrors.echeances && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-800">
+                    💡 Cliquez sur "Standard (30-40-30)" ou "Tranches égales" pour générer automatiquement un échéancier,
+                    ou sélectionnez "Personnalisé" pour créer vos propres échéances.
+                  </p>
+                </div>
+              )}
+
               {/* Liste des échéances */}
               {createForm.echeances.length > 0 && (
                 <div className="space-y-3">
@@ -628,7 +742,13 @@ export function CreateContratModal({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={addEcheance}
+                      onClick={() => {
+                        addEcheance();
+                        // Réinitialiser l'erreur des échéances
+                        if (fieldErrors.echeances) {
+                          setFieldErrors(prev => ({ ...prev, echeances: false }));
+                        }
+                      }}
                     >
                       Ajouter une échéance
                     </Button>
@@ -685,7 +805,7 @@ export function CreateContratModal({
                           <Label>Date d'échéance</Label>
                           <Popover>
                             <PopoverTrigger asChild>
-                              <Button variant="outline" className="w-full justify-start text-left font-normal">
+                              <Button variant="outline" className="w-full h-10 justify-start text-left font-normal">
                                 <CalendarIcon className="mr-2 h-4 w-4" />
                                 {echeance.date_echeance ? format(new Date(echeance.date_echeance), "PPP", { locale: fr }) : "Sélectionner une date"}
                               </Button>
