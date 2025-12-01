@@ -21,6 +21,7 @@ interface ServiceAutocompleteProps {
   services: Service[];
   isLoading?: boolean;
   onServiceSelect?: (service: Service | null) => void;
+  onSearchChange?: (search: string) => void; // Nouvelle prop pour la recherche côté serveur
 }
 
 export function ServiceAutocomplete({
@@ -32,17 +33,21 @@ export function ServiceAutocomplete({
   showClearButton = true,
   services = [],
   isLoading = false,
-  onServiceSelect
+  onServiceSelect,
+  onSearchChange
 }: ServiceAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  // Filtrer les services selon la recherche
-  const filteredServices = services.filter(service =>
-    service.name.toLowerCase().includes(search.toLowerCase()) ||
-    service.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Si onSearchChange est fourni, ne pas filtrer côté client (recherche côté serveur)
+  // Sinon, filtrer les services selon la recherche (comportement par défaut)
+  const filteredServices = onSearchChange
+    ? services
+    : services.filter(service =>
+        service.name.toLowerCase().includes(search.toLowerCase()) ||
+        service.description?.toLowerCase().includes(search.toLowerCase())
+      );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
@@ -80,6 +85,17 @@ export function ServiceAutocomplete({
       handleClear();
     }
   };
+
+  // Effet pour la recherche côté serveur avec debounce
+  useEffect(() => {
+    if (onSearchChange) {
+      const timeoutId = setTimeout(() => {
+        onSearchChange(search);
+      }, 300); // Debounce de 300ms
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [search, onSearchChange]);
 
   return (
     <div className="flex items-center gap-2 w-full">

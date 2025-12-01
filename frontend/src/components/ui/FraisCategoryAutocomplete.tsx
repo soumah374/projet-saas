@@ -20,6 +20,7 @@ interface FraisCategoryAutocompleteProps {
   categories: FraisCategory[];
   isLoading?: boolean;
   onCategorySelect?: (category: FraisCategory | null) => void;
+  onSearchChange?: (search: string) => void; // Nouvelle prop pour la recherche côté serveur
 }
 
 export function FraisCategoryAutocomplete({
@@ -31,16 +32,20 @@ export function FraisCategoryAutocomplete({
   showClearButton = true,
   categories = [],
   isLoading = false,
-  onCategorySelect
+  onCategorySelect,
+  onSearchChange
 }: FraisCategoryAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<FraisCategory | null>(null);
 
-  // Filtrer les catégories selon la recherche
-  const filteredCategories = categories.filter(category =>
-    category.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // Si onSearchChange est fourni, ne pas filtrer côté client (recherche côté serveur)
+  // Sinon, filtrer les catégories selon la recherche (comportement par défaut)
+  const filteredCategories = onSearchChange
+    ? categories
+    : categories.filter(category =>
+        category.name.toLowerCase().includes(search.toLowerCase())
+      );
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
@@ -77,6 +82,17 @@ export function FraisCategoryAutocomplete({
       handleClear();
     }
   };
+
+  // Effet pour la recherche côté serveur avec debounce
+  useEffect(() => {
+    if (onSearchChange) {
+      const timeoutId = setTimeout(() => {
+        onSearchChange(search);
+      }, 300); // Debounce de 300ms
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [search, onSearchChange]);
 
   return (
     <div className="flex items-center gap-2 w-full">

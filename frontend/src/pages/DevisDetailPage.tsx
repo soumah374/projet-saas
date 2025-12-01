@@ -100,8 +100,20 @@ export function DevisDetailPage() {
   const createContratMutation = useCreateContratFromDevis();
 
   // Hooks pour les données de référence
-  const { data: servicesData } = useServices({ page_size: 1000 });
-  const { data: unitesData } = useUnitesStandards({ page_size: 1000, is_active: true });
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [uniteSearch, setUniteSearch] = useState('');
+  const [fraisCategorySearch, setFraisCategorySearch] = useState('');
+  const [ligneFraisSearch, setLigneFraisSearch] = useState('');
+
+  const { data: servicesData } = useServices({
+    search: serviceSearch,
+    page_size: 100
+  });
+  const { data: unitesData } = useUnitesStandards({
+    search: uniteSearch,
+    page_size: 100,
+    is_active: true
+  });
   const { data: activitesData, refetch: refetchActivites, isLoading: isLoadingActivites } = useActivitesParService(
     parseInt(currentLigne.service_id) || 0
   );
@@ -383,7 +395,6 @@ export function DevisDetailPage() {
 
   const openDeleteDialog = (ligne: any) => {
     setLigneToDelete(ligne);
-    console.log(ligne)
     setDeleteLigneDialogOpen(true);
   };
 
@@ -783,7 +794,8 @@ export function DevisDetailPage() {
                       onValueChange={(value) => handleLigneChange('service_id', value)}
                       services={services}
                       placeholder="Rechercher un service..."
-                      className={fieldErrors.service_id ? 'w-full border-red-500' : 'w-full'}
+                      className={fieldErrors.service_id ? 'w-full border-red-500' : currentLigne.service_id ? 'w-full border-green-500 bg-green-50' : 'w-full'}
+                      onSearchChange={setServiceSearch}
                     />
                     {fieldErrors.service_id && (
                       <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
@@ -798,7 +810,7 @@ export function DevisDetailPage() {
                       isLoading={isLoadingActivites}
                       serviceSelected={!!currentLigne.service_id}
                       placeholder="Rechercher une activité..."
-                      className={fieldErrors.activity_id ? 'w-full border-red-500' : 'w-full'}
+                      className={fieldErrors.activity_id ? 'w-full border-red-500' : currentLigne.activity_id ? 'w-full border-green-500 bg-green-50' : 'w-full'}
                     />
                     {fieldErrors.activity_id && (
                       <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
@@ -807,7 +819,7 @@ export function DevisDetailPage() {
                   <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Unité *</Label>
                     <Select value={currentLigne.unite_id} onValueChange={(value) => handleLigneChange('unite_id', value)}>
-                      <SelectTrigger className={fieldErrors.unite_id ? 'border-red-500 focus:ring-red-500' : ''}>
+                      <SelectTrigger className={fieldErrors.unite_id ? 'border-red-500 focus:ring-red-500' : currentLigne.unite_id ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner une unité" />
                       </SelectTrigger>
                       <SelectContent>
@@ -830,6 +842,7 @@ export function DevisDetailPage() {
                       value={currentLigne.quantite}
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
+                      className={currentLigne.quantite && parseFloat(currentLigne.quantite) > 0 ? 'border-green-500 bg-green-50' : ''}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -840,7 +853,7 @@ export function DevisDetailPage() {
                       value={currentLigne.prix_unitaire}
                       onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
                       placeholder="0"
-                      className={fieldErrors.prix_unitaire ? 'border-red-500 focus:ring-red-500' : ''}
+                      className={fieldErrors.prix_unitaire ? 'border-red-500 focus:ring-red-500' : currentLigne.prix_unitaire ? 'border-green-500 bg-green-50' : ''}
                     />
                     {fieldErrors.prix_unitaire && (
                       <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
@@ -861,7 +874,7 @@ export function DevisDetailPage() {
                   <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Type de frais *</Label>
                     <Select value={currentLigne.type_frais || ''} onValueChange={(value) => handleLigneChange('type_frais', value)}>
-                      <SelectTrigger>
+                      <SelectTrigger className={currentLigne.type_frais ? 'border-green-500 bg-green-50' : ''}>
                         <SelectValue placeholder="Sélectionner un type de frais" />
                       </SelectTrigger>
                       <SelectContent>
@@ -878,7 +891,7 @@ export function DevisDetailPage() {
                       onValueChange={(value) => handleLigneChange('frais_category_id', value)}
                       categories={fraisCategories}
                       placeholder="Rechercher une catégorie..."
-                      className={fieldErrors.frais_category_id ? 'w-full border-red-500' : 'w-full'}
+                      className={fieldErrors.frais_category_id ? 'w-full border-red-500' : currentLigne.frais_category_id ? 'w-full border-green-500 bg-green-50' : 'w-full'}
                     />
                     {fieldErrors.frais_category_id && (
                       <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
@@ -892,7 +905,7 @@ export function DevisDetailPage() {
                       lignesFrais={lignesFrais}
                       categorySelected={!!currentLigne.frais_category_id}
                       placeholder="Rechercher une ligne de frais..."
-                      className={fieldErrors.ligne_frais_id ? 'w-full border-red-500' : 'w-full'}
+                      className={fieldErrors.ligne_frais_id ? 'w-full border-red-500' : currentLigne.ligne_frais_id ? 'w-full border-green-500 bg-green-50' : 'w-full'}
                     />
                     {fieldErrors.ligne_frais_id && (
                       <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
@@ -906,7 +919,7 @@ export function DevisDetailPage() {
                       value={currentLigne.prix_unitaire}
                       onChange={(e) => handleLigneChange('prix_unitaire', e.target.value)}
                       placeholder="0"
-                      className={fieldErrors.prix_unitaire ? 'border-red-500 focus:ring-red-500' : ''}
+                      className={fieldErrors.prix_unitaire ? 'border-red-500 focus:ring-red-500' : currentLigne.prix_unitaire ? 'border-green-500 bg-green-50' : ''}
                     />
                     {fieldErrors.prix_unitaire && (
                       <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>
@@ -920,6 +933,7 @@ export function DevisDetailPage() {
                       value={currentLigne.quantite}
                       onChange={(e) => handleLigneChange('quantite', e.target.value)}
                       placeholder="1"
+                      className={currentLigne.quantite && parseFloat(currentLigne.quantite) > 0 ? 'border-green-500 bg-green-50' : ''}
                     />
                   </div>
                   <div className="md:col-span-1">
@@ -929,7 +943,8 @@ export function DevisDetailPage() {
                       onValueChange={(value) => handleLigneChange('unite_id', value)}
                       unites={unites}
                       placeholder="Rechercher une unité..."
-                      className={fieldErrors.unite_id ? 'w-full border-red-500' : 'w-full'}
+                      className={fieldErrors.unite_id ? 'w-full border-red-500' : currentLigne.unite_id ? 'w-full border-green-500 bg-green-50' : 'w-full'}
+                      onSearchChange={setUniteSearch}
                     />
                     {fieldErrors.unite_id && (
                       <p className="text-sm text-red-600 mt-1">Ce champ est obligatoire</p>

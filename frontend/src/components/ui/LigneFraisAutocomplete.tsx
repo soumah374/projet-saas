@@ -22,6 +22,7 @@ interface LigneFraisAutocompleteProps {
   isLoading?: boolean;
   onLigneFraisSelect?: (ligneFrais: LigneFrais | null) => void;
   categorySelected?: boolean;
+  onSearchChange?: (search: string) => void; // Nouvelle prop pour la recherche côté serveur
 }
 
 export function LigneFraisAutocomplete({
@@ -34,16 +35,31 @@ export function LigneFraisAutocomplete({
   lignesFrais = [],
   isLoading = false,
   onLigneFraisSelect,
-  categorySelected = false
+  categorySelected = false,
+  onSearchChange
 }: LigneFraisAutocompleteProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedLigneFrais, setSelectedLigneFrais] = useState<LigneFrais | null>(null);
 
-  // Filtrer les lignes de frais selon la recherche
-  const filteredLignesFrais = lignesFrais.filter(ligne =>
-    ligne.description.toLowerCase().includes(search.toLowerCase())
-  );
+  // Si onSearchChange est fourni, ne pas filtrer côté client (recherche côté serveur)
+  // Sinon, filtrer les lignes de frais selon la recherche (comportement par défaut)
+  const filteredLignesFrais = onSearchChange
+    ? lignesFrais
+    : lignesFrais.filter(ligne =>
+        ligne.description.toLowerCase().includes(search.toLowerCase())
+      );
+
+  // Effet pour la recherche côté serveur avec debounce
+  useEffect(() => {
+    if (onSearchChange) {
+      const timeoutId = setTimeout(() => {
+        onSearchChange(search);
+      }, 300); // Debounce de 300ms
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [search, onSearchChange]);
 
   // Synchroniser avec la valeur externe
   useEffect(() => {
