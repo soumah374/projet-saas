@@ -789,7 +789,7 @@ export function DevisCreatePage() {
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.type_frais}</p>
                     )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className={`text-sm font-medium ${ligneErrors.frais_category_id ? 'text-red-600' : ''}`}>
                       Catégorie de frais *
                     </Label>
@@ -804,7 +804,7 @@ export function DevisCreatePage() {
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.frais_category_id}</p>
                     )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className={`text-sm font-medium ${ligneErrors.ligne_frais_id ? 'text-red-600' : ''}`}>
                       Ligne de frais *
                     </Label>
@@ -820,7 +820,7 @@ export function DevisCreatePage() {
                       <p className="text-sm text-red-600 mt-1">{ligneErrors.ligne_frais_id}</p>
                     )}
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className={`text-sm font-medium ${ligneErrors.prix_unitaire ? 'text-red-600' : ''}`}>
                       Prix unitaire *
                     </Label>
@@ -847,7 +847,7 @@ export function DevisCreatePage() {
                       className={currentLigne.quantite && parseFloat(currentLigne.quantite) > 0 ? 'border-green-500 bg-green-50' : ''}
                     />
                   </div>
-                  <div className="md:col-span-1">
+                  <div className="md:col-span-2">
                     <Label className="text-sm font-medium">Montant HT (GNF)</Label>
                     <Input
                       type="text"
