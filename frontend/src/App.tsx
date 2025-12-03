@@ -129,7 +129,7 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/dashboard-manager" element={
-                  <ProtectedRoute roles={["Managing Director", "Finance/Admin", 'Super Admin']}>
+                  <ProtectedRoute>
                     <DashboardManagerPage />
                   </ProtectedRoute>
                 } />
@@ -299,22 +299,22 @@ function App() {
                   </ProtectedRoute>
                 } />
                 <Route path="/permissions" element={
-                  <ProtectedRoute roles={["Managing Director", "Finance/Admin",'Super Admin']}>
+                  <ProtectedRoute roles={["Managing Director",'Super Admin']}>
                     <PermissionManagerPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/permissions/role/:roleId" element={
-                  <ProtectedRoute roles={["Managing Director", "Finance/Admin",'Super Admin']}>
+                  <ProtectedRoute roles={["Managing Director",'Super Admin']}>
                     <RoleDetailsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/email-templates" element={
-                  <ProtectedRoute roles={["Managing Director", "Finance/Admin", "Super Admin"]}>
+                  <ProtectedRoute roles={["Managing Director", "Super Admin"]}>
                     <EmailTemplatesPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/app-config" element={
-                  <ProtectedRoute roles={["Managing Director", "Finance/Admin", "Super Admin"]}>
+                  <ProtectedRoute roles={["Managing Director", "Super Admin"]}>
                     <AppConfigPage />
                   </ProtectedRoute>
                 } />
