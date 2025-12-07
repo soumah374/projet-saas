@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UserAutocomplete } from '@/components/ui/UserAutocomplete';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import { usePermissions } from '@/hooks/use-permissions';
@@ -68,12 +69,14 @@ export function ProjectTeamPage() {
   const [editRole, setEditRole] = useState<string>('');
   const [editIsActive, setEditIsActive] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedAllocation, setSelectedAllocation] = useState(100); 
+  const [selectedAllocation, setSelectedAllocation] = useState(100);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   const { hasPermission } = usePermissions();
   // React Query hooks
   const { data: usersData, isLoading: usersLoading, error: usersError } = useUsers({
     is_active: true,
-    ordering: 'first_name'
+    ordering: 'first_name',
+    search: userSearchTerm || undefined
   });
 
   // Mutations
@@ -97,7 +100,7 @@ export function ProjectTeamPage() {
 
   const removeMemberMutation = useMutation({
     mutationFn: ({ projectId, memberId }: { projectId: string; memberId: number }) =>
-      projectTeamAPI.removeTeamMember(projectId, memberId),
+      projectTeamAPI.deleteProjectMember(projectId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -304,29 +307,17 @@ export function ProjectTeamPage() {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="user">Utilisateur</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un utilisateur" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {usersLoading ? (
-                      <div className="flex items-center justify-center p-4">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Chargement des utilisateurs...
-                      </div>
-                    ) : availableUsers.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        Tous les utilisateurs sont déjà dans l'équipe
-                      </div>
-                    ) : (
-                      availableUsers.map(user => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.first_name} {user.last_name} ({user.email})
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <div className="mt-2">
+                  <UserAutocomplete
+                    value={selectedUser}
+                    onValueChange={setSelectedUser}
+                    placeholder="Sélectionner un utilisateur"
+                    users={availableUsers}
+                    isLoading={usersLoading}
+                    showClearButton={true}
+                    onSearchChange={setUserSearchTerm}
+                  />
+                </div>
               </div>
               <div>
                 <Label htmlFor="role">Rôle</Label>

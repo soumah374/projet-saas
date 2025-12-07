@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectTeamAPI, projectTasksAPI, servicesAPI, projectApi } from '@/lib/api';
-import { Service, TeamMember } from '@/lib/types';
+import { Service } from '@/lib/types';
 
 interface UseProjectLifecycle {
-  teamMembers: TeamMember[];
+  teamMembers: any[];
   loading: boolean;
   error: any;
   addTeamMember: (data: any) => Promise<void>;
@@ -15,13 +15,13 @@ interface UseProjectLifecycle {
   updateTaskStatus: (taskId: number, status: 'À faire' | 'En cours' | 'Terminé' | 'En pause') => Promise<void>;
 }
 
-export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
+export function useProjectLifecycle(projectId: string, searchTerm?: string): UseProjectLifecycle {
   const queryClient = useQueryClient();
 
 
 
   // Fetch services
-  const { 
+  const {
     data: servicesData,
     isLoading: servicesLoading,
     error: servicesError
@@ -39,9 +39,11 @@ export function useProjectLifecycle(projectId: string): UseProjectLifecycle {
     isLoading: teamLoading,
     error: teamError
   } = useQuery({
-    queryKey: ['project-team', projectId],
+    queryKey: ['project-team', projectId, searchTerm],
     queryFn: async () => {
-      const response = await projectTeamAPI.getProjectTeam(projectId);
+      console.log('Fetching team members for projectId:', projectId, 'searchTerm:', searchTerm);
+      const params = searchTerm ? { search: searchTerm } : undefined;
+      const response = await projectTeamAPI.getProjectTeam(projectId, params);
       return response.data;
     },
     enabled: !!projectId

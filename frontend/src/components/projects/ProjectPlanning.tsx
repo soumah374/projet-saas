@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package, UserPlus, Loader2, LayoutGrid, List } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package, UserPlus, LayoutGrid, List, Loader2 } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
 import { useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
@@ -28,6 +28,8 @@ import { fr } from 'date-fns/locale';
 import { DeleteMemberProject } from '../DeleteMemberProject';
 import { StartTaskProjectModal } from '../StartTaskProjectModal';
 import { StandardTasksManager } from './StandardTasksManager';
+import { TeamMemberAutocomplete } from '@/components/ui/TeamMemberAutocomplete';
+import { UserAutocomplete } from '@/components/ui/UserAutocomplete';
 
 interface ProjectPlanningProps {
   projectId: string;
@@ -50,6 +52,8 @@ const roleOptions = [
 ];
 
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
+  console.log('ProjectPlanning mounted with projectId:', projectId, 'type:', typeof projectId);
+
   const [activeTab, setActiveTab] = useState('templates');
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('');
@@ -63,16 +67,19 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [selectedMemberForAssignment, setSelectedMemberForAssignment] = useState<string>('');
   const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<any>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
-  
-  const { 
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [teamMemberSearchTerm, setTeamMemberSearchTerm] = useState('');
+
+  const {
     teamMembers,
     addTeamMember,
     applyTaskTemplate,
-    loading,
-    services
-  } = useProjectLifecycle(projectId);
+    loading
+  } = useProjectLifecycle(projectId, teamMemberSearchTerm);
 
-  const { data: users } = useUsers();
+  const { data: users, isLoading: usersLoading } = useUsers({
+    search: userSearchTerm || undefined
+  });
   const { data: tasks } = useProjectTasks(projectId);
   const { data: projectDetails } = useProject(projectId);
   const updateTaskMutation = useUpdateProjectTask();
@@ -386,23 +393,17 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>Membre</FormLabel>
-                              <Select 
-                                onValueChange={handleUserChange}
-                                value={field.value}
-                              >
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionner un membre" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {users?.data?.results?.map((user: any) => (
-                                    <SelectItem key={user.id} value={user.id.toString()}>
-                                      {user.first_name} {user.last_name} ({user.email})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <FormControl>
+                                <UserAutocomplete
+                                  value={field.value}
+                                  onValueChange={handleUserChange}
+                                  placeholder="Sélectionner un membre"
+                                  users={users?.data?.results || []}
+                                  isLoading={usersLoading}
+                                  showClearButton={true}
+                                  onSearchChange={setUserSearchTerm}
+                                />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
