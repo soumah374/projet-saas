@@ -36,6 +36,7 @@ export const useCreateDocument = () => {
       formData.append('document_type', data.document_type);
       formData.append('is_public', String(data.is_public));
       formData.append('category', data.category);
+      formData.append('project',data.project)
       if (data.tags) formData.append('tags', JSON.stringify(data.tags));
       if (data.project) formData.append('project', data.project);
 
