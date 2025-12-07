@@ -52,8 +52,6 @@ const roleOptions = [
 ];
 
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
-  console.log('ProjectPlanning mounted with projectId:', projectId, 'type:', typeof projectId);
-
   const [activeTab, setActiveTab] = useState('templates');
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('');

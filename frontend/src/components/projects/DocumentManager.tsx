@@ -81,6 +81,8 @@ interface DocumentFormData {
 }
 
 export const DocumentManager = ({ projectId }: DocumentManagerProps) => {
+
+  console.log(projectId)
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
