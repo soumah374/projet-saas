@@ -410,4 +410,15 @@ export const useAddDevisToContrat = () => {
       toast.error(error.response?.data?.error || 'Erreur lors de l\'ajout des devis');
     },
   });
-}; 
+};
+
+export const useContratHistoriqueMontant = (id: number) => {
+  return useQuery({
+    queryKey: ['contrat-historique-montant', id],
+    queryFn: async () => {
+      const response = await contratsAPI.getContratHistoriqueMontant(id);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+};

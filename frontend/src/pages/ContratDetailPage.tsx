@@ -46,17 +46,17 @@ import {
   useSignerContrat,
   useCloturerContrat,
   useAddDevisToContrat,
-  useCreateContratFromDevis
+  useCreateContratFromDevis,
+  useContratHistoriqueMontant
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
 import { useEcheances } from '@/hooks/use-echeances';
 import { Echeance } from '@/lib/types';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
-import { statutContrat } from '@/lib/utils';
+import { statusContratHistorique, statutContrat } from '@/lib/utils';
 import { AvenantList } from '@/components/avenants/AvenantList';
 import { DevisSelectionModal } from '@/components/contrats/DevisSelectionModal';
-import { Input } from '@/components/ui/input';
 import { useContratsFacturation } from '@/hooks/use-factures';
 
 export function ContratDetailPage() {
@@ -96,6 +96,7 @@ export function ContratDetailPage() {
   const envoyerContratMutation = useEnvoyerContrat();
   const signerContratMutation = useSignerContrat();
   const addDevisToContratMutation = useAddDevisToContrat();
+  const {data: contratHistoriqueMontants } = useContratHistoriqueMontant(contratId);
   // Hook pour les échéances
   const {
     echeances,
@@ -145,7 +146,6 @@ export function ContratDetailPage() {
           return 0;
       }
     });
-    
     return filtered;
   };
 
@@ -716,12 +716,13 @@ export function ContratDetailPage() {
 
       {/* Onglets principaux */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="echeancier">Échéancier</TabsTrigger>
           <TabsTrigger value="lignes">Lignes</TabsTrigger>
           <TabsTrigger value="avenants">Avenants</TabsTrigger>
           <TabsTrigger value="alertes">Alertes</TabsTrigger>
+          <TabsTrigger value="contrat-historique">Historiques</TabsTrigger>
         </TabsList>
 
         {/* Onglet Général */}
@@ -1204,7 +1205,7 @@ export function ContratDetailPage() {
                       <TableHead>Unité</TableHead>
                       <TableHead>Prix unitaire HT</TableHead>
                       <TableHead>Montant HT</TableHead>
-                      <TableHead>Intervenants</TableHead>
+                      {/* <TableHead>Intervenants</TableHead> */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1220,7 +1221,7 @@ export function ContratDetailPage() {
                         <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
                         <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
                         <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           {ligne.intervenants && ligne.intervenants.length > 0 ? (
                             <div className="space-y-1">
                               {ligne.intervenants.map((intervenant) => (
@@ -1236,7 +1237,7 @@ export function ContratDetailPage() {
                           ) : (
                             <span className="text-gray-500">-</span>
                           )}
-                        </TableCell>
+                        </TableCell> */}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1320,6 +1321,52 @@ export function ContratDetailPage() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {/* Onglet historiques */}
+        <TabsContent value='contrat-historique' className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historiques des montants du contrat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date de modification</TableHead>
+                    <TableHead>Type de modification</TableHead>
+                    <TableHead>Montant ht avant</TableHead>
+                    <TableHead>Montant ht après</TableHead>
+                    <TableHead>Montant TTC avant</TableHead>
+                    <TableHead>Montant TTC après</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contratHistoriqueMontants.map((historique) =>(
+                    <TableRow key={historique.id}>
+                      <TableCell>
+                        {format(new Date(historique.date_modification), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                      </TableCell>
+                      <TableCell>
+                        {statusContratHistorique(historique.type_modification)}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ht_avant)}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ht_apres)}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ttc_avant)}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ttc_apres)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

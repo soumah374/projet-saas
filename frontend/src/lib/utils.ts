@@ -65,3 +65,20 @@ export function statusFacture(statut: string) {
       return statut;
   }
 }
+
+export function statusContratHistorique(status: string){
+  switch (status) {
+    case 'ajout_devis':
+      return " Ajout devis";
+    case 'suppression_devis':
+      return 'Suppression devis'
+    case 'modification_ligne':
+      return 'Modification ligne'
+    case 'avenant':
+      return 'Avenant'
+    case 'recalcul':
+      return 'Recalcul'
+    default:
+      break;
+  }
+}

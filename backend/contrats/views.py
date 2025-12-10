@@ -708,6 +708,19 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['get'],url_path="historique-contrat", url_name='historique-contrat')
+    def historique_contrat(self,request, pk=None):
+        """Récupérer l'historique des modifications du contrat"""
+        try:
+            contrat = self.get_object()
+            historique = ContratHistoriqueMontant.objects.filter(contrat=contrat).order_by('-date_modification')
+            serializer = ContratHistoriqueMontantSerializer(historique, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la récupération de l\'historique: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class LigneContratViewSet(viewsets.ModelViewSet):
     """ViewSet pour les lignes de contrat"""
