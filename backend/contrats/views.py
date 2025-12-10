@@ -13,12 +13,13 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 
 
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant
+from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant, ContratHistoriqueMontant
 from .serializers import (
     ContratSerializer, ContratCreateSerializer, ContratDetailSerializer,
     LigneContratSerializer, LigneContratIntervenantSerializer,
     EcheancierContratSerializer, EcheancierContratCreateSerializer,
-    AvenantSerializer, AvenantCreateSerializer, AvenantDetailSerializer
+    AvenantSerializer, AvenantCreateSerializer, AvenantDetailSerializer,
+    ContratHistoriqueMontantSerializer
 )
 from devis.models import Devis
 
@@ -494,67 +495,210 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['get'])
+    def historique_montants(self, request, pk=None):
+        """Récupérer l'historique des modifications de montants du contrat"""
+        try:
+            contrat = self.get_object()
+            historique = ContratHistoriqueMontant.objects.filter(contrat=contrat).order_by('-date_modification')
+            serializer = ContratHistoriqueMontantSerializer(historique, many=True)
+            return Response(serializer.data)
+        except Exception as e:
+            return Response(
+                {'error': f'Erreur lors de la récupération de l\'historique: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['post'])
     def add_devis(self, request, pk=None):
         """Ajouter des devis à un contrat existant"""
         try:
-            contrat = self.get_object()
-            devis_ids = request.data.get('devis_ids', [])
-            devis_principal_id = request.data.get('devis_principal_id')
-            
-            if not devis_ids:
-                return Response(
-                    {'error': 'devis_ids est obligatoire'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Récupérer les devis
-            devis_list = Devis.objects.filter(id__in=devis_ids, statut='accepte')
-            if len(devis_list) != len(devis_ids):
-                return Response(
-                    {'error': 'Certains devis n\'existent pas ou ne sont pas acceptés'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Vérifier que tous les devis ont le même client que le contrat
-            for devis in devis_list:
-                if devis.client != contrat.client:
+            with transaction.atomic():
+                contrat = self.get_object()
+                devis_ids = request.data.get('devis_ids', [])
+                devis_principal_id = request.data.get('devis_principal_id')
+                echeances_data = request.data.get('echeances', [])
+
+                if not devis_ids:
                     return Response(
-                        {'error': f'Le devis {devis.numero} a un client différent du contrat'},
+                        {'error': 'devis_ids est obligatoire'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            
-            # Vérifier qu'aucun devis n'est déjà associé à un autre contrat
-            for devis in devis_list:
-                if hasattr(devis, 'contrats') and devis.contrats.exists() and not devis.contrats.filter(id=contrat.id).exists():
+
+                # Sauvegarder les montants avant modification pour l'historique
+                montant_ht_avant = contrat.montant_ht
+                montant_tva_avant = contrat.montant_tva
+                montant_ttc_avant = contrat.montant_ttc
+
+                # Récupérer les devis
+                devis_list = Devis.objects.filter(id__in=devis_ids, statut='accepte')
+                if len(devis_list) != len(devis_ids):
                     return Response(
-                        {'error': f'Le devis {devis.numero} est déjà associé à un autre contrat'},
+                        {'error': 'Certains devis n\'existent pas ou ne sont pas acceptés'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-            
-            # Ajouter les devis au contrat
-            if hasattr(contrat, 'devis'):
-                contrat.devis.add(*devis_list)
-            else:
-                # Fallback pour l'ancien système
-                if devis_principal_id:
+
+                # Vérifier que tous les devis ont le même client que le contrat
+                for devis in devis_list:
+                    if devis.client != contrat.client:
+                        return Response(
+                            {'error': f'Le devis {devis.numero} a un client différent du contrat'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                # Vérifier qu'aucun devis n'est déjà associé à un autre contrat
+                for devis in devis_list:
+                    if hasattr(devis, 'contrats') and devis.contrats.exists() and not devis.contrats.filter(id=contrat.id).exists():
+                        return Response(
+                            {'error': f'Le devis {devis.numero} est déjà associé à un autre contrat'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                # Ajouter les devis au contrat
+                if hasattr(contrat, 'devis'):
+                    contrat.devis.add(*devis_list)
+                else:
+                    # Fallback pour l'ancien système
+                    if devis_principal_id:
+                        contrat.devis_principal_id = devis_principal_id
+                        contrat.save()
+
+                # Définir le devis principal si spécifié
+                if devis_principal_id and devis_principal_id in devis_ids:
                     contrat.devis_principal_id = devis_principal_id
                     contrat.save()
-            
-            # Définir le devis principal si spécifié
-            if devis_principal_id and devis_principal_id in devis_ids:
-                contrat.devis_principal_id = devis_principal_id
-                contrat.save()
-            
-            # Recalculer les montants si la méthode existe
-            if hasattr(contrat, 'calculer_montants'):
-                contrat.calculer_montants()
-            
-            return Response(
-                ContratDetailSerializer(contrat).data,
-                status=status.HTTP_200_OK
-            )
-            
+
+                # Copier les lignes des nouveaux devis dans le contrat
+                for devis in devis_list:
+                    for ligne_devis in devis.lignes.all():
+                        # Vérifier si cette ligne n'existe pas déjà
+                        ligne_contrat = LigneContrat.objects.create(
+                            contrat=contrat,
+                            type_ligne=ligne_devis.type_ligne,
+                            type_frais=ligne_devis.type_frais,
+                            service=ligne_devis.service,
+                            activity=ligne_devis.activity,
+                            frais_category=ligne_devis.frais_category,
+                            ligne_frais=ligne_devis.ligne_frais,
+                            description=ligne_devis.description,
+                            quantite=ligne_devis.quantite,
+                            unite=ligne_devis.unite,
+                            prix_unitaire_ht=ligne_devis.prix_unitaire_ht,
+                            montant_ht=ligne_devis.montant_ht
+                        )
+
+                        # Copier les intervenants si c'est une prestation
+                        if ligne_devis.type_ligne == 'prestation':
+                            for intervenant_devis in ligne_devis.intervenants.all():
+                                LigneContratIntervenant.objects.create(
+                                    ligne_contrat=ligne_contrat,
+                                    profile_intervenant=intervenant_devis.profile_intervenant,
+                                    temps_intervenant=intervenant_devis.temps_intervenant,
+                                    taux_horaire=intervenant_devis.taux_horaire,
+                                    montant_intervenant=intervenant_devis.montant_intervenant
+                                )
+
+                # Recalculer les montants du contrat
+                if hasattr(contrat, 'calculer_montants'):
+                    contrat.calculer_montants()
+
+                # Recharger le contrat pour obtenir les nouveaux montants
+                contrat.refresh_from_db()
+
+                # Créer l'entrée d'historique
+                devis_numeros = ", ".join([d.numero for d in devis_list])
+                ContratHistoriqueMontant.objects.create(
+                    contrat=contrat,
+                    type_modification='ajout_devis',
+                    montant_ht_avant=montant_ht_avant,
+                    montant_tva_avant=montant_tva_avant,
+                    montant_ttc_avant=montant_ttc_avant,
+                    montant_ht_apres=contrat.montant_ht,
+                    montant_tva_apres=contrat.montant_tva,
+                    montant_ttc_apres=contrat.montant_ttc,
+                    description=f"Ajout des devis: {devis_numeros}",
+                    metadata={
+                        'devis_ids': devis_ids,
+                        'devis_numeros': [d.numero for d in devis_list]
+                    }
+                )
+
+                # Créer les échéances si fournies
+                if echeances_data and isinstance(echeances_data, list):
+                    # Gérer les anciennes échéances de manière intelligente
+                    anciennes_echeances = contrat.echeances.all()
+
+                    # Déterminer la version de l'échéancier
+                    version_actuelle = 1
+                    for echeance in anciennes_echeances:
+                        echeance_version = echeance.metadata.get('version', 1) if echeance.metadata else 1
+                        if echeance_version >= version_actuelle:
+                            version_actuelle = echeance_version + 1
+
+                    # Traiter les anciennes échéances
+                    for echeance in anciennes_echeances:
+                        # Vérifier si l'échéance a des factures associées
+                        from billings.models import Facture
+                        has_factures = Facture.objects.filter(echeance=echeance).exists()
+
+                        if echeance.statut == 'paye' or has_factures:
+                            # Garder les échéances payées ou avec factures, mais les marquer comme archives
+                            if not echeance.metadata:
+                                echeance.metadata = {}
+                            echeance.metadata['archive'] = True
+                            echeance.metadata['archive_raison'] = 'Extension du contrat - Échéance conservée car payée ou facturée'
+                            echeance.metadata['archive_date'] = timezone.now().isoformat()
+                            echeance.commentaire = f"{echeance.commentaire}\n[ARCHIVÉ - Extension du contrat le {timezone.now().strftime('%d/%m/%Y')}]".strip()
+                            echeance.save()
+                        else:
+                            # Annuler les échéances non payées et sans factures
+                            echeance.statut = 'annule'
+                            if not echeance.metadata:
+                                echeance.metadata = {}
+                            echeance.metadata['annulation_raison'] = 'Extension du contrat - Nouvelle échéance créée'
+                            echeance.metadata['annulation_date'] = timezone.now().isoformat()
+                            echeance.commentaire = f"{echeance.commentaire}\n[ANNULÉ - Extension du contrat le {timezone.now().strftime('%d/%m/%Y')}]".strip()
+                            echeance.save()
+
+                    # Créer les nouvelles échéances basées sur le nouveau montant total
+                    for echeance_config in echeances_data:
+                        try:
+                            # Calculer les montants
+                            pourcentage = float(echeance_config.get('pourcentage', 0))
+                            montant_ht = (contrat.montant_ht * pourcentage) / 100
+                            montant_tva = (contrat.montant_tva * pourcentage) / 100
+                            montant_ttc = (contrat.montant_ttc * pourcentage) / 100
+
+                            # Créer l'échéance avec métadonnées indiquant l'extension
+                            EcheancierContrat.objects.create(
+                                contrat=contrat,
+                                type_echeance=echeance_config.get('type', 'tranche'),
+                                numero_echeance=echeance_config.get('numero', 1),
+                                montant_ht=montant_ht,
+                                montant_tva=montant_tva,
+                                montant_ttc=montant_ttc,
+                                pourcentage=pourcentage,
+                                date_echeance=echeance_config.get('date_echeance'),
+                                commentaire=echeance_config.get('commentaire', ''),
+                                metadata={
+                                    'version': version_actuelle,
+                                    'type': 'extension',
+                                    'raison': 'Extension du contrat suite à l\'ajout de nouveaux devis',
+                                    'date_creation': timezone.now().isoformat(),
+                                    'devis_ajoutes': [d.numero for d in devis_list],
+                                    'montant_anterieur': float(montant_ttc_avant),
+                                    'montant_nouveau': float(contrat.montant_ttc)
+                                }
+                            )
+                        except Exception as e:
+                            print(f"Erreur lors de la création de l'échéance: {e}")
+                            continue
+
+                return Response(
+                    ContratDetailSerializer(contrat).data,
+                    status=status.HTTP_200_OK
+                )
+
         except Exception as e:
             import traceback
             print(f"Erreur dans add_devis: {str(e)}")

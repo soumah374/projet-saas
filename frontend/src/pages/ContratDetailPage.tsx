@@ -306,13 +306,24 @@ export function ContratDetailPage() {
     }
   };
 
-  const handleAddDevis = (selectedDevisIds: number[], devisPrincipalId: number) => {
+  const handleAddDevis = (
+    selectedDevisIds: number[],
+    devisPrincipalId: number,
+    echeances?: Array<{
+      numero: number;
+      type: 'acompte' | 'tranche' | 'solde';
+      pourcentage: number;
+      date_echeance: string;
+      commentaire: string;
+    }>
+  ) => {
     if (!contrat) return;
-    
+
     addDevisToContratMutation.mutate({
       contrat_id: contrat.id,
       devis_ids: selectedDevisIds,
-      devis_principal_id: devisPrincipalId
+      devis_principal_id: devisPrincipalId,
+      echeances: echeances
     });
   };
 
@@ -736,16 +747,37 @@ export function ContratDetailPage() {
                   {contrat.devis.length > 0 ? (
                     <div className="space-y-1">
                       {contrat.devis.length === 1 ? (
-                        <p className="font-medium">{contrat.devis[0].numero}</p>
+                        <button
+                          onClick={() => navigate(`/devis/${contrat.devis[0].id}`)}
+                          className="font-medium text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                        >
+                          {contrat.devis[0].numero}
+                        </button>
                       ) : (
                         <div>
                           <p className="font-medium">{contrat.devis.length} devis</p>
-                          <div className="text-sm text-gray-600">
-                            {contrat.devis.map(d => d.numero).join(', ')}
+                          <div className="text-sm text-gray-600 flex flex-wrap gap-1">
+                            {contrat.devis.map((d, index) => (
+                              <span key={d.id}>
+                                <button
+                                  onClick={() => navigate(`/devis/${d.id}`)}
+                                  className="text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                                >
+                                  {d.numero}
+                                </button>
+                                {index < contrat.devis.length - 1 && ', '}
+                              </span>
+                            ))}
                           </div>
                           {contrat.devis_principal && (
                             <div className="text-sm text-blue-600">
-                              Principal: {contrat.devis_principal.numero}
+                              Principal:
+                              <button
+                                onClick={() => navigate(`/devis/${contrat.devis_principal.id}`)}
+                                className="ml-1 text-blue-600 hover:text-blue-700 hover:underline cursor-pointer font-medium"
+                              >
+                                {contrat.devis_principal.numero}
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1383,8 +1415,8 @@ export function ContratDetailPage() {
                 <div>
                   <h4 className="font-semibold mb-3">Répartition des échéances :</h4>
                   <div className="space-y-3">
-                    {getEcheancierDetails(selectedEcheancierType)?.echeances.map((echeance, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                    {getEcheancierDetails(selectedEcheancierType)?.echeances.map((echeance) => (
+                      <div key={`${selectedEcheancierType}-${echeance.numero}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold text-sm">
                             {echeance.numero}
@@ -1480,6 +1512,7 @@ export function ContratDetailPage() {
         existingDevisIds={contrat?.devis.map(d => d.id) || []}
         title="Ajouter des devis au contrat"
         selectedClientId={contrat.client.id}
+        contratMontantTtc={contrat?.montant_ttc || 0}
       />
     </div>
   );

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { useUsers } from '@/hooks/use-users';
+import { UserAutocomplete } from '@/components/ui/UserAutocomplete';
 import {
   Tabs,
   TabsContent,
@@ -35,17 +36,6 @@ import {
   validateWidgetDependencies,
 } from '@/hooks/use-widgets-catalog';
 
-const ROLES = [
-  'superuser',
-  'Managing Director',
-  'Finance/Admin',
-  'Chef de projet',
-  'Designer',
-  'Développeur',
-  'Rédacteur',
-  'Consultant'
-];
-
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   basic: <BarChart3 className="h-4 w-4" />,
   advanced: <Sparkles className="h-4 w-4" />,
@@ -57,18 +47,21 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 
 const DashboardManagerPage: React.FC = () => {
   const { user } = useAuth();
-  const [mode, setMode] = useState<'role' | 'user'>('role');
-  const [selectedRole, setSelectedRole] = useState<string>('Managing Director');
   const [userId, setUserId] = useState<string>('');
+  const [userSearchTerm, setUserSearchTerm] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
   const [showOnlyAvailable, setShowOnlyAvailable] = useState(false);
 
-  const params = mode === 'user' && userId ? { user_id: Number(userId) } : { role: selectedRole };
+  const params = userId ? { user_id: Number(userId) } : undefined;
   const { selected, setSelected, save, reload, loading } = useDashboardConfig(params);
 
-  const { data: usersData, isLoading: usersLoading } = useUsers({ is_active: true, ordering: 'first_name', page_size: 1000 });
+  const { data: usersData, isLoading: usersLoading } = useUsers({
+    is_active: true,
+    ordering: 'first_name',
+    search: userSearchTerm || undefined
+  });
   const users = useMemo(() => usersData?.data?.results || [], [usersData]);
 
   // Charger le catalogue depuis l'API (source unique de vérité)
@@ -103,12 +96,12 @@ const DashboardManagerPage: React.FC = () => {
     // Filtre disponibilité
     if (showOnlyAvailable) {
       widgets = widgets.filter(w =>
-        isWidgetAvailableForUser(w.key, widgetsCatalog, mode === 'role' ? selectedRole : user?.role || '', user?.is_staff || false)
+        isWidgetAvailableForUser(w.key, widgetsCatalog, user?.role || '', user?.is_staff || false)
       );
     }
 
     return widgets;
-  }, [widgetsCatalog, searchQuery, filterCategory, filterType, showOnlyAvailable, mode, selectedRole, user]);
+  }, [widgetsCatalog, searchQuery, filterCategory, filterType, showOnlyAvailable, user]);
 
   // Grouper les widgets filtrés
   const groupedWidgets = useMemo(() => {
@@ -168,14 +161,13 @@ const DashboardManagerPage: React.FC = () => {
   };
 
   const handleApplyPreset = () => {
-    const preset = getDefaultWidgetsForRole(rolePresets, mode === 'role' ? selectedRole : user?.role || '');
+    const preset = getDefaultWidgetsForRole(rolePresets, user?.role || '');
     setSelected(preset);
   };
 
   const handleExportConfig = () => {
     const config = {
-      mode,
-      target: mode === 'role' ? selectedRole : userId,
+      target: userId,
       widgets: selected,
       exportedAt: new Date().toISOString(),
     };
@@ -221,7 +213,7 @@ const DashboardManagerPage: React.FC = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion du Tableau de Bord</h1>
           <p className="text-gray-600 mt-2">
-            Configurez les widgets visibles par rôle ou par utilisateur
+            Configurez les widgets visibles par utilisateur
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -343,44 +335,19 @@ const DashboardManagerPage: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-wrap items-center gap-4">
-                <Select value={mode} onValueChange={(v: 'role' | 'user') => setMode(v)}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="user">Par utilisateur</SelectItem>
-                    <SelectItem value="role">Par rôle</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {mode === 'role' ? (
-                  <Select value={selectedRole} onValueChange={setSelectedRole}>
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Rôle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.map(r => (
-                        <SelectItem key={r} value={r}>{r}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Select value={userId} onValueChange={setUserId} disabled={usersLoading}>
-                      <SelectTrigger className="w-64">
-                        <SelectValue placeholder={usersLoading ? 'Chargement…' : 'Sélectionner un utilisateur'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.map((u: any) => (
-                          <SelectItem key={u.id} value={String(u.id)}>
-                            {(u.full_name && u.full_name.trim()) || `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Badge variant="secondary">Override utilisateur</Badge>
-                  </div>
-                )}
+                <div className="flex items-center gap-2 flex-1">
+                  <UserAutocomplete
+                    value={userId}
+                    onValueChange={setUserId}
+                    placeholder="Sélectionner un utilisateur"
+                    users={users}
+                    isLoading={usersLoading}
+                    showClearButton={true}
+                    onSearchChange={setUserSearchTerm}
+                    className="w-full max-w-md"
+                  />
+                  {userId && <Badge variant="secondary">Configuration utilisateur</Badge>}
+                </div>
 
                 <Button variant="outline" onClick={handleApplyPreset}>
                   <Sparkles className="h-4 w-4 mr-2" />
@@ -499,7 +466,7 @@ const DashboardManagerPage: React.FC = () => {
                             const isAvailable = isWidgetAvailableForUser(
                               widget.key,
                               widgetsCatalog,
-                              mode === 'role' ? selectedRole : user?.role || '',
+                              user?.role || '',
                               user?.is_staff || false
                             );
 
@@ -573,8 +540,6 @@ const DashboardManagerPage: React.FC = () => {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            setMode('role');
-                            setSelectedRole(role);
                             setSelected(widgets);
                           }}
                         >
@@ -612,7 +577,7 @@ const DashboardManagerPage: React.FC = () => {
                 {/* Résumé */}
                 <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                   <h4 className="font-medium text-blue-900 mb-2">
-                    Configuration pour: {mode === 'role' ? selectedRole : `Utilisateur #${userId}`}
+                    Configuration pour: {userId ? `Utilisateur #${userId}` : 'Aucun utilisateur sélectionné'}
                   </h4>
                   <p className="text-sm text-blue-700">
                     {stats.selected} widgets sélectionnés sur {stats.total} disponibles ({stats.percentage.toFixed(0)}%)

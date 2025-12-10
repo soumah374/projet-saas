@@ -386,6 +386,13 @@ export const useAddDevisToContrat = () => {
       contrat_id: number;
       devis_ids: number[];
       devis_principal_id?: number;
+      echeances?: Array<{
+        numero: number;
+        type: 'acompte' | 'tranche' | 'solde';
+        pourcentage: number;
+        date_echeance: string;
+        commentaire: string;
+      }>
     }): Promise<Contrat> => {
       const response = await contratsAPI.addDevisToContrat(data.contrat_id, {
         devis_ids: data.devis_ids,
