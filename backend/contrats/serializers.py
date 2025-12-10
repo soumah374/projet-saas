@@ -239,7 +239,7 @@ class AvenantSerializer(serializers.ModelSerializer):
             'id', 'numero', 'contrat', 'contrat_id', 'date_creation', 'date_signature',
             'statut', 'statut_display', 'intitule_avenant', 'objet_avenant',
             'type_modification', 'type_modification_display', 'modifications',
-            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe',
+            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe','description',
             'created_at', 'updated_at'
         ]
         read_only_fields = [

@@ -1336,6 +1336,7 @@ export function ContratDetailPage() {
                   <TableRow>
                     <TableHead>Date de modification</TableHead>
                     <TableHead>Type de modification</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead>Montant ht avant</TableHead>
                     <TableHead>Montant ht après</TableHead>
                     <TableHead>Montant TTC avant</TableHead>
@@ -1349,7 +1350,10 @@ export function ContratDetailPage() {
                         {format(new Date(historique.date_modification), 'dd/MM/yyyy HH:mm', { locale: fr })}
                       </TableCell>
                       <TableCell>
-                        {statusContratHistorique(historique.type_modification)}
+                        {historique.type_modification_display}
+                      </TableCell> 
+                      <TableCell>
+                        {historique.description}
                       </TableCell>
                       <TableCell className="font-medium right-align">
                         {formatMontant(historique.montant_ht_avant)}
