@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant
+from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant, ContratHistoriqueMontant
 from users.serializers import ClientProfileSerializer
 from devis.serializers import DevisSerializer
 from catalog.serializers import ServiceSerializer, ActivitySerializer, IntervenantProfileSerializer, UniteStandardSerializer
@@ -22,7 +22,7 @@ class EcheancierContratSerializer(serializers.ModelSerializer):
             'montant_ht', 'montant_tva', 'montant_ttc', 'pourcentage',
             'date_echeance', 'date_paiement', 'statut', 'commentaire',
             'alerte_envoyee', 'jours_restants', 'est_en_retard', 'doit_alerter',
-            'factures_count', 'derniere_facture', 'created_at', 'updated_at'
+            'factures_count', 'derniere_facture', 'metadata', 'created_at', 'updated_at'
         ]
         read_only_fields = ['created_at', 'updated_at']
 
@@ -239,7 +239,7 @@ class AvenantSerializer(serializers.ModelSerializer):
             'id', 'numero', 'contrat', 'contrat_id', 'date_creation', 'date_signature',
             'statut', 'statut_display', 'intitule_avenant', 'objet_avenant',
             'type_modification', 'type_modification_display', 'modifications',
-            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe',
+            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe','description',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
@@ -288,6 +288,25 @@ class AvenantDetailSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'numero', 'date_creation', 'contenu_personnalise', 
+            'id', 'numero', 'date_creation', 'contenu_personnalise',
             'variables_personnalisees', 'created_at', 'updated_at', 'fichier_signe'
-        ] 
+        ]
+
+
+class ContratHistoriqueMontantSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour l'historique des montants de contrat"""
+    type_modification_display = serializers.CharField(source='get_type_modification_display', read_only=True)
+    variation_ht = serializers.ReadOnlyField()
+    variation_ttc = serializers.ReadOnlyField()
+    variation_pourcentage = serializers.ReadOnlyField()
+
+    class Meta:
+        model = ContratHistoriqueMontant
+        fields = [
+            'id', 'contrat', 'date_modification', 'type_modification',
+            'type_modification_display', 'montant_ht_avant', 'montant_tva_avant',
+            'montant_ttc_avant', 'montant_ht_apres', 'montant_tva_apres',
+            'montant_ttc_apres', 'description', 'metadata',
+            'variation_ht', 'variation_ttc', 'variation_pourcentage'
+        ]
+        read_only_fields = ['id', 'date_modification', 'variation_ht', 'variation_ttc', 'variation_pourcentage']

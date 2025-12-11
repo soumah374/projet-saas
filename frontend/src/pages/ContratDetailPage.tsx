@@ -46,17 +46,17 @@ import {
   useSignerContrat,
   useCloturerContrat,
   useAddDevisToContrat,
-  useCreateContratFromDevis
+  useCreateContratFromDevis,
+  useContratHistoriqueMontant
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
 import { useEcheances } from '@/hooks/use-echeances';
 import { Echeance } from '@/lib/types';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
-import { statutContrat } from '@/lib/utils';
+import { statusContratHistorique, statutContrat } from '@/lib/utils';
 import { AvenantList } from '@/components/avenants/AvenantList';
 import { DevisSelectionModal } from '@/components/contrats/DevisSelectionModal';
-import { Input } from '@/components/ui/input';
 import { useContratsFacturation } from '@/hooks/use-factures';
 
 export function ContratDetailPage() {
@@ -96,6 +96,7 @@ export function ContratDetailPage() {
   const envoyerContratMutation = useEnvoyerContrat();
   const signerContratMutation = useSignerContrat();
   const addDevisToContratMutation = useAddDevisToContrat();
+  const {data: contratHistoriqueMontants } = useContratHistoriqueMontant(contratId);
   // Hook pour les échéances
   const {
     echeances,
@@ -145,7 +146,6 @@ export function ContratDetailPage() {
           return 0;
       }
     });
-    
     return filtered;
   };
 
@@ -306,13 +306,24 @@ export function ContratDetailPage() {
     }
   };
 
-  const handleAddDevis = (selectedDevisIds: number[], devisPrincipalId: number) => {
+  const handleAddDevis = (
+    selectedDevisIds: number[],
+    devisPrincipalId: number,
+    echeances?: Array<{
+      numero: number;
+      type: 'acompte' | 'tranche' | 'solde';
+      pourcentage: number;
+      date_echeance: string;
+      commentaire: string;
+    }>
+  ) => {
     if (!contrat) return;
-    
+
     addDevisToContratMutation.mutate({
       contrat_id: contrat.id,
       devis_ids: selectedDevisIds,
-      devis_principal_id: devisPrincipalId
+      devis_principal_id: devisPrincipalId,
+      echeances: echeances
     });
   };
 
@@ -705,12 +716,13 @@ export function ContratDetailPage() {
 
       {/* Onglets principaux */}
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="general">Général</TabsTrigger>
           <TabsTrigger value="echeancier">Échéancier</TabsTrigger>
           <TabsTrigger value="lignes">Lignes</TabsTrigger>
           <TabsTrigger value="avenants">Avenants</TabsTrigger>
           <TabsTrigger value="alertes">Alertes</TabsTrigger>
+          <TabsTrigger value="contrat-historique">Historiques</TabsTrigger>
         </TabsList>
 
         {/* Onglet Général */}
@@ -736,16 +748,37 @@ export function ContratDetailPage() {
                   {contrat.devis.length > 0 ? (
                     <div className="space-y-1">
                       {contrat.devis.length === 1 ? (
-                        <p className="font-medium">{contrat.devis[0].numero}</p>
+                        <button
+                          onClick={() => navigate(`/devis/${contrat.devis[0].id}`)}
+                          className="font-medium text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                        >
+                          {contrat.devis[0].numero}
+                        </button>
                       ) : (
                         <div>
                           <p className="font-medium">{contrat.devis.length} devis</p>
-                          <div className="text-sm text-gray-600">
-                            {contrat.devis.map(d => d.numero).join(', ')}
+                          <div className="text-sm text-gray-600 flex flex-wrap gap-1">
+                            {contrat.devis.map((d, index) => (
+                              <span key={d.id}>
+                                <button
+                                  onClick={() => navigate(`/devis/${d.id}`)}
+                                  className="text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                                >
+                                  {d.numero}
+                                </button>
+                                {index < contrat.devis.length - 1 && ', '}
+                              </span>
+                            ))}
                           </div>
                           {contrat.devis_principal && (
                             <div className="text-sm text-blue-600">
-                              Principal: {contrat.devis_principal.numero}
+                              Principal:
+                              <button
+                                onClick={() => navigate(`/devis/${contrat.devis_principal.id}`)}
+                                className="ml-1 text-blue-600 hover:text-blue-700 hover:underline cursor-pointer font-medium"
+                              >
+                                {contrat.devis_principal.numero}
+                              </button>
                             </div>
                           )}
                         </div>
@@ -1172,7 +1205,7 @@ export function ContratDetailPage() {
                       <TableHead>Unité</TableHead>
                       <TableHead>Prix unitaire HT</TableHead>
                       <TableHead>Montant HT</TableHead>
-                      <TableHead>Intervenants</TableHead>
+                      {/* <TableHead>Intervenants</TableHead> */}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1188,7 +1221,7 @@ export function ContratDetailPage() {
                         <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
                         <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
                         <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           {ligne.intervenants && ligne.intervenants.length > 0 ? (
                             <div className="space-y-1">
                               {ligne.intervenants.map((intervenant) => (
@@ -1204,7 +1237,7 @@ export function ContratDetailPage() {
                           ) : (
                             <span className="text-gray-500">-</span>
                           )}
-                        </TableCell>
+                        </TableCell> */}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1288,6 +1321,56 @@ export function ContratDetailPage() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        {/* Onglet historiques */}
+        <TabsContent value='contrat-historique' className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Historiques des montants du contrat</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date de modification</TableHead>
+                    <TableHead>Type de modification</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Montant ht avant</TableHead>
+                    <TableHead>Montant ht après</TableHead>
+                    <TableHead>Montant TTC avant</TableHead>
+                    <TableHead>Montant TTC après</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contratHistoriqueMontants.map((historique) =>(
+                    <TableRow key={historique.id}>
+                      <TableCell>
+                        {format(new Date(historique.date_modification), 'dd/MM/yyyy HH:mm', { locale: fr })}
+                      </TableCell>
+                      <TableCell>
+                        {historique.type_modification_display}
+                      </TableCell> 
+                      <TableCell>
+                        {historique.description}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ht_avant)}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ht_apres)}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ttc_avant)}
+                      </TableCell>
+                      <TableCell className="font-medium right-align">
+                        {formatMontant(historique.montant_ttc_apres)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>
@@ -1383,8 +1466,8 @@ export function ContratDetailPage() {
                 <div>
                   <h4 className="font-semibold mb-3">Répartition des échéances :</h4>
                   <div className="space-y-3">
-                    {getEcheancierDetails(selectedEcheancierType)?.echeances.map((echeance, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                    {getEcheancierDetails(selectedEcheancierType)?.echeances.map((echeance) => (
+                      <div key={`${selectedEcheancierType}-${echeance.numero}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold text-sm">
                             {echeance.numero}
@@ -1480,6 +1563,7 @@ export function ContratDetailPage() {
         existingDevisIds={contrat?.devis.map(d => d.id) || []}
         title="Ajouter des devis au contrat"
         selectedClientId={contrat.client.id}
+        contratMontantTtc={contrat?.montant_ttc || 0}
       />
     </div>
   );

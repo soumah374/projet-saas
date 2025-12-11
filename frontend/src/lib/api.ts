@@ -681,6 +681,7 @@ export const contratsAPI = {
     }) => api.get('/contrats/', { params }),
     
     getContratById: (id: number) => api.get(`/contrats/${id}/`),
+    getContratHistoriqueMontant: (id: number) => api.get(`/contrats/${id}/historique-contrat/`),
     
     createContrat: (data: {
         devis_id: number;

@@ -386,6 +386,13 @@ export const useAddDevisToContrat = () => {
       contrat_id: number;
       devis_ids: number[];
       devis_principal_id?: number;
+      echeances?: Array<{
+        numero: number;
+        type: 'acompte' | 'tranche' | 'solde';
+        pourcentage: number;
+        date_echeance: string;
+        commentaire: string;
+      }>
     }): Promise<Contrat> => {
       const response = await contratsAPI.addDevisToContrat(data.contrat_id, {
         devis_ids: data.devis_ids,
@@ -403,4 +410,15 @@ export const useAddDevisToContrat = () => {
       toast.error(error.response?.data?.error || 'Erreur lors de l\'ajout des devis');
     },
   });
-}; 
+};
+
+export const useContratHistoriqueMontant = (id: number) => {
+  return useQuery({
+    queryKey: ['contrat-historique-montant', id],
+    queryFn: async () => {
+      const response = await contratsAPI.getContratHistoriqueMontant(id);
+      return response.data;
+    },
+    enabled: !!id,
+  });
+};

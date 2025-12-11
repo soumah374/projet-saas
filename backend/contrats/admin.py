@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant
+from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant, ContratHistoriqueMontant
 
 
 class LigneContratIntervenantInline(admin.TabularInline):
@@ -100,3 +100,46 @@ class AvenantAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(ContratHistoriqueMontant)
+class ContratHistoriqueMontantAdmin(admin.ModelAdmin):
+    list_display = ['contrat', 'date_modification', 'type_modification', 'montant_ttc_avant', 'montant_ttc_apres', 'variation_ttc', 'variation_pourcentage']
+    list_filter = ['type_modification', 'date_modification']
+    search_fields = ['contrat__numero', 'description']
+    readonly_fields = ['date_modification', 'variation_ht', 'variation_ttc', 'variation_pourcentage']
+    ordering = ['-date_modification']
+
+    fieldsets = (
+        ('Informations générales', {
+            'fields': ('contrat', 'date_modification', 'type_modification', 'description')
+        }),
+        ('Montants avant modification', {
+            'fields': ('montant_ht_avant', 'montant_tva_avant', 'montant_ttc_avant')
+        }),
+        ('Montants après modification', {
+            'fields': ('montant_ht_apres', 'montant_tva_apres', 'montant_ttc_apres')
+        }),
+        ('Variations', {
+            'fields': ('variation_ht', 'variation_ttc', 'variation_pourcentage'),
+            'classes': ('collapse',)
+        }),
+        ('Métadonnées', {
+            'fields': ('metadata',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def variation_ttc(self, obj):
+        """Affiche la variation TTC formatée"""
+        variation = obj.variation_ttc
+        sign = '+' if variation > 0 else ''
+        return f"{sign}{variation:,.2f} FCFA"
+    variation_ttc.short_description = "Variation TTC"
+
+    def variation_pourcentage(self, obj):
+        """Affiche la variation en pourcentage"""
+        variation = obj.variation_pourcentage
+        sign = '+' if variation > 0 else ''
+        return f"{sign}{variation:.2f}%"
+    variation_pourcentage.short_description = "Variation %"

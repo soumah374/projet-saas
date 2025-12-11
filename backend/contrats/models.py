@@ -623,8 +623,10 @@ class EcheancierContrat(models.Model):
     
     # Alertes
     alerte_envoyee = models.BooleanField(default=False, help_text="Alerte envoyée 3 jours avant l'échéance")
-    
-    # Métadonnées
+
+    # Métadonnées et historique
+    metadata = models.JSONField(default=dict, blank=True, verbose_name="Métadonnées de l'échéance",
+                                help_text="Informations comme version, type (initial/extension), etc.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -953,3 +955,66 @@ class Avenant(models.Model):
             variables = self.get_variables_avenant()
             return self.remplacer_variables(self.contenu_personnalise, variables)
         return self.contenu_personnalise
+
+
+class ContratHistoriqueMontant(models.Model):
+    """Modèle pour l'historique des modifications de montants du contrat"""
+
+    TYPE_MODIFICATION_CHOICES = [
+        ('ajout_devis', 'Ajout de devis'),
+        ('suppression_devis', 'Suppression de devis'),
+        ('modification_ligne', 'Modification de ligne'),
+        ('avenant', 'Avenant'),
+        ('recalcul', 'Recalcul'),
+    ]
+
+    # Relation avec le contrat
+    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='historique_montants')
+
+    # Date de la modification
+    date_modification = models.DateTimeField(auto_now_add=True)
+
+    # Type de modification
+    type_modification = models.CharField(max_length=50, choices=TYPE_MODIFICATION_CHOICES)
+
+    # Montants avant modification
+    montant_ht_avant = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant HT avant")
+    montant_tva_avant = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant TVA avant")
+    montant_ttc_avant = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant TTC avant")
+
+    # Montants après modification
+    montant_ht_apres = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant HT après")
+    montant_tva_apres = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant TVA après")
+    montant_ttc_apres = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Montant TTC après")
+
+    # Détails de la modification
+    description = models.TextField(blank=True, verbose_name="Description de la modification")
+    metadata = models.JSONField(default=dict, verbose_name="Métadonnées supplémentaires")
+
+    # Utilisateur ayant effectué la modification (optionnel)
+    # user = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        verbose_name = 'Historique de montant de contrat'
+        verbose_name_plural = 'Historiques de montants de contrats'
+        ordering = ['-date_modification']
+
+    def __str__(self):
+        return f"Historique {self.contrat.numero} - {self.get_type_modification_display()} - {self.date_modification.strftime('%d/%m/%Y %H:%M')}"
+
+    @property
+    def variation_ht(self):
+        """Calcule la variation du montant HT"""
+        return self.montant_ht_apres - self.montant_ht_avant
+
+    @property
+    def variation_ttc(self):
+        """Calcule la variation du montant TTC"""
+        return self.montant_ttc_apres - self.montant_ttc_avant
+
+    @property
+    def variation_pourcentage(self):
+        """Calcule la variation en pourcentage"""
+        if self.montant_ttc_avant > 0:
+            return ((self.montant_ttc_apres - self.montant_ttc_avant) / self.montant_ttc_avant) * 100
+        return 0
