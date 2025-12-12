@@ -252,9 +252,9 @@
       <div class="section-title">DÉTAILS DE LA FACTURE</div>
       <div><strong>Contrat:</strong> {{ facture.contrat.numero }}</div>
 
-      {% if facture.echeance %}
+      {% if facture.ligne_echeancier %}
       <div>
-        <strong>Échéance:</strong> {{ facture.echeance.numero_echeance }}
+        <strong>Échéance:</strong> {{ facture.ligne_echeancier.numero_echeance }}
       </div>
       {% endif %}
 

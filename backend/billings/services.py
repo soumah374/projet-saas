@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from django.db import transaction
 from django.utils import timezone
 from .models import Facture, LigneFacture, ConfigurationFacturation
-from contrats.models import EcheancierContrat
+from contrats.models import LigneEcheancierContrat
 from django.db.models import Sum
 from email_templates.services import EmailTemplateService
 
@@ -25,11 +25,11 @@ class FacturationService:
         date_limite = date.today() + timedelta(days=config.delai_avant_echeance)
         
         # Récupérer les échéances éligibles
-        echeances_eligibles = EcheancierContrat.objects.filter(
+        echeances_eligibles = LigneEcheancierContrat.objects.filter(
             date_echeance__lte=date_limite,
             statut='en_attente',
             factures__isnull=True  # Pas de facture existante
-        ).select_related('contrat', 'contrat__client')
+        ).select_related('echeancier__contrat', 'echeancier__contrat__client')
         
         factures_crees = []
         
@@ -50,12 +50,12 @@ class FacturationService:
     
     @staticmethod
     def _creer_facture_pour_echeance(echeance, config):
-        """Crée une facture pour une échéance spécifique"""
+        """Crée une facture pour une ligne d'échéance spécifique"""
         # Créer la facture
         facture_data = {
-            'contrat': echeance.contrat,
-            'echeance': echeance,
-            'client': echeance.contrat.client,
+            'contrat': echeance.echeancier.contrat,
+            'ligne_echeancier': echeance,
+            'client': echeance.echeancier.contrat.client,
             'date_echeance': echeance.date_echeance,
             'montant_ht': echeance.montant_ht,
             'montant_tva': echeance.montant_tva,
@@ -215,7 +215,7 @@ class FacturationService:
         
         # Échéances à venir
         date_limite = today + timedelta(days=30)
-        echeances_a_venir = EcheancierContrat.objects.filter(
+        echeances_a_venir = LigneEcheancierContrat.objects.filter(
             date_echeance__lte=date_limite,
             statut='en_attente',
             factures__isnull=True
@@ -240,8 +240,8 @@ class FacturationService:
         return Facture.objects.filter(
             statut='en_retard',
             date_echeance__lt=date.today()
-        ).select_related('client', 'contrat', 'echeance')
-    
+        ).select_related('client', 'contrat', 'ligne_echeancier')
+
     @staticmethod
     def get_factures_a_venir():
         """Retourne les factures à venir (échéance dans les 30 jours)"""
@@ -249,7 +249,7 @@ class FacturationService:
         return Facture.objects.filter(
             date_echeance__lte=date_limite,
             statut__in=['emise', 'envoyee']
-        ).select_related('client', 'contrat', 'echeance')
+        ).select_related('client', 'contrat', 'ligne_echeancier')
     
     @staticmethod
     def enregistrer_paiement_facture(facture_id, montant, date_paiement=None, mode_paiement='virement', reference_paiement=''):
@@ -287,9 +287,9 @@ class FacturationService:
             # Mettre à jour la facture
             facture.enregistrer_paiement(montant, date_paiement)
             
-            # Mettre à jour l'échéance si elle existe
-            if facture.echeance:
-                facture.echeance.marquer_comme_paye(date_paiement)
+            # Mettre à jour la ligne d'échéance si elle existe
+            if facture.ligne_echeancier:
+                facture.ligne_echeancier.marquer_comme_paye(date_paiement)
         
         return {
             'success': True,

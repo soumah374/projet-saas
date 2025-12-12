@@ -1,5 +1,9 @@
 from django.contrib import admin
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant, ContratHistoriqueMontant
+from .models import (
+    Contrat, LigneContrat, LigneContratIntervenant,
+    EcheancierContrat, LigneEcheancierContrat,
+    Avenant, ContratHistoriqueMontant
+)
 
 
 class LigneContratIntervenantInline(admin.TabularInline):
@@ -143,3 +147,87 @@ class ContratHistoriqueMontantAdmin(admin.ModelAdmin):
         sign = '+' if variation > 0 else ''
         return f"{sign}{variation:.2f}%"
     variation_pourcentage.short_description = "Variation %"
+
+
+# ===== NOUVEAUX ADMINS POUR LA NOUVELLE ARCHITECTURE =====
+
+class LigneEcheancierContratInline(admin.TabularInline):
+    model = LigneEcheancierContrat
+    extra = 0
+    readonly_fields = ['jours_restants', 'est_en_retard']
+    fields = ['numero_echeance', 'type_echeance', 'montant_ttc', 'pourcentage', 'date_echeance', 'statut', 'commentaire']
+
+
+@admin.register(EcheancierContrat)
+class EcheancierContratAdmin(admin.ModelAdmin):
+    list_display = ['contrat', 'type_echeancier', 'get_montant_total', 'get_nombre_lignes', 'date_creation']
+    list_filter = ['type_echeancier', 'date_creation']
+    search_fields = ['contrat__numero', 'description']
+    readonly_fields = ['date_creation']
+    inlines = [LigneEcheancierContratInline]
+    ordering = ['contrat', '-date_creation']
+
+    fieldsets = (
+        ('Informations générales', {
+            'fields': ('contrat', 'type_echeancier', 'date_creation')
+        }),
+        ('Description', {
+            'fields': ('description',)
+        }),
+        ('Métadonnées', {
+            'fields': ('metadata',),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def get_nombre_lignes(self, obj):
+        """Retourne le nombre de lignes d'échéances"""
+        return obj.nombre_lignes
+    get_nombre_lignes.short_description = "Nb lignes"
+
+    def get_montant_total(self, obj):
+        """Retourne le montant total formaté"""
+        return f"{obj.montant_total:,.2f} FCFA"
+    get_montant_total.short_description = "Montant total"
+
+
+@admin.register(LigneEcheancierContrat)
+class LigneEcheancierContratAdmin(admin.ModelAdmin):
+    list_display = ['echeancier', 'numero_echeance', 'type_echeance', 'montant_ttc', 'date_echeance', 'statut', 'jours_restants']
+    list_filter = ['type_echeance', 'statut', 'date_echeance']
+    search_fields = ['echeancier__contrat__numero', 'commentaire']
+    readonly_fields = ['created_at', 'updated_at', 'jours_restants', 'est_en_retard', 'doit_alerter']
+    ordering = ['echeancier', 'numero_echeance']
+
+    fieldsets = (
+        ('Échéancier parent', {
+            'fields': ('echeancier',)
+        }),
+        ('Informations de l\'échéance', {
+            'fields': ('numero_echeance', 'type_echeance', 'pourcentage')
+        }),
+        ('Montants', {
+            'fields': ('montant_ht', 'montant_tva', 'montant_ttc')
+        }),
+        ('Dates et statut', {
+            'fields': ('date_echeance', 'date_paiement', 'statut', 'jours_restants', 'est_en_retard', 'doit_alerter')
+        }),
+        ('Suivi', {
+            'fields': ('commentaire', 'alerte_envoyee')
+        }),
+        ('Métadonnées', {
+            'fields': ('metadata', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def jours_restants(self, obj):
+        """Affiche les jours restants"""
+        jours = obj.jours_restants
+        if jours < 0:
+            return f"{abs(jours)} jours de retard"
+        elif jours == 0:
+            return "Aujourd'hui"
+        else:
+            return f"{jours} jours"
+    jours_restants.short_description = "Échéance"

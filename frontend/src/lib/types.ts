@@ -632,6 +632,47 @@ export interface EcheancierContrat {
 }
 
 // Échéance types
+// Nouveau: Ligne d'échéancier (individual échéance)
+export interface LigneEcheancier {
+  id: number;
+  echeancier: number;
+  numero_echeance: number;
+  type_echeance: string;
+  type_echeance_display?: string;
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+  pourcentage: number;
+  date_echeance: string;
+  date_paiement?: string;
+  statut: string;
+  statut_display?: string;
+  commentaire: string;
+  alerte_envoyee: boolean;
+  jours_restants: number;
+  est_en_retard: boolean;
+  doit_alerter: boolean;
+  factures_count?: number;
+  metadata?: any;
+  created_at: string;
+  updated_at: string;
+}
+
+// Nouveau: Échéancier (header)
+export interface EcheancierContrat {
+  id: number;
+  contrat: number;
+  type_echeancier: string;
+  type_echeancier_display?: string;
+  date_creation: string;
+  description: string;
+  metadata?: any;
+  lignes: LigneEcheancier[];
+  montant_total: number;
+  nombre_lignes: number;
+}
+
+// Ancien format (pour compatibilité temporaire)
 export interface Echeance {
   id: number;
   contrat: number;

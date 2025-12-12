@@ -1,5 +1,9 @@
 from rest_framework import serializers
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant, ContratHistoriqueMontant
+from .models import (
+    Contrat, LigneContrat, LigneContratIntervenant,
+    EcheancierContrat, LigneEcheancierContrat,
+    Avenant, ContratHistoriqueMontant
+)
 from users.serializers import ClientProfileSerializer
 from devis.serializers import DevisSerializer
 from catalog.serializers import ServiceSerializer, ActivitySerializer, IntervenantProfileSerializer, UniteStandardSerializer
@@ -7,60 +11,70 @@ from catalog.serializers import ServiceSerializer, ActivitySerializer, Intervena
 from users.models import ClientProfile
 from devis.models import Devis
 
-class EcheancierContratSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les échéances de contrat"""
+# ===== NOUVEAUX SÉRIALISEURS POUR LA NOUVELLE ARCHITECTURE =====
+
+class LigneEcheancierContratSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour les lignes individuelles d'un échéancier"""
     jours_restants = serializers.ReadOnlyField()
     est_en_retard = serializers.ReadOnlyField()
     doit_alerter = serializers.ReadOnlyField()
     factures_count = serializers.SerializerMethodField()
-    derniere_facture = serializers.SerializerMethodField()
-    
+    type_echeance_display = serializers.CharField(source='get_type_echeance_display', read_only=True)
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+
+    class Meta:
+        model = LigneEcheancierContrat
+        fields = [
+            'id', 'echeancier', 'numero_echeance', 'type_echeance', 'type_echeance_display',
+            'montant_ht', 'montant_tva', 'montant_ttc', 'pourcentage',
+            'date_echeance', 'date_paiement', 'statut', 'statut_display',
+            'commentaire', 'alerte_envoyee', 'jours_restants', 'est_en_retard',
+            'doit_alerter', 'factures_count', 'metadata', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at', 'jours_restants', 'est_en_retard', 'doit_alerter']
+
+    def get_factures_count(self, obj):
+        """Retourne le nombre de factures pour cette ligne d'échéance"""
+        return obj.factures.count() if hasattr(obj, 'factures') else 0
+
+
+class EcheancierContratSerializer(serializers.ModelSerializer):
+    """Sérialiseur pour l'échéancier de contrat (header)"""
+    lignes = LigneEcheancierContratSerializer(many=True, read_only=True)
+    type_echeancier_display = serializers.CharField(source='get_type_echeancier_display', read_only=True)
+    montant_total = serializers.ReadOnlyField()
+    nombre_lignes = serializers.ReadOnlyField()
+
     class Meta:
         model = EcheancierContrat
         fields = [
-            'id', 'contrat', 'type_echeance', 'numero_echeance',
-            'montant_ht', 'montant_tva', 'montant_ttc', 'pourcentage',
-            'date_echeance', 'date_paiement', 'statut', 'commentaire',
-            'alerte_envoyee', 'jours_restants', 'est_en_retard', 'doit_alerter',
-            'factures_count', 'derniere_facture', 'metadata', 'created_at', 'updated_at'
+            'id', 'contrat', 'type_echeancier', 'type_echeancier_display',
+            'date_creation', 'description', 'metadata',
+            'lignes', 'montant_total', 'nombre_lignes'
         ]
-        read_only_fields = ['created_at', 'updated_at']
-
-    def get_factures_count(self, obj):
-        """Retourne le nombre de factures pour cette échéance"""
-        return getattr(obj, 'factures_count', 0)
-
-    def get_derniere_facture(self, obj):
-        """Retourne la dernière facture pour cette échéance"""
-        return getattr(obj, 'derniere_facture', None)
+        read_only_fields = ['date_creation', 'montant_total', 'nombre_lignes']
 
 
 class EcheancierContratCreateSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour la création d'échéances avec calcul automatique"""
-    
+    """Sérialiseur pour la création d'un échéancier avec ses lignes"""
+    lignes = LigneEcheancierContratSerializer(many=True, write_only=True, required=False)
+
     class Meta:
         model = EcheancierContrat
         fields = [
-            'contrat', 'type_echeance', 'numero_echeance',
-            'montant_ht', 'montant_tva', 'montant_ttc', 'pourcentage',
-            'date_echeance', 'commentaire'
+            'contrat', 'type_echeancier', 'description', 'metadata', 'lignes'
         ]
-    
-    def validate(self, data):
-        """Validation personnalisée pour les échéances"""
-        contrat = data.get('contrat')
-        numero_echeance = data.get('numero_echeance')
-        
-        # Vérifier que le numéro d'échéance est unique pour ce contrat
-        if EcheancierContrat.objects.filter(
-            contrat=contrat, 
-            numero_echeance=numero_echeance
-        ).exists():
-            raise serializers.ValidationError(
-                f"Une échéance avec le numéro {numero_echeance} existe déjà pour ce contrat"
-            )
-        
-        return data
+
+    def create(self, validated_data):
+        """Créer l'échéancier avec ses lignes"""
+        lignes_data = validated_data.pop('lignes', [])
+        echeancier = EcheancierContrat.objects.create(**validated_data)
+
+        # Créer les lignes
+        for ligne_data in lignes_data:
+            LigneEcheancierContrat.objects.create(echeancier=echeancier, **ligne_data)
+
+        return echeancier
 
 
 class LigneContratIntervenantSerializer(serializers.ModelSerializer):
@@ -239,7 +253,7 @@ class AvenantSerializer(serializers.ModelSerializer):
             'id', 'numero', 'contrat', 'contrat_id', 'date_creation', 'date_signature',
             'statut', 'statut_display', 'intitule_avenant', 'objet_avenant',
             'type_modification', 'type_modification_display', 'modifications',
-            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe','description',
+            'contenu_personnalise', 'variables_personnalisees', 'fichier_signe',
             'created_at', 'updated_at'
         ]
         read_only_fields = [

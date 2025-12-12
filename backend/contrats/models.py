@@ -587,94 +587,124 @@ class Contrat(models.Model):
 
 
 class EcheancierContrat(models.Model):
-    """Modèle pour les échéances de paiement des contrats"""
-    
+    """Modèle pour l'échéancier de contrat - Un contrat peut avoir plusieurs échéanciers"""
+
+    TYPE_CHOICES = [
+        ('initial', 'Échéancier initial'),
+        ('extension', 'Extension de contrat'),
+        ('avenant', 'Suite à avenant'),
+        ('modification', 'Modification'),
+    ]
+
+    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='echeanciers')
+    type_echeancier = models.CharField(max_length=20, choices=TYPE_CHOICES, default='initial')
+    date_creation = models.DateTimeField(auto_now_add=True)
+
+    # Métadonnées minimales
+    description = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        db_table = 'contrats_echeancier'  # Nouveau nom de table pour éviter conflit avec l'ancien
+        verbose_name = 'Échéancier de contrat'
+        verbose_name_plural = 'Échéanciers de contrat'
+        ordering = ['contrat', '-date_creation']
+
+    def __str__(self):
+        return f"Échéancier {self.get_type_echeancier_display()} - {self.contrat.numero} - {self.date_creation.strftime('%d/%m/%Y')}"
+
+    @property
+    def montant_total(self):
+        """Calcule le montant total à partir des lignes"""
+        return sum(ligne.montant_ttc for ligne in self.lignes.all())
+
+    @property
+    def nombre_lignes(self):
+        """Retourne le nombre de lignes"""
+        return self.lignes.count()
+
+class LigneEcheancierContrat(models.Model):
+    """Modèle pour les lignes individuelles d'un échéancier de contrat"""
+
     TYPE_ECHEANCE_CHOICES = [
         ('acompte', 'Acompte'),
         ('tranche', 'Tranche de paiement'),
         ('solde', 'Solde'),
         ('retention', 'Retenue de garantie'),
     ]
-    
+
     STATUT_CHOICES = [
         ('en_attente', 'En attente'),
         ('paye', 'Payé'),
         ('en_retard', 'En retard'),
         ('annule', 'Annulé'),
     ]
-    
-    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='echeances')
-    type_echeance = models.CharField(max_length=20, choices=TYPE_ECHEANCE_CHOICES)
+
+    # Relation avec l'échéancier parent
+    echeancier = models.ForeignKey(EcheancierContrat, on_delete=models.CASCADE, related_name='lignes')
+
+    # Informations de l'échéance
     numero_echeance = models.PositiveIntegerField(help_text="Numéro de l'échéance (1, 2, 3, etc.)")
-    
-    # Informations de paiement
+    type_echeance = models.CharField(max_length=20, choices=TYPE_ECHEANCE_CHOICES, default='tranche')
+
+    # Montants
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
     montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
-    pourcentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)], help_text="Pourcentage du montant total")
-    
+    pourcentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)],
+                                     default=0, help_text="Pourcentage du montant total du contrat")
+
     # Dates
     date_echeance = models.DateField()
     date_paiement = models.DateField(null=True, blank=True)
-    
+
     # Statut et suivi
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_attente')
     commentaire = models.TextField(blank=True)
-    
+
     # Alertes
     alerte_envoyee = models.BooleanField(default=False, help_text="Alerte envoyée 3 jours avant l'échéance")
 
-    # Métadonnées et historique
-    metadata = models.JSONField(default=dict, blank=True, verbose_name="Métadonnées de l'échéance",
-                                help_text="Informations comme version, type (initial/extension), etc.")
+    # Métadonnées
+    metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     class Meta:
-        verbose_name = 'Échéance de contrat'
-        verbose_name_plural = 'Échéances de contrat'
-        ordering = ['contrat', 'numero_echeance']
-        unique_together = ['contrat', 'numero_echeance']
-    
+        verbose_name = 'Ligne d\'échéancier de contrat'
+        verbose_name_plural = 'Lignes d\'échéancier de contrat'
+        ordering = ['echeancier', 'numero_echeance']
+        unique_together = ['echeancier', 'numero_echeance']
+
     def __str__(self):
-        return f"Échéance {self.numero_echeance} - {self.contrat.numero} - {self.get_type_echeance_display()}"
-    
-    def save(self, *args, **kwargs):
-        # Calculer automatiquement les montants si pas définis
-        if not self.montant_ttc and self.contrat:
-            self.montant_ttc = (self.contrat.montant_ttc * self.pourcentage) / 100
-            self.montant_ht = (self.contrat.montant_ht * self.pourcentage) / 100
-            self.montant_tva = (self.contrat.montant_tva * self.pourcentage) / 100
-        
-        super().save(*args, **kwargs)
-    
+        return f"Échéance {self.numero_echeance} - Échéancier v{self.echeancier.version} - {self.echeancier.contrat.numero}"
+
     @property
     def jours_restants(self):
         """Calcule le nombre de jours restants avant l'échéance"""
         from datetime import date
         today = date.today()
         return (self.date_echeance - today).days
-    
+
     @property
     def est_en_retard(self):
         """Vérifie si l'échéance est en retard"""
         return self.jours_restants < 0 and self.statut == 'en_attente'
-    
+
     @property
     def doit_alerter(self):
         """Vérifie si une alerte doit être envoyée (3 jours avant)"""
         return self.jours_restants <= 3 and self.jours_restants >= 0 and not self.alerte_envoyee and self.statut == 'en_attente'
-    
+
     def marquer_comme_paye(self, date_paiement=None):
         """Marque l'échéance comme payée"""
         from datetime import date
         self.statut = 'paye'
         self.date_paiement = date_paiement or date.today()
         self.save()
-    
+
     def envoyer_alerte(self):
         """Envoie une alerte pour cette échéance"""
-        # Cette méthode sera implémentée avec le système de notifications
         self.alerte_envoyee = True
         self.save()
 
@@ -682,8 +712,8 @@ class EcheancierContrat(models.Model):
     def factures(self):
         """Retourne les factures liées à cette échéance"""
         from billings.models import Facture
-        return Facture.objects.filter(echeance=self)
-
+        # Note: Il faudra adapter le modèle Facture pour pointer vers LigneEcheancierContrat
+        return Facture.objects.filter(ligne_echeance=self)
 
 class LigneContrat(models.Model):
     """Modèle pour les lignes de contrat (basées sur les lignes de devis)"""

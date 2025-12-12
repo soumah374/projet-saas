@@ -208,13 +208,12 @@ class LigneDevis(models.Model):
         verbose_name = 'Ligne de devis'
         verbose_name_plural = 'Lignes de devis'
         ordering = ['created_at']
-        permissions = [
-            ('view_lignedevis', 'Peut voir les lignes de devis'),
-            ('add_lignedevis', 'Peut ajouter des lignes de devis'),
-            ('change_lignedevis', 'Peut modifier les lignes de devis'),
-            ('delete_lignedevis', 'Peut supprimer les lignes de devis'),
-            
-        ]
+        # permissions = [
+        #     ('view_lignedevis', 'Peut voir les lignes de devis'),
+        #     ('add_lignedevis', 'Peut ajouter des lignes de devis'),
+        #     ('change_lignedevis', 'Peut modifier les lignes de devis'),
+        #     ('delete_lignedevis', 'Peut supprimer les lignes de devis'),
+        # ]
     def __str__(self):
         if self.type_ligne == 'prestation' and self.activity:
             return f"Prestation {self.id} - {self.activity.name}"

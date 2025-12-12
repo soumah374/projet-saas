@@ -21,7 +21,7 @@ from .serializers import (
     PaiementCreateSerializer, LigneFactureSerializer, ConfigurationFacturationSerializer,
     EcheanceFacturationSerializer, ContratFacturationSerializer
 )
-from contrats.models import Contrat, EcheancierContrat
+from contrats.models import Contrat, LigneEcheancierContrat
 
 
 class FactureViewSet(viewsets.ModelViewSet):
@@ -252,14 +252,14 @@ class ConfigurationFacturationViewSet(viewsets.ModelViewSet):
 
 
 class EcheanceFacturationViewSet(viewsets.ReadOnlyModelViewSet):
-    """ViewSet pour les échéances avec informations de facturation"""
-    
-    queryset = EcheancierContrat.objects.all()
+    """ViewSet pour les lignes d'échéances avec informations de facturation"""
+
+    queryset = LigneEcheancierContrat.objects.all()
     serializer_class = EcheanceFacturationSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['contrat', 'type_echeance', 'statut']
+    filterset_fields = ['echeancier__contrat', 'type_echeance', 'statut']
     ordering_fields = ['date_echeance', 'numero_echeance']
-    ordering = ['contrat', 'numero_echeance']
+    ordering = ['echeancier', 'numero_echeance']
     
     @action(detail=True, methods=['post'])
     def generer_facture(self, request, pk=None):
@@ -275,9 +275,9 @@ class EcheanceFacturationViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Créer la facture
         facture_data = {
-            'contrat': echeance.contrat,
-            'echeance': echeance,
-            'client': echeance.contrat.client,
+            'contrat': echeance.echeancier.contrat,
+            'ligne_echeancier': echeance,
+            'client': echeance.echeancier.contrat.client,
             'date_echeance': echeance.date_echeance,
             'montant_ht': echeance.montant_ht,
             'montant_tva': echeance.montant_tva,
@@ -323,18 +323,21 @@ class ContratFacturationViewSet(viewsets.ReadOnlyModelViewSet):
     
     @action(detail=True, methods=['post'])
     def generer_factures_echeances(self, request, pk=None):
-        """Génère les factures pour toutes les échéances d'un contrat"""
+        """Génère les factures pour toutes les lignes d'échéances d'un contrat"""
         contrat = self.get_object()
-        
-        # Récupérer les échéances sans facture
-        echeances_sans_facture = contrat.echeances.filter(factures__isnull=True)
-        
+
+        # Récupérer les lignes d'échéances sans facture
+        echeances_sans_facture = LigneEcheancierContrat.objects.filter(
+            echeancier__contrat=contrat,
+            factures__isnull=True
+        )
+
         factures_crees = []
         for echeance in echeances_sans_facture:
             # Créer la facture
             facture_data = {
                 'contrat': contrat,
-                'echeance': echeance,
+                'ligne_echeancier': echeance,
                 'client': contrat.client,
                 'date_echeance': echeance.date_echeance,
                 'montant_ht': echeance.montant_ht,

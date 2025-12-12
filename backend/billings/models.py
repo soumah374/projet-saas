@@ -3,7 +3,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-from contrats.models import Contrat, EcheancierContrat
+from contrats.models import Contrat, LigneEcheancierContrat
 from users.models import ClientProfile
 
 
@@ -25,7 +25,7 @@ class Facture(models.Model):
     
     # Relations
     contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='factures')
-    echeance = models.ForeignKey(EcheancierContrat, on_delete=models.CASCADE, related_name='factures', null=True, blank=True)
+    ligne_echeancier = models.ForeignKey(LigneEcheancierContrat, on_delete=models.CASCADE, related_name='factures', null=True, blank=True)
     client = models.ForeignKey(ClientProfile, on_delete=models.CASCADE, related_name='factures')
     
     # Informations de la facture

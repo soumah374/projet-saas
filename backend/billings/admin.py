@@ -23,7 +23,7 @@ class FactureAdmin(admin.ModelAdmin):
     ]
     fieldsets = (
         ('Informations générales', {
-            'fields': ('numero', 'contrat', 'echeance', 'client', 'statut')
+            'fields': ('numero', 'contrat', 'ligne_echeancier', 'client', 'statut')
         }),
         ('Dates', {
             'fields': ('date_emission', 'date_echeance', 'date_paiement')
@@ -63,7 +63,7 @@ class FactureAdmin(admin.ModelAdmin):
     pourcentage_paye.short_description = '% Payé'
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('client', 'contrat', 'echeance')
+        return super().get_queryset(request).select_related('client', 'contrat', 'ligne_echeancier')
     
     actions = ['marquer_comme_payee', 'marquer_comme_envoyee']
     
