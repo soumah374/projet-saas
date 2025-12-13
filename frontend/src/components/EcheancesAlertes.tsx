@@ -14,7 +14,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { type Echeance, type AlertesQuotidiennes } from '@/lib/types';
+import { type LigneEcheancier, type AlertesQuotidiennes } from '@/lib/types';
 
 export function EcheancesAlertes() {
   const [alertes, setAlertes] = useState<AlertesQuotidiennes | null>(null);

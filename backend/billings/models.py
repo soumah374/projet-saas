@@ -37,10 +37,10 @@ class Facture(models.Model):
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
     
     # Montants
-    montant_ht = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    montant_ht = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
     montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_frais_agence = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
     montant_paye = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     montant_restant = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     
@@ -245,7 +245,7 @@ class PaiementFacture(models.Model):
     facture = models.ForeignKey(Facture, on_delete=models.CASCADE, related_name='paiements')
     
     # Informations du paiement
-    montant = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    montant = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
     date_paiement = models.DateField()
     mode_paiement = models.CharField(
         max_length=50,

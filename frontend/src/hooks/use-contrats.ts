@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contratsAPI } from '@/lib/api';
 import { toast } from 'sonner';
-import { Echeance } from '@/lib/types';
+import { EcheancierContrat } from '@/lib/types';
 
 // Types
 export interface Contrat {
@@ -38,7 +38,7 @@ export interface Contrat {
   lignes: LigneContrat[];
   created_at: string;
   updated_at: string;
-  echeances: Echeance[];
+  echeances: EcheancierContrat[];
 }
 
 export interface LigneContrat {
@@ -396,7 +396,8 @@ export const useAddDevisToContrat = () => {
     }): Promise<Contrat> => {
       const response = await contratsAPI.addDevisToContrat(data.contrat_id, {
         devis_ids: data.devis_ids,
-        devis_principal_id: data.devis_principal_id
+        devis_principal_id: data.devis_principal_id,
+        echeances: data.echeances
       });
       return response.data;
     },

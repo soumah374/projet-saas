@@ -47,10 +47,7 @@ export function DevisPage() {
   const [devisToAccepter, setDevisToAccepter] = useState<Devis | null>(null);
 
   // Hooks pour les opérations CRUD
-  const createDevisMutation = useCreateDevis();
-  const updateDevisMutation = useUpdateDevis();
   const deleteDevisMutation = useDeleteDevis();
-  const envoyerDevisMutation = useEnvoyerDevis();
   const accepterDevisMutation = useAccepterDevis();
   const refuserDevisMutation = useRefuserDevis();
 
@@ -249,6 +246,7 @@ export function DevisPage() {
       setDevisToAccepter(null);
     } catch (err) {
       // Les erreurs sont gérées par les hooks
+      alert('Erreur lors de l\'acceptation du devis.');
     }
   };
 
@@ -256,6 +254,7 @@ export function DevisPage() {
     try {
       await refuserDevisMutation.mutateAsync(devis.id);
     } catch (err) {
+      alert('Erreur lors du refus du devis.');
       // Les erreurs sont gérées par les hooks
     }
   };

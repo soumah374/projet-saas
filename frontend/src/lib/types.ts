@@ -656,6 +656,14 @@ export interface LigneEcheancier {
   metadata?: any;
   created_at: string;
   updated_at: string;
+  // Champs optionnels ajoutés par certains endpoints (comme alertes_quotidiennes)
+  contrat?: number;
+  contrat_details?: {
+    numero: string;
+    client: {
+      nom_complet: string;
+    };
+  };
 }
 
 // Nouveau: Échéancier (header)
@@ -667,6 +675,13 @@ export interface EcheancierContrat {
   date_creation: string;
   description: string;
   metadata?: any;
+  echeances_contrat: Array<{
+    numero: number;
+    type: 'acompte' | 'tranche' | 'solde';
+    pourcentage: number;
+    date_echeance: string;
+    commentaire: string;
+  }>;
   lignes: LigneEcheancier[];
   montant_total: number;
   nombre_lignes: number;
@@ -701,8 +716,8 @@ export interface Echeance {
 }
 
 export interface AlertesQuotidiennes {
-  echeances_3_jours: Echeance[];
-  echeances_retard: Echeance[];
+  echeances_3_jours: LigneEcheancier[];
+  echeances_retard: LigneEcheancier[];
   total_alertes: number;
 }
 

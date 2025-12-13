@@ -205,24 +205,11 @@ export function DevisDetailPage() {
     try {
       // Accepter le devis
       await accepterDevisMutation.mutateAsync(devisId);
-      
-      // Créer automatiquement un contrat à partir du devis accepté
-      const dateDebut = new Date();
-      const dateFin = new Date();
-      dateFin.setFullYear(dateFin.getFullYear() + 1); // Contrat d'un an par défaut
-      
-      await createContratMutation.mutateAsync({
-        devis_ids: [devisId], // Utiliser un tableau avec l'ID du devis
-        date_debut: dateDebut.toISOString().split('T')[0],
-        date_fin: dateFin.toISOString().split('T')[0],
-        conditions: devis?.conditions || '',
-        notes: `Contrat créé automatiquement lors de l'acceptation du devis ${devis?.numero}`,
-      });
-      
       setAccepterDialogOpen(false);
       toast.success('Devis accepté et contrat créé avec succès !');
     } catch (err) {
       // Error handled by hook
+      alert('Erreur lors de l\'acceptation du devis.');
     }
   };
 

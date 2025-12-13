@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { type Echeance, type AlertesQuotidiennes } from '@/lib/types';
+import { type LigneEcheancier, type EcheancierContrat, type AlertesQuotidiennes } from '@/lib/types';
 
 export function useEcheances(contratId?: number) {
-  const [echeances, setEcheances] = useState<Echeance[]>([]);
+  const [echeances, setEcheances] = useState<LigneEcheancier[]>([]);
+  const [echeanciers, setEcheanciers] = useState<EcheancierContrat[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,14 +20,24 @@ export function useEcheances(contratId?: number) {
     try {
       // Utiliser l'endpoint du contrat pour récupérer les échéances
       const contratResponse = await api.get(`/contrats/${contratIdToLoad}/`);
-      const echeancesData = contratResponse.data.echeances || [];
-      setEcheances(echeancesData);
+      const echeanciersList: EcheancierContrat[] = contratResponse.data.echeances || [];
+
+      // Stocker la structure hiérarchique complète
+      setEcheanciers(echeanciersList);
+
+      // Aplatir la structure hiérarchique: extraire toutes les lignes des échéanciers
+      const toutesLesLignes: LigneEcheancier[] = echeanciersList.flatMap(
+        (echeancier) => echeancier.lignes || []
+      );
+
+      setEcheances(toutesLesLignes);
     } catch (err: any) {
       const errorMessage = err.response?.data?.detail || 'Erreur lors du chargement des échéances';
       setError(errorMessage);
       toast.error(errorMessage);
       // En cas d'erreur, s'assurer que echeances reste un tableau vide
       setEcheances([]);
+      setEcheanciers([]);
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +128,24 @@ export function useEcheances(contratId?: number) {
     }
   };
 
+  // Supprimer une échéance
+  // const supprimerEcheance = async (echeanceId: number) => {
+  //   setIsLoading(true);
+  //   setError(null);
+
+  //   try {
+  //     await api.delete(`/contrats/echeances/${echeanceId}/`);
+  //     toast.success('Échéance supprimée avec succès');
+  //     await loadEcheances(); // Recharger les échéances
+  //   } catch (err: any) {
+  //     const errorMessage = err.response?.data?.detail || 'Erreur lors de la suppression de l\'échéance';
+  //     setError(errorMessage);
+  //     toast.error(errorMessage);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   // Charger les alertes quotidiennes
   const loadAlertesQuotidiennes = async (): Promise<AlertesQuotidiennes | null> => {
     try {
@@ -131,7 +160,7 @@ export function useEcheances(contratId?: number) {
   };
 
   // Charger les échéances en alerte
-  const loadEcheancesAlertes = async (): Promise<Echeance[]> => {
+  const loadEcheancesAlertes = async (): Promise<LigneEcheancier[]> => {
     try {
       const response = await api.get(`/contrats/echeances_alertes/`);
       return response.data;
@@ -144,7 +173,7 @@ export function useEcheances(contratId?: number) {
   };
 
   // Charger les échéances en retard
-  const loadEcheancesRetard = async (): Promise<Echeance[]> => {
+  const loadEcheancesRetard = async (): Promise<LigneEcheancier[]> => {
     try {
       const response = await api.get(`/contrats/echeances_retard/`);
       return response.data;
@@ -165,12 +194,14 @@ export function useEcheances(contratId?: number) {
 
   return {
     echeances,
+    echeanciers,
     isLoading,
     error,
     loadEcheances,
     genererEcheancier,
     marquerPaye,
     envoyerAlerte,
+    // supprimerEcheance,
     loadAlertesQuotidiennes,
     loadEcheancesAlertes,
     loadEcheancesRetard,

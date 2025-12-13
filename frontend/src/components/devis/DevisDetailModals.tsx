@@ -158,9 +158,6 @@ export const DevisDetailModals: React.FC<DevisDetailModalsProps> = ({
               <p className="text-sm text-green-600">
                 Une fois accepté, le devis deviendra définitif.
               </p>
-              <p className="text-sm text-blue-600">
-                <strong>Note :</strong> Un contrat sera automatiquement créé à partir de ce devis accepté.
-              </p>
             </div>
           </div>
           <DialogFooter>

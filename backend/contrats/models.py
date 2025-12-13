@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
+from decimal import Decimal
 from users.models import ClientProfile
 from devis.models import Devis
 from catalog.models import Service, Activity, IntervenantProfile, UniteStandard
@@ -42,11 +43,11 @@ class Contrat(models.Model):
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
     
     # Configuration TVA (héritée du devis)
-    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(0)])
+    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(Decimal('0'))])
     appliquer_tva = models.BooleanField(default=True, verbose_name="Appliquer la TVA")
     
     # Configuration Frais d'Agence (héritée du devis)
-    taux_frais_agence = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, validators=[MinValueValidator(0)])
+    taux_frais_agence = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, validators=[MinValueValidator(Decimal('0'))])
     appliquer_frais_agence = models.BooleanField(default=False, verbose_name="Appliquer les frais d'agence")
     
     # Informations commerciales
@@ -97,11 +98,7 @@ class Contrat(models.Model):
                         
         super().save(*args, **kwargs)
         
-        # Créer les échéances si la configuration est fournie ET que le contrat n'est pas terminé
-        if (self.echeances_contrat and isinstance(self.echeances_contrat, list) 
-            and self.statut not in ['termine', 'annule','actif','suspendu','archive','envoye','signe','cloture']):
-            self.creer_echeances_depuis_configuration()
-    
+       
     def initialiser_montants_depuis_devis(self):
         """Initialise les montants du contrat à partir des devis"""
         if self.devis.exists():
@@ -136,24 +133,36 @@ class Contrat(models.Model):
     
     def creer_echeances_depuis_configuration(self):
         """Crée les échéances à partir de la configuration JSON"""
+        
+        print("=========Echeances Contrat ======", self.echeances_contrat)
+        print("=========Echeances Contrat ======", isinstance(self.echeances_contrat, list))
+        
         if not self.echeances_contrat or not isinstance(self.echeances_contrat, list):
             return
-        
-        # Supprimer les échéances existantes
-        self.echeances.all().delete()
-        
-        # Créer les nouvelles échéances
+        # Vérifier si c'est le premier échéancier ou une extension
+        is_first_echeance = not self.echeances.exists()
+
+        # Créer un nouvel échéancier (header)
+        nouvel_echeancier = EcheancierContrat.objects.create(
+            contrat=self,
+            type_echeancier='initial' if is_first_echeance else 'modification',
+            description="Échéancier créé automatiquement",
+            echeances_contrat=self.echeances_contrat
+        )
+
+        # Créer les lignes d'échéancier
         for echeance_config in self.echeances_contrat:
             try:
                 # Calculer les montants
-                pourcentage = float(echeance_config.get('pourcentage', 0))
+                from decimal import Decimal
+                pourcentage = Decimal(str(echeance_config.get('pourcentage', 0)))
                 montant_ht = (self.montant_ht * pourcentage) / 100
                 montant_tva = (self.montant_tva * pourcentage) / 100
                 montant_ttc = (self.montant_ttc * pourcentage) / 100
-                
-                # Créer l'échéance
-                EcheancierContrat.objects.create(
-                    contrat=self,
+
+                # Créer la ligne d'échéancier
+                LigneEcheancierContrat.objects.create(
+                    echeancier=nouvel_echeancier,
                     type_echeance=echeance_config.get('type', 'tranche'),
                     numero_echeance=echeance_config.get('numero', 1),
                     montant_ht=montant_ht,
@@ -161,7 +170,8 @@ class Contrat(models.Model):
                     montant_ttc=montant_ttc,
                     pourcentage=pourcentage,
                     date_echeance=echeance_config.get('date_echeance'),
-                    commentaire=echeance_config.get('commentaire', '')
+                    commentaire=echeance_config.get('commentaire', ''),
+                    statut='en_attente'
                 )
             except Exception as e:
                 print(f"Erreur lors de la création de l'échéance: {e}")
@@ -596,9 +606,12 @@ class EcheancierContrat(models.Model):
         ('modification', 'Modification'),
     ]
 
-    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='echeanciers')
+    contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='echeances')
     type_echeancier = models.CharField(max_length=20, choices=TYPE_CHOICES, default='initial')
     date_creation = models.DateTimeField(auto_now_add=True)
+
+    # Configuration des échéances de paiement
+    echeances_contrat = models.JSONField(default=list, verbose_name="Configuration des échéances de paiement")
 
     # Métadonnées minimales
     description = models.TextField(blank=True)
@@ -648,10 +661,10 @@ class LigneEcheancierContrat(models.Model):
     type_echeance = models.CharField(max_length=20, choices=TYPE_ECHEANCE_CHOICES, default='tranche')
 
     # Montants
-    montant_ht = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+    montant_ht = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
     montant_tva = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
-    pourcentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(0)],
+    montant_ttc = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
+    pourcentage = models.DecimalField(max_digits=5, decimal_places=2, validators=[MinValueValidator(Decimal('0'))],
                                      default=0, help_text="Pourcentage du montant total du contrat")
 
     # Dates
@@ -743,7 +756,7 @@ class LigneContrat(models.Model):
     
     # Informations de la ligne
     description = models.TextField(blank=True, default='')
-    quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(0)])
+    quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(Decimal('0'))])
     unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_contrat')
     prix_unitaire_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -796,10 +809,10 @@ class LigneContratIntervenant(models.Model):
     profile_intervenant = models.ForeignKey(IntervenantProfile, on_delete=models.CASCADE, related_name='lignes_contrat')
     
     # Temps personnalisé pour ce contrat
-    temps_intervenant = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
+    temps_intervenant = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
     
     # Taux horaire pour ce contrat
-    taux_horaire = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
+    taux_horaire = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
     
     # Montant pour cet intervenant
     montant_intervenant = models.DecimalField(max_digits=10, decimal_places=2, default=0)

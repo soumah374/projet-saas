@@ -3,6 +3,8 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.core.cache import cache
 from django.db import transaction
+from datetime import datetime, date
+from decimal import Decimal
 import logging
 
 from projects.models import Project, ProjectTask
@@ -15,6 +17,19 @@ from .models import DashboardMetrics, DashboardCache
 from .services import DashboardMetricsService
 
 logger = logging.getLogger(__name__)
+
+
+def serialize_datetime_values(obj):
+    """Convertit récursivement les objets datetime/date/Decimal en types JSON sérialisables"""
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    elif isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {key: serialize_datetime_values(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [serialize_datetime_values(item) for item in obj]
+    return obj
 
 
 class DashboardSignalManager:
@@ -60,22 +75,34 @@ class DashboardSignalManager:
             
             # Calcul des métriques
             overview_metrics = service.get_overview_metrics(start_date, end_date)
-            
+
+            # Vérifier que overview_metrics est bien un dictionnaire
+            if not isinstance(overview_metrics, dict):
+                logger.error(f"overview_metrics devrait être un dict, mais c'est un {type(overview_metrics)}: {overview_metrics}")
+                return
+
             # Sauvegarde des métriques
             with transaction.atomic():
                 # Supprime les anciennes métriques
                 DashboardMetrics.objects.filter(
                     calculated_at__lt=now - timezone.timedelta(hours=1)
                 ).delete()
-                
+
                 # Crée de nouvelles métriques
                 for metric_type, metrics in overview_metrics.items():
+                    # Vérifier que metrics est bien un dictionnaire
+                    if not isinstance(metrics, dict):
+                        logger.warning(f"Skipping metric_type '{metric_type}' - metrics devrait être un dict, mais c'est un {type(metrics)}: {metrics}")
+                        continue
+
                     for metric_name, metric_value in metrics.items():
                         if isinstance(metric_value, dict) or isinstance(metric_value, list):
+                            # Sérialise les datetime objects avant de sauvegarder
+                            serialized_value = serialize_datetime_values(metric_value)
                             DashboardMetrics.objects.create(
                                 metric_type=metric_type,
                                 metric_name=metric_name,
-                                metric_value=metric_value,
+                                metric_value=serialized_value,
                                 period_start=start_date,
                                 period_end=end_date
                             )
@@ -156,14 +183,14 @@ def contrat_saved(sender, instance, created, **kwargs):
     """Signal déclenché lors de la sauvegarde d'un contrat"""
     try:
         if created:
-            logger.info(f"Nouveau contrat créé: {instance.reference}")
+            logger.info(f"Nouveau contrat créé: {instance.numero}")
         else:
-            logger.info(f"Contrat mis à jour: {instance.reference}")
-        
+            logger.info(f"Contrat mis à jour: {instance.numero}")
+
         # Invalide le cache et met à jour les métriques
         DashboardSignalManager.invalidate_cache()
         DashboardSignalManager.update_metrics()
-        
+
     except Exception as e:
         logger.error(f"Erreur dans le signal contrat_saved: {str(e)}")
 
@@ -172,8 +199,8 @@ def contrat_saved(sender, instance, created, **kwargs):
 def contrat_deleted(sender, instance, **kwargs):
     """Signal déclenché lors de la suppression d'un contrat"""
     try:
-        logger.info(f"Contrat supprimé: {instance.reference}")
-        
+        logger.info(f"Contrat supprimé: {instance.numero}")
+
         # Invalide le cache et met à jour les métriques
         DashboardSignalManager.invalidate_cache()
         DashboardSignalManager.update_metrics()

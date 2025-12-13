@@ -49,7 +49,7 @@ class EcheancierContratSerializer(serializers.ModelSerializer):
         model = EcheancierContrat
         fields = [
             'id', 'contrat', 'type_echeancier', 'type_echeancier_display',
-            'date_creation', 'description', 'metadata',
+            'date_creation', 'description', 'metadata', 'echeances_contrat',
             'lignes', 'montant_total', 'nombre_lignes'
         ]
         read_only_fields = ['date_creation', 'montant_total', 'nombre_lignes']
@@ -62,7 +62,7 @@ class EcheancierContratCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EcheancierContrat
         fields = [
-            'contrat', 'type_echeancier', 'description', 'metadata', 'lignes'
+            'contrat', 'type_echeancier', 'description', 'metadata', 'echeances_contrat', 'lignes'
         ]
 
     def create(self, validated_data):
@@ -169,6 +169,8 @@ class ContratCreateSerializer(serializers.ModelSerializer):
         devis_ids = validated_data.pop('devis_ids', [])
         devis_principal_id = validated_data.pop('devis_principal_id', None)
         
+        print("Creating Contrat with validated_data:", validated_data.pop("echeances_contrat",[]))
+        
         # Créer le contrat
         contrat = Contrat.objects.create(**validated_data)
         
@@ -185,6 +187,8 @@ class ContratCreateSerializer(serializers.ModelSerializer):
             # Utiliser le premier devis comme principal
             contrat.devis_principal_id = devis_ids[0]
             contrat.save()
+        # Initialiser les echéances si nécessaire
+        contrat.creer_echeances_depuis_configuration()
         
         return contrat
 
@@ -196,7 +200,7 @@ class ContratDetailSerializer(serializers.ModelSerializer):
     devis_principal = DevisSerializer(read_only=True)
     lignes = LigneContratSerializer(many=True, read_only=True)
     echeances = EcheancierContratSerializer(many=True, read_only=True)
-    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)  
     
     class Meta:
         model = Contrat

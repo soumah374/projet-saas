@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
+from decimal import Decimal
 from users.models import ClientProfile
 from catalog.models import Service, Activity, IntervenantProfile, UniteStandard
 
@@ -29,11 +30,11 @@ class Devis(models.Model):
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='brouillon')
     
     # Configuration TVA
-    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(0)])
+    taux_tva = models.DecimalField(max_digits=5, decimal_places=2, default=18.00, validators=[MinValueValidator(Decimal('0'))])
     appliquer_tva = models.BooleanField(default=True, verbose_name="Appliquer la TVA")
     
     # Configuration Frais d'Agence
-    taux_frais_agence = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, validators=[MinValueValidator(0)])
+    taux_frais_agence = models.DecimalField(max_digits=5, decimal_places=2, default=15.00, validators=[MinValueValidator(Decimal('0'))])
     appliquer_frais_agence = models.BooleanField(default=False, verbose_name="Appliquer les frais d'agence")
     
     # Informations commerciales
@@ -198,7 +199,7 @@ class LigneDevis(models.Model):
     ligne_frais = models.ForeignKey('catalog.LigneFrais', on_delete=models.CASCADE, related_name='lignes_devis', blank=True, null=True)
     # Informations de la ligne
     description = models.TextField(blank=True, default='')
-    quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(0)])
+    quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(Decimal('0'))])
     unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_devis')
     prix_unitaire_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -257,10 +258,10 @@ class LigneDevisIntervenant(models.Model):
     profile_intervenant = models.ForeignKey(IntervenantProfile, on_delete=models.CASCADE, related_name='lignes_devis')
     
     # Temps personnalisé pour ce devis
-    temps_intervenant = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
-    
+    temps_intervenant = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
+
     # Taux horaire pour ce devis
-    taux_horaire = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(0)])
+    taux_horaire = models.DecimalField(max_digits=8, decimal_places=2, validators=[MinValueValidator(Decimal('0'))])
     
     # Montant pour cet intervenant
     montant_intervenant = models.DecimalField(max_digits=10, decimal_places=2, default=0)
