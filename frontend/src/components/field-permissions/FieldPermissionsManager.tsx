@@ -1,31 +1,12 @@
 import React, { useState } from 'react';
 import {
   useFieldPermissions,
-  useAvailableModels,
-  useCreateFieldPermission,
-  useUpdateFieldPermission,
   useDeleteFieldPermission,
-  FieldPermission,
 } from '@/hooks/use-field-permissions';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableHeader,
@@ -34,51 +15,23 @@ import {
   TableBody,
   TableCell,
 } from '@/components/ui/table';
-import { Plus, Trash2, Edit, Eye, Lock, Shield } from 'lucide-react';
-import { toast } from 'sonner';
+import { Trash2, Edit, Eye, Shield, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export const FieldPermissionsManager: React.FC = () => {
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingPermission, setEditingPermission] = useState<FieldPermission | null>(null);
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
-  const { data: permissions, isLoading } = useFieldPermissions();
-  const { data: availableModels } = useAvailableModels();
-  const createMutation = useCreateFieldPermission();
-  const updateMutation = useUpdateFieldPermission();
+  const { data: permissionsData, isLoading } = useFieldPermissions({
+    search,
+    page,
+    page_size: pageSize,
+  });
   const deleteMutation = useDeleteFieldPermission();
 
-  const [formData, setFormData] = useState({
-    user: '',
-    group: '',
-    content_type: '',
-    field_name: '',
-    object_id: '',
-    permission: 'read' as 'read' | 'write',
-  });
-
-  const handleCreate = () => {
-    if (!formData.content_type || !formData.field_name) {
-      toast.error('Veuillez remplir tous les champs requis');
-      return;
-    }
-
-    if (!formData.user && !formData.group) {
-      toast.error('Veuillez sélectionner un utilisateur ou un groupe');
-      return;
-    }
-
-    createMutation.mutate({
-      user: formData.user ? parseInt(formData.user) : undefined,
-      group: formData.group ? parseInt(formData.group) : undefined,
-      content_type: parseInt(formData.content_type),
-      field_name: formData.field_name,
-      object_id: formData.object_id ? parseInt(formData.object_id) : undefined,
-      permission: formData.permission,
-    });
-
-    setIsCreateDialogOpen(false);
-    resetForm();
-  };
+  const permissions = permissionsData?.results || [];
+  const totalCount = permissionsData?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
   const handleDelete = (id: number) => {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette permission ?')) {
@@ -86,21 +39,6 @@ export const FieldPermissionsManager: React.FC = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      user: '',
-      group: '',
-      content_type: '',
-      field_name: '',
-      object_id: '',
-      permission: 'read',
-    });
-    setEditingPermission(null);
-  };
-
-  const selectedModelData = availableModels?.find(
-    (m) => m.id === parseInt(formData.content_type)
-  );
 
   const getPermissionBadge = (permission: string) => {
     if (permission === 'read') {
@@ -127,19 +65,32 @@ export const FieldPermissionsManager: React.FC = () => {
             <Shield size={24} />
             Gestion des Permissions par Champ
           </CardTitle>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <Plus size={16} className="mr-2" />
-            Nouvelle Permission
-          </Button>
         </CardHeader>
         <CardContent>
+          {/* Barre de recherche */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <Input
+                placeholder="Rechercher par utilisateur, modèle ou champ..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1); // Reset to first page on search
+                }}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
           {isLoading ? (
             <div className="text-center py-8">Chargement...</div>
           ) : permissions && permissions.length > 0 ? (
-            <Table>
+            <>
+              <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Utilisateur/Groupe</TableHead>
+                  <TableHead>Utilisateur</TableHead>
                   <TableHead>Modèle</TableHead>
                   <TableHead>Champ</TableHead>
                   <TableHead>ID Objet</TableHead>
@@ -151,11 +102,7 @@ export const FieldPermissionsManager: React.FC = () => {
                 {permissions.map((perm) => (
                   <TableRow key={perm.id}>
                     <TableCell>
-                      {perm.user_display ? (
-                        <Badge variant="outline">👤 {perm.user_display}</Badge>
-                      ) : (
-                        <Badge variant="outline">👥 {perm.group_display}</Badge>
-                      )}
+                      <Badge variant="outline">👤 {perm.user_display || 'N/A'}</Badge>
                     </TableCell>
                     <TableCell>
                       <code className="text-sm bg-gray-100 px-2 py-1 rounded">
@@ -186,155 +133,44 @@ export const FieldPermissionsManager: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-gray-600">
+                Affichage {permissions.length > 0 ? ((page - 1) * pageSize + 1) : 0} à {Math.min(page * pageSize, totalCount)} sur {totalCount} permissions
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page - 1)}
+                  disabled={page === 1 || isLoading}
+                >
+                  <ChevronLeft size={16} className="mr-1" />
+                  Précédent
+                </Button>
+                <div className="flex items-center px-3 text-sm">
+                  Page {page} sur {totalPages || 1}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(page + 1)}
+                  disabled={page >= totalPages || isLoading}
+                >
+                  Suivant
+                  <ChevronRight size={16} className="ml-1" />
+                </Button>
+              </div>
+            </div>
+          </>
           ) : (
             <div className="text-center py-8 text-gray-500">
-              Aucune permission configurée
+              {search ? 'Aucun résultat trouvé' : 'Aucune permission configurée'}
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/* Dialog de création/édition */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPermission ? 'Modifier la Permission' : 'Nouvelle Permission'}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {/* Sélection Utilisateur ou Groupe */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="user">Utilisateur</Label>
-                <Input
-                  id="user"
-                  type="number"
-                  placeholder="ID utilisateur"
-                  value={formData.user}
-                  onChange={(e) =>
-                    setFormData({ ...formData, user: e.target.value, group: '' })
-                  }
-                  disabled={!!formData.group}
-                />
-              </div>
-              <div>
-                <Label htmlFor="group">Groupe</Label>
-                <Input
-                  id="group"
-                  type="number"
-                  placeholder="ID groupe"
-                  value={formData.group}
-                  onChange={(e) =>
-                    setFormData({ ...formData, group: e.target.value, user: '' })
-                  }
-                  disabled={!!formData.user}
-                />
-              </div>
-            </div>
-
-            {/* Sélection du modèle */}
-            <div>
-              <Label htmlFor="model">Modèle</Label>
-              <Select
-                value={formData.content_type}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, content_type: value, field_name: '' })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner un modèle" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableModels?.map((model) => (
-                    <SelectItem key={model.id} value={model.id.toString()}>
-                      {model.app_label}.{model.model_name} ({model.model_verbose_name})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Sélection du champ */}
-            {selectedModelData && (
-              <div>
-                <Label htmlFor="field">Champ</Label>
-                <Select
-                  value={formData.field_name}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, field_name: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sélectionner un champ" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectedModelData.fields.map((field) => (
-                      <SelectItem key={field} value={field}>
-                        {field}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {/* ID de l'objet (optionnel) */}
-            <div>
-              <Label htmlFor="object_id">ID Objet (optionnel)</Label>
-              <Input
-                id="object_id"
-                type="number"
-                placeholder="Laisser vide pour tous les objets"
-                value={formData.object_id}
-                onChange={(e) => setFormData({ ...formData, object_id: e.target.value })}
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                Si vide, la permission s'applique à tous les objets de ce modèle
-              </p>
-            </div>
-
-            {/* Type de permission */}
-            <div>
-              <Label htmlFor="permission">Type de Permission</Label>
-              <Select
-                value={formData.permission}
-                onValueChange={(value: 'read' | 'write') =>
-                  setFormData({ ...formData, permission: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="read">
-                    <div className="flex items-center gap-2">
-                      <Eye size={16} />
-                      Lecture
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="write">
-                    <div className="flex items-center gap-2">
-                      <Edit size={16} />
-                      Écriture
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              {editingPermission ? 'Mettre à jour' : 'Créer'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

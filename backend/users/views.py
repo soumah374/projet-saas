@@ -1140,13 +1140,13 @@ class PermissionManagerViewSet(viewsets.ViewSet):
 
 class FieldPermissionViewSet(viewsets.ModelViewSet):
     """ViewSet pour gérer les permissions par champ"""
-    queryset = FieldPermission.objects.all()
+    queryset = FieldPermission.objects.select_related('user', 'content_type').all()
     serializer_class = FieldPermissionSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['user', 'content_type', 'field_name', 'permission']
-    search_fields = ['field_name']
+    search_fields = ['field_name', 'user__username', 'user__first_name', 'user__last_name', 'content_type__model']
     ordering_fields = ['id', 'field_name', 'permission']
-    ordering = ['id']
+    ordering = ['-id']
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update', 'bulk_create']:
@@ -1173,7 +1173,6 @@ class FieldPermissionViewSet(viewsets.ModelViewSet):
                 user_id=perm_data.get('user'),
                 content_type_id=perm_data.get('content_type'),
                 field_name=perm_data.get('field_name'),
-                permission=perm_data.get('permission'),
             ).delete()
 
             serializer = FieldPermissionCreateSerializer(data=perm_data)

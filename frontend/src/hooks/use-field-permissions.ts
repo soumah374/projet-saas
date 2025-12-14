@@ -21,7 +21,7 @@ export interface FieldPermission {
   model_name: string;
   field_name: string;
   object_id?: number;
-  permissions: Array<FieldPermissions>;
+  permission: string;
   permission_display: string;
 }
 
@@ -58,12 +58,24 @@ export interface CheckPermissionResponse {
 }
 
 // Hook pour récupérer toutes les permissions
-export const useFieldPermissions = () => {
+export interface FieldPermissionsParams {
+  search?: string;
+  page?: number;
+  page_size?: number;
+}
+
+export const useFieldPermissions = (params: FieldPermissionsParams = {}) => {
   return useQuery({
-    queryKey: ['field-permissions'],
+    queryKey: ['field-permissions', params],
     queryFn: async () => {
-      const response = await api.get('/auth/field-permissions/');
-      return response.data as FieldPermission[];
+      const queryParams = new URLSearchParams();
+      if (params.search) queryParams.append('search', params.search);
+      if (params.page) queryParams.append('page', params.page.toString());
+      if (params.page_size) queryParams.append('page_size', params.page_size.toString());
+
+      const url = `/auth/field-permissions/${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      const response = await api.get(url);
+      return response.data;
     },
   });
 };

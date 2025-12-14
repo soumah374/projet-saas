@@ -75,10 +75,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
   // Auto-ouvrir les menus basés sur la route actuelle
   useEffect(() => {
-    const path = location.pathname;
-
-    console.log(hasPermission('catalog.view_tauxhoraire'))
-    
+    const path = location.pathname;    
     // Prestations menu
     if (path.includes('/services') || path.includes('/activities') || path.includes('/taux-horaires') || 
         path.includes('/unites-standards') || path.includes('/frais-categories') || 

@@ -194,12 +194,8 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
         });
       }
     });
-
-    // Envoyer toutes les permissions en une seule requête
-    console.log(permissionsToCreate)
     try {
       await bulkCreateMutation.mutateAsync(permissionsToCreate);
-
       // Réinitialiser le formulaire après succès
       setSelectedUserId('');
       setSelectedModelId('');
@@ -208,6 +204,7 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
       setFieldPermissions([]);
       setUserSearch('');
       setObjectSearch('');
+      toast("Permissions ajouter")
     } catch (error) {
       console.error('Erreur lors de la création des permissions:', error);
     }
