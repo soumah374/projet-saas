@@ -28,7 +28,6 @@ import { fr } from 'date-fns/locale';
 import { DeleteMemberProject } from '../DeleteMemberProject';
 import { StartTaskProjectModal } from '../StartTaskProjectModal';
 import { StandardTasksManager } from './StandardTasksManager';
-import { TeamMemberAutocomplete } from '@/components/ui/TeamMemberAutocomplete';
 import { UserAutocomplete } from '@/components/ui/UserAutocomplete';
 
 interface ProjectPlanningProps {
@@ -114,15 +113,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
     }
   };
   
-  const handleApplyTemplate = async () => {
-    if (!selectedTemplateCategory) return;
-    try {
-      await applyTaskTemplate(selectedTemplateCategory);
-      setSelectedTemplateCategory('');
-    } catch (error) {
-      console.error('Error applying template:', error);
-    }
-  };
 
   const filteredTasks = tasks?.results?.filter(task => {
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -173,10 +163,6 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
     }
   };
 
-  const getMemberName = (memberId: number) => {
-    const member = teamMembers?.find(m => m.user === memberId);
-    return member ? member.user_name : 'Membre inconnu';
-  };
   
   return (
     <>

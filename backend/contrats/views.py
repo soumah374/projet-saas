@@ -635,9 +635,14 @@ class ContratViewSet(viewsets.ModelViewSet):
 
                 # Créer un nouvel échéancier si des échéances sont fournies
                 if echeances_data and isinstance(echeances_data, list):
+                    # Calculer les montants totaux des devis ajoutés
+                    from decimal import Decimal
+                    montant_devis_ht = sum(Decimal(str(devis.montant_ht)) for devis in devis_list)
+                    montant_devis_tva = sum(Decimal(str(devis.montant_tva)) for devis in devis_list)
+                    montant_devis_ttc = sum(Decimal(str(devis.montant_ttc)) for devis in devis_list)
+
                     # Vérifier si c'est le premier échéancier ou une extension
                     is_first_echeance = not contrat.echeances.exists()
-
                     # Créer le nouvel échéancier (header)
                     nouvel_echeancier = EcheancierContrat.objects.create(
                         contrat=contrat,
@@ -648,18 +653,20 @@ class ContratViewSet(viewsets.ModelViewSet):
                             'devis_ajoutes': [d.numero for d in devis_list],
                             'devis_ids': [d.id for d in devis_list],
                             'montant_contrat': float(contrat.montant_ttc),
+                            'montant_devis_ht': float(montant_devis_ht),
+                            'montant_devis_tva': float(montant_devis_tva),
+                            'montant_devis_ttc': float(montant_devis_ttc),
                             'montant_anterieur': float(montant_ttc_avant) if not is_first_echeance else 0,
                         }
                     )
                     # Créer les lignes d'échéancier
                     for echeance_config in echeances_data:
                         try:
-                            # Calculer les montants
-                            from decimal import Decimal
+                            # Calculer les montants basés sur les montants des devis ajoutés
                             pourcentage = Decimal(str(echeance_config.get('pourcentage', 0)))
-                            montant_ht = (contrat.montant_ht * pourcentage) / 100
-                            montant_tva = (contrat.montant_tva * pourcentage) / 100
-                            montant_ttc = (contrat.montant_ttc * pourcentage) / 100
+                            montant_ht = (montant_devis_ht * pourcentage) / 100
+                            montant_tva = (montant_devis_tva * pourcentage) / 100
+                            montant_ttc = (montant_devis_ttc * pourcentage) / 100
 
                             # Créer la ligne d'échéancier
                             LigneEcheancierContrat.objects.create(

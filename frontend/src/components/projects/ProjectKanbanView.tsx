@@ -11,13 +11,17 @@ import {
   Play,
   Eye,
   UserPlus,
-  GripVertical
+  GripVertical,
+  View
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { TaskModal } from '../TaskModal';
 import { StartTaskProjectModal } from '../StartTaskProjectModal';
 import type { ProjectTask } from '@/lib/types';
+import { TaskDetailModal } from './TaskDetailModal';
+import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
+import { toast } from 'sonner';
 
 interface ProjectKanbanViewProps {
   tasks: ProjectTask[];
@@ -66,6 +70,10 @@ const columns: KanbanColumn[] = [
 
 export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: ProjectKanbanViewProps) {
   const [draggedTask, setDraggedTask] = useState<ProjectTask | null>(null);
+  const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<any>(null);
+  const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+
+  const { updateTaskStatus } = useProjectLifecycle(projectId);
 
   const getTasksByStatus = (status: string) => {
     return tasks?.filter(task => task.status === status) || [];
@@ -86,10 +94,24 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
   const handleDrop = async (status: string) => {
     if (!draggedTask) return;
 
-    // TODO: Appeler l'API pour mettre à jour le statut
-    console.log(`Moving task ${draggedTask.id} to ${status}`);
+    // Ne rien faire si la tâche est déjà dans ce statut
+    if (draggedTask.status === status) {
+      setDraggedTask(null);
+      return;
+    }
 
-    setDraggedTask(null);
+    try {
+      await updateTaskStatus(
+        Number(draggedTask.id),
+        status as 'À faire' | 'En cours' | 'En pause' | 'Terminé'
+      );
+      toast.success(`Tâche déplacée vers "${status}"`);
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      toast.error('Erreur lors de la mise à jour du statut');
+    } finally {
+      setDraggedTask(null);
+    }
   };
 
   const renderTask = (task: ProjectTask) => {
@@ -155,7 +177,7 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
               {task.estimated_hours && (
                 <div className="flex items-center gap-1 bg-gray-100 rounded px-2 py-1">
                   <Clock className="h-3 w-3" />
-                  <span>{task.estimated_hours / 8}J</span>
+                  <span>{(task.estimated_hours / 8).toFixed(1)}J</span>
                 </div>
               )}
             </div>
@@ -188,12 +210,17 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
                   </Button>
                 </TaskModal>
               )}
-
-              <TaskModal projectId={projectId} task={extendedTask} mode="view">
-                <Button variant="ghost" size="sm" className="h-7 px-2">
-                  <Eye className="h-3 w-3" />
-                </Button>
-              </TaskModal>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedTaskForDetails(extendedTask);
+                  setIsTaskDetailOpen(true);
+                }}
+                className="h-7 px-2"
+              >
+                <View className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardContent>
@@ -202,46 +229,56 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {columns.map((column) => {
-        const columnTasks = getTasksByStatus(column.status);
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {columns.map((column) => {
+          const columnTasks = getTasksByStatus(column.status);
 
-        return (
-          <div
-            key={column.id}
-            className="flex flex-col"
-            onDragOver={handleDragOver}
-            onDrop={() => handleDrop(column.status)}
-          >
-            {/* En-tête de colonne */}
-            <Card className={`${column.bgColor} border-2`}>
-              <CardHeader className="p-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className={`text-sm font-semibold ${column.color}`}>
-                    {column.title}
-                  </CardTitle>
-                  <Badge variant="secondary" className="ml-2">
-                    {columnTasks.length}
-                  </Badge>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Liste des tâches */}
-            <ScrollArea className="flex-1 mt-4" style={{ maxHeight: 'calc(100vh - 300px)' }}>
-              <div className="pr-4">
-                {columnTasks.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-gray-400">
-                    <p>Aucune tâche</p>
+          return (
+            <div
+              key={column.id}
+              className="flex flex-col"
+              onDragOver={handleDragOver}
+              onDrop={() => handleDrop(column.status)}
+            >
+              {/* En-tête de colonne */}
+              <Card className={`${column.bgColor} border-2`}>
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className={`text-sm font-semibold ${column.color}`}>
+                      {column.title}
+                    </CardTitle>
+                    <Badge variant="secondary" className="ml-2">
+                      {columnTasks.length}
+                    </Badge>
                   </div>
-                ) : (
-                  columnTasks.map(renderTask)
-                )}
-              </div>
-            </ScrollArea>
-          </div>
-        );
-      })}
-    </div>
+                </CardHeader>
+              </Card>
+
+              {/* Liste des tâches */}
+              <ScrollArea className="flex-1 mt-4" style={{ maxHeight: 'calc(100vh - 300px)' }}>
+                <div className="pr-4">
+                  {columnTasks.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-gray-400">
+                      <p>Aucune tâche</p>
+                    </div>
+                  ) : (
+                    columnTasks.map(renderTask)
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Task Detail Modal - Rendue une seule fois pour toutes les tâches */}
+      <TaskDetailModal
+        task={selectedTaskForDetails}
+        projectId={projectId}
+        open={isTaskDetailOpen}
+        onOpenChange={setIsTaskDetailOpen}
+      />
+    </>
   );
 }
