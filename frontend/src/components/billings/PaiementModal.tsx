@@ -146,7 +146,7 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
                 appLabel="billings"
                 fieldName="montant_ttc"
                 mode="hide"
-                fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                fallback={<div className="text-gray-400 italic">Non autorisé</div>}
               >
                 <span className="text-sm font-semibold">{formatMontant(facture.montant_ttc)}</span>
               </ProtectedField>
@@ -158,7 +158,7 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
                 appLabel="billings"
                 fieldName="montant_paye"
                 mode="hide"
-                fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                fallback={<div className="text-gray-400 italic">Non autorisé</div>}
               >
                 <span className="text-sm">{formatMontant(facture.montant_paye)}</span>
               </ProtectedField>
@@ -171,7 +171,7 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
                   appLabel="billings"
                   fieldName="montant_restant"
                   mode="hide"
-                  fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                 >
                   {formatMontant(facture.montant_restant)}
                 </ProtectedField>

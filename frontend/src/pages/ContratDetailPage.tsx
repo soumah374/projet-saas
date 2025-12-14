@@ -889,59 +889,59 @@ export function ContratDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
-                  <p className="text-lg font-bold">
+                  <div className="text-lg font-bold">
                     <ProtectedField
                       modelName="contrat"
                       appLabel="contrats"
                       fieldName="montant_ht"
                       mode="hide"
-                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                     >
                       {formatMontant(contrat.montant_ht)}
                     </ProtectedField>
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TVA</Label>
-                  <p className="text-lg font-bold">
+                  <div className="text-lg font-bold">
                     <ProtectedField
                       modelName="contrat"
                       appLabel="contrats"
                       fieldName="montant_frais_agence"
                       mode="hide"
-                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                     >
                       {formatMontant(contrat.montant_tva)}
                     </ProtectedField>
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant Frais d'Agence</Label>
-                  <p className="text-lg font-bold">
+                  <div className="text-lg font-bold">
                     <ProtectedField
                       modelName="contrat"
                       appLabel="contrats"
                       fieldName="montant_frais_agence"
                       mode="hide"
-                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                     >
                       {formatMontant(contrat.montant_frais_agence)}
                     </ProtectedField>
-                  </p>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
-                  <p className="text-lg font-bold text-blue-600">
+                  <div className="text-lg font-bold text-blue-600">
                       <ProtectedField
                         modelName="contrat"
                         appLabel="contrats"
                         fieldName="montant_ht"
                         mode="hide"
-                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                       >
                         {formatMontant(contrat.montant_ttc)}
                       </ProtectedField>
-                    </p>
+                    </div>
                 </div>
               </div>
             </CardContent>
@@ -1104,7 +1104,15 @@ export function ContratDetailPage() {
                                   {echeancier.nombre_lignes} échéance{echeancier.nombre_lignes > 1 ? 's' : ''}
                                 </div>
                                 <div className="font-semibold text-blue-900">
+                                  <ProtectedField
+                                    modelName="echeancierContrat"
+                                    appLabel="contrats"
+                                    fieldName="montant_total"
+                                    mode="hide"
+                                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                                  >
                                   {formatMontant(echeancier.montant_total)}
+                                  </ProtectedField>
                                 </div>
                               </div>
                               {/* Bouton pour générer les factures de cet échéancier */}
@@ -1157,7 +1165,15 @@ export function ContratDetailPage() {
                           <div className="bg-white p-3 rounded border">
                             <span className="text-gray-500 text-xs uppercase tracking-wide">Montant TTC</span>
                             <div className="font-bold text-lg text-blue-600">
+                              <ProtectedField
+                                modelName="ligneecheanciercontrat"
+                                appLabel="contrats"
+                                fieldName="montant_ttc"
+                                mode="hide"
+                                fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                              >
                               {formatMontant(echeance.montant_ttc)}
+                              </ProtectedField>
                             </div>
                           </div>
                           <div className="bg-white p-3 rounded border">
@@ -1291,25 +1307,28 @@ export function ContratDetailPage() {
                         <TableCell>{ligne.activity?.intitule || ligne.ligne_frais?.type_frais || '—'}</TableCell>
                         <TableCell>{ligne.quantite}</TableCell>
                         <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
-                        <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
-                        <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
-                        {/* <TableCell>
-                          {ligne.intervenants && ligne.intervenants.length > 0 ? (
-                            <div className="space-y-1">
-                              {ligne.intervenants.map((intervenant) => (
-                                <div key={intervenant.id} className="text-sm">
-                                  <span className="font-medium">{intervenant.profile_intervenant?.intitule || '—'}</span>
-                                  <br />
-                                  <span className="text-gray-600">
-                                    {intervenant.temps_intervenant || 0}h × {formatMontant(intervenant.taux_horaire || 0)}/h
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">-</span>
-                          )}
-                        </TableCell> */}
+                        <TableCell>
+                          <ProtectedField
+                            modelName="lignecontrat"
+                            appLabel="contrats"
+                            fieldName="prix_unitaire_ht"
+                            mode="hide"
+                            fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                          >
+                          {formatMontant(ligne.prix_unitaire_ht)}
+                          </ProtectedField>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <ProtectedField
+                            modelName="lignecontrat"
+                            appLabel="contrats"
+                            fieldName="prix_unitaire_ht"
+                            mode="hide"
+                            fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                          >
+                          {formatMontant(ligne.montant_ht)}
+                          </ProtectedField>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1428,16 +1447,48 @@ export function ContratDetailPage() {
                         {historique.description}
                       </TableCell>
                       <TableCell className="font-medium right-align">
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ht_avant"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
                         {formatMontant(historique.montant_ht_avant)}
+                        </ProtectedField>
                       </TableCell>
                       <TableCell className="font-medium right-align">
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ht_apres"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
                         {formatMontant(historique.montant_ht_apres)}
+                        </ProtectedField>
                       </TableCell>
                       <TableCell className="font-medium right-align">
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ttc_avant"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
                         {formatMontant(historique.montant_ttc_avant)}
+                        </ProtectedField>
                       </TableCell>
                       <TableCell className="font-medium right-align">
-                        {formatMontant(historique.montant_ttc_apres)}
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ttc_apres"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
+                          {formatMontant(historique.montant_ttc_apres)}
+                        </ProtectedField>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1552,7 +1603,15 @@ export function ContratDetailPage() {
                         <div className="text-right">
                           <div className="text-lg font-bold text-blue-600">{echeance.pourcentage}%</div>
                           <div className="text-sm text-gray-500">
-                            {formatMontant((contrat.montant_ttc * echeance.pourcentage) / 100)}
+                            <ProtectedField
+                              modelName="contrat"
+                              appLabel="contrats"
+                              fieldName="montant_ttc"
+                              mode="hide"
+                              fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                            >
+                              {formatMontant((contrat.montant_ttc * echeance.pourcentage) / 100)}
+                            </ProtectedField>
                           </div>
                         </div>
                       </div>
@@ -1568,7 +1627,16 @@ export function ContratDetailPage() {
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-bold text-green-600">
-                        {formatMontant(contrat.montant_ttc)}
+                        <ProtectedField
+                          modelName="contrat"
+                          appLabel="contrats"
+                          fieldName="montant_ttc"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
+                          {formatMontant(contrat.montant_ttc)}
+
+                        </ProtectedField>
                       </div>
                     </div>
                   </div>
@@ -1589,7 +1657,17 @@ export function ContratDetailPage() {
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="font-medium">Contrat {contrat.numero}</p>
               <p className="text-gray-600">Client: {contrat.client.nom_complet}</p>
-              <p className="text-gray-600">Montant TTC: {formatMontant(contrat.montant_ttc)}</p>
+              <p className="text-gray-600">Montant TTC: 
+                <ProtectedField
+                  modelName="contrat"
+                  appLabel="contrats"
+                  fieldName="montant_ttc"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                {formatMontant(contrat.montant_ttc)}
+                </ProtectedField>
+              </p>
             </div>
           </div>
           <DialogFooter className="border-t pt-4">

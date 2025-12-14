@@ -408,7 +408,7 @@ export function ContratsPage() {
                         appLabel="contrats"
                         fieldName="montant_ht"
                         mode="hide"
-                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                       >
                         {formatMontant(contrat.montant_ht)}
                       </ProtectedField>
@@ -419,7 +419,7 @@ export function ContratsPage() {
                         appLabel="contrats"
                         fieldName="appliquer_tva"
                         mode="hide"
-                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                       >
                         {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
                       </ProtectedField>
@@ -430,7 +430,7 @@ export function ContratsPage() {
                         appLabel="contrats"
                         fieldName="appliquer_frais_agence"
                         mode="hide"
-                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                       >
                         {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
                       </ProtectedField>
@@ -441,11 +441,10 @@ export function ContratsPage() {
                         appLabel="contrats"
                         fieldName="montant_ttc"
                         mode="hide"
-                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                       >
                         {formatMontant(contrat.montant_ttc)}
                       </ProtectedField>
-                     
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>

@@ -22,6 +22,7 @@ import { formatMontant } from '@/lib/formatters';
 import { generateMinimalDevisPDF } from '@/lib/pdfUtils';
 import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ProtectedField } from '@/components/field-permissions/ProtectedField';
 
 export function DevisPage() {
   const navigate = useNavigate();
@@ -116,27 +117,6 @@ export function DevisPage() {
     }
   };
 
-  // const handleOpenDialog = (devis?: Devis) => {
-  //   if (devis) {
-  //     setEditDevis(devis);
-  //     setForm({
-  //       client_id: devis.client.id.toString(),
-  //       date_validite: devis.date_validite,
-  //       notes: devis.notes,
-  //       conditions: devis.conditions,
-  //     });
-  //   } else {
-  //     setEditDevis(null);
-  //     setForm({
-  //       client_id: '',
-  //       date_validite: '',
-  //       notes: '',
-  //       conditions: '',
-  //     });
-  //   }
-  //   setDialogOpen(true);
-  // };
-
   const handleCloseDialog = () => {
     setDialogOpen(false);
     setEditDevis(null);
@@ -147,47 +127,6 @@ export function DevisPage() {
       conditions: '',
     });
   };
-
-  // const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-  //   setForm({ ...form, [e.target.name]: e.target.value });
-  // };
-
-  // const handleSelectChange = (name: string, value: string) => {
-  //   setForm({ ...form, [name]: value });
-  // };
-
-  // const handleSave = async () => {
-  //   if (editDevis) {
-  //     // Edition
-  //     try {
-  //       await updateDevisMutation.mutateAsync({
-  //         id: editDevis.id,
-  //         data: {
-  //           client_id: parseInt(form.client_id),
-  //           date_validite: form.date_validite,
-  //           notes: form.notes,
-  //           conditions: form.conditions,
-  //         }
-  //       });
-  //       handleCloseDialog();
-  //     } catch (err) {
-  //       // Les erreurs sont gérées par les hooks
-  //     }
-  //   } else {
-  //     // Création
-  //     try {
-  //       await createDevisMutation.mutateAsync({
-  //         client_id: parseInt(form.client_id),
-  //         date_validite: form.date_validite,
-  //         notes: form.notes,
-  //         conditions: form.conditions,
-  //       });
-  //       handleCloseDialog();
-  //     } catch (err) {
-  //       // Les erreurs sont gérées par les hooks
-  //     }
-  //   }
-  // };
 
   const handleDelete = async (devis: Devis) => {
     try {
@@ -488,7 +427,17 @@ export function DevisPage() {
                       <TableCell>{new Date(devis.date_creation).toLocaleDateString()}</TableCell>
                       <TableCell>{new Date(devis.date_validite).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatutBadge(devis.statut)}</TableCell>
-                      <TableCell>{formatMontant(devis.montant_ttc)}</TableCell>
+                      <TableCell>
+                        <ProtectedField
+                          modelName="devis"
+                          appLabel="devis"
+                          fieldName="montant_ttc"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
+                        {formatMontant(devis.montant_ttc)}
+                        </ProtectedField>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
                           <Button size="icon" variant="ghost" asChild>

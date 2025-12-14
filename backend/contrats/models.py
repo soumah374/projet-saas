@@ -133,10 +133,6 @@ class Contrat(models.Model):
     
     def creer_echeances_depuis_configuration(self):
         """Crée les échéances à partir de la configuration JSON"""
-        
-        print("=========Echeances Contrat ======", self.echeances_contrat)
-        print("=========Echeances Contrat ======", isinstance(self.echeances_contrat, list))
-        
         if not self.echeances_contrat or not isinstance(self.echeances_contrat, list):
             return
         # Vérifier si c'est le premier échéancier ou une extension

@@ -482,7 +482,7 @@ export const FacturesPage: React.FC = () => {
                                 appLabel="billings"
                                 fieldName="montant_ttc"
                                 mode="hide"
-                                fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                                fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                               >
                                 {formatMontant(facture.montant_ttc || 0)}
                               </ProtectedField>

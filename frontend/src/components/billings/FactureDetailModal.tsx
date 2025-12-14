@@ -204,7 +204,7 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                       appLabel="billings"
                       fieldName="montant_ht"
                       mode="hide"
-                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                     >
                       {formatMontant(facture.montant_ht)}
                     </ProtectedField>
@@ -218,7 +218,7 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                       appLabel="billings"
                       fieldName="montant_tva"
                       mode="hide"
-                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                     >
                       {formatMontant(facture.montant_tva)}
                     </ProtectedField>
@@ -232,7 +232,7 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                       appLabel="billings"
                       fieldName="montant_ttc"
                       mode="hide"
-                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                     >
                       {formatMontant(facture.montant_ttc)}
                     </ProtectedField>
@@ -246,7 +246,7 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                       appLabel="billings"
                       fieldName="montant_restant"
                       mode="hide"
-                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                     >
                       {formatMontant(facture.montant_restant)}
                     </ProtectedField>
@@ -278,7 +278,7 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                             appLabel="billings"
                             fieldName="prix_unitaire_ht"
                             mode="hide"
-                            fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                            fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                           >
                           {ligne.quantite} x {formatMontant(ligne.prix_unitaire_ht)}
                           </ProtectedField>
@@ -291,7 +291,7 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                             appLabel="billings"
                             fieldName="montant_ht"
                             mode="hide"
-                            fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                            fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                           >
                           {formatMontant(ligne.montant_ht)}
                           </ProtectedField>

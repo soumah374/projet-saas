@@ -3,6 +3,7 @@
 ## Vue d'ensemble
 
 Le système de permissions par champ permet de contrôler finement qui peut voir et modifier chaque champ de vos modèles Django. Les permissions peuvent être accordées au niveau:
+
 - **Utilisateur** : Permission pour un utilisateur spécifique
 - **Groupe** : Permission pour tous les utilisateurs d'un groupe
 - **Modèle** : Permission pour tous les objets d'un modèle
@@ -13,8 +14,8 @@ Le système de permissions par champ permet de contrôler finement qui peut voir
 ### 1. Protéger un champ simple
 
 ```tsx
-import { ProtectedField } from '@/components/field-permissions/ProtectedField';
-import { Input } from '@/components/ui/input';
+import { ProtectedField } from "@/components/field-permissions/ProtectedField";
+import { Input } from "@/components/ui/input";
 
 function ContratForm({ contratId }) {
   return (
@@ -24,8 +25,23 @@ function ContratForm({ contratId }) {
         modelName="contrat"
         appLabel="contrats"
         fieldName="montant_ttc"
+        mode="hide"
+        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+      >
+        <div>
+          <label>Montant TTC</label>
+          <Input name="montant_ttc" />
+        </div>
+      </ProtectedField>
+
+      {/* Champ visible uniquement si l'utilisateur a la permission de lecture */}
+      <ProtectedField
+        modelName="contrat"
+        appLabel="contrats"
+        fieldName="montant_ttc"
         objectId={contratId}
         mode="hide"
+        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
       >
         <div>
           <label>Montant TTC</label>
@@ -68,7 +84,7 @@ function ContratForm({ contratId }) {
 ### 2. Protéger une section entière
 
 ```tsx
-import { ProtectedSection } from '@/components/field-permissions/ProtectedField';
+import { ProtectedSection } from "@/components/field-permissions/ProtectedField";
 
 function ContratDetail({ contratId }) {
   return (
@@ -77,7 +93,7 @@ function ContratDetail({ contratId }) {
       <ProtectedSection
         modelName="contrat"
         appLabel="contrats"
-        fields={['montant_ht', 'montant_tva', 'montant_ttc']}
+        fields={["montant_ht", "montant_tva", "montant_ttc"]}
         objectId={contratId}
         requireAllFields={false}
       >
@@ -100,13 +116,13 @@ function ContratDetail({ contratId }) {
 ### 3. Utiliser le hook pour vérifier manuellement
 
 ```tsx
-import { useFieldAccess } from '@/hooks/use-field-permissions';
+import { useFieldAccess } from "@/hooks/use-field-permissions";
 
 function CustomComponent({ contratId }) {
   const { canRead, canWrite, isLoading } = useFieldAccess(
-    'contrat',
-    'contrats',
-    'montant_ttc',
+    "contrat",
+    "contrats",
+    "montant_ttc",
     contratId
   );
 
@@ -124,13 +140,13 @@ function CustomComponent({ contratId }) {
 ### 4. Vérifier plusieurs champs à la fois
 
 ```tsx
-import { useMultipleFieldAccess } from '@/hooks/use-field-permissions';
+import { useMultipleFieldAccess } from "@/hooks/use-field-permissions";
 
 function MultiFieldComponent({ contratId }) {
   const { fieldsAccess, isLoading } = useMultipleFieldAccess(
-    'contrat',
-    'contrats',
-    ['montant_ht', 'montant_tva', 'montant_ttc', 'date_debut', 'date_fin'],
+    "contrat",
+    "contrats",
+    ["montant_ht", "montant_tva", "montant_ttc", "date_debut", "date_fin"],
     contratId
   );
 
@@ -139,8 +155,12 @@ function MultiFieldComponent({ contratId }) {
   return (
     <div>
       {fieldsAccess.montant_ht.canRead && <div>HT: {contrat.montant_ht}</div>}
-      {fieldsAccess.montant_tva.canRead && <div>TVA: {contrat.montant_tva}</div>}
-      {fieldsAccess.montant_ttc.canRead && <div>TTC: {contrat.montant_ttc}</div>}
+      {fieldsAccess.montant_tva.canRead && (
+        <div>TVA: {contrat.montant_tva}</div>
+      )}
+      {fieldsAccess.montant_ttc.canRead && (
+        <div>TTC: {contrat.montant_ttc}</div>
+      )}
 
       {fieldsAccess.date_debut.canWrite && (
         <Input type="date" name="date_debut" />
@@ -153,14 +173,14 @@ function MultiFieldComponent({ contratId }) {
 ### 5. Afficher un indicateur de permission
 
 ```tsx
-import { FieldPermissionIndicator } from '@/components/field-permissions/ProtectedField';
-import { useFieldAccess } from '@/hooks/use-field-permissions';
+import { FieldPermissionIndicator } from "@/components/field-permissions/ProtectedField";
+import { useFieldAccess } from "@/hooks/use-field-permissions";
 
 function FieldWithIndicator({ contratId }) {
   const { canRead, canWrite } = useFieldAccess(
-    'contrat',
-    'contrats',
-    'montant_ttc',
+    "contrat",
+    "contrats",
+    "montant_ttc",
     contratId
   );
 
@@ -185,8 +205,8 @@ const createPermission = useCreateFieldPermission();
 createPermission.mutate({
   user: 5,
   content_type: 12, // ID du ContentType pour "contrats.Contrat"
-  field_name: 'montant_ttc',
-  permission: 'read',
+  field_name: "montant_ttc",
+  permission: "read",
 });
 ```
 
@@ -197,8 +217,8 @@ createPermission.mutate({
 createPermission.mutate({
   group: 3,
   content_type: 12,
-  field_name: 'conditions',
-  permission: 'write',
+  field_name: "conditions",
+  permission: "write",
   // Pas d'object_id = s'applique à tous les objets
 });
 ```
@@ -210,9 +230,9 @@ createPermission.mutate({
 createPermission.mutate({
   user: 5,
   content_type: 12,
-  field_name: 'montant_ttc',
+  field_name: "montant_ttc",
   object_id: 42,
-  permission: 'read',
+  permission: "read",
 });
 ```
 
@@ -337,7 +357,7 @@ perm.delete()  # À faire dans une tâche planifiée
 Pour gérer les permissions via l'interface:
 
 ```tsx
-import { FieldPermissionsManager } from '@/components/field-permissions/FieldPermissionsManager';
+import { FieldPermissionsManager } from "@/components/field-permissions/FieldPermissionsManager";
 
 function AdminPage() {
   return (

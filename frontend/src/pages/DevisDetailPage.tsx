@@ -44,6 +44,7 @@ import { DevisDetailModals } from '@/components/devis/DevisDetailModals';
 import type { LigneFrais } from '@/lib/types';
 import { useEnvoyerEmailPDF } from '@/hooks/use-devis';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ProtectedField } from '@/components/field-permissions/ProtectedField';
 interface LigneForm {
   type_ligne: 'prestation' | 'frais' | '';
   type_frais?: 'standard' | 'forfait' | 'offert';
@@ -507,23 +508,63 @@ export function DevisDetailPage() {
             </div>
             <div>
               <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
-              <p className="font-medium">{formatMontant(devis.montant_ht)}</p>
+              <div className="font-medium">
+                <ProtectedField
+                  modelName="devis"
+                  appLabel="devis"
+                  fieldName="montant_ht"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                  {formatMontant(devis.montant_ht)}
+                </ProtectedField>
+              </div>
             </div>
             {devis.appliquer_tva && (
               <div>
                 <Label className="text-sm font-medium text-gray-600">TVA ({devis.taux_tva}%)</Label>
-                <p className="font-medium">{formatMontant(devis.montant_tva)}</p>
+                <div className="font-medium">
+                  <ProtectedField
+                    modelName="devis"
+                    appLabel="devis"
+                    fieldName="montant_tva"
+                    mode="hide"
+                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                  >
+                  {formatMontant(devis.montant_tva)}
+                  </ProtectedField>
+                </div>
               </div>
             )}
             {devis.appliquer_frais_agence && (
               <div>
                 <Label className="text-sm font-medium text-gray-600">Frais d'agence ({devis.taux_frais_agence}%)</Label>
-                <p className="font-medium">{formatMontant(devis.montant_frais_agence || 0)}</p>
+                <div className="font-medium">
+                  <ProtectedField
+                    modelName="devis"
+                    appLabel="devis"
+                    fieldName="montant_frais_agence"
+                    mode="hide"
+                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                  >
+                    {formatMontant(devis.montant_frais_agence || 0)}
+                  </ProtectedField>
+                </div>
               </div>
             )}
             <div>
               <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
-              <p className="font-medium text-lg">{formatMontant(devis.montant_ttc)}</p>
+              <div className="font-medium text-lg">
+                <ProtectedField
+                  modelName="devis"
+                  appLabel="devis"
+                  fieldName="montant_frais_agence"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                  {formatMontant(devis.montant_ttc)}
+                </ProtectedField>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -561,8 +602,28 @@ export function DevisDetailPage() {
                     <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
                     <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
-                    <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
-                    <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
+                    <TableCell>
+                      <ProtectedField
+                        modelName="lignedevis"
+                        appLabel="devis"
+                        fieldName="prix_unitaire_ht"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                      >
+                        {formatMontant(ligne.prix_unitaire_ht)}
+                      </ProtectedField>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <ProtectedField
+                        modelName="lignedevis"
+                        appLabel="devis"
+                        fieldName="montant_ht"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                      >
+                      {formatMontant(ligne.montant_ht)}
+                      </ProtectedField>
+                    </TableCell>
                     {devis.statut === 'brouillon' && (
                       <TableCell>
                         <Button 

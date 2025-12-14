@@ -87,11 +87,10 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
     if (path.includes('/clients') || path.includes('/categories-clients')) {
       setOpenMenus(prev => ({ ...prev, clients: true }));
     }
-    
-            // Administration menu
-            if (path.includes('/users') || path.includes('/permissions') || path.includes('/dashboard-manager') || path.includes('/email-templates') || path.includes('/app-config')) {
-              setOpenMenus(prev => ({ ...prev, administration: true }));
-            }
+      // Administration menu
+      if (path.includes('/users') || path.includes('/permissions') || path.includes('/dashboard-manager') || path.includes('/email-templates') || path.includes('/app-config')) {
+        setOpenMenus(prev => ({ ...prev, administration: true }));
+      }
   }, [location.pathname]);
 
 
