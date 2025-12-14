@@ -352,10 +352,10 @@ class FieldPermissionSerializer(serializers.ModelSerializer):
         return obj.content_type.model if obj.content_type else None
 
     def validate(self, attrs):
-        # Vérifier qu'au moins user
+        # Vérifier que user est spécifié
         if not attrs.get('user'):
             raise serializers.ValidationError(
-                "Vous devez spécifier soit un utilisateur, soit un groupe"
+                "Vous devez spécifier un utilisateur"
             )
         return attrs
 
@@ -364,24 +364,25 @@ class FieldPermissionCreateSerializer(serializers.ModelSerializer):
     """Serializer pour créer des permissions par champ"""
     user = serializers.PrimaryKeyRelatedField(
         queryset=User.objects.all(),
-        required=False,
-        allow_null=True
+        required=True
     )
-    object_id = serializers.IntegerField(required=False, allow_null=True, default=None)
-
+    # object_id = serializers.IntegerField(required=False, allow_null=True)
 
     class Meta:
         model = FieldPermission
         fields = ['user', 'content_type', 'field_name', 'object_id', 'permission']
-
+    
     def create(self, validated_data):
-        """
-        S'assure que les champs non fournis sont explicitement définis comme None
-        """
-        if 'user' not in validated_data:
-            validated_data['user'] = None
-            
-        return super().create(validated_data)
+        """Créer une permission par champ"""
+        return FieldPermission.objects.create(**validated_data)
+
+    def validate(self, attrs):
+        # Vérifier que user est spécifié
+        if not attrs.get('user'):
+            raise serializers.ValidationError({
+                'user': "Vous devez spécifier un utilisateur"
+            })
+        return attrs
 
 class UserFieldPermissionsSerializer(serializers.Serializer):
     """Serializer pour retourner les permissions d'un utilisateur pour un modèle"""

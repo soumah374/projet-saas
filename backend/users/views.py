@@ -1122,8 +1122,6 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 })
             
             return Response({
-                'group_id': group.id,
-                'group_name': group.name,
                 'users': users_data,
                 'total_count': len(users_data)
             })
@@ -1151,10 +1149,61 @@ class FieldPermissionViewSet(viewsets.ModelViewSet):
     ordering = ['id']
     
     def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
+        if self.action in ['create', 'update', 'partial_update', 'bulk_create']:
             return FieldPermissionCreateSerializer
         return FieldPermissionSerializer
-    
+
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """Créer plusieurs permissions en masse"""
+        permissions_data = request.data
+
+        if not isinstance(permissions_data, list):
+            return Response(
+                {'error': 'Les données doivent être un tableau de permissions'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created_permissions = []
+        errors = []
+
+        for perm_data in permissions_data:
+            # Supprimer les permissions existantes pour éviter les duplicatas
+            FieldPermission.objects.filter(
+                user_id=perm_data.get('user'),
+                content_type_id=perm_data.get('content_type'),
+                field_name=perm_data.get('field_name'),
+                permission=perm_data.get('permission'),
+            ).delete()
+
+            serializer = FieldPermissionCreateSerializer(data=perm_data)
+            if serializer.is_valid():
+                try:
+                    permission = serializer.save()
+                    created_permissions.append(permission)
+                except Exception as e:
+                    errors.append({
+                        'data': perm_data,
+                        'error': str(e)
+                    })
+            else:
+                errors.append({
+                    'data': perm_data,
+                    'errors': serializer.errors
+                })
+
+        response_data = {
+            'created': len(created_permissions),
+            'errors': len(errors),
+            'permissions': FieldPermissionSerializer(created_permissions, many=True).data
+        }
+
+        if errors:
+            response_data['error_details'] = errors
+
+        status_code = status.HTTP_201_CREATED if created_permissions else status.HTTP_400_BAD_REQUEST
+        return Response(response_data, status=status_code)
+
     @action(detail=False, methods=['get'])
     def my_permissions(self, request):
         """Retourne toutes les permissions de l'utilisateur connecté"""
@@ -1163,12 +1212,9 @@ class FieldPermissionViewSet(viewsets.ModelViewSet):
         # Permissions directes de l'utilisateur
         user_perms = FieldPermission.objects.filter(user=user)
         
-        # Permissions via les groupes
-        group_ids = user.groups.all().values_list('id', flat=True)
-        group_perms = FieldPermission.objects.filter(group_id__in=group_ids)
-        
+    
         # Combiner les deux
-        all_perms = user_perms | group_perms
+        all_perms = user_perms
         all_perms = all_perms.distinct()
         
         serializer = self.get_serializer(all_perms, many=True)
@@ -1325,3 +1371,61 @@ class FieldPermissionViewSet(viewsets.ModelViewSet):
                 continue
         
         return Response(models_data)
+
+    @action(detail=False, methods=['get'], url_path='model-objects/(?P<content_type_id>[^/.]+)')
+    def model_objects(self, request, content_type_id=None):
+        """
+        Retourne les objets d'un modèle spécifique (par content_type ID).
+        Supporte la recherche via le paramètre ?search=...
+        """
+        from django.contrib.contenttypes.models import ContentType
+        from django.db.models import Q
+
+        try:
+            content_type = ContentType.objects.get(pk=content_type_id)
+            model_class = content_type.model_class()
+
+            if not model_class:
+                return Response(
+                    {'error': 'Modèle non trouvé'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Récupérer tous les objets du modèle
+            queryset = model_class.objects.all()
+
+            # Appliquer la recherche si fournie
+            search = request.query_params.get('search', '')
+            if search:
+                # Chercher dans les champs textuels du modèle
+                search_fields = []
+                for field in model_class._meta.get_fields():
+                    if field.__class__.__name__ in ['CharField', 'TextField']:
+                        search_fields.append(field.name)
+
+                if search_fields:
+                    query = Q()
+                    for field_name in search_fields:
+                        query |= Q(**{f'{field_name}__icontains': search})
+                    queryset = queryset.filter(query)
+
+            # Limiter à 50 résultats
+            queryset = queryset[:50]
+
+            # Formater les résultats
+            objects_data = []
+            for obj in queryset:
+                # Utiliser __str__ du modèle pour l'affichage
+                display = str(obj)
+                objects_data.append({
+                    'id': obj.pk,
+                    'display': display
+                })
+
+            return Response(objects_data)
+
+        except ContentType.DoesNotExist:
+            return Response(
+                {'error': 'Content type non trouvé'},
+                status=status.HTTP_404_NOT_FOUND
+            )

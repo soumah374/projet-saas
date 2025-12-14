@@ -25,6 +25,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Facture } from '@/hooks/use-factures';
+import { ProtectedField } from '../field-permissions/ProtectedField';
 
 interface FactureDetailModalProps {
   facture: Facture | null;
@@ -198,25 +199,57 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center">
                   <div className="text-lg font-bold text-gray-600">
-                    {formatMontant(facture.montant_ht)}
+                    <ProtectedField
+                      modelName="facture"
+                      appLabel="billings"
+                      fieldName="montant_ht"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                    >
+                      {formatMontant(facture.montant_ht)}
+                    </ProtectedField>
                   </div>
                   <div className="text-xs text-muted-foreground">Montant HT</div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-bold text-gray-600">
-                    {formatMontant(facture.montant_tva)}
+                    <ProtectedField
+                      modelName="facture"
+                      appLabel="billings"
+                      fieldName="montant_tva"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                    >
+                      {formatMontant(facture.montant_tva)}
+                    </ProtectedField>
                   </div>
                   <div className="text-xs text-muted-foreground">TVA ({facture.taux_tva}%)</div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-bold text-green-600">
-                    {formatMontant(facture.montant_ttc)}
+                    <ProtectedField
+                      modelName="facture"
+                      appLabel="billings"
+                      fieldName="montant_ttc"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                    >
+                      {formatMontant(facture.montant_ttc)}
+                    </ProtectedField>
                   </div>
                   <div className="text-xs text-muted-foreground">Montant TTC</div>
                 </div>
                 <div className="text-center">
                   <div className="text-lg font-bold text-orange-600">
-                    {formatMontant(facture.montant_restant)}
+                    <ProtectedField
+                      modelName="facture"
+                      appLabel="billings"
+                      fieldName="montant_restant"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                    >
+                      {formatMontant(facture.montant_restant)}
+                    </ProtectedField>
                   </div>
                   <div className="text-xs text-muted-foreground">Restant</div>
                 </div>
@@ -240,11 +273,29 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                       <div className="flex-1">
                         <div className="font-medium">{ligne.description}</div>
                         <div className="text-sm text-muted-foreground">
+                          <ProtectedField
+                            modelName="ligne"
+                            appLabel="billings"
+                            fieldName="prix_unitaire_ht"
+                            mode="hide"
+                            fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                          >
                           {ligne.quantite} x {formatMontant(ligne.prix_unitaire_ht)}
+                          </ProtectedField>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold">{formatMontant(ligne.montant_ht)}</div>
+                        <div className="font-semibold">
+                          <ProtectedField
+                            modelName="ligne"
+                            appLabel="billings"
+                            fieldName="montant_ht"
+                            mode="hide"
+                            fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                          >
+                          {formatMontant(ligne.montant_ht)}
+                          </ProtectedField>
+                          </div>
                         <div className="text-xs text-muted-foreground capitalize">
                           {ligne.type_ligne}
                         </div>

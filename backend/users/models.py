@@ -258,7 +258,7 @@ class FieldPermission(models.Model):
 
     class Meta:
         # Un utilisateur ou groupe ne peut avoir qu'une permission par champ (par objet)
-        unique_together = ['user', 'content_type', 'field_name', 'object_id', 'permission']
+        unique_together = ['user', 'content_type', 'field_name', 'permission']
 
     def __str__(self):
         return f"{self.user} - {self.field_name} - {self.permission}"

@@ -42,6 +42,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { usePermissions } from '@/hooks/use-permissions';
+import { ProtectedField } from '@/components/field-permissions/ProtectedField';
 
 // -------- Utils
 const formatMontant = (montant: number) =>
@@ -476,7 +477,15 @@ export const FacturesPage: React.FC = () => {
                               {facture.client_nom || 'N/A'}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                              {formatMontant(facture.montant_ttc || 0)}
+                              <ProtectedField
+                                modelName="facture"
+                                appLabel="billings"
+                                fieldName="montant_ttc"
+                                mode="hide"
+                                fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                              >
+                                {formatMontant(facture.montant_ttc || 0)}
+                              </ProtectedField>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <Badge variant={badge.variant} className={badge.className}>

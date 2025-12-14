@@ -3,6 +3,13 @@ import api from '@/lib/api';
 import { toast } from 'sonner';
 
 // Types
+
+export interface FieldPermissions {
+  [fieldName: string]: {
+    read: boolean;
+    write: boolean;
+  };
+}
 export interface FieldPermission {
   id: number;
   user?: number;
@@ -14,16 +21,11 @@ export interface FieldPermission {
   model_name: string;
   field_name: string;
   object_id?: number;
-  permission: 'read' | 'write';
+  permissions: Array<FieldPermissions>;
   permission_display: string;
 }
 
-export interface FieldPermissions {
-  [fieldName: string]: {
-    read: boolean;
-    write: boolean;
-  };
-}
+
 
 export interface ModelPermissionsResponse {
   model_name: string;
@@ -140,6 +142,53 @@ export const useCreateFieldPermission = () => {
   });
 };
 
+// Hook pour créer plusieurs permissions en masse
+export interface BulkPermissionData {
+  user: number;
+  content_type: number;
+  field_name: string;
+  permission: 'read' | 'write';
+  object_id?: number;
+}
+
+export interface BulkCreateResponse {
+  created: number;
+  errors: number;
+  permissions: FieldPermission[];
+  error_details?: Array<{
+    data: BulkPermissionData;
+    errors?: any;
+    error?: string;
+  }>;
+}
+
+export const useBulkCreateFieldPermissions = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: BulkPermissionData[]) => {
+      const response = await api.post('/auth/field-permissions/bulk_create/', data);
+      return response.data as BulkCreateResponse;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['field-permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['my-field-permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['model-field-permissions'] });
+
+      if (data.created > 0) {
+        toast.success(`${data.created} permission(s) créée(s) avec succès`);
+      }
+      if (data.errors > 0) {
+        toast.warning(`${data.errors} erreur(s) lors de la création`);
+        console.error('Erreurs de création:', data.error_details);
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Erreur lors de la création des permissions');
+    },
+  });
+};
+
 // Hook pour mettre à jour une permission
 export const useUpdateFieldPermission = () => {
   const queryClient = useQueryClient();
@@ -232,5 +281,21 @@ export const useGroups = () => {
       console.log(response.data.roles)
       return response.data.roles as Array<{ id: number; name: string }>;
     },
+  });
+};
+
+// Hook pour récupérer les objets d'un modèle spécifique
+export const useModelObjects = (contentTypeId?: number, search?: string, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ['model-objects', contentTypeId, search],
+    queryFn: async () => {
+      if (!contentTypeId) return [];
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+
+      const response = await api.get(`/auth/field-permissions/model-objects/${contentTypeId}/?${params}`);
+      return response.data as Array<{ id: number; display: string }>;
+    },
+    enabled: enabled && !!contentTypeId,
   });
 };

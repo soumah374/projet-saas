@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import {
   useAvailableModels,
-  useCreateFieldPermission,
-  useGroups,
+  useBulkCreateFieldPermissions,
+  useModelObjects,
+  type BulkPermissionData,
 } from '@/hooks/use-field-permissions';
 import { useUsers } from '@/hooks/use-users';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { UserAutocomplete } from '@/components/ui/UserAutocomplete';
 import {
   Select,
   SelectContent,
@@ -14,10 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import {
   UserPlus,
   Check,
@@ -25,12 +29,13 @@ import {
   Eye,
   Edit,
   Shield,
-  Users
+  Search,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Role } from '@/hooks/use-permissions';
+import { cn } from '@/lib/utils';
 
 interface FieldPermissionSelection {
   field_name: string;
@@ -39,24 +44,49 @@ interface FieldPermissionSelection {
 }
 
 export const UserFieldPermissionsAssigner: React.FC = () => {
-  const [selectedTargetType, setSelectedTargetType] = useState<'user' | 'group'>('user');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
-  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [selectedModelId, setSelectedModelId] = useState<string>('');
   const [objectId, setObjectId] = useState<string>('');
+  const [selectedObjectDisplay, setSelectedObjectDisplay] = useState<string>('');
   const [fieldPermissions, setFieldPermissions] = useState<FieldPermissionSelection[]>([]);
-  const [roles, setRoles] = useState<(Role)[]>([]);
+  const [userSearch, setUserSearch] = useState<string>('');
+  const [objectSearch, setObjectSearch] = useState<string>('');
+  const [objectPopoverOpen, setObjectPopoverOpen] = useState(false);
 
-  // Utiliser les hooks pour charger les données
-  const { data: usersResponse } = useUsers({ page_size: 1000 });
-  const { data: groupsResponse } = useGroups();
+  // Utiliser les hooks pour charger les données avec recherche
+  const { data: usersResponse, isLoading: isLoadingUsers } = useUsers({
+    search: userSearch,
+    page_size: 50 // Limiter à 50 résultats pour la recherche
+  });
   const { data: availableModels } = useAvailableModels();
-  const createMutation = useCreateFieldPermission();
-
+  const { data: modelObjects, isLoading: isLoadingObjects } = useModelObjects(
+    selectedModelId ? parseInt(selectedModelId) : undefined,
+    objectSearch,
+    !!selectedModelId
+  );
+  const bulkCreateMutation = useBulkCreateFieldPermissions();
 
   // Extraire les données des réponses
   const users = usersResponse?.data?.results || [];
-  const groups = groupsResponse || [];
+
+  // Handler pour la recherche côté serveur
+  const handleUserSearch = (search: string) => {
+    setUserSearch(search);
+  };
+
+  // Handler pour la sélection d'objet
+  const handleObjectSelect = (obj: { id: number; display: string }) => {
+    setObjectId(obj.id.toString());
+    setSelectedObjectDisplay(obj.display);
+    setObjectPopoverOpen(false);
+  };
+
+  // Handler pour vider la sélection d'objet
+  const handleClearObject = () => {
+    setObjectId('');
+    setSelectedObjectDisplay('');
+    setObjectSearch('');
+  };
 
   // Initialiser les permissions quand un modèle est sélectionné
   React.useEffect(() => {
@@ -71,6 +101,10 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
           }))
         );
       }
+      // Réinitialiser la sélection d'objet quand le modèle change
+      setObjectId('');
+      setSelectedObjectDisplay('');
+      setObjectSearch('');
     }
   }, [selectedModelId, availableModels]);
 
@@ -113,12 +147,8 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
 
   const handleAssign = async () => {
     // Validation
-    if (selectedTargetType === 'user' && !selectedUserId) {
+    if (!selectedUserId) {
       toast.error('Veuillez sélectionner un utilisateur');
-      return;
-    }
-    if (selectedTargetType === 'group' && !selectedGroupId) {
-      toast.error('Veuillez sélectionner un groupe');
       return;
     }
     if (!selectedModelId) {
@@ -132,68 +162,54 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
       return;
     }
 
-    // Créer les permissions
-    const targetId = selectedTargetType === 'user'
-      ? parseInt(selectedUserId)
-      : parseInt(selectedGroupId);
+    // Construire le tableau de permissions à créer
+    const userId = parseInt(selectedUserId);
+    const contentTypeId = parseInt(selectedModelId);
+    const permissionsToCreate: BulkPermissionData[] = [];
 
-    const targetName = selectedTargetType === 'user'
-      ? users.find(u => u.id === targetId)?.get_full_name
-      : groups.find(g => g.id === targetId)?.name;
+    selectedPermissions.forEach(fp => {
+      const basePayload = {
+        user: userId,
+        content_type: contentTypeId,
+        field_name: fp.field_name,
+      };
 
-    let successCount = 0;
-    let errorCount = 0;
+      const payloadWithObjectId = objectId
+        ? { ...basePayload, object_id: parseInt(objectId) }
+        : basePayload;
 
-    for (const fp of selectedPermissions) {
-      // Créer permission read si cochée
+      // Créer une entrée pour la permission read si cochée
       if (fp.read) {
-        try {
-          await createMutation.mutateAsync({
-            [selectedTargetType]: targetId,
-            content_type: parseInt(selectedModelId),
-            field_name: fp.field_name,
-            object_id: objectId ? parseInt(objectId) : undefined,
-            permission: 'read',
-          });
-          successCount++;
-        } catch (error) {
-          errorCount++;
-          console.error(`Erreur création permission read pour ${fp.field_name}:`, error);
-        }
+        permissionsToCreate.push({
+          ...payloadWithObjectId,
+          permission: 'read' as const,
+        });
       }
 
-      // Créer permission write si cochée (et différente de read)
+      // Créer une entrée pour la permission write si cochée
       if (fp.write) {
-        try {
-          await createMutation.mutateAsync({
-            [selectedTargetType]: targetId,
-            content_type: parseInt(selectedModelId),
-            field_name: fp.field_name,
-            object_id: objectId ? parseInt(objectId) : undefined,
-            permission: 'write',
-          });
-          successCount++;
-        } catch (error) {
-          errorCount++;
-          console.error(`Erreur création permission write pour ${fp.field_name}:`, error);
-        }
+        permissionsToCreate.push({
+          ...payloadWithObjectId,
+          permission: 'write' as const,
+        });
       }
-    }
+    });
 
-    if (errorCount === 0) {
-      toast.success(
-        `${successCount} permission(s) assignée(s) à ${targetName} avec succès`
-      );
-      // Reset
+    // Envoyer toutes les permissions en une seule requête
+    console.log(permissionsToCreate)
+    try {
+      await bulkCreateMutation.mutateAsync(permissionsToCreate);
+
+      // Réinitialiser le formulaire après succès
       setSelectedUserId('');
-      setSelectedGroupId('');
       setSelectedModelId('');
       setObjectId('');
+      setSelectedObjectDisplay('');
       setFieldPermissions([]);
-    } else {
-      toast.warning(
-        `${successCount} permission(s) créée(s), ${errorCount} erreur(s)`
-      );
+      setUserSearch('');
+      setObjectSearch('');
+    } catch (error) {
+      console.error('Erreur lors de la création des permissions:', error);
     }
   };
 
@@ -207,73 +223,22 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
           Assigner des Permissions par Champ
         </CardTitle>
         <p className="text-sm text-gray-500">
-          Sélectionnez un utilisateur ou un groupe, puis choisissez les champs auxquels accorder des permissions
+          Sélectionnez un utilisateur, puis choisissez les champs auxquels accorder des permissions
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Sélection Utilisateur ou Groupe */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Button
-              variant={selectedTargetType === 'user' ? 'default' : 'outline'}
-              onClick={() => {
-                setSelectedTargetType('user');
-                setSelectedGroupId('');
-              }}
-              className="flex items-center gap-2"
-            >
-              <UserPlus size={16} />
-              Utilisateur
-            </Button>
-            {/* <Button
-              variant={selectedTargetType === 'group' ? 'default' : 'outline'}
-              onClick={() => {
-                setSelectedTargetType('group');
-                setSelectedUserId('');
-              }}
-              className="flex items-center gap-2"
-            >
-              <Users size={16} />
-              Groupe
-            </Button> */}
-          </div>
-
-          {selectedTargetType === 'user' ? (
-            <div>
-              <Label htmlFor="user-select">Utilisateur</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger id="user-select">
-                  <SelectValue placeholder="Sélectionner un utilisateur" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{user.get_full_name || user.username}</span>
-                        <span className="text-gray-500 text-sm">({user.email})</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <div>
-              <Label htmlFor="group-select">Groupe</Label>
-              <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-                <SelectTrigger id="group-select">
-                  <SelectValue placeholder="Sélectionner un groupe" />
-                </SelectTrigger>
-                <SelectContent>
-                  {groups.map(group => (
-                    <SelectItem key={group.id} value={group.id.toString()}>
-                      👥 {group.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+        {/* Sélection Utilisateur */}
+        <div>
+          <Label htmlFor="user-select">Utilisateur</Label>
+          <UserAutocomplete
+            value={selectedUserId}
+            onValueChange={setSelectedUserId}
+            users={users}
+            isLoading={isLoadingUsers}
+            placeholder="Rechercher un utilisateur..."
+            showClearButton
+            onSearchChange={handleUserSearch}
+          />
         </div>
 
         <Separator />
@@ -300,16 +265,81 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
           </Select>
         </div>
 
-        {/* ID Objet optionnel */}
+        {/* Objet optionnel avec autocomplete */}
         <div>
-          <Label htmlFor="object-id">ID Objet (optionnel)</Label>
-          <Input
-            id="object-id"
-            type="number"
-            placeholder="Laisser vide pour tous les objets"
-            value={objectId}
-            onChange={e => setObjectId(e.target.value)}
-          />
+          <Label htmlFor="object-select">Objet spécifique (optionnel)</Label>
+          <div className="flex items-center gap-2">
+            <Popover open={objectPopoverOpen} onOpenChange={setObjectPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={objectPopoverOpen}
+                  className="w-full justify-between text-left font-normal"
+                  disabled={!selectedModelId}
+                >
+                  <span className="truncate flex-1">
+                    {selectedObjectDisplay || "Rechercher un objet..."}
+                  </span>
+                  <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Rechercher..."
+                    value={objectSearch}
+                    onValueChange={setObjectSearch}
+                  />
+                  <CommandList className="max-h-[200px]">
+                    <CommandEmpty>
+                      {isLoadingObjects ? (
+                        <div className="flex items-center justify-center py-6">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          <span>Chargement...</span>
+                        </div>
+                      ) : (
+                        <div className="py-6 text-center text-sm">
+                          {selectedModelId
+                            ? "Aucun objet trouvé"
+                            : "Sélectionnez d'abord un modèle"}
+                        </div>
+                      )}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {modelObjects?.map((obj) => (
+                        <CommandItem
+                          key={obj.id}
+                          value={obj.display}
+                          onSelect={() => handleObjectSelect(obj)}
+                          className="cursor-pointer"
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4 shrink-0",
+                              objectId === obj.id.toString() ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          <span className="truncate">{obj.display}</span>
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {objectId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearObject}
+                className="text-red-600 hover:text-red-700 shrink-0"
+                title="Effacer la sélection"
+              >
+                <X size={14} />
+              </Button>
+            )}
+          </div>
           <p className="text-xs text-gray-500 mt-1">
             Si vide, les permissions s'appliquent à tous les objets de ce modèle
           </p>
@@ -408,13 +438,16 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
               </h4>
               <div className="text-sm space-y-1">
                 <div>
-                  <strong>Cible:</strong>{' '}
-                  {selectedTargetType === 'user'
-                    ? users.find(u => u.id.toString() === selectedUserId)?.get_full_name
-                    : groups.find(g => g.id.toString() === selectedGroupId)?.name}
+                  <strong>Utilisateur:</strong>{' '}
+                  {(() => {
+                    const user = users.find(u => u.id.toString() === selectedUserId);
+                    return user?.first_name && user?.last_name
+                      ? `${user.first_name} ${user.last_name}`
+                      : user?.username || 'Non sélectionné';
+                  })()}
                 </div>
                 <div>
-                  <strong>Modèle:</strong> {selectedModel.model_verbose_name}
+                  <strong>Modèle:</strong> {selectedModel?.model_verbose_name || 'Non sélectionné'}
                 </div>
                 <div>
                   <strong>Portée:</strong>{' '}
@@ -432,13 +465,13 @@ export const UserFieldPermissionsAssigner: React.FC = () => {
             <Button
               onClick={handleAssign}
               disabled={
-                createMutation.isPending ||
+                bulkCreateMutation.isPending ||
                 fieldPermissions.filter(fp => fp.read || fp.write).length === 0
               }
               className="w-full"
               size="lg"
             >
-              {createMutation.isPending ? (
+              {bulkCreateMutation.isPending ? (
                 <>Assignation en cours...</>
               ) : (
                 <>

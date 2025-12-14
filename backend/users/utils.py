@@ -27,19 +27,7 @@ def has_field_permission(user, model, field_name, permission, obj=None):
   )
   if user_perms.exists():
     return True
-
-  # Chercher une permission pour les groupes de l'utilisateur
-  group_ids = user.groups.all().values_list('id', flat=True)
-  group_perms = FieldPermission.objects.filter(
-    group_id__in=group_ids,
-    content_type=content_type,
-    field_name=field_name,
-    permission=permission,
-    object_id=obj.id if obj else None
-  )
-  if group_perms.exists():
-      return True
-
+  
   # Si aucune permission spécifique à l'objet, chercher une permission au niveau du modèle (object_id vide)
   if obj:
     # Permission au niveau du modèle pour l'utilisateur
@@ -55,7 +43,6 @@ def has_field_permission(user, model, field_name, permission, obj=None):
 
     # Permission au niveau du modèle pour les groupes
     group_model_perms = FieldPermission.objects.filter(
-      group_id__in=group_ids,
       content_type=content_type,
       field_name=field_name,
       permission=permission,
@@ -88,14 +75,6 @@ def get_user_field_permissions(user, model, obj=None):
     object_id=obj.id if obj else None
   )
 
-  # Récupérer les permissions des groupes
-  group_ids = user.groups.all().values_list('id', flat=True)
-  group_perms = FieldPermission.objects.filter(
-    group_id__in=group_ids,
-    content_type=content_type,
-    object_id=obj.id if obj else None
-  )
-
   # Si obj existe, récupérer aussi les permissions au niveau du modèle
   model_perms = []
   if obj:
@@ -103,11 +82,11 @@ def get_user_field_permissions(user, model, obj=None):
       content_type=content_type,
       object_id__isnull=True
     ).filter(
-      models.Q(user=user) | models.Q(group_id__in=group_ids)
+      models.Q(user=user)
     )
 
   # Combiner toutes les permissions
-  all_perms = list(user_perms) + list(group_perms) + list(model_perms)
+  all_perms = list(user_perms) + list(model_perms)
 
   for perm in all_perms:
     if perm.field_name not in permissions:

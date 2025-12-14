@@ -414,10 +414,26 @@ export function ContratsPage() {
                       </ProtectedField>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="appliquer_tva"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      >
+                        {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
+                      </ProtectedField>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="appliquer_frais_agence"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      >
+                        {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
+                      </ProtectedField>
                     </TableCell>
                     <TableCell className="font-medium">
                       <ProtectedField
