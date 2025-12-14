@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -63,7 +64,8 @@ export function ContratDetailPage() {
   const contratId = parseInt(id || '0');
 
   const { hasPermission } = usePermissions();
-  
+  const queryClient = useQueryClient();
+
   // États pour les modals
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -104,7 +106,6 @@ export function ContratDetailPage() {
     marquerPaye,
     envoyerAlerte,
     loadEcheances,
-    // supprimerEcheance
   } = useEcheances(contratId);
   
   // Hook pour la facturation
@@ -166,9 +167,6 @@ export function ContratDetailPage() {
     contenu_personnalise: string;
   }) => {
     if (!contrat) return;
-
-    console.log('Début de la mise à jour du contrat:', contrat.id);
-    console.log('Données à envoyer:', data);
 
     try {
       const result = await updateContratMutation.mutateAsync({
@@ -333,11 +331,15 @@ export function ContratDetailPage() {
   ) => {
     if (!contrat) return;
 
-    addDevisToContratMutation.mutate({
+    addDevisToContratMutation.mutateAsync({
       contrat_id: contrat.id,
       devis_ids: selectedDevisIds,
       devis_principal_id: devisPrincipalId,
       echeances: echeances
+    }).then(async () => {
+      await loadEcheances();
+      await queryClient.invalidateQueries({ queryKey: ['contrat-historique-montant', contrat.id] });
+      await queryClient.invalidateQueries({ queryKey: ['contrat', contrat.id] });
     });
   };
 
