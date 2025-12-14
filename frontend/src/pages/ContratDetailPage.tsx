@@ -57,6 +57,7 @@ import {statutContrat } from '@/lib/utils';
 import { AvenantList } from '@/components/avenants/AvenantList';
 import { DevisSelectionModal } from '@/components/contrats/DevisSelectionModal';
 import { useContratsFacturation } from '@/hooks/use-factures';
+import { ProtectedField } from '@/components/field-permissions/ProtectedField';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -888,19 +889,59 @@ export function ContratDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
-                  <p className="text-lg font-bold">{formatMontant(contrat.montant_ht)}</p>
+                  <p className="text-lg font-bold">
+                    <ProtectedField
+                      modelName="contrat"
+                      appLabel="contrats"
+                      fieldName="montant_ht"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                    >
+                      {formatMontant(contrat.montant_ht)}
+                    </ProtectedField>
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TVA</Label>
-                  <p className="text-lg font-bold">{formatMontant(contrat.montant_tva)}</p>
+                  <p className="text-lg font-bold">
+                    <ProtectedField
+                      modelName="contrat"
+                      appLabel="contrats"
+                      fieldName="montant_frais_agence"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                    >
+                      {formatMontant(contrat.montant_tva)}
+                    </ProtectedField>
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant Frais d'Agence</Label>
-                  <p className="text-lg font-bold">{formatMontant(contrat.montant_frais_agence)}</p>
+                  <p className="text-lg font-bold">
+                    <ProtectedField
+                      modelName="contrat"
+                      appLabel="contrats"
+                      fieldName="montant_frais_agence"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                    >
+                      {formatMontant(contrat.montant_frais_agence)}
+                    </ProtectedField>
+                  </p>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
-                  <p className="text-lg font-bold text-blue-600">{formatMontant(contrat.montant_ttc)}</p>
+                  <p className="text-lg font-bold text-blue-600">
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="montant_ht"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non disponible</div>}
+                      >
+                        {formatMontant(contrat.montant_ttc)}
+                      </ProtectedField>
+                    </p>
                 </div>
               </div>
             </CardContent>

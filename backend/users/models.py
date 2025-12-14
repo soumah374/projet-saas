@@ -221,6 +221,7 @@ class ClientProfile(models.Model):
             return self.raison_sociale
         return f"{self.prenom} {self.nom}"
     
+
     def clean(self):
         from django.core.exceptions import ValidationError
         # Validation : si type_client est personne_physique, raison_sociale et rccm_nif doivent être vides
@@ -240,14 +241,12 @@ class FieldPermission(models.Model):
     PERM_READ = 'read'
     PERM_WRITE = 'write'
     PERM_CHOICES = [
-        (PERM_READ, 'Lecture'),
-        (PERM_WRITE, 'Écriture'),
+        (PERM_READ, 'Read'),
+        (PERM_WRITE, 'Write'),
     ]
 
     # À qui accorde-t-on la permission ? (utilisateur OU groupe)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, null=True, blank=True)
-
     # Pour quel modèle et quel champ ?
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     field_name = models.CharField(max_length=100)
@@ -259,7 +258,7 @@ class FieldPermission(models.Model):
 
     class Meta:
         # Un utilisateur ou groupe ne peut avoir qu'une permission par champ (par objet)
-        unique_together = ['user', 'group', 'content_type', 'field_name', 'object_id', 'permission']
+        unique_together = ['user', 'content_type', 'field_name', 'object_id', 'permission']
 
     def __str__(self):
-        return f"{self.user or self.group} - {self.field_name} - {self.permission}"
+        return f"{self.user} - {self.field_name} - {self.permission}"

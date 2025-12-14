@@ -2,8 +2,9 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
-    UserViewSet, CustomTokenObtainPairView, AuthViewSet, 
-    ClientProfileViewSet, ClientCategoryViewSet, PermissionManagerViewSet
+    UserViewSet, CustomTokenObtainPairView, AuthViewSet,
+    ClientProfileViewSet, ClientCategoryViewSet, PermissionManagerViewSet,
+    FieldPermissionViewSet
 )
 
 # Router pour les utilisateurs
@@ -13,6 +14,7 @@ router.register(r'auth', AuthViewSet, basename='auth')
 router.register(r'clients', ClientProfileViewSet, basename='client')
 router.register(r'categories', ClientCategoryViewSet, basename='client-category')
 router.register(r'permissions', PermissionManagerViewSet, basename='permission-manager')
+router.register(r'field-permissions', FieldPermissionViewSet, basename='field-permission')
 
 urlpatterns = [
     # Authentification JWT classique

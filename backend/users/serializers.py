@@ -4,7 +4,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import UserProfile, OTPCode, ClientProfile, ClientCategory
+from .models import UserProfile, OTPCode, ClientProfile, ClientCategory, FieldPermission
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -325,3 +325,70 @@ class ClientCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = ClientCategory
         fields = ['id', 'name', 'description']
+
+
+class FieldPermissionSerializer(serializers.ModelSerializer):
+    """Serializer pour les permissions par champ"""
+    user_display = serializers.SerializerMethodField()
+    content_type_display = serializers.SerializerMethodField()
+    model_name = serializers.SerializerMethodField()
+    permission_display = serializers.CharField(source='get_permission_display', read_only=True)
+
+    class Meta:
+        model = FieldPermission
+        fields = [
+            'id', 'user', 'user_display',
+            'content_type', 'content_type_display', 'model_name',
+            'field_name', 'object_id', 'permission', 'permission_display'
+        ]
+        read_only_fields = ['id']
+
+    def get_user_display(self, obj):
+        return obj.user.get_full_name() if obj.user else None
+    def get_content_type_display(self, obj):
+        return str(obj.content_type)
+
+    def get_model_name(self, obj):
+        return obj.content_type.model if obj.content_type else None
+
+    def validate(self, attrs):
+        # Vérifier qu'au moins user
+        if not attrs.get('user'):
+            raise serializers.ValidationError(
+                "Vous devez spécifier soit un utilisateur, soit un groupe"
+            )
+        return attrs
+
+
+class FieldPermissionCreateSerializer(serializers.ModelSerializer):
+    """Serializer pour créer des permissions par champ"""
+    user = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        required=False,
+        allow_null=True
+    )
+    object_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+
+
+    class Meta:
+        model = FieldPermission
+        fields = ['user', 'content_type', 'field_name', 'object_id', 'permission']
+
+    def create(self, validated_data):
+        """
+        S'assure que les champs non fournis sont explicitement définis comme None
+        """
+        if 'user' not in validated_data:
+            validated_data['user'] = None
+            
+        return super().create(validated_data)
+
+class UserFieldPermissionsSerializer(serializers.Serializer):
+    """Serializer pour retourner les permissions d'un utilisateur pour un modèle"""
+    model_name = serializers.CharField()
+    object_id = serializers.IntegerField(required=False, allow_null=True)
+    fields = serializers.DictField(
+        child=serializers.DictField(
+            child=serializers.BooleanField()
+        )
+    )
