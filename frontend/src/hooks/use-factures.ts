@@ -732,6 +732,32 @@ export const useContratsFacturation = () => {
     }
   }, []);
 
+  // Générer les factures pour un échéancier spécifique
+  const genererFacturesEcheancier = useCallback(async (echeancier_id: number) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post(`/contrats/echeanciers/${echeancier_id}/generer_factures/`);
+      toast({
+        title: 'Succès',
+        description: response.data.message,
+      });
+      await fetchContrats();
+      return response.data;
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Erreur lors de la génération des factures';
+      setError(message);
+      toast({
+        title: 'Erreur',
+        description: message,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchContrats, toast]);
+
 
   return {
     contrats,
@@ -739,6 +765,7 @@ export const useContratsFacturation = () => {
     error,
     fetchContrats,
     genererFacturesContrat,
+    genererFacturesEcheancier,
     fetchResumeFacturation,
   };
 };

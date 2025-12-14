@@ -82,7 +82,7 @@ def test_reportlab():
         return True
         
     except ImportError as e:
-        print(f"❌ ReportLab non disponible: {e}")
+        print(f"❌ ReportLab Non autorisé: {e}")
         return False
     except Exception as e:
         print(f"❌ Erreur avec ReportLab: {str(e)}")

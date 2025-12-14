@@ -21,7 +21,7 @@ export const useUsers = (params: UsersParams = {}) => {
   const query = useQuery({
     queryKey,
     queryFn: () => usersAPI.getUsers(params),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, 
   });
 
   const toggleUserActiveMutation = useMutation({

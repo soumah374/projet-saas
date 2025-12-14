@@ -9,11 +9,9 @@ from django.template.loader import render_to_string
 from django.http import HttpResponse
 from weasyprint import HTML, CSS
 from weasyprint.text.fonts import FontConfiguration
-import base64
-import tempfile
-import os
 import logging
 from decimal import Decimal
+from django.db.models import Count
 from projects.models import ProjectTask
 from .models import Devis, LigneDevis, LigneDevisIntervenant
 from .serializers import (
@@ -185,8 +183,10 @@ class DevisViewSet(viewsets.ModelViewSet):
             )
 
         try:
-            # Récupérer les devis du client
-            devis = self.queryset.filter(client_id=client_id).order_by('-date_creation')
+            # Récupérer les devis du client qui ne sont pas déjà dans un contrat
+            devis = self.queryset.filter(client_id=client_id).annotate(
+                nb_contrats=Count('contrats')
+            ).filter(nb_contrats=0).order_by('-date_creation')
 
             # Optionnel : filtrer par statut si spécifié
             statut = request.query_params.get('statut')

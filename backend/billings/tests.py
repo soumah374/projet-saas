@@ -4,7 +4,7 @@ from decimal import Decimal
 from datetime import date, timedelta
 from .models import Facture, PaiementFacture, LigneFacture, ConfigurationFacturation
 from .services import FacturationService
-from contrats.models import Contrat, EcheancierContrat
+from contrats.models import Contrat, EcheancierContrat, LigneEcheancierContrat
 from users.models import ClientProfile
 
 
@@ -34,9 +34,16 @@ class FacturationTestCase(TestCase):
             appliquer_tva=True
         )
         
-        # Créer une échéance
-        self.echeance = EcheancierContrat.objects.create(
+        # Créer un échéancier
+        self.echeancier = EcheancierContrat.objects.create(
             contrat=self.contrat,
+            type_echeancier='initial',
+            description='Échéancier de test'
+        )
+
+        # Créer une ligne d'échéance
+        self.echeance = LigneEcheancierContrat.objects.create(
+            echeancier=self.echeancier,
             type_echeance='tranche',
             numero_echeance=1,
             montant_ht=Decimal('500000'),
@@ -63,7 +70,7 @@ class FacturationTestCase(TestCase):
         """Test de création d'une facture"""
         facture = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=self.echeance.date_echeance,
             montant_ht=self.echeance.montant_ht,
@@ -81,7 +88,7 @@ class FacturationTestCase(TestCase):
         """Test d'enregistrement d'un paiement"""
         facture = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=self.echeance.date_echeance,
             montant_ht=self.echeance.montant_ht,
@@ -130,7 +137,7 @@ class FacturationTestCase(TestCase):
         # Vérifier que la facture a été créée
         facture = resultat['factures_crees'][0]
         self.assertEqual(facture.contrat, self.contrat)
-        self.assertEqual(facture.echeance, self.echeance)
+        self.assertEqual(facture.ligne_echeancier, self.echeance)
         self.assertEqual(facture.montant_ttc, self.echeance.montant_ttc)
     
     def test_generation_facture_contrat(self):
@@ -145,7 +152,7 @@ class FacturationTestCase(TestCase):
         # Créer quelques factures
         facture1 = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=date.today() + timedelta(days=7),
             montant_ht=Decimal('500000'),
@@ -156,7 +163,7 @@ class FacturationTestCase(TestCase):
         
         facture2 = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=date.today() + timedelta(days=14),
             montant_ht=Decimal('300000'),
@@ -179,7 +186,7 @@ class FacturationTestCase(TestCase):
         """Test de détection des factures en retard"""
         facture = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=date.today() - timedelta(days=5),  # Échéance passée
             montant_ht=Decimal('500000'),
@@ -195,7 +202,7 @@ class FacturationTestCase(TestCase):
         """Test de création d'une ligne de facture"""
         facture = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=self.echeance.date_echeance,
             montant_ht=self.echeance.montant_ht,
@@ -228,7 +235,7 @@ class FacturationTestCase(TestCase):
         """Test de validation des paiements"""
         facture = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=self.echeance.date_echeance,
             montant_ht=self.echeance.montant_ht,
@@ -251,7 +258,7 @@ class FacturationTestCase(TestCase):
         """Test de mise à jour de l'échéance lors du paiement"""
         facture = Facture.objects.create(
             contrat=self.contrat,
-            echeance=self.echeance,
+            ligne_echeancier=self.echeance,
             client=self.client,
             date_echeance=self.echeance.date_echeance,
             montant_ht=self.echeance.montant_ht,

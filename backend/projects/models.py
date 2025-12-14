@@ -390,9 +390,9 @@ class TimeSheet(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='timesheets')
     date = models.DateField()
     hours = models.DecimalField(
-        max_digits=4, 
+        max_digits=4,
         decimal_places=1,
-        validators=[MinValueValidator(0), MaxValueValidator(24)]
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(24)]
     )
     description = models.TextField(blank=True)
     validated_by = models.ForeignKey(
@@ -508,14 +508,14 @@ class ProjectTask(models.Model):
     estimated_hours = models.DecimalField(
         max_digits=5,
         decimal_places=1,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(Decimal('0'))],
         null=True,
         blank=True
     )
     actual_hours = models.DecimalField(
         max_digits=5,
         decimal_places=1,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(Decimal('0'))],
         default=0
     )
     created_at = models.DateTimeField(auto_now_add=True)

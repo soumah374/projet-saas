@@ -4,7 +4,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 import pyotp
 import secrets
-
+from django.contrib.auth.models import User, Group
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 
 class ClientCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -219,6 +221,7 @@ class ClientProfile(models.Model):
             return self.raison_sociale
         return f"{self.prenom} {self.nom}"
     
+
     def clean(self):
         from django.core.exceptions import ValidationError
         # Validation : si type_client est personne_physique, raison_sociale et rccm_nif doivent être vides
@@ -231,3 +234,31 @@ class ClientProfile(models.Model):
         if self.type_client == 'personne_physique':
             if self.category:
                 raise ValidationError("La catégorie ne peut pas être définie pour une personne physique") 
+
+class FieldPermission(models.Model):
+    """Permissions par champ pour un utilisateur ou un groupe."""
+    # Types de permissions
+    PERM_READ = 'read'
+    PERM_WRITE = 'write'
+    PERM_CHOICES = [
+        (PERM_READ, 'Read'),
+        (PERM_WRITE, 'Write'),
+    ]
+
+    # À qui accorde-t-on la permission ? (utilisateur OU groupe)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    # Pour quel modèle et quel champ ?
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    field_name = models.CharField(max_length=100)
+    # On peut aussi utiliser un objet spécifique (si NULL, alors tous les objets de ce modèle)
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    content_object = GenericForeignKey('content_type', 'object_id')
+
+    permission = models.CharField(max_length=10, choices=PERM_CHOICES)
+
+    class Meta:
+        # Un utilisateur ou groupe ne peut avoir qu'une permission par champ (par objet)
+        unique_together = ['user', 'content_type', 'field_name', 'permission']
+
+    def __str__(self):
+        return f"{self.user} - {self.field_name} - {self.permission}"

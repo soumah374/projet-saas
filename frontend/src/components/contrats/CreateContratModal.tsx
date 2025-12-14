@@ -55,7 +55,6 @@ export function CreateContratModal({
   open,
   onOpenChange,
   onSave,
-  isLoadingDevis = false,
   isLoading = false
 }: CreateContratModalProps) {
   const [createForm, setCreateForm] = useState({
@@ -138,12 +137,7 @@ export function CreateContratModal({
     return allDevisDisponibles.filter(devis => createForm.devis_ids.includes(devis.id));
   };
 
-  const getDevisPrincipal = () => {
-    if (!createForm.devis_principal_id) return null;
-    return allDevisDisponibles.find(devis => devis.id === createForm.devis_principal_id);
-  };
 
-  const selectedDevis = getSelectedDevis();
 
   // Fonctions pour générer automatiquement les échéances
   const generateStandardEcheances = () => {

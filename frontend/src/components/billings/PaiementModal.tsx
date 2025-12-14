@@ -30,6 +30,7 @@ import { CalendarIcon } from 'lucide-react';
 import { Facture } from '@/hooks/use-factures';
 import { cn } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ProtectedField } from '../field-permissions/ProtectedField';
 
 interface PaiementModalProps {
   facture: Facture | null;
@@ -140,16 +141,40 @@ export const PaiementModal: React.FC<PaiementModalProps> = ({
             </div>
             <div className="flex justify-between">
               <span className="text-sm font-medium text-gray-600">Montant TTC:</span>
-              <span className="text-sm font-semibold">{formatMontant(facture.montant_ttc)}</span>
+              <ProtectedField
+                modelName="facture"
+                appLabel="billings"
+                fieldName="montant_ttc"
+                mode="hide"
+                fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+              >
+                <span className="text-sm font-semibold">{formatMontant(facture.montant_ttc)}</span>
+              </ProtectedField>
             </div>
             <div className="flex justify-between">
               <span className="text-sm font-medium text-gray-600">Déjà payé:</span>
-              <span className="text-sm">{formatMontant(facture.montant_paye)}</span>
+              <ProtectedField
+                modelName="facture"
+                appLabel="billings"
+                fieldName="montant_paye"
+                mode="hide"
+                fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+              >
+                <span className="text-sm">{formatMontant(facture.montant_paye)}</span>
+              </ProtectedField>
             </div>
             <div className="flex justify-between">
               <span className="text-sm font-medium text-gray-600">Restant à payer:</span>
               <span className="text-sm font-semibold text-orange-600">
-                {formatMontant(facture.montant_restant)}
+                <ProtectedField
+                  modelName="facture"
+                  appLabel="billings"
+                  fieldName="montant_restant"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                  {formatMontant(facture.montant_restant)}
+                </ProtectedField>
               </span>
             </div>
           </div>

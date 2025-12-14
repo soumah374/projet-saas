@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Facture, PaiementFacture, LigneFacture, ConfigurationFacturation
-from contrats.models import Contrat, EcheancierContrat
-from users.models import ClientProfile
+from contrats.models import Contrat, LigneEcheancierContrat
 
 
 class LigneFactureSerializer(serializers.ModelSerializer):
@@ -34,15 +33,15 @@ class FactureSerializer(serializers.ModelSerializer):
     paiements = PaiementFactureSerializer(many=True, read_only=True)
     client_nom = serializers.CharField(source='client.nom_complet', read_only=True)
     contrat_numero = serializers.CharField(source='contrat.numero', read_only=True)
-    echeance_numero = serializers.CharField(source='echeance.numero_echeance', read_only=True)
+    echeance_numero = serializers.CharField(source='ligne_echeancier.numero_echeance', read_only=True)
     jours_restants = serializers.ReadOnlyField()
     est_en_retard = serializers.ReadOnlyField()
     pourcentage_paye = serializers.ReadOnlyField()
-    
+
     class Meta:
         model = Facture
         fields = [
-            'id', 'numero', 'contrat', 'echeance', 'client', 'client_nom',
+            'id', 'numero', 'contrat', 'ligne_echeancier', 'client', 'client_nom',
             'contrat_numero', 'echeance_numero', 'date_emission', 'date_echeance',
             'date_paiement', 'statut', 'montant_ht', 'montant_tva',
             'montant_frais_agence', 'montant_ttc', 'montant_paye',
@@ -64,7 +63,7 @@ class FactureCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Facture
         fields = [
-            'contrat', 'echeance', 'client', 'date_echeance', 'montant_ht',
+            'contrat', 'ligne_echeancier', 'client', 'date_echeance', 'montant_ht',
             'montant_tva', 'montant_frais_agence', 'montant_ttc',
             'mode_paiement', 'iban', 'bic', 'compte_bancaire', 'notes',
             'conditions_paiement'
@@ -121,15 +120,15 @@ class ConfigurationFacturationSerializer(serializers.ModelSerializer):
 
 
 class EcheanceFacturationSerializer(serializers.ModelSerializer):
-    """Sérialiseur pour les échéances avec informations de facturation"""
-    
+    """Sérialiseur pour les lignes d'échéances avec informations de facturation"""
+
     factures_count = serializers.SerializerMethodField()
     derniere_facture = serializers.SerializerMethodField()
-    
+
     class Meta:
-        model = EcheancierContrat
+        model = LigneEcheancierContrat
         fields = [
-            'id', 'contrat', 'type_echeance', 'numero_echeance',
+            'id', 'echeancier', 'type_echeance', 'numero_echeance',
             'montant_ht', 'montant_tva', 'montant_ttc', 'pourcentage',
             'date_echeance', 'date_paiement', 'statut', 'commentaire',
             'alerte_envoyee', 'factures_count', 'derniere_facture',

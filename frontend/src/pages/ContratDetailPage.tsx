@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -40,24 +41,23 @@ import {
   useAnnulerContrat,
   useSuspendreContrat,
   useArchiverContrat,
-  type Contrat,
   useUpdateContratContent,
   useEnvoyerContrat,
   useSignerContrat,
   useCloturerContrat,
   useAddDevisToContrat,
-  useCreateContratFromDevis,
   useContratHistoriqueMontant
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
 import { useEcheances } from '@/hooks/use-echeances';
-import { Echeance } from '@/lib/types';
+import { LigneEcheancier } from '@/lib/types';
 import { EditContratModal } from '@/components/contrats/EditContratModal';
-import { statusContratHistorique, statutContrat } from '@/lib/utils';
+import {statutContrat } from '@/lib/utils';
 import { AvenantList } from '@/components/avenants/AvenantList';
 import { DevisSelectionModal } from '@/components/contrats/DevisSelectionModal';
 import { useContratsFacturation } from '@/hooks/use-factures';
+import { ProtectedField } from '@/components/field-permissions/ProtectedField';
 
 export function ContratDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -65,7 +65,8 @@ export function ContratDetailPage() {
   const contratId = parseInt(id || '0');
 
   const { hasPermission } = usePermissions();
-  
+  const queryClient = useQueryClient();
+
   // États pour les modals
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -100,14 +101,16 @@ export function ContratDetailPage() {
   // Hook pour les échéances
   const {
     echeances,
+    echeanciers,
     isLoading: isLoadingEcheances,
     genererEcheancier,
     marquerPaye,
-    envoyerAlerte
+    envoyerAlerte,
+    loadEcheances,
   } = useEcheances(contratId);
   
   // Hook pour la facturation
-  const { genererFacturesContrat } = useContratsFacturation();
+  const { genererFacturesContrat, genererFacturesEcheancier } = useContratsFacturation();
 
   // Fonction pour filtrer et trier les échéances
   const getFilteredAndSortedEcheances = () => {
@@ -165,9 +168,6 @@ export function ContratDetailPage() {
     contenu_personnalise: string;
   }) => {
     if (!contrat) return;
-
-    console.log('Début de la mise à jour du contrat:', contrat.id);
-    console.log('Données à envoyer:', data);
 
     try {
       const result = await updateContratMutation.mutateAsync({
@@ -293,7 +293,7 @@ export function ContratDetailPage() {
 
   const handleGenererFactures = async () => {
     if (!contrat) return;
-    
+
     try {
       const result = await genererFacturesContrat(contrat.id);
       if (result) {
@@ -303,6 +303,19 @@ export function ContratDetailPage() {
       }
     } catch (err) {
       console.error('Erreur lors de la génération des factures:', err);
+    }
+  };
+
+  const handleGenererFacturesEcheancier = async (echeancier_id: number) => {
+    try {
+      const result = await genererFacturesEcheancier(echeancier_id);
+      if (result) {
+        // Recharger les échéances pour voir les factures générées
+        await loadEcheances();
+        console.log('Factures générées pour l\'échéancier:', result);
+      }
+    } catch (err) {
+      console.error('Erreur lors de la génération des factures de l\'échéancier:', err);
     }
   };
 
@@ -319,11 +332,15 @@ export function ContratDetailPage() {
   ) => {
     if (!contrat) return;
 
-    addDevisToContratMutation.mutate({
+    addDevisToContratMutation.mutateAsync({
       contrat_id: contrat.id,
       devis_ids: selectedDevisIds,
       devis_principal_id: devisPrincipalId,
       echeances: echeances
+    }).then(async () => {
+      await loadEcheances();
+      await queryClient.invalidateQueries({ queryKey: ['contrat-historique-montant', contrat.id] });
+      await queryClient.invalidateQueries({ queryKey: ['contrat', contrat.id] });
     });
   };
 
@@ -351,7 +368,7 @@ export function ContratDetailPage() {
     return <Badge variant={variants[statut as keyof typeof variants]}>{statutContrat(statut)}</Badge>;
   };
 
-  const getEcheanceStatutBadge = (echeance: Echeance) => {
+  const getEcheanceStatutBadge = (echeance: LigneEcheancier) => {
     if (echeance.statut === 'paye') {
       return <Badge variant="default" className="bg-green-500"><CheckCircle size={12} className="mr-1" />Payé</Badge>;
     } else if (echeance.est_en_retard) {
@@ -416,7 +433,7 @@ export function ContratDetailPage() {
             Envoyer
           </Button>
           {showConfirmSendModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+            <div key="modal-envoyer" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
               <div className="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full">
                 <h2 className="text-lg font-semibold mb-2">Confirmer l'envoi du contrat</h2>
                 <p className="mb-4">Voulez-vous vraiment envoyer ce contrat au client ?</p>
@@ -496,7 +513,7 @@ export function ContratDetailPage() {
           )}
           {/* Modal d'upload du contrat signé */}
           {showSignModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div key="modal-signer" className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
               <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
                 <h2 className="text-lg font-semibold mb-4">Uploader le contrat signé</h2>
                 <form
@@ -567,9 +584,7 @@ export function ContratDetailPage() {
               {contrat.fichier_signe ? 'Fichier disponible' : 'En attente de fichier'}
             </p>
           </div>
-          {contrat.fichier_signe && (
-            <>
-            {hasPermission('contrats.can_download_contrat') && (
+          {contrat.fichier_signe && hasPermission('contrats.can_download_contrat') && (
             <Button
               variant="outline"
               size="sm"
@@ -584,18 +599,14 @@ export function ContratDetailPage() {
               <FileText size={14} className="mr-2" />
               Télécharger
             </Button>
-            )}
-            </>
           )}
         </div>
       );
     }
 
 
-    if (contrat.statut === 'cloture') {
+    if (contrat.statut === 'cloture' && hasPermission('contrats.can_archiver_contrat')) {
       buttons.push(
-        <>
-        {hasPermission('contrats.can_archiver_contrat') && (
         <Button
           key="archiver"
           variant="outline"
@@ -605,15 +616,11 @@ export function ContratDetailPage() {
           <Archive size={16} className="mr-2" />
           Archiver
         </Button>
-        )}
-        </>
-      )
+      );
     }
     
-    if (contrat.statut === 'suspendu') {
+    if (contrat.statut === 'suspendu' && hasPermission('contrats.can_activer_contrat')) {
       buttons.push(
-        <>
-        {hasPermission('contrats.can_activer_contrat') && (
         <Button
           key="activer"
           onClick={() => handleActionContrat('activer')}
@@ -622,26 +629,20 @@ export function ContratDetailPage() {
           <Play size={16} className="mr-2" />
           Réactiver
         </Button>
-        )}
-        </>
       );
     }
     
-    if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut)) {
+    if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut) && hasPermission('contrats.can_annuler_contrat')) {
       buttons.push(
-        <>
-        {hasPermission('contrats.can_annuler_contrat') && (
-          <Button
-            key="annuler"
-            variant="destructive"
-            onClick={() => handleActionContrat('annuler')}
-            disabled={annulerContratMutation.isPending}
-          >
-            <X size={16} className="mr-2" />
-              Annuler
-            </Button>
-          )}
-        </>
+        <Button
+          key="annuler"
+          variant="destructive"
+          onClick={() => handleActionContrat('annuler')}
+          disabled={annulerContratMutation.isPending}
+        >
+          <X size={16} className="mr-2" />
+          Annuler
+        </Button>
       );
     }
     
@@ -700,15 +701,11 @@ export function ContratDetailPage() {
               Ajouter des devis
             </Button>
           )}
-          {contrat.statut === 'brouillon' && (
-            <>
-              {hasPermission('contrats.delete_contrat') && (
-                <Button onClick={openDeleteDialog} variant="destructive">
-                  <Trash2 size={16} className="mr-2" />
-                    Supprimer
-                </Button>
-              )}
-            </>
+          {contrat.statut === 'brouillon' && hasPermission('contrats.delete_contrat') && (
+            <Button onClick={openDeleteDialog} variant="destructive">
+              <Trash2 size={16} className="mr-2" />
+              Supprimer
+            </Button>
           )}
           {getActionButtons()}
         </div>
@@ -892,19 +889,59 @@ export function ContratDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant HT</Label>
-                  <p className="text-lg font-bold">{formatMontant(contrat.montant_ht)}</p>
+                  <div className="text-lg font-bold">
+                    <ProtectedField
+                      modelName="contrat"
+                      appLabel="contrats"
+                      fieldName="montant_ht"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                    >
+                      {formatMontant(contrat.montant_ht)}
+                    </ProtectedField>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TVA</Label>
-                  <p className="text-lg font-bold">{formatMontant(contrat.montant_tva)}</p>
+                  <div className="text-lg font-bold">
+                    <ProtectedField
+                      modelName="contrat"
+                      appLabel="contrats"
+                      fieldName="montant_frais_agence"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                    >
+                      {formatMontant(contrat.montant_tva)}
+                    </ProtectedField>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant Frais d'Agence</Label>
-                  <p className="text-lg font-bold">{formatMontant(contrat.montant_frais_agence)}</p>
+                  <div className="text-lg font-bold">
+                    <ProtectedField
+                      modelName="contrat"
+                      appLabel="contrats"
+                      fieldName="montant_frais_agence"
+                      mode="hide"
+                      fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                    >
+                      {formatMontant(contrat.montant_frais_agence)}
+                    </ProtectedField>
+                  </div>
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-600">Montant TTC</Label>
-                  <p className="text-lg font-bold text-blue-600">{formatMontant(contrat.montant_ttc)}</p>
+                  <div className="text-lg font-bold text-blue-600">
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="montant_ht"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                      >
+                        {formatMontant(contrat.montant_ttc)}
+                      </ProtectedField>
+                    </div>
                 </div>
               </div>
             </CardContent>
@@ -983,17 +1020,7 @@ export function ContratDetailPage() {
 
                 {/* Boutons de génération d'échéancier et factures */}
                 {contrat.statut !== 'termine' && (
-                <div className="flex gap-2">
-                  {hasPermission('contrats.can_generer_echeancier') && (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => handleGenererEcheancier('standard')}
-                      disabled={isLoadingEcheances}
-                    >
-                      <Plus size={16} className="mr-2" />
-                      Générer échéancier
-                    </Button>
-                  )}                  
+                <div className="flex gap-2">       
                   {echeances && Array.isArray(echeances) && echeances.length > 0 && (
                     <>
                       {hasPermission('contrats.can_generer_factures') && (
@@ -1047,15 +1074,69 @@ export function ContratDetailPage() {
                   </div>
                 )}
 
-                {/* Liste des échéances */}
+                {/* Liste des échéances groupées par échéancier */}
                 {isLoadingEcheances ? (
                   <div className="flex items-center justify-center py-8">
                     <RefreshCw size={24} className="animate-spin" />
                     <span className="ml-2">Chargement des échéances...</span>
                   </div>
-                ) : echeances && Array.isArray(echeances) && echeances.length > 0 ? (
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                    {getFilteredAndSortedEcheances().map((echeance) => (
+                ) : echeanciers && Array.isArray(echeanciers) && echeanciers.length > 0 ? (
+                  <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+                    {echeanciers.map((echeancier) => (
+                      <div key={echeancier.id} className="border-2 border-blue-200 rounded-lg overflow-hidden">
+                        {/* En-tête de l'échéancier */}
+                        <div className="bg-blue-50 border-b-2 border-blue-200 p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <CalendarIcon size={20} className="text-blue-600" />
+                              <div>
+                                <h4 className="font-semibold text-blue-900">
+                                  {echeancier.type_echeancier_display || echeancier.type_echeancier}
+                                </h4>
+                                <p className="text-sm text-blue-700">
+                                  Créé le {format(new Date(echeancier.date_creation), 'dd/MM/yyyy à HH:mm', { locale: fr })}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <div className="text-right">
+                                <div className="text-sm text-blue-700">
+                                  {echeancier.nombre_lignes} échéance{echeancier.nombre_lignes > 1 ? 's' : ''}
+                                </div>
+                                <div className="font-semibold text-blue-900">
+                                  <ProtectedField
+                                    modelName="echeancierContrat"
+                                    appLabel="contrats"
+                                    fieldName="montant_total"
+                                    mode="hide"
+                                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                                  >
+                                  {formatMontant(echeancier.montant_total)}
+                                  </ProtectedField>
+                                </div>
+                              </div>
+                              {/* Bouton pour générer les factures de cet échéancier */}
+                              {hasPermission('contrats.can_generer_factures') && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleGenererFacturesEcheancier(echeancier.id)}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <FileText size={16} className="mr-1" />
+                                  Générer factures
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          {echeancier.description && (
+                            <p className="mt-2 text-sm text-blue-800 italic">{echeancier.description}</p>
+                          )}
+                          
+                        </div>
+
+                        {/* Lignes d'échéances de cet échéancier */}
+                        <div className="p-4 space-y-3">
+                          {echeancier.lignes.map((echeance) => (
                       <div key={echeance.id} className={`border rounded-lg p-4 transition-all duration-200 hover:shadow-md ${
                         echeance.est_en_retard ? 'border-red-200 bg-red-50' :
                         echeance.doit_alerter ? 'border-yellow-200 bg-yellow-50' :
@@ -1084,7 +1165,15 @@ export function ContratDetailPage() {
                           <div className="bg-white p-3 rounded border">
                             <span className="text-gray-500 text-xs uppercase tracking-wide">Montant TTC</span>
                             <div className="font-bold text-lg text-blue-600">
+                              <ProtectedField
+                                modelName="ligneecheanciercontrat"
+                                appLabel="contrats"
+                                fieldName="montant_ttc"
+                                mode="hide"
+                                fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                              >
                               {formatMontant(echeance.montant_ttc)}
+                              </ProtectedField>
                             </div>
                           </div>
                           <div className="bg-white p-3 rounded border">
@@ -1129,20 +1218,16 @@ export function ContratDetailPage() {
                                 Marquer comme payé
                               </Button>
                             )}
-                            {echeance.doit_alerter && (
-                              <>
-                              {hasPermission('contrats.can_envoyer_alerte') && (
-                                <Button 
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleEnvoyerAlerte(echeance.id)}
-                                  className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
-                                >
-                                  <Bell size={14} className="mr-1" />
-                                  Envoyer alerte
-                                </Button>
-                              )}
-                              </>
+                            {echeance.doit_alerter && hasPermission('contrats.can_envoyer_alerte') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEnvoyerAlerte(echeance.id)}
+                                className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
+                              >
+                                <Bell size={14} className="mr-1" />
+                                Envoyer alerte
+                              </Button>
                             )}
                           </div>
                         )}
@@ -1155,6 +1240,9 @@ export function ContratDetailPage() {
                             </span>
                           </div>
                         )}
+                      </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1219,25 +1307,28 @@ export function ContratDetailPage() {
                         <TableCell>{ligne.activity?.intitule || ligne.ligne_frais?.type_frais || '—'}</TableCell>
                         <TableCell>{ligne.quantite}</TableCell>
                         <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
-                        <TableCell>{formatMontant(ligne.prix_unitaire_ht)}</TableCell>
-                        <TableCell className="font-medium">{formatMontant(ligne.montant_ht)}</TableCell>
-                        {/* <TableCell>
-                          {ligne.intervenants && ligne.intervenants.length > 0 ? (
-                            <div className="space-y-1">
-                              {ligne.intervenants.map((intervenant) => (
-                                <div key={intervenant.id} className="text-sm">
-                                  <span className="font-medium">{intervenant.profile_intervenant?.intitule || '—'}</span>
-                                  <br />
-                                  <span className="text-gray-600">
-                                    {intervenant.temps_intervenant || 0}h × {formatMontant(intervenant.taux_horaire || 0)}/h
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-500">-</span>
-                          )}
-                        </TableCell> */}
+                        <TableCell>
+                          <ProtectedField
+                            modelName="lignecontrat"
+                            appLabel="contrats"
+                            fieldName="prix_unitaire_ht"
+                            mode="hide"
+                            fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                          >
+                          {formatMontant(ligne.prix_unitaire_ht)}
+                          </ProtectedField>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <ProtectedField
+                            modelName="lignecontrat"
+                            appLabel="contrats"
+                            fieldName="prix_unitaire_ht"
+                            mode="hide"
+                            fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                          >
+                          {formatMontant(ligne.montant_ht)}
+                          </ProtectedField>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -1356,16 +1447,48 @@ export function ContratDetailPage() {
                         {historique.description}
                       </TableCell>
                       <TableCell className="font-medium right-align">
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ht_avant"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
                         {formatMontant(historique.montant_ht_avant)}
+                        </ProtectedField>
                       </TableCell>
                       <TableCell className="font-medium right-align">
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ht_apres"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
                         {formatMontant(historique.montant_ht_apres)}
+                        </ProtectedField>
                       </TableCell>
                       <TableCell className="font-medium right-align">
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ttc_avant"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
                         {formatMontant(historique.montant_ttc_avant)}
+                        </ProtectedField>
                       </TableCell>
                       <TableCell className="font-medium right-align">
-                        {formatMontant(historique.montant_ttc_apres)}
+                        <ProtectedField
+                          modelName="contrathistoriquemontant"
+                          appLabel="contrats"
+                          fieldName="montant_ttc_apres"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
+                          {formatMontant(historique.montant_ttc_apres)}
+                        </ProtectedField>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1480,7 +1603,15 @@ export function ContratDetailPage() {
                         <div className="text-right">
                           <div className="text-lg font-bold text-blue-600">{echeance.pourcentage}%</div>
                           <div className="text-sm text-gray-500">
-                            {formatMontant((contrat.montant_ttc * echeance.pourcentage) / 100)}
+                            <ProtectedField
+                              modelName="contrat"
+                              appLabel="contrats"
+                              fieldName="montant_ttc"
+                              mode="hide"
+                              fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                            >
+                              {formatMontant((contrat.montant_ttc * echeance.pourcentage) / 100)}
+                            </ProtectedField>
                           </div>
                         </div>
                       </div>
@@ -1496,7 +1627,16 @@ export function ContratDetailPage() {
                     </div>
                     <div className="text-right">
                       <div className="text-xl font-bold text-green-600">
-                        {formatMontant(contrat.montant_ttc)}
+                        <ProtectedField
+                          modelName="contrat"
+                          appLabel="contrats"
+                          fieldName="montant_ttc"
+                          mode="hide"
+                          fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                        >
+                          {formatMontant(contrat.montant_ttc)}
+
+                        </ProtectedField>
                       </div>
                     </div>
                   </div>
@@ -1517,7 +1657,17 @@ export function ContratDetailPage() {
             <div className="bg-gray-50 p-4 rounded-lg">
               <p className="font-medium">Contrat {contrat.numero}</p>
               <p className="text-gray-600">Client: {contrat.client.nom_complet}</p>
-              <p className="text-gray-600">Montant TTC: {formatMontant(contrat.montant_ttc)}</p>
+              <p className="text-gray-600">Montant TTC: 
+                <ProtectedField
+                  modelName="contrat"
+                  appLabel="contrats"
+                  fieldName="montant_ttc"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                {formatMontant(contrat.montant_ttc)}
+                </ProtectedField>
+              </p>
             </div>
           </div>
           <DialogFooter className="border-t pt-4">

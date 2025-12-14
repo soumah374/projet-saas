@@ -12,12 +12,13 @@ from django.contrib.contenttypes.models import ContentType
 from django.contrib.auth.decorators import permission_required
 from django.utils.decorators import method_decorator
 
-from .models import UserProfile, OTPCode, ClientProfile, ClientCategory
+from .models import UserProfile, OTPCode, ClientProfile, ClientCategory, FieldPermission
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer,
     UserListSerializer, ChangePasswordSerializer, CustomTokenObtainPairSerializer,
     LoginRequestSerializer, OTPVerificationSerializer, ClientProfileSerializer,
-    ClientCategorySerializer, AppearanceSettingsSerializer, NotificationSettingsSerializer
+    ClientCategorySerializer, AppearanceSettingsSerializer, NotificationSettingsSerializer,
+    FieldPermissionSerializer, FieldPermissionCreateSerializer
 )
 
 
@@ -1121,8 +1122,6 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 })
             
             return Response({
-                'group_id': group.id,
-                'group_name': group.name,
                 'users': users_data,
                 'total_count': len(users_data)
             })
@@ -1138,3 +1137,294 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
+
+class FieldPermissionViewSet(viewsets.ModelViewSet):
+    """ViewSet pour gérer les permissions par champ"""
+    queryset = FieldPermission.objects.select_related('user', 'content_type').all()
+    serializer_class = FieldPermissionSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['user', 'content_type', 'field_name', 'permission']
+    search_fields = ['field_name', 'user__username', 'user__first_name', 'user__last_name', 'content_type__model']
+    ordering_fields = ['id', 'field_name', 'permission']
+    ordering = ['-id']
+    
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update', 'bulk_create']:
+            return FieldPermissionCreateSerializer
+        return FieldPermissionSerializer
+
+    @action(detail=False, methods=['post'])
+    def bulk_create(self, request):
+        """Créer plusieurs permissions en masse"""
+        permissions_data = request.data
+
+        if not isinstance(permissions_data, list):
+            return Response(
+                {'error': 'Les données doivent être un tableau de permissions'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created_permissions = []
+        errors = []
+
+        for perm_data in permissions_data:
+            # Supprimer les permissions existantes pour éviter les duplicatas
+            FieldPermission.objects.filter(
+                user_id=perm_data.get('user'),
+                content_type_id=perm_data.get('content_type'),
+                field_name=perm_data.get('field_name'),
+            ).delete()
+
+            serializer = FieldPermissionCreateSerializer(data=perm_data)
+            if serializer.is_valid():
+                try:
+                    permission = serializer.save()
+                    created_permissions.append(permission)
+                except Exception as e:
+                    errors.append({
+                        'data': perm_data,
+                        'error': str(e)
+                    })
+            else:
+                errors.append({
+                    'data': perm_data,
+                    'errors': serializer.errors
+                })
+
+        response_data = {
+            'created': len(created_permissions),
+            'errors': len(errors),
+            'permissions': FieldPermissionSerializer(created_permissions, many=True).data
+        }
+
+        if errors:
+            response_data['error_details'] = errors
+
+        status_code = status.HTTP_201_CREATED if created_permissions else status.HTTP_400_BAD_REQUEST
+        return Response(response_data, status=status_code)
+
+    @action(detail=False, methods=['get'])
+    def my_permissions(self, request):
+        """Retourne toutes les permissions de l'utilisateur connecté"""
+        user = request.user
+        
+        # Permissions directes de l'utilisateur
+        user_perms = FieldPermission.objects.filter(user=user)
+        
+    
+        # Combiner les deux
+        all_perms = user_perms
+        all_perms = all_perms.distinct()
+        
+        serializer = self.get_serializer(all_perms, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def check_permission(self, request):
+        """
+        Vérifie si l'utilisateur a une permission spécifique sur un champ.
+        
+        Body: {
+            "model_name": "contrat",  # nom du modèle
+            "app_label": "contrats",  # label de l'app
+            "field_name": "montant_ttc",
+            "permission": "read",  # ou "write"
+            "object_id": 123  # optionnel
+        }
+        """
+        from django.contrib.contenttypes.models import ContentType
+        from django.apps import apps
+        from .utils import has_field_permission
+        
+        model_name = request.data.get('model_name')
+        app_label = request.data.get('app_label')
+        field_name = request.data.get('field_name')
+        permission = request.data.get('permission')
+        object_id = request.data.get('object_id')
+        
+        if not all([model_name, app_label, field_name, permission]):
+            return Response(
+                {'error': 'model_name, app_label, field_name et permission sont requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Récupérer le modèle
+            model = apps.get_model(app_label, model_name)
+            
+            # Récupérer l'objet si object_id est fourni
+            obj = None
+            if object_id:
+                try:
+                    obj = model.objects.get(id=object_id)
+                except model.DoesNotExist:
+                    return Response(
+                        {'error': 'Objet non trouvé'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            # Vérifier la permission
+            has_perm = has_field_permission(request.user, model, field_name, permission, obj)
+            
+            return Response({
+                'has_permission': has_perm,
+                'model': model_name,
+                'field': field_name,
+                'permission': permission,
+                'object_id': object_id
+            })
+            
+        except LookupError:
+            return Response(
+                {'error': f'Modèle {app_label}.{model_name} non trouvé'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=False, methods=['post'])
+    def get_model_permissions(self, request):
+        """
+        Retourne toutes les permissions de l'utilisateur pour un modèle.
+        
+        Body: {
+            "model_name": "contrat",
+            "app_label": "contrats",
+            "object_id": 123  # optionnel
+        }
+        
+        Response: {
+            "model_name": "contrat",
+            "object_id": 123,
+            "fields": {
+                "montant_ttc": {"read": true, "write": false},
+                "date_debut": {"read": true, "write": true},
+                ...
+            }
+        }
+        """
+        from django.apps import apps
+        from .utils import get_user_field_permissions
+
+        model_name = request.data.get('model_name')
+        app_label = request.data.get('app_label')
+        object_id = request.data.get('object_id')
+        
+        if not all([model_name, app_label]):
+            return Response(
+                {'error': 'model_name et app_label sont requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Récupérer le modèle
+            model = apps.get_model(app_label, model_name)
+            
+            # Récupérer l'objet si object_id est fourni
+            obj = None
+            if object_id:
+                try:
+                    obj = model.objects.get(id=object_id)
+                except model.DoesNotExist:
+                    return Response(
+                        {'error': 'Objet non trouvé'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            # Récupérer les permissions
+            permissions = get_user_field_permissions(request.user, model, obj)
+            
+            return Response({
+                'model_name': model_name,
+                'object_id': object_id,
+                'fields': permissions
+            })
+            
+        except LookupError:
+            return Response(
+                {'error': f'Modèle {app_label}.{model_name} non trouvé'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=False, methods=['get'])
+    def available_models(self, request):
+        """Retourne la liste des modèles disponibles pour les permissions"""
+        from django.apps import apps
+        from django.contrib.contenttypes.models import ContentType
+        
+        # Récupérer tous les ContentTypes
+        content_types = ContentType.objects.all().order_by('app_label', 'model')
+        
+        models_data = []
+        for ct in content_types:
+            try:
+                model = ct.model_class()
+                if model:
+                    fields = [f.name for f in model._meta.get_fields()]
+                    models_data.append({
+                        'id': ct.id,
+                        'app_label': ct.app_label,
+                        'model_name': ct.model,
+                        'model_verbose_name': model._meta.verbose_name,
+                        'fields': fields
+                    })
+            except:
+                continue
+        
+        return Response(models_data)
+
+    @action(detail=False, methods=['get'], url_path='model-objects/(?P<content_type_id>[^/.]+)')
+    def model_objects(self, request, content_type_id=None):
+        """
+        Retourne les objets d'un modèle spécifique (par content_type ID).
+        Supporte la recherche via le paramètre ?search=...
+        """
+        from django.contrib.contenttypes.models import ContentType
+        from django.db.models import Q
+
+        try:
+            content_type = ContentType.objects.get(pk=content_type_id)
+            model_class = content_type.model_class()
+
+            if not model_class:
+                return Response(
+                    {'error': 'Modèle non trouvé'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            # Récupérer tous les objets du modèle
+            queryset = model_class.objects.all()
+
+            # Appliquer la recherche si fournie
+            search = request.query_params.get('search', '')
+            if search:
+                # Chercher dans les champs textuels du modèle
+                search_fields = []
+                for field in model_class._meta.get_fields():
+                    if field.__class__.__name__ in ['CharField', 'TextField']:
+                        search_fields.append(field.name)
+
+                if search_fields:
+                    query = Q()
+                    for field_name in search_fields:
+                        query |= Q(**{f'{field_name}__icontains': search})
+                    queryset = queryset.filter(query)
+
+            # Limiter à 50 résultats
+            queryset = queryset[:50]
+
+            # Formater les résultats
+            objects_data = []
+            for obj in queryset:
+                # Utiliser __str__ du modèle pour l'affichage
+                display = str(obj)
+                objects_data.append({
+                    'id': obj.pk,
+                    'display': display
+                })
+
+            return Response(objects_data)
+
+        except ContentType.DoesNotExist:
+            return Response(
+                {'error': 'Content type non trouvé'},
+                status=status.HTTP_404_NOT_FOUND
+            )

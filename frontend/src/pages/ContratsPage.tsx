@@ -27,6 +27,7 @@ import { EditContratModal } from '@/components/contrats/EditContratModal';
 import { CreateContratModal } from '@/components/contrats/CreateContratModal';
 import { statutContrat } from '@/lib/utils';
 import { usePermissions } from '@/hooks/use-permissions';
+import { ProtectedField } from '@/components/field-permissions/ProtectedField';
 export function ContratsPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,79 +156,12 @@ export function ContratsPage() {
     return <Badge variant={variants[statut as keyof typeof variants]}>{statutContrat(statut)}</Badge>;
   };
 
-  // const getActionButtons = (contrat: Contrat) => {
-  //   const buttons = [];
-    
-  //   if (contrat.statut === 'brouillon') {
-  //     buttons.push(
-  //       <Button
-  //         key="activer"
-  //         size="sm"
-  //         onClick={() => handleActionContrat(contrat, 'activer')}
-  //         disabled={activerContratMutation.isPending}
-  //       >
-  //         <Play size={14} className="mr-1" />
-  //         Activer
-  //       </Button>
-  //     );
-  //   }
-    
-  //   if (contrat.statut === 'actif') {
-  //     buttons.push(
-  //       <Button
-  //         key="cloturer"
-  //         size="sm"
-  //         variant="outline"
-  //         onClick={() => handleActionContrat(contrat, 'cloturer')}
-  //         disabled={cloturerContratMutation.isPending}
-  //       >
-  //         <Check size={14} className="mr-1" />
-  //         Clôturer
-  //       </Button>,
-  //       <Button
-  //         key="suspendre"
-  //         size="sm"
-  //         variant="outline"
-  //         onClick={() => handleActionContrat(contrat, 'suspendre')}
-  //         disabled={suspendreContratMutation.isPending}
-  //       >
-  //         <Pause size={14} className="mr-1" />
-  //         Suspendre
-  //       </Button>
-  //     );
-  //   }
-    
-  //   if (contrat.statut === 'suspendu') {
-  //     buttons.push(
-  //       <Button
-  //         key="activer"
-  //         size="sm"
-  //         onClick={() => handleActionContrat(contrat, 'activer')}
-  //         disabled={activerContratMutation.isPending}
-  //       >
-  //         <Play size={14} className="mr-1" />
-  //         Réactiver
-  //       </Button>
-  //     );
-  //   }
-    
-  //   if (['brouillon', 'actif', 'suspendu'].includes(contrat.statut)) {
-  //     buttons.push(
-  //       <Button
-  //         key="annuler"
-  //         size="sm"
-  //         variant="destructive"
-  //         onClick={() => handleActionContrat(contrat, 'annuler')}
-  //         disabled={annulerContratMutation.isPending}
-  //       >
-  //         <X size={14} className="mr-1" />
-  //         Annuler
-  //       </Button>
-  //     );
-  //   }
-    
-  //   return buttons;
-  // };
+  // const { canRead, canWrite, isLoading } = useFieldAccess(
+  //   'contrat',
+  //   'contrats',
+  //   'montant_ttc',
+  //   contratId
+  // );
 
   const getAvailableActions = (contrat: Contrat) => {
     const actions = [];
@@ -468,14 +402,50 @@ export function ContratsPage() {
                     <TableCell>{formatDate(contrat.date_debut)}</TableCell>
                     <TableCell>{formatDate(contrat.date_fin)}</TableCell>
                     <TableCell>{getStatutBadge(contrat.statut)}</TableCell>
-                    <TableCell className="font-medium">{formatMontant(contrat.montant_ht)}</TableCell>
-                    <TableCell className="text-sm text-gray-600">
-                      {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
+                    <TableCell className="font-medium">
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="montant_ht"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                      >
+                        {formatMontant(contrat.montant_ht)}
+                      </ProtectedField>
                     </TableCell>
                     <TableCell className="text-sm text-gray-600">
-                      {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="appliquer_tva"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                      >
+                        {contrat.appliquer_tva ? `${contrat.taux_tva}%` : '—'}
+                      </ProtectedField>
                     </TableCell>
-                    <TableCell className="font-medium">{formatMontant(contrat.montant_ttc)}</TableCell>
+                    <TableCell className="text-sm text-gray-600">
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="appliquer_frais_agence"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                      >
+                        {contrat.appliquer_frais_agence ? `${contrat.taux_frais_agence}%` : '—'}
+                      </ProtectedField>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      <ProtectedField
+                        modelName="contrat"
+                        appLabel="contrats"
+                        fieldName="montant_ttc"
+                        mode="hide"
+                        fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                      >
+                        {formatMontant(contrat.montant_ttc)}
+                      </ProtectedField>
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

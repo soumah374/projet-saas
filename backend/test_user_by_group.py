@@ -70,7 +70,6 @@ def test_user_by_group_endpoint():
                 })
             
             response_data = {
-                'group_id': group.id,
                 'group_name': group.name,
                 'users': users_data,
                 'total_count': len(users_data)

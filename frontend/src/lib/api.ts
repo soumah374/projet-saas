@@ -712,6 +712,13 @@ export const contratsAPI = {
     addDevisToContrat: (id: number, data: {
         devis_ids: number[];
         devis_principal_id?: number;
+        echeances?: Array<{
+            numero: number;
+            type: 'acompte' | 'tranche' | 'solde';
+            pourcentage: number;
+            date_echeance: string;
+            commentaire: string;
+        }>;
     }) => api.post(`/contrats/${id}/add_devis/`, data),
 
     updateContratContent: (id: number, data: {

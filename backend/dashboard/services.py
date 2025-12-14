@@ -9,7 +9,7 @@ from django.db.models import Value, DecimalField, FloatField
 from projects.models import Project, ProjectTask
 from users.models import User
 from teams.models import Team
-from contrats.models import Contrat, EcheancierContrat
+from contrats.models import Contrat, EcheancierContrat, LigneEcheancierContrat
 from devis.models import Devis
 from billings.models import Facture
 from .permission_widget import AVAILABLE_WIDGETS
@@ -657,20 +657,23 @@ class DashboardMetricsService:
                 )['total'] or 0
                 result['total_factures_amount'] = float(total_factures_amount)
             
-            #Facture non emises 
+            #Facture non emises
             if self._want('financial', 'facture_non_emises', selected):
-                echeancier_ids = Facture.objects.filter(
-                    created_at__gte=start_date, 
-                    created_at__lte=end_date).values('echeance_id')
-                echeancier_ids = [e['echeance_id'] for e in echeancier_ids if e['echeance_id'] is not None]
-                
-                echeances_non_emises = EcheancierContrat.objects.filter(
+                # Récupérer les IDs des lignes d'échéancier qui ont des factures
+                ligne_echeancier_ids = Facture.objects.filter(
+                    created_at__gte=start_date,
+                    created_at__lte=end_date).values('ligne_echeancier_id')
+                ligne_echeancier_ids = [e['ligne_echeancier_id'] for e in ligne_echeancier_ids if e['ligne_echeancier_id'] is not None]
+
+                # Trouver les lignes d'échéancier sans facture
+                lignes_echeances_non_emises = LigneEcheancierContrat.objects.filter(
                     date_echeance__gte=start_date,
                     date_echeance__lte=end_date,
-                ).exclude(id__in=echeancier_ids)
-                
-                echeances_non_emises = self._filter_by_role(echeances_non_emises, 'contrats')
-                total_non_emises = echeances_non_emises.aggregate(
+                ).exclude(id__in=ligne_echeancier_ids)
+
+                # Filtrer par rôle via la relation echeancier__contrat
+                lignes_echeances_non_emises = self._filter_by_role(lignes_echeances_non_emises, 'echeancier__contrat')
+                total_non_emises = lignes_echeances_non_emises.aggregate(
                     total=Coalesce(Sum('montant_ttc'), Value(0, output_field=DecimalField(max_digits=12, decimal_places=2)))
                 )['total'] or 0
                 result['facture_non_emises'] = float(total_non_emises)

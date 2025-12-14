@@ -13,15 +13,23 @@ from django.core.mail import EmailMessage
 from django.conf import settings
 
 
-from .models import Contrat, LigneContrat, LigneContratIntervenant, EcheancierContrat, Avenant, ContratHistoriqueMontant
+from .models import (
+    Contrat, LigneContrat, LigneContratIntervenant,
+    EcheancierContrat, LigneEcheancierContrat,
+    Avenant, ContratHistoriqueMontant
+)
+from django.db import models
 from .serializers import (
     ContratSerializer, ContratCreateSerializer, ContratDetailSerializer,
     LigneContratSerializer, LigneContratIntervenantSerializer,
     EcheancierContratSerializer, EcheancierContratCreateSerializer,
+    LigneEcheancierContratSerializer,
     AvenantSerializer, AvenantCreateSerializer, AvenantDetailSerializer,
     ContratHistoriqueMontantSerializer
 )
 from devis.models import Devis
+from billings.models import Facture, LigneFacture, ConfigurationFacturation
+from billings.serializers import FactureSerializer
 
 from django.template.loader import render_to_string
 from weasyprint import HTML, CSS
@@ -172,6 +180,8 @@ class ContratViewSet(viewsets.ModelViewSet):
                 
                 # Initialiser les montants depuis les devis
                 contrat.initialiser_montants_depuis_devis()
+                # Initialiser les echeanciers
+                contrat.creer_echeances_depuis_configuration()
                 contrat.save()
                 
                 for devis in devis_list:
@@ -511,6 +521,7 @@ class ContratViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def add_devis(self, request, pk=None):
+        contrat = self.get_object()
         """Ajouter des devis à un contrat existant"""
         try:
             with transaction.atomic():
@@ -518,14 +529,13 @@ class ContratViewSet(viewsets.ModelViewSet):
                 devis_ids = request.data.get('devis_ids', [])
                 devis_principal_id = request.data.get('devis_principal_id')
                 echeances_data = request.data.get('echeances', [])
-
                 if not devis_ids:
                     return Response(
                         {'error': 'devis_ids est obligatoire'},
                         status=status.HTTP_400_BAD_REQUEST
                     )
-
-                # Sauvegarder les montants avant modification pour l'historique
+                    
+                # Sauvegarder les montants avant modification pour l'historique1
                 montant_ht_avant = contrat.montant_ht
                 montant_tva_avant = contrat.montant_tva
                 montant_ttc_avant = contrat.montant_ttc
@@ -623,77 +633,62 @@ class ContratViewSet(viewsets.ModelViewSet):
                     }
                 )
 
-                # Créer les échéances si fournies
+                # Créer un nouvel échéancier si des échéances sont fournies
                 if echeances_data and isinstance(echeances_data, list):
-                    # Gérer les anciennes échéances de manière intelligente
-                    anciennes_echeances = contrat.echeances.all()
+                    # Vérifier si c'est le premier échéancier ou une extension
+                    is_first_echeance = not contrat.echeances.exists()
 
-                    # Déterminer la version de l'échéancier
-                    version_actuelle = 1
-                    for echeance in anciennes_echeances:
-                        echeance_version = echeance.metadata.get('version', 1) if echeance.metadata else 1
-                        if echeance_version >= version_actuelle:
-                            version_actuelle = echeance_version + 1
-
-                    # Traiter les anciennes échéances
-                    for echeance in anciennes_echeances:
-                        # Vérifier si l'échéance a des factures associées
-                        from billings.models import Facture
-                        has_factures = Facture.objects.filter(echeance=echeance).exists()
-
-                        if echeance.statut == 'paye' or has_factures:
-                            # Garder les échéances payées ou avec factures, mais les marquer comme archives
-                            if not echeance.metadata:
-                                echeance.metadata = {}
-                            echeance.metadata['archive'] = True
-                            echeance.metadata['archive_raison'] = 'Extension du contrat - Échéance conservée car payée ou facturée'
-                            echeance.metadata['archive_date'] = timezone.now().isoformat()
-                            echeance.commentaire = f"{echeance.commentaire}\n[ARCHIVÉ - Extension du contrat le {timezone.now().strftime('%d/%m/%Y')}]".strip()
-                            echeance.save()
-                        else:
-                            # Annuler les échéances non payées et sans factures
-                            echeance.statut = 'annule'
-                            if not echeance.metadata:
-                                echeance.metadata = {}
-                            echeance.metadata['annulation_raison'] = 'Extension du contrat - Nouvelle échéance créée'
-                            echeance.metadata['annulation_date'] = timezone.now().isoformat()
-                            echeance.commentaire = f"{echeance.commentaire}\n[ANNULÉ - Extension du contrat le {timezone.now().strftime('%d/%m/%Y')}]".strip()
-                            echeance.save()
-
-                    # Créer les nouvelles échéances basées sur le nouveau montant total
+                    # Créer le nouvel échéancier (header)
+                    nouvel_echeancier = EcheancierContrat.objects.create(
+                        contrat=contrat,
+                        type_echeancier='initial' if is_first_echeance else 'extension',
+                        description=f"Échéancier créé lors de l'ajout de devis: {', '.join([d.numero for d in devis_list])}",
+                        echeances_contrat = echeances_data,
+                        metadata={
+                            'devis_ajoutes': [d.numero for d in devis_list],
+                            'devis_ids': [d.id for d in devis_list],
+                            'montant_contrat': float(contrat.montant_ttc),
+                            'montant_anterieur': float(montant_ttc_avant) if not is_first_echeance else 0,
+                        }
+                    )
+                    # Créer les lignes d'échéancier
                     for echeance_config in echeances_data:
                         try:
                             # Calculer les montants
-                            pourcentage = float(echeance_config.get('pourcentage', 0))
+                            from decimal import Decimal
+                            pourcentage = Decimal(str(echeance_config.get('pourcentage', 0)))
                             montant_ht = (contrat.montant_ht * pourcentage) / 100
                             montant_tva = (contrat.montant_tva * pourcentage) / 100
                             montant_ttc = (contrat.montant_ttc * pourcentage) / 100
 
-                            # Créer l'échéance avec métadonnées indiquant l'extension
-                            EcheancierContrat.objects.create(
-                                contrat=contrat,
-                                type_echeance=echeance_config.get('type', 'tranche'),
+                            # Créer la ligne d'échéancier
+                            LigneEcheancierContrat.objects.create(
+                                echeancier=nouvel_echeancier,
                                 numero_echeance=echeance_config.get('numero', 1),
+                                type_echeance=echeance_config.get('type', 'tranche'),
                                 montant_ht=montant_ht,
                                 montant_tva=montant_tva,
                                 montant_ttc=montant_ttc,
                                 pourcentage=pourcentage,
                                 date_echeance=echeance_config.get('date_echeance'),
                                 commentaire=echeance_config.get('commentaire', ''),
+                                statut='en_attente',
                                 metadata={
-                                    'version': version_actuelle,
-                                    'type': 'extension',
-                                    'raison': 'Extension du contrat suite à l\'ajout de nouveaux devis',
-                                    'date_creation': timezone.now().isoformat(),
-                                    'devis_ajoutes': [d.numero for d in devis_list],
-                                    'montant_anterieur': float(montant_ttc_avant),
-                                    'montant_nouveau': float(contrat.montant_ttc)
+                                    'creation_type': 'extension_contrat' if not is_first_echeance else 'initial'
                                 }
                             )
                         except Exception as e:
-                            print(f"Erreur lors de la création de l'échéance: {e}")
+                            print(f"Erreur lors de la création de la ligne d'échéance: {e}")
+                            import traceback
+                            print(traceback.format_exc())
                             continue
 
+                    return Response(
+                        ContratDetailSerializer(contrat).data,
+                        status=status.HTTP_200_OK
+                    )
+
+                # Retourner le contrat mis à jour même si aucune échéance n'a été créée
                 return Response(
                     ContratDetailSerializer(contrat).data,
                     status=status.HTTP_200_OK
@@ -739,13 +734,13 @@ class LigneContratIntervenantViewSet(viewsets.ModelViewSet):
 
 
 class EcheancierContratViewSet(viewsets.ModelViewSet):
-    """ViewSet pour les échéances de contrat"""
+    """ViewSet pour les échéanciers de contrat (headers)"""
     queryset = EcheancierContrat.objects.all()
     serializer_class = EcheancierContratSerializer
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['contrat']
-    ordering_fields = ['date_echeance', 'numero_echeance']
-    ordering = ['numero_echeance']
+    ordering_fields = ['date_creation']
+    ordering = ['-date_creation']
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -753,20 +748,89 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
         return EcheancierContratSerializer
 
     @action(detail=True, methods=['post'])
-    def marquer_paye(self, request, pk=None, contrat_pk=None):
+    def generer_factures(self, request, pk=None):
+        """Génère les factures pour toutes les lignes d'échéances de cet échéancier"""
+        echeancier = self.get_object()
+
+        # Récupérer les lignes d'échéances de cet échéancier sans facture
+        lignes_sans_facture = echeancier.lignes.filter(factures__isnull=True)
+
+        if not lignes_sans_facture.exists():
+            return Response({
+                'message': 'Aucune échéance sans facture à générer',
+                'factures_crees': []
+            }, status=status.HTTP_200_OK)
+
+        factures_crees = []
+        with transaction.atomic():
+            for ligne in lignes_sans_facture:
+                # Créer la facture
+                facture_data = {
+                    'contrat': echeancier.contrat,
+                    'ligne_echeancier': ligne,
+                    'client': echeancier.contrat.client,
+                    'date_echeance': ligne.date_echeance,
+                    'montant_ht': ligne.montant_ht,
+                    'montant_tva': ligne.montant_tva,
+                    'montant_ttc': ligne.montant_ttc,
+                    'taux_tva': echeancier.contrat.taux_tva,
+                    'appliquer_tva': echeancier.contrat.appliquer_tva,
+                    'mode_paiement': 'virement',
+                }
+
+                # Récupérer la configuration par défaut
+                config = ConfigurationFacturation.get_config()
+                if config.iban_defaut:
+                    facture_data['iban'] = config.iban_defaut
+                if config.bic_defaut:
+                    facture_data['bic'] = config.bic_defaut
+                if config.compte_bancaire_defaut:
+                    facture_data['compte_bancaire'] = config.compte_bancaire_defaut
+
+                facture = Facture.objects.create(**facture_data)
+
+                # Créer une ligne de facture
+                LigneFacture.objects.create(
+                    facture=facture,
+                    type_ligne='prestation',
+                    description=f"Échéance {ligne.numero_echeance} - {ligne.get_type_echeance_display()}",
+                    quantite=1,
+                    prix_unitaire_ht=ligne.montant_ht,
+                    montant_ht=ligne.montant_ht
+                )
+
+                factures_crees.append(facture)
+
+        return Response({
+            'message': f'{len(factures_crees)} facture(s) créée(s) pour l\'échéancier {echeancier.get_type_echeancier_display()}',
+            'factures_crees': FactureSerializer(factures_crees, many=True).data
+        }, status=status.HTTP_201_CREATED)
+
+
+class LigneEcheancierContratViewSet(viewsets.ModelViewSet):
+    """ViewSet pour les lignes d'échéances individuelles"""
+    queryset = LigneEcheancierContrat.objects.all()
+    serializer_class = LigneEcheancierContratSerializer
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['echeancier', 'statut', 'type_echeance']
+    ordering_fields = ['date_echeance', 'numero_echeance']
+    ordering = ['numero_echeance']
+
+    @action(detail=True, methods=['post'])
+    def marquer_paye(self, request, pk=None):
         """Marquer une échéance comme payée"""
         echeance = self.get_object()
         date_paiement = request.data.get('date_paiement')
-        
+
         echeance.marquer_comme_paye(date_paiement)
-        
+
         return Response({'message': 'Échéance marquée comme payée'})
 
     @action(detail=True, methods=['post'])
-    def envoyer_alerte(self, request, pk=None, contrat_pk=None):
+    def envoyer_alerte(self, request, pk=None):
         """Envoyer une alerte pour une échéance"""
         echeance = self.get_object()
-        
+
         if echeance.doit_alerter:
             echeance.envoyer_alerte()
             return Response({'message': 'Alerte envoyée avec succès'})
@@ -782,43 +846,63 @@ class EcheancierContratViewSet(viewsets.ModelViewSet):
         contrat_id = request.data.get('contrat') or contrat_pk
         type_echeancier = request.data.get('type', 'standard')  # standard, acompte_solde, etc.
         echeances_contrat = request.data.get('echeances', [])
-        
+
         try:
             contrat = Contrat.objects.get(id=contrat_id)
-            
-            # Supprimer les échéances existantes
-            contrat.echeances.all().delete()
+
+            # Vérifier si c'est le premier échéancier ou une modification
+            est_premier = not contrat.echeances.exists()
+
+            # Créer un nouvel échéancier (header)
+            nouvel_echeancier = EcheancierContrat.objects.create(
+                contrat=contrat,
+                type_echeancier='initial' if est_premier else 'modification',
+                description=f"Échéancier {type_echeancier} généré automatiquement",
+                echeances_contrat=echeances_contrat
+            )
+
             echeances = []
             if type_echeancier == 'standard':
-                # Échéancier standard : 30% à la commande, 70% à la livraison
+                # Échéancier standard : utiliser les échéances fournies
                 for echeance in echeances_contrat:
                     echeances.append(echeance)
             elif type_echeancier == 'tranches':
-                # Échéancier en tranches : 25% à la commande, 25% à mi-parcours, 50% à la livraison
+                # Échéancier en tranches : calculer les dates intermédiaires
                 from datetime import timedelta
-                # mi_parcours = contrat.date_debut + (contrat.date_fin - contrat.date_debut) / 2
                 for i in range(len(echeances_contrat)):
                     echeances.append(echeances_contrat[i])
                     if i == 1:
+                        # Date à mi-parcours pour la 2ème tranche
                         echeances[i]['date_echeance'] = contrat.date_debut + (contrat.date_fin - contrat.date_debut) / 2
-            # Créer les échéances
+
+            # Créer les lignes d'échéances
             for echeance_data in echeances:
                 # Calculer les montants basés sur le pourcentage
                 pourcentage = echeance_data.get('pourcentage', 0)
                 montant_ttc = (contrat.montant_ttc * pourcentage) / 100
                 montant_ht = (contrat.montant_ht * pourcentage) / 100
                 montant_tva = (contrat.montant_tva * pourcentage) / 100
-                
-                EcheancierContrat.objects.create(
-                    contrat=contrat,
+
+                # Extraire les champs spécifiques pour LigneEcheancierContrat
+                LigneEcheancierContrat.objects.create(
+                    echeancier=nouvel_echeancier,
+                    numero_echeance=echeance_data.get('numero_echeance', echeance_data.get('numero', 1)),
+                    type_echeance=echeance_data.get('type_echeance', echeance_data.get('type', 'tranche')),
                     montant_ht=montant_ht,
                     montant_tva=montant_tva,
                     montant_ttc=montant_ttc,
-                    **echeance_data
+                    pourcentage=pourcentage,
+                    date_echeance=echeance_data.get('date_echeance'),
+                    commentaire=echeance_data.get('commentaire', ''),
+                    statut='en_attente'
                 )
-            
-            return Response({'message': f'Échéancier {type_echeancier} généré avec succès'})
-            
+
+            return Response({
+                'message': f'Échéancier {type_echeancier} généré avec succès',
+                'echeancier_id': nouvel_echeancier.id,
+                'nombre_lignes': nouvel_echeancier.nombre_lignes
+            })
+
         except Contrat.DoesNotExist:
             return Response(
                 {'error': 'Contrat introuvable'},

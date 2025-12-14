@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ChevronDown, Edit, Settings, Trash2 } from 'lucide-react';
+import FieldPermissionsAdminPage from './FieldPermissionsAdminPage';
 interface PermissionObject {
   id: number;
   name: string;
@@ -87,8 +88,6 @@ export default function PermissionManagerPage() {
   const [editRoleName, setEditRoleName] = useState('');
   const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
   const [roleToDelete, setRoleToDelete] = useState<RoleObject | null>(null);
-  const [permissionToDelete, setPermissionToDelete] = useState<string | null>(null);
-  const [isDeletePermissionDialogOpen, setIsDeletePermissionDialogOpen] = useState(false);
 
   // Charger les données
   useEffect(() => {
@@ -134,16 +133,6 @@ export default function PermissionManagerPage() {
     }
   };
 
-  // Créer une nouvelle permission
-  // const handleCreatePermission = async () => {
-  //   const success = await createPermissionAPI(newPermissionName);
-  //   if (success) {
-  //     setNewPermissionName('');
-  //     setIsCreatePermissionDialogOpen(false);
-  //     loadData();
-  //   }
-  // };
-
   // Supprimer un rôle
   const handleDeleteRole = async (role: RoleObject) => {
     setRoleToDelete(role);
@@ -168,32 +157,6 @@ export default function PermissionManagerPage() {
     setRoleToDelete(null);
   };
 
-  // Supprimer une permission
-  // const handleDeletePermission = (permissionName: string) => {
-  //   setPermissionToDelete(permissionName);
-  //   setIsDeletePermissionDialogOpen(true);
-  // };
-
-  // const confirmDeletePermission = async () => {
-  //   if (!permissionToDelete) return;
-  //   const success = await deletePermissionAPI(permissionToDelete);
-  //   if (success) {
-  //     loadData();
-  //     toast({
-  //       title: "Succès",
-  //       description: `Permission "${permissionToDelete}" supprimée avec succès`
-  //     });
-  //   }
-  //   setIsDeletePermissionDialogOpen(false);
-  //   setPermissionToDelete(null);
-  // };
-
-  // const modules = [
-  //   'users', 'projects', 'teams', 'departments', 'clients', 
-  //   'devis', 'contrats', 'billings', 'catalog', 'documents', 
-  //   'reports', 'calendar', 'timesheets'
-  // ];
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -217,6 +180,7 @@ export default function PermissionManagerPage() {
         <TabsList>
           <TabsTrigger value="roles">Rôles</TabsTrigger>
           <TabsTrigger value="permissions">Permissions</TabsTrigger>
+          <TabsTrigger value="field-permissions">Permission sur les champs</TabsTrigger>
         </TabsList>
 
         <TabsContent value="roles" className="space-y-6">
@@ -382,36 +346,6 @@ export default function PermissionManagerPage() {
                     Gérez les permissions disponibles dans le système
                   </CardDescription>
                 </div>
-                {/* <Dialog open={isCreatePermissionDialogOpen} onOpenChange={setIsCreatePermissionDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>Nouvelle Permission</Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Créer une nouvelle permission</DialogTitle>
-                      <DialogDescription>
-                        Entrez le nom de la nouvelle permission
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="permissionName">Nom de la permission</Label>
-                        <Input
-                          id="permissionName"
-                          value={newPermissionName}
-                          onChange={(e) => setNewPermissionName(e.target.value)}
-                          placeholder="Ex: projects.advanced_edit"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => setIsCreatePermissionDialogOpen(false)}>
-                        Annuler
-                      </Button>
-                      <Button onClick={handleCreatePermission}>Créer</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog> */}
               </div>
             </CardHeader>
             <CardContent>
@@ -474,15 +408,6 @@ export default function PermissionManagerPage() {
                                   <span className="font-medium">{permissionName}</span>
                                   <Badge variant="outline">{displayModuleName}</Badge>
                                 </div>
-                                {/* <div className="flex items-center gap-2">
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => handleDeletePermission(permissionName)}
-                                  >
-                                    Supprimer
-                                  </Button>
-                                </div> */}
                               </div>
                             );
 
@@ -495,6 +420,14 @@ export default function PermissionManagerPage() {
                 })()}
 
               </Accordion>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value='field-permissions' className='space-y-6'>
+          <Card>
+            <CardHeader>Permissions sur les champs</CardHeader>
+            <CardContent>
+              <FieldPermissionsAdminPage/>
             </CardContent>
           </Card>
         </TabsContent>
@@ -529,36 +462,6 @@ export default function PermissionManagerPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Dialogue de suppression de permission */}
-      {/* <Dialog open={isDeletePermissionDialogOpen} onOpenChange={setIsDeletePermissionDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Supprimer la permission</DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir supprimer la permission "{permissionToDelete}" ?
-              <br />
-              <span className="text-red-600 font-medium">
-                Cette action est irréversible.
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsDeletePermissionDialogOpen(false);
-                setPermissionToDelete(null);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={confirmDeletePermission}>
-              Supprimer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog> */}
     </div>
   );
 } 

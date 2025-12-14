@@ -632,6 +632,62 @@ export interface EcheancierContrat {
 }
 
 // Échéance types
+// Nouveau: Ligne d'échéancier (individual échéance)
+export interface LigneEcheancier {
+  id: number;
+  echeancier: number;
+  numero_echeance: number;
+  type_echeance: string;
+  type_echeance_display?: string;
+  montant_ht: number;
+  montant_tva: number;
+  montant_ttc: number;
+  pourcentage: number;
+  date_echeance: string;
+  date_paiement?: string;
+  statut: string;
+  statut_display?: string;
+  commentaire: string;
+  alerte_envoyee: boolean;
+  jours_restants: number;
+  est_en_retard: boolean;
+  doit_alerter: boolean;
+  factures_count?: number;
+  metadata?: any;
+  created_at: string;
+  updated_at: string;
+  // Champs optionnels ajoutés par certains endpoints (comme alertes_quotidiennes)
+  contrat?: number;
+  contrat_details?: {
+    numero: string;
+    client: {
+      nom_complet: string;
+    };
+  };
+}
+
+// Nouveau: Échéancier (header)
+export interface EcheancierContrat {
+  id: number;
+  contrat: number;
+  type_echeancier: string;
+  type_echeancier_display?: string;
+  date_creation: string;
+  description: string;
+  metadata?: any;
+  echeances_contrat: Array<{
+    numero: number;
+    type: 'acompte' | 'tranche' | 'solde';
+    pourcentage: number;
+    date_echeance: string;
+    commentaire: string;
+  }>;
+  lignes: LigneEcheancier[];
+  montant_total: number;
+  nombre_lignes: number;
+}
+
+// Ancien format (pour compatibilité temporaire)
 export interface Echeance {
   id: number;
   contrat: number;
@@ -660,8 +716,8 @@ export interface Echeance {
 }
 
 export interface AlertesQuotidiennes {
-  echeances_3_jours: Echeance[];
-  echeances_retard: Echeance[];
+  echeances_3_jours: LigneEcheancier[];
+  echeances_retard: LigneEcheancier[];
   total_alertes: number;
 }
 
