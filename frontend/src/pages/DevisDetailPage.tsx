@@ -519,6 +519,17 @@ export function DevisDetailPage() {
                   {formatMontant(devis.montant_ht)}
                 </ProtectedField>
               </div>
+              <div className="font-medium text-red-400">
+                <ProtectedField
+                  modelName="devis"
+                  appLabel="devis"
+                  fieldName="montant_ht"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                  {formatMontant(devis.recalcul_after_line_change.montant_ht)}
+                </ProtectedField>
+              </div>
             </div>
             {devis.appliquer_tva && (
               <div>
@@ -532,6 +543,17 @@ export function DevisDetailPage() {
                     fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                   >
                   {formatMontant(devis.montant_tva)}
+                  </ProtectedField>
+                </div>
+                <div className="font-medium text-red-400">
+                  <ProtectedField
+                    modelName="devis"
+                    appLabel="devis"
+                    fieldName="montant_tva"
+                    mode="hide"
+                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                  >
+                  {formatMontant(devis.recalcul_after_line_change.montant_tva)}
                   </ProtectedField>
                 </div>
               </div>
@@ -550,6 +572,17 @@ export function DevisDetailPage() {
                     {formatMontant(devis.montant_frais_agence || 0)}
                   </ProtectedField>
                 </div>
+                <div className="font-medium text-red-400">
+                  <ProtectedField
+                    modelName="devis"
+                    appLabel="devis"
+                    fieldName="montant_frais_agence"
+                    mode="hide"
+                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                  >
+                    {formatMontant(devis.recalcul_after_line_change.montant_frais_agence || 0)}
+                  </ProtectedField>
+                </div>
               </div>
             )}
             <div>
@@ -563,6 +596,17 @@ export function DevisDetailPage() {
                   fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                 >
                   {formatMontant(devis.montant_ttc)}
+                </ProtectedField>
+              </div>
+              <div className="font-medium text-red-400">
+                <ProtectedField
+                  modelName="devis"
+                  appLabel="devis"
+                  fieldName="montant_frais_agence"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                  {formatMontant(devis.recalcul_after_line_change.montant_ttc)}
                 </ProtectedField>
               </div>
             </div>
@@ -588,6 +632,7 @@ export function DevisDetailPage() {
                   <TableHead>Unité</TableHead>
                   <TableHead>Prix unitaire HT</TableHead>
                   <TableHead>Montant HT</TableHead>
+                  <TableHead>Statut</TableHead>
                   {devis.statut === 'brouillon' && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -623,6 +668,9 @@ export function DevisDetailPage() {
                       >
                       {formatMontant(ligne.montant_ht)}
                       </ProtectedField>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant='default' className="bg-green-500">{ligne.statut}</Badge>
                     </TableCell>
                     {devis.statut === 'brouillon' && (
                       <TableCell>

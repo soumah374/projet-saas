@@ -27,7 +27,7 @@ from .serializers import (
     AvenantSerializer, AvenantCreateSerializer, AvenantDetailSerializer,
     ContratHistoriqueMontantSerializer
 )
-from devis.models import Devis
+from devis.models import (Devis, LigneDevis)
 from billings.models import Facture, LigneFacture, ConfigurationFacturation
 from billings.serializers import FactureSerializer
 
@@ -198,7 +198,8 @@ class ContratViewSet(viewsets.ModelViewSet):
                             quantite=ligne_devis.quantite,
                             unite=ligne_devis.unite,
                             prix_unitaire_ht=ligne_devis.prix_unitaire_ht,
-                            montant_ht=ligne_devis.montant_ht
+                            montant_ht=ligne_devis.montant_ht,
+                            ligne_devis=ligne_devis  # Lien vers la ligne de devis d'origine
                         )
                         
                         # Copier les intervenants si c'est une prestation
@@ -594,7 +595,8 @@ class ContratViewSet(viewsets.ModelViewSet):
                             quantite=ligne_devis.quantite,
                             unite=ligne_devis.unite,
                             prix_unitaire_ht=ligne_devis.prix_unitaire_ht,
-                            montant_ht=ligne_devis.montant_ht
+                            montant_ht=ligne_devis.montant_ht,
+                            ligne_devis=ligne_devis  # Lien vers la ligne de devis d'origine
                         )
 
                         # Copier les intervenants si c'est une prestation
@@ -755,7 +757,7 @@ class ContratViewSet(viewsets.ModelViewSet):
         try:
             # Appeler la méthode du modèle qui gère toute la logique
             resultat = contrat.retirer_ligne(ligne_id, commentaire_retrait)
-
+            
             # Recharger le contrat pour obtenir les données mises à jour
             contrat.refresh_from_db()
 

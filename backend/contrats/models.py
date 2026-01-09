@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from users.models import ClientProfile
-from devis.models import Devis
+from devis.models import (Devis,LigneDevis)
 from catalog.models import Service, Activity, IntervenantProfile, UniteStandard
 from .constant import DEFAULT_TEMPLATE_HTML, DEFAULT_TEMPLATE_AVENANT_HTML
 
@@ -605,7 +605,6 @@ class Contrat(models.Model):
         """
         from django.utils import timezone
         from django.db import transaction
-        from decimal import Decimal
 
         # Utiliser une transaction pour garantir la cohérence
         with transaction.atomic():
@@ -618,6 +617,12 @@ class Contrat(models.Model):
             # Vérifier que la ligne n'est pas déjà retirée
             if ligne.statut == 'retiree':
                 raise ValueError("Cette ligne a déjà été retirée")
+            
+            ligne_devis = LigneDevis.objects.get(id=ligne.ligne_devis_id)
+            
+            ligne_devis.mark_like_remove(
+                commentaire = commentaire_retrait
+            )
 
             # Sauvegarder les montants avant modification
             montant_ht_avant = self.montant_ht
@@ -943,6 +948,10 @@ class LigneContrat(models.Model):
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='active')
     commentaire_retrait = models.TextField(blank=True, default='', help_text='Raison du retrait de la ligne')
     date_retrait = models.DateTimeField(blank=True, null=True, help_text='Date à laquelle la ligne a été retirée')
+    
+    # ajout d'une référence à la ligne de devis d'origine
+    ligne_devis = models.ForeignKey('devis.LigneDevis', on_delete=models.CASCADE, related_name='lignes_contrat', blank=True, null=True)
+    
 
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)

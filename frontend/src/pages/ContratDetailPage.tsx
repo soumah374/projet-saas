@@ -1327,6 +1327,7 @@ export function ContratDetailPage() {
                       <TableHead>Unité</TableHead>
                       <TableHead>Prix unitaire HT</TableHead>
                       <TableHead>Montant HT</TableHead>
+                      <TableHead>Devis</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -1375,6 +1376,18 @@ export function ContratDetailPage() {
                           >
                           {formatMontant(ligne.montant_ht)}
                           </ProtectedField>
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          {ligne.ligne_devis ? (
+                            <button
+                              onClick={() => navigate(`/devis/${ligne.ligne_devis.devis.id}`)}
+                              className="text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                            >
+                              {ligne.ligne_devis.devis.numero}
+                            </button>
+                          ) : (
+                            '—'
+                          )}
                         </TableCell>
                         <TableCell>
                           {ligne.statut === 'retiree' ? (
