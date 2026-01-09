@@ -743,7 +743,11 @@ export const contratsAPI = {
     createLigneContrat: (data: any) => api.post('/contrats/lignes/', data),
     updateLigneContrat: (id: number, data: any) => api.patch(`/contrats/lignes/${id}/`, data),
     deleteLigneContrat: (id: number) => api.delete(`/contrats/lignes/${id}/`),
-    
+    retirerLigneContrat: (contratId: number, data: {
+        ligne_id: number;
+        commentaire_retrait: string;
+    }) => api.post(`/contrats/${contratId}/retirer-ligne/`, data),
+
     // Intervenants de ligne de contrat
     getIntervenantsLigneContrat: (ligneId: number) => api.get(`/contrats/intervenants/?ligne_contrat=${ligneId}`),
     createIntervenantLigneContrat: (data: any) => api.post('/contrats/intervenants/', data),

@@ -70,6 +70,10 @@ export interface LigneContrat {
   };
   prix_unitaire_ht: number;
   montant_ht: number;
+  statut: 'active' | 'retiree';
+  statut_display?: string;
+  commentaire_retrait?: string;
+  date_retrait?: string;
   intervenants: LigneContratIntervenant[];
   created_at: string;
   updated_at: string;
@@ -421,5 +425,32 @@ export const useContratHistoriqueMontant = (id: number) => {
       return response.data;
     },
     enabled: !!id,
+  });
+};
+
+export const useRetirerLigneContrat = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (data: {
+      contrat_id: number;
+      ligne_id: number;
+      commentaire_retrait: string;
+    }) => {
+      const response = await contratsAPI.retirerLigneContrat(data.contrat_id, {
+        ligne_id: data.ligne_id,
+        commentaire_retrait: data.commentaire_retrait
+      });
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      toast.success('Ligne retirée avec succès');
+      queryClient.invalidateQueries({ queryKey: ['contrats'] });
+      queryClient.invalidateQueries({ queryKey: ['contrat', variables.contrat_id] });
+      queryClient.invalidateQueries({ queryKey: ['contrat-historique-montant', variables.contrat_id] });
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Erreur lors du retrait de la ligne');
+    },
   });
 };

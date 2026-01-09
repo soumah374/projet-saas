@@ -724,6 +724,63 @@ class ContratViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['post'], url_path="retirer-ligne", url_name='retirer-ligne')
+    def retirer_ligne(self, request, pk=None):
+        """
+        Retire une ligne de contrat et recalcule tous les montants associés.
+
+        Paramètres attendus:
+            - ligne_id: ID de la ligne à retirer
+            - commentaire_retrait: Raison du retrait de la ligne
+        """
+        contrat = self.get_object()
+
+        # Récupérer les paramètres de la requête
+        ligne_id = request.data.get('ligne_id')
+        commentaire_retrait = request.data.get('commentaire_retrait', '')
+
+        # Validation
+        if not ligne_id:
+            return Response(
+                {'error': 'Le champ ligne_id est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not commentaire_retrait:
+            return Response(
+                {'error': 'Le champ commentaire_retrait est requis'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Appeler la méthode du modèle qui gère toute la logique
+            resultat = contrat.retirer_ligne(ligne_id, commentaire_retrait)
+
+            # Recharger le contrat pour obtenir les données mises à jour
+            contrat.refresh_from_db()
+
+            # Retourner le contrat mis à jour et les informations sur le retrait
+            serializer = self.get_serializer(contrat)
+            return Response({
+                'message': 'Ligne retirée avec succès',
+                'contrat': serializer.data,
+                'details': resultat
+            }, status=status.HTTP_200_OK)
+
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            import traceback
+            print(f"Erreur lors du retrait de ligne: {str(e)}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': f'Erreur lors du retrait de la ligne: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class LigneContratViewSet(viewsets.ModelViewSet):
     """ViewSet pour les lignes de contrat"""
     queryset = LigneContrat.objects.all()

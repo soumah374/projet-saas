@@ -33,7 +33,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { 
+import {
   useContratById,
   useUpdateContrat,
   useDeleteContrat,
@@ -46,7 +46,8 @@ import {
   useSignerContrat,
   useCloturerContrat,
   useAddDevisToContrat,
-  useContratHistoriqueMontant
+  useContratHistoriqueMontant,
+  useRetirerLigneContrat
 } from '@/hooks/use-contrats';
 import { formatDate, formatMontant } from '@/lib/formatters';
 import { ContractEditor } from '@/components/contrats/ContractEditor';
@@ -79,6 +80,9 @@ export function ContratDetailPage() {
   const [showSignModal, setShowSignModal] = useState(false);
   const [fileToSign, setFileToSign] = useState<File | null>(null);
   const [isSigning, setIsSigning] = useState(false);
+  const [showRetirerLigneModal, setShowRetirerLigneModal] = useState(false);
+  const [selectedLigneId, setSelectedLigneId] = useState<number | null>(null);
+  const [commentaireRetrait, setCommentaireRetrait] = useState('');
 
   // États pour les filtres d'échéances
   const [filterStatut, setFilterStatut] = useState<string>('all');
@@ -98,6 +102,8 @@ export function ContratDetailPage() {
   const signerContratMutation = useSignerContrat();
   const addDevisToContratMutation = useAddDevisToContrat();
   const {data: contratHistoriqueMontants } = useContratHistoriqueMontant(contratId);
+  const retirerLigneMutation = useRetirerLigneContrat();
+
   // Hook pour les échéances
   const {
     echeances,
@@ -108,6 +114,8 @@ export function ContratDetailPage() {
     envoyerAlerte,
     loadEcheances,
   } = useEcheances(contratId);
+
+  console.log("Echéances:", echeanciers);
   
   // Hook pour la facturation
   const { genererFacturesContrat, genererFacturesEcheancier } = useContratsFacturation();
@@ -354,6 +362,28 @@ export function ContratDetailPage() {
 
   const openDeleteDialog = () => {
     setDeleteDialogOpen(true);
+  };
+
+  const handleRetirerLigne = async () => {
+    if (!contrat || !selectedLigneId || !commentaireRetrait.trim()) {
+      toast.error('Veuillez saisir un commentaire');
+      return;
+    }
+
+    try {
+      await retirerLigneMutation.mutateAsync({
+        contrat_id: contrat.id,
+        ligne_id: selectedLigneId,
+        commentaire_retrait: commentaireRetrait
+      });
+
+      // Fermer le modal et réinitialiser les états
+      setShowRetirerLigneModal(false);
+      setSelectedLigneId(null);
+      setCommentaireRetrait('');
+    } catch (err) {
+      // Error handled by hook
+    }
   };
 
   const getStatutBadge = (statut: string) => {
@@ -1293,18 +1323,31 @@ export function ContratDetailPage() {
                       <TableHead>Unité</TableHead>
                       <TableHead>Prix unitaire HT</TableHead>
                       <TableHead>Montant HT</TableHead>
-                      {/* <TableHead>Intervenants</TableHead> */}
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {contrat.lignes.map((ligne) => (
-                      <TableRow key={ligne.id}>
+                    {contrat.lignes.map((ligne: any) => (
+                      <TableRow
+                        key={ligne.id}
+                        className={ligne.statut === 'retiree' ? 'opacity-60 bg-gray-50' : ''}
+                      >
                         <TableCell>
                           <Badge variant={ligne.type_ligne === 'prestation' ? 'default' : 'secondary'}>
                             {ligne.type_ligne}
                           </Badge>
                         </TableCell>
-                        <TableCell>{ligne.activity?.intitule || ligne.ligne_frais?.type_frais || '—'}</TableCell>
+                        <TableCell>
+                          <div>
+                            <div>{ligne.activity?.intitule || ligne.ligne_frais?.type_frais || '—'}</div>
+                            {ligne.statut === 'retiree' && ligne.commentaire_retrait && (
+                              <div className="text-sm text-red-600 italic mt-1">
+                                Retirée: {ligne.commentaire_retrait}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{ligne.quantite}</TableCell>
                         <TableCell>{ligne.unite?.intitule || '—'}</TableCell>
                         <TableCell>
@@ -1328,6 +1371,28 @@ export function ContratDetailPage() {
                           >
                           {formatMontant(ligne.montant_ht)}
                           </ProtectedField>
+                        </TableCell>
+                        <TableCell>
+                          {ligne.statut === 'retiree' ? (
+                            <Badge variant="destructive">Retirée</Badge>
+                          ) : (
+                            <Badge variant="default" className="bg-green-500">Active</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {ligne.statut === 'active' && contrat.statut !== 'archive' && hasPermission('contrats.can_edit_contrat') && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                setSelectedLigneId(ligne.id);
+                                setShowRetirerLigneModal(true);
+                              }}
+                            >
+                              <X size={14} className="mr-1" />
+                              Retirer
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1715,6 +1780,51 @@ export function ContratDetailPage() {
         selectedClientId={contrat.client.id}
         contratMontantTtc={contrat?.montant_ttc || 0}
       />
+
+      {/* Modal de retrait de ligne */}
+      <Dialog open={showRetirerLigneModal} onOpenChange={setShowRetirerLigneModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Retirer une ligne du contrat</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-gray-600">
+              Vous êtes sur le point de retirer cette ligne du contrat. Cette action recalculera automatiquement les montants du contrat, des échéances impayées et des factures non payées.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="commentaire_retrait">
+                Motif du retrait <span className="text-red-500">*</span>
+              </Label>
+              <textarea
+                id="commentaire_retrait"
+                className="w-full min-h-[100px] p-2 border rounded-md"
+                placeholder="Expliquez la raison du retrait de cette ligne..."
+                value={commentaireRetrait}
+                onChange={(e) => setCommentaireRetrait(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRetirerLigneModal(false);
+                setSelectedLigneId(null);
+                setCommentaireRetrait('');
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRetirerLigne}
+              disabled={retirerLigneMutation.isPending || !commentaireRetrait.trim()}
+            >
+              {retirerLigneMutation.isPending ? 'Retrait en cours...' : 'Confirmer le retrait'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 

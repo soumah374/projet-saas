@@ -98,12 +98,13 @@ class LigneContratSerializer(serializers.ModelSerializer):
     activity = ActivitySerializer(read_only=True)
     unite = UniteStandardSerializer(read_only=True)
     intervenants = LigneContratIntervenantSerializer(many=True, read_only=True)
-    
+    statut_display = serializers.CharField(source='get_statut_display', read_only=True)
+
     # IDs pour la création/modification
     service_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     activity_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     unite_id = serializers.IntegerField(write_only=True)
-    
+
     class Meta:
         model = LigneContrat
         fields = [
@@ -111,9 +112,10 @@ class LigneContratSerializer(serializers.ModelSerializer):
             'service', 'service_id', 'activity', 'activity_id',
             'frais_category', 'ligne_frais', 'description',
             'quantite', 'unite', 'unite_id', 'prix_unitaire_ht', 'montant_ht',
+            'statut', 'statut_display', 'commentaire_retrait', 'date_retrait',
             'intervenants', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['montant_ht', 'created_at', 'updated_at']
+        read_only_fields = ['montant_ht', 'date_retrait', 'created_at', 'updated_at']
 
 
 class ContratSerializer(serializers.ModelSerializer):
