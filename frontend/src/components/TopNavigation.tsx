@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { 
-  Menu, 
-  Search, 
-  Plus, 
-  User, 
-  Settings, 
-  LogOut, 
+import {
+  Menu,
+  Search,
+  Plus,
+  User,
+  Settings,
+  LogOut,
   HelpCircle,
-  Bell
+  Bell,
+  PanelLeft,
+  PanelLeftClose
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -57,20 +59,25 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
   };
 
   return (
-    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20">
-      <div className="flex items-center gap-4 min-w-0">
-        <Button 
-          variant="ghost" 
-          size="sm" 
+    <header className="bg-white border-b border-gray-200 h-16 flex items-center justify-between px-2 lg:px-4 sticky top-0 z-20">
+      <div className="flex items-center gap-3 min-w-0">
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="lg:hidden"
+          className="hover:bg-gray-100 transition-all -ml-1"
+          title={isSidebarOpen ? "Fermer la barre de menu" : "Ouvrir la barre de menu"}
         >
-          <Menu className="h-5 w-5" />
+          {isSidebarOpen ? (
+            <PanelLeftClose className="h-5 w-5" />
+          ) : (
+            <PanelLeft className="h-5 w-5" />
+          )}
         </Button>
         <Link to="/" className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold text-lg whitespace-nowrap">
           <Logo size="md" showText={true} className="text-white" linkTo="" />
         </Link>
-        <span className="hidden md:block text-sm text-gray-500 ml-2 whitespace-nowrap">
+        <span className="hidden md:block text-sm text-gray-500 ml-0 whitespace-nowrap">
           Gestion de projets collaborative
         </span>
       </div>

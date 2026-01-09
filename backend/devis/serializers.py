@@ -47,9 +47,9 @@ class LigneDevisSerializer(serializers.ModelSerializer):
             'frais_category', 'frais_category_id', 'ligne_frais', 'ligne_frais_id',
             'description', 'quantite', 'unite', 'unite_id',
             'prix_unitaire_ht', 'montant_ht', 'intitule',
-            'created_at', 'updated_at', 'type_frais', 'profile_intervenant'
+            'created_at', 'updated_at', 'type_frais', 'profile_intervenant','statut','commentaire_retrait'
         ]
-        read_only_fields = ['id', 'montant_ht', 'created_at', 'updated_at', 'intitule', 'profile_intervenant']
+        read_only_fields = ['id', 'montant_ht', 'created_at', 'updated_at', 'intitule','profile_intervenant','statut','commentaire_retrait']
     def validate(self, data):
         type_ligne = data.get('type_ligne')
         if type_ligne == 'prestation':
@@ -89,14 +89,36 @@ class DevisSerializer(serializers.ModelSerializer):
             'statut', 'statut_display', 'taux_tva', 'appliquer_tva',
             'taux_frais_agence', 'appliquer_frais_agence',
             'montant_ht', 'montant_tva', 'montant_frais_agence', 'montant_ttc',
-            'notes', 'conditions', 'lignes', 'created_at', 'updated_at'
+            'notes', 'conditions', 'lignes', 'created_at', 'updated_at','recalcul_after_line_change'
         ]
         read_only_fields = [
             'id', 'numero', 'date_creation', 'montant_ht', 'montant_tva', 
-            'montant_frais_agence', 'montant_ttc', 'created_at', 'updated_at', 'statut_display'
+            'montant_frais_agence', 'montant_ttc', 'created_at', 'updated_at', 'statut_display','recalcul_after_line_change'
         ]
 
+class DevisDetailIdNumeroSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Devis
+        fields = ['id', 'numero']
 
+
+class LigneDevisDetailsSerializer(serializers.ModelSerializer):
+    """Serializer détaillé pour les lignes de devis"""
+    frais_category = FraisCategorySerializer(read_only=True)
+    ligne_frais = LigneFraisSerializer(read_only=True)
+    unite = UniteStandardSerializer(read_only=True)
+    devis = DevisDetailIdNumeroSerializer(read_only=True)
+    
+    class Meta:
+        model = LigneDevis
+        fields = [
+            'id', 'type_ligne',
+            'frais_category', 'ligne_frais',
+            'description', 'quantite', 'unite',
+            'prix_unitaire_ht', 'montant_ht',
+            'created_at', 'updated_at', 'type_frais', 'devis'
+        ]
+        read_only_fields = ['id', 'montant_ht', 'created_at','devis','updated_at']
 class DevisCreateSerializer(serializers.ModelSerializer):
     """Serializer pour la création de devis"""
     

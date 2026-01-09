@@ -298,6 +298,16 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                   }}>
                     Montant
                   </th>
+                  <th style={{ 
+                    border: '1px solid #2d3748', 
+                    padding: '8px', 
+                    textAlign: 'right',
+                    fontWeight: 'bold',
+                    fontSize: '9px',
+                    textTransform: 'uppercase'
+                  }}>
+                    Statut
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -314,7 +324,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     rows.push(
                       <tr key="header-prestations" style={{ backgroundColor: '#f5f5f5' }}>
                         <td 
-                          colSpan={5} 
+                          colSpan={6} 
                           style={{ 
                             border: '1px solid #2d3748', 
                             padding: '10px 8px',
@@ -386,6 +396,16 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                           }}>
                             {formatMontant(ligne.montant_ht)}
                           </td>
+                          <td  style={{ 
+                            border: '1px solid #2d3748', 
+                            padding: '8px',
+                            textAlign: 'right',
+                            fontWeight: 'bold',
+                            fontSize: '10px',
+                            color: 'red'
+                          }}>
+                            {ligne.statut || 'N/A'}
+                          </td>
                         </tr>
                       );
                     });
@@ -397,7 +417,7 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                     rows.push(
                       <tr key="header-frais" style={{ backgroundColor: '#f5f5f5' }}>
                         <td 
-                          colSpan={5} 
+                          colSpan={6} 
                           style={{ 
                             border: '1px solid #000',
                             padding: '10px 8px',
@@ -479,6 +499,16 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                             fontSize: '10px'
                           }}>
                             {formatMontant(ligne.montant_ht)}
+                          </td>
+                          <td style={{ 
+                            border: '1px solid red', 
+                            padding: '8px',
+                            textAlign: 'right',
+                            fontWeight: 'bold',
+                            fontSize: '10px',
+                            color: 'red'
+                          }}>
+                            {ligne.statut || 'N/A'}
                           </td>
                         </tr>
                       );

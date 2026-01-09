@@ -519,6 +519,17 @@ export function DevisDetailPage() {
                   {formatMontant(devis.montant_ht)}
                 </ProtectedField>
               </div>
+              <div className="font-medium text-red-400">
+                <ProtectedField
+                  modelName="devis"
+                  appLabel="devis"
+                  fieldName="montant_ht"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                  {formatMontant(devis.recalcul_after_line_change.montant_ht)}
+                </ProtectedField>
+              </div>
             </div>
             {devis.appliquer_tva && (
               <div>
@@ -532,6 +543,17 @@ export function DevisDetailPage() {
                     fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                   >
                   {formatMontant(devis.montant_tva)}
+                  </ProtectedField>
+                </div>
+                <div className="font-medium text-red-400">
+                  <ProtectedField
+                    modelName="devis"
+                    appLabel="devis"
+                    fieldName="montant_tva"
+                    mode="hide"
+                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                  >
+                  {formatMontant(devis.recalcul_after_line_change.montant_tva)}
                   </ProtectedField>
                 </div>
               </div>
@@ -550,6 +572,17 @@ export function DevisDetailPage() {
                     {formatMontant(devis.montant_frais_agence || 0)}
                   </ProtectedField>
                 </div>
+                <div className="font-medium text-red-400">
+                  <ProtectedField
+                    modelName="devis"
+                    appLabel="devis"
+                    fieldName="montant_frais_agence"
+                    mode="hide"
+                    fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                  >
+                    {formatMontant(devis.recalcul_after_line_change.montant_frais_agence || 0)}
+                  </ProtectedField>
+                </div>
               </div>
             )}
             <div>
@@ -563,6 +596,17 @@ export function DevisDetailPage() {
                   fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                 >
                   {formatMontant(devis.montant_ttc)}
+                </ProtectedField>
+              </div>
+              <div className="font-medium text-red-400">
+                <ProtectedField
+                  modelName="devis"
+                  appLabel="devis"
+                  fieldName="montant_frais_agence"
+                  mode="hide"
+                  fallback={<div className="text-gray-400 italic">Non autorisé</div>}
+                >
+                  {formatMontant(devis.recalcul_after_line_change.montant_ttc)}
                 </ProtectedField>
               </div>
             </div>
@@ -588,16 +632,29 @@ export function DevisDetailPage() {
                   <TableHead>Unité</TableHead>
                   <TableHead>Prix unitaire HT</TableHead>
                   <TableHead>Montant HT</TableHead>
+                  <TableHead>Statut</TableHead>
                   {devis.statut === 'brouillon' && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {devis.lignes.map((ligne) => (
-                  <TableRow key={ligne.id}>
+                {devis.lignes.map((ligne: any) => (
+                  <TableRow
+                    key={ligne.id}
+                    className={ligne.statut === 'retiree' ? 'opacity-60 bg-gray-50' : ''}
+                  >
                     <TableCell className="font-medium">
-                      {ligne.type_ligne === 'prestation'
-                        ? ligne.activity?.intitule || '—'
-                        : ligne.ligne_frais?.description || '—'}
+                      <div>
+                        <div>
+                          {ligne.type_ligne === 'prestation'
+                            ? ligne.activity?.intitule || '—'
+                            : ligne.ligne_frais?.description || '—'}
+                        </div>
+                        {ligne.statut === 'retiree' && ligne.commentaire_retrait && (
+                          <div className="text-sm text-red-600 italic mt-1">
+                            Retirée: {ligne.commentaire_retrait}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
@@ -624,16 +681,25 @@ export function DevisDetailPage() {
                       {formatMontant(ligne.montant_ht)}
                       </ProtectedField>
                     </TableCell>
+                    <TableCell>
+                      {ligne.statut === 'retiree' ? (
+                        <Badge variant="destructive">Retirée</Badge>
+                      ) : (
+                        <Badge variant="default" className="bg-green-500">Active</Badge>
+                      )}
+                    </TableCell>
                     {devis.statut === 'brouillon' && (
                       <TableCell>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => openDeleteDialog(ligne)}
-                          disabled={deleteLigneMutation.isPending}
-                        >
-                          <Trash2 size={16}/>
-                        </Button>
+                        {ligne.statut === 'active' && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openDeleteDialog(ligne)}
+                            disabled={deleteLigneMutation.isPending}
+                          >
+                            <Trash2 size={16}/>
+                          </Button>
+                        )}
                       </TableCell>
                     )}
                   </TableRow>

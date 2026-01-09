@@ -114,8 +114,6 @@ export function ContratDetailPage() {
     envoyerAlerte,
     loadEcheances,
   } = useEcheances(contratId);
-
-  console.log("Echéances:", echeanciers);
   
   // Hook pour la facturation
   const { genererFacturesContrat, genererFacturesEcheancier } = useContratsFacturation();
@@ -377,10 +375,22 @@ export function ContratDetailPage() {
         commentaire_retrait: commentaireRetrait
       });
 
+      // Recharger les données du contrat et des échéances
+      await queryClient.invalidateQueries({ queryKey: ['contrat', contrat.id] });
+      await queryClient.invalidateQueries({ queryKey: ['contrat-historique-montant', contrat.id] });
+      await loadEcheances();
+
+      // Recharger les devis associés pour refléter les lignes retirées
+      contrat.devis.forEach((devis: any) => {
+        queryClient.invalidateQueries({ queryKey: ['devis', devis.id] });
+      });
+      queryClient.invalidateQueries({ queryKey: ['devis'] }); // Liste complète des devis
+
       // Fermer le modal et réinitialiser les états
       setShowRetirerLigneModal(false);
       setSelectedLigneId(null);
       setCommentaireRetrait('');
+
     } catch (err) {
       // Error handled by hook
     }
@@ -1323,6 +1333,7 @@ export function ContratDetailPage() {
                       <TableHead>Unité</TableHead>
                       <TableHead>Prix unitaire HT</TableHead>
                       <TableHead>Montant HT</TableHead>
+                      <TableHead>Devis</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -1371,6 +1382,18 @@ export function ContratDetailPage() {
                           >
                           {formatMontant(ligne.montant_ht)}
                           </ProtectedField>
+                        </TableCell>
+                        <TableCell className='font-medium'>
+                          {ligne.ligne_devis ? (
+                            <button
+                              onClick={() => navigate(`/devis/${ligne.ligne_devis.devis.id}`)}
+                              className="text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                            >
+                              {ligne.ligne_devis.devis.numero}
+                            </button>
+                          ) : (
+                            '—'
+                          )}
                         </TableCell>
                         <TableCell>
                           {ligne.statut === 'retiree' ? (

@@ -19,6 +19,9 @@ export default {
 			}
 		},
 		extend: {
+			spacing: {
+				'68': '17rem', // 272px - largeur de la sidebar
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',

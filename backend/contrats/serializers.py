@@ -5,7 +5,7 @@ from .models import (
     Avenant, ContratHistoriqueMontant
 )
 from users.serializers import ClientProfileSerializer
-from devis.serializers import DevisSerializer
+from devis.serializers import (DevisSerializer,LigneDevisDetailsSerializer)
 from catalog.serializers import ServiceSerializer, ActivitySerializer, IntervenantProfileSerializer, UniteStandardSerializer
 
 from users.models import ClientProfile
@@ -104,6 +104,10 @@ class LigneContratSerializer(serializers.ModelSerializer):
     service_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     activity_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     unite_id = serializers.IntegerField(write_only=True)
+    
+    #Ligne devis associée (optionnel)
+    ligne_devis = LigneDevisDetailsSerializer(read_only=True)
+    
 
     class Meta:
         model = LigneContrat
@@ -113,7 +117,7 @@ class LigneContratSerializer(serializers.ModelSerializer):
             'frais_category', 'ligne_frais', 'description',
             'quantite', 'unite', 'unite_id', 'prix_unitaire_ht', 'montant_ht',
             'statut', 'statut_display', 'commentaire_retrait', 'date_retrait',
-            'intervenants', 'created_at', 'updated_at'
+            'intervenants','ligne_devis','created_at', 'updated_at'
         ]
         read_only_fields = ['montant_ht', 'date_retrait', 'created_at', 'updated_at']
 

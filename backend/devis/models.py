@@ -127,7 +127,7 @@ class Devis(models.Model):
         """Calculer les montants HT, TVA, Frais d'Agence et TTC"""
         from decimal import Decimal
         
-        total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
+        total_ht = sum(ligne.montant_ht for ligne in self.lignes.exclude(statut='retiree'))
         self.montant_ht = total_ht
         
         # Calculer la TVA selon la configuration
@@ -152,6 +152,44 @@ class Devis(models.Model):
         
         self.montant_ttc = self.montant_ht + self.montant_tva + self.montant_frais_agence
         self.save()
+    
+    @property  
+    def recalcul_after_line_change(self):
+        from decimal import Decimal
+        montant_old = {}
+        total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
+        self.montant_ht = total_ht
+        
+        # Calculer la TVA selon la configuration
+        if self.appliquer_tva:
+            # S'assurer que taux_tva est bien un Decimal
+            taux = self.taux_tva / 100
+            if isinstance(taux, float):
+                taux = Decimal(str(taux))
+            self.montant_tva = self.montant_ht * taux
+        else:
+            self.montant_tva = Decimal('0')
+        
+        # Calculer les frais d'agence selon la configuration
+        if self.appliquer_frais_agence:
+            # S'assurer que taux_frais_agence est bien un Decimal
+            taux_frais = self.taux_frais_agence / 100
+            if isinstance(taux_frais, float):
+                taux_frais = Decimal(str(taux_frais))
+            self.montant_frais_agence = self.montant_ht * taux_frais
+        else:
+            self.montant_frais_agence = Decimal('0')
+        
+        self.montant_ttc = self.montant_ht + self.montant_tva + self.montant_frais_agence
+        
+        montant_old = {
+            'montant_ht': self.montant_ht,
+            'montant_tva': self.montant_tva,
+            'montant_frais_agence': self.montant_frais_agence,
+            'montant_ttc': self.montant_ttc
+        }
+        return montant_old
+
     
     def ajouter_ligne(self, service_id, activity_id, description, quantite, unite_id, type_ligne, prix_unitaire_ht=0, montant_ht=0):
         """Ajouter une ligne au devis"""
@@ -183,6 +221,11 @@ class LigneDevis(models.Model):
         ('frais', 'Frais'),
     ]
     
+    STATUT_CHOICES = [
+        ('active', 'Active'),
+        ('retiree', 'Retirée'),
+    ]
+    
     TYPE_CHOICES_FRAIS = [
         ('standard', 'Standard'),
         ('forfait', 'Forfait'),
@@ -205,6 +248,10 @@ class LigneDevis(models.Model):
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # Gestion du retrait de ligne
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='active')
+    commentaire_retrait = models.TextField(blank=True, default='', help_text='Raison du retrait de la ligne')
+    date_retrait = models.DateTimeField(blank=True, null=True, help_text='Date à laquelle la ligne a été retirée')
     class Meta:
         verbose_name = 'Ligne de devis'
         verbose_name_plural = 'Lignes de devis'
@@ -250,6 +297,14 @@ class LigneDevis(models.Model):
         elif self.type_ligne == 'frais':
             return 'Frais'
         return 'Autre'
+    
+    def mark_like_remove(self, commentaire=''):
+        """Marquer la ligne comme retirée"""
+        self.statut = 'retiree'
+        self.commentaire_retrait = commentaire
+        self.date_retrait = timezone.now()
+        self.devis.calculer_montants()
+        self.save()
 
 class LigneDevisIntervenant(models.Model):
     """Modèle pour les intervenants d'une ligne de devis avec temps personnalisé"""
