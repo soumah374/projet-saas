@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { AppearanceProvider } from './contexts/AppearanceContext';
+import { cn } from '@/lib/utils';
 import { TopNavigation } from './components/TopNavigation';
 import { Sidebar } from './components/Sidebar';
 import { LoginPage } from './pages/LoginPage';
@@ -50,10 +51,40 @@ import { AppConfigPage } from './pages/AppConfigPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
-  
+
   // Utiliser la configuration dynamique pour le titre et favicon
   useDynamicTitle();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // Initialiser la sidebar avec la préférence sauvegardée ou selon la taille d'écran
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    const savedState = localStorage.getItem('sidebarOpen');
+    if (savedState !== null) {
+      return savedState === 'true';
+    }
+    return window.innerWidth >= 1024; // lg breakpoint
+  });
+
+  // Sauvegarder l'état de la sidebar dans localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarOpen', String(isSidebarOpen));
+  }, [isSidebarOpen]);
+
+  // Gérer le redimensionnement de la fenêtre
+  useEffect(() => {
+    const handleResize = () => {
+      // Sur mobile, fermer automatiquement la sidebar au redimensionnement
+      if (window.innerWidth < 1024 && isSidebarOpen) {
+        const savedState = localStorage.getItem('sidebarOpen');
+        if (savedState === 'true') {
+          // L'utilisateur veut la sidebar ouverte, la garder
+          return;
+        }
+        setIsSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen]);
 
   // Sauvegarder la page courante avant la déconnexion
   const handleLogout = () => {
@@ -108,14 +139,17 @@ function App() {
         
         {user ? (
         <div className="flex h-screen">
-          <Sidebar 
-            isOpen={isSidebarOpen} 
-            user={user} 
+          <Sidebar
+            isOpen={isSidebarOpen}
+            user={user}
             setIsSidebarOpen={setIsSidebarOpen}
             onLogout={handleLogout}
           />
-          <div className="flex-1 flex flex-col min-w-0">
-            <TopNavigation 
+          <div className={cn(
+            "flex-1 flex flex-col min-w-0 transition-all duration-300",
+            isSidebarOpen ? "lg:ml-68" : "ml-0"
+          )}>
+            <TopNavigation
               isSidebarOpen={isSidebarOpen}
               setIsSidebarOpen={setIsSidebarOpen}
               user={user}

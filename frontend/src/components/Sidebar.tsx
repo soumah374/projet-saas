@@ -96,17 +96,17 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
 
   return (
     <>
-      {/* Overlay pour mobile */}
+      {/* Overlay pour mobile uniquement quand la sidebar est ouverte */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
-      
+
       <aside className={cn(
-        "fixed lg:static inset-y-0 left-0 z-40 w-68 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col justify-between py-6 px-3",
-        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        "fixed inset-y-0 left-0 z-40 w-68 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col justify-between py-6 px-3",
+        isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div>
           <div className="mb-8">
