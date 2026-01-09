@@ -193,8 +193,9 @@ class Contrat(models.Model):
     def calculer_montants(self):
         """Calculer les montants HT, TVA, Frais d'Agence et TTC"""
         from decimal import Decimal
-        
-        total_ht = sum(ligne.montant_ht for ligne in self.lignes.all())
+
+        # Ne considérer que les lignes actives (non retirées)
+        total_ht = sum(ligne.montant_ht for ligne in self.lignes.filter(statut='active'))
         self.montant_ht = total_ht
         
         # Calculer la TVA selon la configuration
@@ -591,6 +592,182 @@ class Contrat(models.Model):
         else:
             return "<ul><li>Paiement à 100% à la signature du contrat</li></ul>"
 
+    def retirer_ligne(self, ligne_id, commentaire_retrait):
+        """
+        Retire une ligne du contrat et recalcule tous les montants associés.
+
+        Args:
+            ligne_id: ID de la ligne à retirer
+            commentaire_retrait: Raison du retrait de la ligne
+
+        Returns:
+            dict: Résumé des modifications effectuées
+        """
+        from django.utils import timezone
+        from django.db import transaction
+        from decimal import Decimal
+
+        # Utiliser une transaction pour garantir la cohérence
+        with transaction.atomic():
+            # Vérifier que la ligne existe et appartient à ce contrat
+            try:
+                ligne = self.lignes.get(id=ligne_id)
+            except LigneContrat.DoesNotExist:
+                raise ValueError(f"La ligne {ligne_id} n'existe pas dans ce contrat")
+
+            # Vérifier que la ligne n'est pas déjà retirée
+            if ligne.statut == 'retiree':
+                raise ValueError("Cette ligne a déjà été retirée")
+
+            # Sauvegarder les montants avant modification
+            montant_ht_avant = self.montant_ht
+            montant_tva_avant = self.montant_tva
+            montant_frais_agence_avant = self.montant_frais_agence
+            montant_ttc_avant = self.montant_ttc
+            montant_ligne_retire = ligne.montant_ht
+
+            # Marquer la ligne comme retirée
+            # Utiliser update() pour éviter de déclencher la méthode save() qui recalcule les montants
+            LigneContrat.objects.filter(id=ligne.id).update(
+                statut='retiree',
+                commentaire_retrait=commentaire_retrait,
+                date_retrait=timezone.now()
+            )
+            # Recharger la ligne pour avoir les valeurs à jour
+            ligne.refresh_from_db()
+
+            # Recalculer les montants du contrat (automatiquement exclut les lignes retirées)
+            self.calculer_montants()
+
+            # Recharger le contrat pour s'assurer que tous les montants sont à jour
+            self.refresh_from_db()
+
+            # Créer un historique de modification
+            ContratHistoriqueMontant.objects.create(
+                contrat=self,
+                type_modification='retrait_ligne',
+                description=f"Retrait de ligne : {ligne.intitule}. Motif : {commentaire_retrait}",
+                montant_ht_avant=montant_ht_avant,
+                montant_ht_apres=self.montant_ht,
+                montant_tva_avant=montant_tva_avant,
+                montant_tva_apres=self.montant_tva,
+                montant_ttc_avant=montant_ttc_avant,
+                montant_ttc_apres=self.montant_ttc,
+                metadata={
+                    'ligne_id': ligne.id,
+                    'ligne_intitule': ligne.intitule,
+                    'montant_ligne_ht': float(montant_ligne_retire),
+                    'montant_frais_agence_avant': float(montant_frais_agence_avant),
+                    'montant_frais_agence_apres': float(self.montant_frais_agence)
+                }
+            )
+
+            # Recalculer les échéances impayées
+            self.recalculer_echeances_impayees()
+
+            # Mettre à jour les factures non payées
+            self.mettre_a_jour_factures_non_payees()
+
+            return {
+                'ligne_retiree': {
+                    'id': ligne.id,
+                    'intitule': ligne.intitule,
+                    'montant_ht': float(montant_ligne_retire)
+                },
+                'nouveau_montant_ht': float(self.montant_ht),
+                'nouveau_montant_ttc': float(self.montant_ttc),
+                'reduction': float(montant_ht_avant - self.montant_ht)
+            }
+
+    def recalculer_echeances_impayees(self):
+        """
+        Recalcule les montants des échéances impayées en fonction du nouveau montant du contrat.
+        La réduction est redistribuée proportionnellement sur toutes les échéances impayées.
+        """
+        from decimal import Decimal
+
+        # Récupérer toutes les échéances impayées
+        echeances_impayees = list(LigneEcheancierContrat.objects.filter(
+            echeancier__contrat=self,
+            statut='en_attente'
+        ))
+
+        if not echeances_impayees:
+            return
+
+        # Calculer la somme des pourcentages des échéances impayées
+        total_pourcentage_impaye = sum(
+            echeance.pourcentage for echeance in echeances_impayees
+        )
+
+        if total_pourcentage_impaye == 0:
+            return
+
+        # Recalculer chaque échéance impayée avec le nouveau montant du contrat
+        echeances_a_mettre_a_jour = []
+        for echeance in echeances_impayees:
+            # Calculer les nouveaux montants basés sur le pourcentage
+            pourcentage_decimal = Decimal(str(echeance.pourcentage / 100))
+
+            echeance.montant_ht = self.montant_ht * pourcentage_decimal
+            echeance.montant_tva = self.montant_tva * pourcentage_decimal
+            echeance.montant_ttc = self.montant_ttc * pourcentage_decimal
+
+            echeances_a_mettre_a_jour.append(echeance)
+
+        # Mise à jour en bloc pour améliorer les performances
+        if echeances_a_mettre_a_jour:
+            LigneEcheancierContrat.objects.bulk_update(
+                echeances_a_mettre_a_jour,
+                ['montant_ht', 'montant_tva', 'montant_ttc']
+            )
+
+    def mettre_a_jour_factures_non_payees(self):
+        """
+        Met à jour les factures non payées associées aux échéances du contrat.
+        """
+        from billings.models import Facture, LigneFacture
+
+        # Récupérer toutes les factures non payées liées à ce contrat avec leurs échéances
+        factures_non_payees = Facture.objects.filter(
+            contrat=self,
+            statut__in=['brouillon', 'emise', 'envoyee', 'en_retard']
+        ).select_related('ligne_echeancier')
+
+        factures_a_mettre_a_jour = []
+
+        for facture in factures_non_payees:
+            # Si la facture est liée à une échéance, mettre à jour avec les montants de l'échéance
+            if facture.ligne_echeancier:
+                # Recharger l'échéance depuis la DB pour avoir les montants à jour
+                echeance = LigneEcheancierContrat.objects.get(id=facture.ligne_echeancier.id)
+
+                facture.montant_ht = echeance.montant_ht
+                facture.montant_tva = echeance.montant_tva
+                facture.montant_ttc = echeance.montant_ttc
+
+                factures_a_mettre_a_jour.append(facture)
+
+                # Mettre à jour les lignes de facture
+                facture.lignes.all().delete()  # Supprimer les anciennes lignes
+
+                # Recréer la ligne de facture avec le nouveau montant
+                LigneFacture.objects.create(
+                    facture=facture,
+                    type_ligne='acompte' if echeance.type_echeance == 'acompte' else 'tranche',
+                    description=f"{echeance.get_type_echeance_display()} - Échéance {echeance.numero_echeance}",
+                    quantite=1,
+                    prix_unitaire_ht=echeance.montant_ht,
+                    montant_ht=echeance.montant_ht
+                )
+
+        # Mise à jour en bloc des factures
+        if factures_a_mettre_a_jour:
+            Facture.objects.bulk_update(
+                factures_a_mettre_a_jour,
+                ['montant_ht', 'montant_tva', 'montant_ttc']
+            )
+
 
 class EcheancierContrat(models.Model):
     """Modèle pour l'échéancier de contrat - Un contrat peut avoir plusieurs échéanciers"""
@@ -726,37 +903,47 @@ class LigneEcheancierContrat(models.Model):
 
 class LigneContrat(models.Model):
     """Modèle pour les lignes de contrat (basées sur les lignes de devis)"""
-    
+
     TYPE_CHOICES = [
         ('prestation', 'Prestation'),
         ('frais', 'Frais'),
     ]
-    
+
     TYPE_CHOICES_FRAIS = [
         ('standard', 'Standard'),
         ('forfait', 'Forfait'),
         ('offert', 'Offert'),
     ]
-    
+
+    STATUT_CHOICES = [
+        ('active', 'Active'),
+        ('retiree', 'Retirée'),
+    ]
+
     contrat = models.ForeignKey(Contrat, on_delete=models.CASCADE, related_name='lignes')
     type_ligne = models.CharField(max_length=200, choices=TYPE_CHOICES)
     type_frais = models.CharField(max_length=200, choices=TYPE_CHOICES_FRAIS, blank=True, null=True)
-    
+
     # Relations pour prestations
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='lignes_contrat', blank=True, null=True)
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='lignes_contrat', blank=True, null=True)
-    
+
     # Relations pour frais
     frais_category = models.ForeignKey('catalog.FraisCategory', on_delete=models.CASCADE, related_name='lignes_contrat', blank=True, null=True)
     ligne_frais = models.ForeignKey('catalog.LigneFrais', on_delete=models.CASCADE, related_name='lignes_contrat', blank=True, null=True)
-    
+
     # Informations de la ligne
     description = models.TextField(blank=True, default='')
     quantite = models.DecimalField(max_digits=10, decimal_places=2, default=1, validators=[MinValueValidator(Decimal('0'))])
     unite = models.ForeignKey(UniteStandard, on_delete=models.CASCADE, related_name='lignes_contrat')
     prix_unitaire_ht = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     montant_ht = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    
+
+    # Gestion du retrait de ligne
+    statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='active')
+    commentaire_retrait = models.TextField(blank=True, default='', help_text='Raison du retrait de la ligne')
+    date_retrait = models.DateTimeField(blank=True, null=True, help_text='Date à laquelle la ligne a été retirée')
+
     # Métadonnées
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -1003,6 +1190,7 @@ class ContratHistoriqueMontant(models.Model):
         ('ajout_devis', 'Ajout de devis'),
         ('suppression_devis', 'Suppression de devis'),
         ('modification_ligne', 'Modification de ligne'),
+        ('retrait_ligne', 'Retrait de ligne'),
         ('avenant', 'Avenant'),
         ('recalcul', 'Recalcul'),
     ]
