@@ -637,12 +637,24 @@ export function DevisDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {devis.lignes.map((ligne) => (
-                  <TableRow key={ligne.id}>
+                {devis.lignes.map((ligne: any) => (
+                  <TableRow
+                    key={ligne.id}
+                    className={ligne.statut === 'retiree' ? 'opacity-60 bg-gray-50' : ''}
+                  >
                     <TableCell className="font-medium">
-                      {ligne.type_ligne === 'prestation'
-                        ? ligne.activity?.intitule || '—'
-                        : ligne.ligne_frais?.description || '—'}
+                      <div>
+                        <div>
+                          {ligne.type_ligne === 'prestation'
+                            ? ligne.activity?.intitule || '—'
+                            : ligne.ligne_frais?.description || '—'}
+                        </div>
+                        {ligne.statut === 'retiree' && ligne.commentaire_retrait && (
+                          <div className="text-sm text-red-600 italic mt-1">
+                            Retirée: {ligne.commentaire_retrait}
+                          </div>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>{ligne.type_ligne === 'prestation' ? 'Prestation' : 'Frais'}</TableCell>
                     <TableCell>{ligne.quantite}</TableCell>
@@ -670,18 +682,24 @@ export function DevisDetailPage() {
                       </ProtectedField>
                     </TableCell>
                     <TableCell>
-                      <Badge variant='default' className="bg-green-500">{ligne.statut}</Badge>
+                      {ligne.statut === 'retiree' ? (
+                        <Badge variant="destructive">Retirée</Badge>
+                      ) : (
+                        <Badge variant="default" className="bg-green-500">Active</Badge>
+                      )}
                     </TableCell>
                     {devis.statut === 'brouillon' && (
                       <TableCell>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => openDeleteDialog(ligne)}
-                          disabled={deleteLigneMutation.isPending}
-                        >
-                          <Trash2 size={16}/>
-                        </Button>
+                        {ligne.statut === 'active' && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => openDeleteDialog(ligne)}
+                            disabled={deleteLigneMutation.isPending}
+                          >
+                            <Trash2 size={16}/>
+                          </Button>
+                        )}
                       </TableCell>
                     )}
                   </TableRow>

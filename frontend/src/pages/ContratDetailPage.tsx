@@ -380,6 +380,12 @@ export function ContratDetailPage() {
       await queryClient.invalidateQueries({ queryKey: ['contrat-historique-montant', contrat.id] });
       await loadEcheances();
 
+      // Recharger les devis associés pour refléter les lignes retirées
+      contrat.devis.forEach((devis: any) => {
+        queryClient.invalidateQueries({ queryKey: ['devis', devis.id] });
+      });
+      queryClient.invalidateQueries({ queryKey: ['devis'] }); // Liste complète des devis
+
       // Fermer le modal et réinitialiser les états
       setShowRetirerLigneModal(false);
       setSelectedLigneId(null);

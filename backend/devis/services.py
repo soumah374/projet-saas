@@ -18,7 +18,8 @@ class DevisService:
   def generer_pdf(self, devis, save_to_model=False):
     """Génère le PDF du devis"""
     try:
-      prestations_qs = devis.lignes.all()
+      # Ne récupérer que les lignes actives (non retirées)
+      prestations_qs = devis.lignes.exclude(statut='retiree')
       prestations_grouped = defaultdict(list)
       for ligne_devis in prestations_qs:
           if ligne_devis.type_ligne == 'prestation':
@@ -30,14 +31,15 @@ class DevisService:
 
       # Convertit en dict normal (plus prévisible dans le template)
       prestations = dict(prestations_grouped)
-      
+
       print("prestations keys:", list(prestations.keys()))
       # éventuel debug pour voir un objet
       if prestations:
           first_key = next(iter(prestations))
           print("exemple prestation:", prestations[first_key][0].__dict__)
-      
-      frais = devis.lignes.filter(type_ligne='frais')
+
+      # Ne récupérer que les frais actifs (non retirés)
+      frais = devis.lignes.filter(type_ligne='frais').exclude(statut='retiree')
       # Rendre le template HTML
       html_string = render_to_string('devis/devis_pdf.html', {
           'devis': devis,
@@ -85,8 +87,8 @@ class DevisService:
 
   def grouper_prestations(self, devis):
     """Groupe les prestations par service"""
-    # Préparer les données des prestations
-    prestations_qs = devis.lignes.all()
+    # Préparer les données des prestations (seulement les lignes actives)
+    prestations_qs = devis.lignes.exclude(statut='retiree')
     prestations_grouped = defaultdict(list)
     for ligne_devis in prestations_qs:
       if ligne_devis.type_ligne == 'prestation':
