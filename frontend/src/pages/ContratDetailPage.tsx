@@ -114,8 +114,6 @@ export function ContratDetailPage() {
     envoyerAlerte,
     loadEcheances,
   } = useEcheances(contratId);
-
-  console.log("Echéances:", echeanciers);
   
   // Hook pour la facturation
   const { genererFacturesContrat, genererFacturesEcheancier } = useContratsFacturation();
@@ -377,10 +375,16 @@ export function ContratDetailPage() {
         commentaire_retrait: commentaireRetrait
       });
 
+      // Recharger les données du contrat et des échéances
+      await queryClient.invalidateQueries({ queryKey: ['contrat', contrat.id] });
+      await queryClient.invalidateQueries({ queryKey: ['contrat-historique-montant', contrat.id] });
+      await loadEcheances();
+
       // Fermer le modal et réinitialiser les états
       setShowRetirerLigneModal(false);
       setSelectedLigneId(null);
       setCommentaireRetrait('');
+
     } catch (err) {
       // Error handled by hook
     }
