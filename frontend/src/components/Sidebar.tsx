@@ -105,10 +105,10 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
       )}
 
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-40 w-68 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col justify-between py-6 px-3",
+        "fixed inset-y-0 left-0 z-40 w-68 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out flex flex-col py-6 px-3 overflow-hidden",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <div className="mb-8">
             <span className="block text-xs text-gray-400 mb-2">Rôle actuel</span>
             <div className="rounded-lg border px-3 py-2 text-sm font-medium bg-gray-50 flex items-center justify-between">
@@ -366,7 +366,7 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
           </nav>
         </div>
 
-        <div className="space-y-2">
+        <div className="flex-shrink-0 space-y-2 mt-4">
           <div className="border-t border-gray-200 pt-4 flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
               <span className="text-sm font-medium text-blue-600">
