@@ -153,16 +153,16 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 Équipes
               </Label>
               <Select
-                value={localFilters.teamIds?.[0]?.toString() || ''}
+                value={localFilters.teamIds?.[0]?.toString() || 'all'}
                 onValueChange={(value) =>
-                  updateFilter('teamIds', value ? [parseInt(value)] : [])
+                  updateFilter('teamIds', value !== 'all' ? [parseInt(value)] : [])
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Toutes les équipes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Toutes</SelectItem>
+                  <SelectItem value="all">Toutes</SelectItem>
                   {teams.map((team) => (
                     <SelectItem key={team.id} value={team.id.toString()}>
                       {team.name}
@@ -181,16 +181,16 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 Départements
               </Label>
               <Select
-                value={localFilters.departmentIds?.[0]?.toString() || ''}
+                value={localFilters.departmentIds?.[0]?.toString() || 'all'}
                 onValueChange={(value) =>
-                  updateFilter('departmentIds', value ? [parseInt(value)] : [])
+                  updateFilter('departmentIds', value !== 'all' ? [parseInt(value)] : [])
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Tous les départements" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous</SelectItem>
+                  <SelectItem value="all">Tous</SelectItem>
                   {departments.map((dept) => (
                     <SelectItem key={dept.id} value={dept.id.toString()}>
                       {dept.name}
@@ -209,16 +209,16 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
                 Projets
               </Label>
               <Select
-                value={localFilters.projectIds?.[0]?.toString() || ''}
+                value={localFilters.projectIds?.[0]?.toString() || 'all'}
                 onValueChange={(value) =>
-                  updateFilter('projectIds', value ? [parseInt(value)] : [])
+                  updateFilter('projectIds', value !== 'all' ? [parseInt(value)] : [])
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Tous les projets" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tous</SelectItem>
+                  <SelectItem value="all">Tous</SelectItem>
                   {projects.map((project) => (
                     <SelectItem key={project.id} value={project.id.toString()}>
                       {project.name}
@@ -233,16 +233,16 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           <div className="space-y-2">
             <Label>Statut</Label>
             <Select
-              value={localFilters.status?.[0] || ''}
+              value={localFilters.status?.[0] || 'all'}
               onValueChange={(value) =>
-                updateFilter('status', value ? [value] : [])
+                updateFilter('status', value !== 'all' ? [value] : [])
               }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Tous les statuts" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tous</SelectItem>
+                <SelectItem value="all">Tous</SelectItem>
                 {statusOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -256,16 +256,16 @@ export const AdvancedFilters: React.FC<AdvancedFiltersProps> = ({
           <div className="space-y-2">
             <Label>Priorité</Label>
             <Select
-              value={localFilters.priority?.[0] || ''}
+              value={localFilters.priority?.[0] || 'all'}
               onValueChange={(value) =>
-                updateFilter('priority', value ? [value] : [])
+                updateFilter('priority', value !== 'all' ? [value] : [])
               }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Toutes les priorités" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toutes</SelectItem>
+                <SelectItem value="all">Toutes</SelectItem>
                 {priorityOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}

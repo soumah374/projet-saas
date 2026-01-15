@@ -12,7 +12,9 @@ import {
   Eye,
   UserPlus,
   GripVertical,
-  View
+  View,
+  Trash2,
+  CalendarPlus
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -21,7 +23,12 @@ import { StartTaskProjectModal } from '../StartTaskProjectModal';
 import type { ProjectTask } from '@/lib/types';
 import { TaskDetailModal } from './TaskDetailModal';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
+import { useDeleteProjectTask, useUpdateProjectTask } from '@/hooks/use-projects';
 import { toast } from 'sonner';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { usePermissions } from '@/hooks/use-permissions';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 interface ProjectKanbanViewProps {
   tasks: ProjectTask[];
@@ -72,8 +79,15 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
   const [draggedTask, setDraggedTask] = useState<ProjectTask | null>(null);
   const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<any>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  const [datePopoverOpen, setDatePopoverOpen] = useState<number | null>(null);
 
   const { updateTaskStatus } = useProjectLifecycle(projectId);
+  const deleteTaskMutation = useDeleteProjectTask();
+  const updateTaskMutation = useUpdateProjectTask();
+
+  const {
+    hasPermission
+  } = usePermissions();
 
   const getTasksByStatus = (status: string) => {
     return tasks?.filter(task => task.status === status) || [];
@@ -111,6 +125,35 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
       toast.error('Erreur lors de la mise à jour du statut');
     } finally {
       setDraggedTask(null);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number, taskTitle: string) => {
+    try {
+      await deleteTaskMutation.mutateAsync({ projectId, taskId });
+      toast.success(`Activité "${taskTitle}" supprimée avec succès`);
+    } catch (error) {
+      toast.error('Erreur lors de la suppression de l\'activité');
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  const handleUpdateDueDate = async (taskId: number, taskTitle: string, date: Date | undefined) => {
+    if (!date) return;
+
+    try {
+      await updateTaskMutation.mutateAsync({
+        projectId,
+        taskId,
+        data: {
+          due_date: date.toISOString().split('T')[0]
+        }
+      });
+      toast.success(`Date d'échéance mise à jour pour "${taskTitle}"`);
+      setDatePopoverOpen(null);
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour de la date');
+      console.error('Error updating due date:', error);
     }
   };
 
@@ -221,6 +264,70 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
               >
                 <View className="h-4 w-4" />
               </Button>
+
+              {/* Bouton pour ajouter/modifier la date d'échéance - uniquement pour les activités qui ne viennent pas du contrat */}
+              {task.status !== 'Terminé' && !task.ligne_devis && hasPermission('projects.change_projecttask') && (
+                <Popover
+                  open={datePopoverOpen === task.id}
+                  onOpenChange={(open) => setDatePopoverOpen(open ? task.id : null)}
+                >
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2"
+                      title={task.due_date ? "Modifier la date d'échéance" : "Ajouter une date d'échéance"}
+                    >
+                      <CalendarPlus className={`h-3 w-3 ${task.due_date ? 'text-blue-500' : 'text-gray-400'}`} />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={task.due_date ? new Date(task.due_date) : undefined}
+                      onSelect={(date) => handleUpdateDueDate(task.id, task.title, date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              )}
+
+              {/* Bouton de suppression uniquement pour les activités qui ne viennent pas du contrat */}
+              {task.status !== 'Terminé' && !task.ligne_devis && (
+                <>
+                  {hasPermission('projects.delete_projecttask') && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2"
+                          title="Supprimer l'activité"
+                        >
+                          <Trash2 className="h-3 w-3 text-red-500" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Cette action ne peut pas être annulée. L'activité "{task.title}" sera définitivement supprimée.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteTask(task.id, task.title)}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            Supprimer
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </CardContent>

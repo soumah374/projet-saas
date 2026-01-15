@@ -41,7 +41,7 @@ export function useProjectLifecycle(projectId: string, searchTerm?: string): Use
   } = useQuery({
     queryKey: ['project-team', projectId, searchTerm],
     queryFn: async () => {
-      console.log('Fetching team members for projectId:', projectId, 'searchTerm:', searchTerm);
+      // console.log('Fetching team members for projectId:', projectId, 'searchTerm:', searchTerm);
       const params = searchTerm ? { search: searchTerm } : undefined;
       const response = await projectTeamAPI.getProjectTeam(projectId, params);
       return response.data;

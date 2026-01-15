@@ -10,10 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package, UserPlus, LayoutGrid, List, Loader2 } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package, UserPlus, LayoutGrid, List, Loader2, Trash2, CalendarPlus } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
 import { useUsers } from '@/hooks/use-users';
-import { useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
+import { useProjectTasks, useUpdateProjectTask, useDeleteProjectTask } from '@/hooks/use-projects';
 import { useProject } from '@/hooks/use-projects';
 import { toast } from 'sonner';
 import { ProjectKanbanView } from './ProjectKanbanView';
@@ -29,6 +29,10 @@ import { DeleteMemberProject } from '../DeleteMemberProject';
 import { StartTaskProjectModal } from '../StartTaskProjectModal';
 import { StandardTasksManager } from './StandardTasksManager';
 import { UserAutocomplete } from '@/components/ui/UserAutocomplete';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { usePermissions } from '@/hooks/use-permissions';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
 interface ProjectPlanningProps {
   projectId: string;
@@ -53,7 +57,6 @@ const roleOptions = [
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [activeTab, setActiveTab] = useState('templates');
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
-  const [selectedTemplateCategory, setSelectedTemplateCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
@@ -61,16 +64,18 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   // États pour l'assignation des tâches
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [selectedTaskForAssignment, setSelectedTaskForAssignment] = useState<any>(null);
-  const [selectedMemberForAssignment, setSelectedMemberForAssignment] = useState<string>('');
+  const [selectedMemberForAssignment, setSelectedMemberForAssignment] = useState<string | undefined>(undefined);
   const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<any>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [teamMemberSearchTerm, setTeamMemberSearchTerm] = useState('');
 
+  // États pour la gestion des dates d'échéance
+  const [datePopoverOpen, setDatePopoverOpen] = useState<number | null>(null);
+
   const {
     teamMembers,
     addTeamMember,
-    applyTaskTemplate,
     loading
   } = useProjectLifecycle(projectId, teamMemberSearchTerm);
 
@@ -80,6 +85,11 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const { data: tasks } = useProjectTasks(projectId);
   const { data: projectDetails } = useProject(projectId);
   const updateTaskMutation = useUpdateProjectTask();
+  const deleteTaskMutation = useDeleteProjectTask();
+
+  const {
+    hasPermission
+  } = usePermissions();
   
   const form = useForm<z.infer<typeof teamMemberSchema>>({
     resolver: zodResolver(teamMemberSchema),
@@ -131,7 +141,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   // Fonctions pour l'assignation des tâches
   const handleOpenAssignmentDialog = (task: any) => {
     setSelectedTaskForAssignment(task);
-    setSelectedMemberForAssignment(task.assigned_to?.toString() || '');
+    setSelectedMemberForAssignment(task.assigned_to?.toString() || undefined);
     setShowAssignmentDialog(true);
   };
 
@@ -156,10 +166,39 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       toast.success(`Activité "${selectedTaskForAssignment.title}" assignée à ${memberName}`);
       setShowAssignmentDialog(false);
       setSelectedTaskForAssignment(null);
-      setSelectedMemberForAssignment('');
+      setSelectedMemberForAssignment(undefined);
     } catch (error) {
       toast.error('Erreur lors de l\'assignation de l\'activité');
       console.error('Error assigning task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: number, taskTitle: string) => {
+    try {
+      await deleteTaskMutation.mutateAsync({ projectId, taskId });
+      toast.success(`Activité "${taskTitle}" supprimée avec succès`);
+    } catch (error) {
+      toast.error('Erreur lors de la suppression de l\'activité');
+      console.error('Error deleting task:', error);
+    }
+  };
+
+  const handleUpdateDueDate = async (taskId: number, taskTitle: string, date: Date | undefined) => {
+    if (!date) return;
+
+    try {
+      await updateTaskMutation.mutateAsync({
+        projectId,
+        taskId,
+        data: {
+          due_date: date.toISOString().split('T')[0]
+        }
+      });
+      toast.success(`Date d'échéance mise à jour pour "${taskTitle}"`);
+      setDatePopoverOpen(null);
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour de la date');
+      console.error('Error updating due date:', error);
     }
   };
 
@@ -314,7 +353,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                               </Button>
                             )}
 
-                              {task.status !== 'Terminé' && ( 
+                              {task.status !== 'Terminé' && (
                                 <StartTaskProjectModal task={task} projectId={projectId}>
                                   <Button variant="ghost" size="icon">
                                     <Play className="h-4 w-4" />
@@ -329,7 +368,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                                   </Button>
                                 </TaskModal>
                               )}
-                              
+
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -340,7 +379,69 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                               >
                                 <View className="h-4 w-4" />
                               </Button>
-                            
+
+                              {/* Bouton pour ajouter/modifier la date d'échéance - uniquement pour les activités qui ne viennent pas du contrat */}
+                              {task.status !== 'Terminé' && !task.ligne_devis && hasPermission('projects.change_projecttask') && (
+                                <Popover
+                                  open={datePopoverOpen === task.id}
+                                  onOpenChange={(open) => setDatePopoverOpen(open ? task.id : null)}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title={task.due_date ? "Modifier la date d'échéance" : "Ajouter une date d'échéance"}
+                                    >
+                                      <CalendarPlus className={`h-4 w-4 ${task.due_date ? 'text-blue-500' : 'text-gray-400'}`} />
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                      mode="single"
+                                      selected={task.due_date ? new Date(task.due_date) : undefined}
+                                      onSelect={(date) => handleUpdateDueDate(task.id, task.title, date)}
+                                      initialFocus
+                                    />
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+
+                              {/* Bouton de suppression uniquement pour les activités qui ne viennent pas du contrat */}
+                              {task.status !== 'Terminé' && !task.ligne_devis && (
+                                <>
+                                  {hasPermission('projects.delete_projecttask') && (
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          title="Supprimer l'activité"
+                                        >
+                                          <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Cette action ne peut pas être annulée. L'activité "{task.title}" sera définitivement supprimée.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleDeleteTask(task.id, task.title)}
+                                            className="bg-red-600 hover:bg-red-700"
+                                          >
+                                            Supprimer
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  )}
+                                </>
+                              )}
+
                             </div>
                           </div>
                         </CardContent>

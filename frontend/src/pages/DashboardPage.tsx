@@ -369,7 +369,7 @@ const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {isSelected('advanced.filters') && (
+          {/* {isSelected('advanced.filters') && (
             <Button
               variant="outline"
               size="sm"
@@ -378,7 +378,7 @@ const DashboardPage: React.FC = () => {
               <FilterIcon className="h-4 w-4 mr-2" />
               Filtres
             </Button>
-          )}
+          )} */}
 
           <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />
