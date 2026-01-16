@@ -541,6 +541,19 @@ export const servicesAPI = {
     getService: (id: number) => api.get(`/catalog/services/${id}/`),
 };
 
+// Catégories de services (Catalog)
+export const catalogCategoriesAPI = {
+    getCategories: (params?: {
+        search?: string;
+        page?: number;
+        page_size?: number;
+    }) => api.get('/catalog/categories/', { params }),
+    getCategory: (id: number) => api.get(`/catalog/categories/${id}/`),
+    createCategory: (data: { name: string }) => api.post('/catalog/categories/', data),
+    updateCategory: (id: number, data: { name: string }) => api.put(`/catalog/categories/${id}/`, data),
+    deleteCategory: (id: number) => api.delete(`/catalog/categories/${id}/`),
+};
+
 // Devis
 export const devisAPI = {
     getDevis: (params?: {

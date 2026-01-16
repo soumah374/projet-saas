@@ -317,7 +317,13 @@ class ContratFacturationViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ContratFacturationSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['statut', 'client']
-    search_fields = ['numero', 'client__nom_complet']
+    search_fields = [
+        'numero',
+        'client__nom',
+        'client__prenom',
+        'client__raison_sociale',
+        'client__email',
+    ]
     ordering_fields = ['date_creation', 'date_debut', 'date_fin', 'montant_ttc']
     ordering = ['-date_creation']
     

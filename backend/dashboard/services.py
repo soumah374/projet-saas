@@ -377,7 +377,9 @@ class DashboardMetricsService:
                         'projects': {
                             'id': top_projects.id,
                             'title': top_projects.title,
-                            'progress': top_projects.progress
+                            'progress': top_projects.progress,
+                            'status': top_projects.status,
+                            'budget': top_projects.budget
                         }
                     })
                 
@@ -387,7 +389,9 @@ class DashboardMetricsService:
                         'projects': {
                             'id': flop_projects.id,
                             'title': flop_projects.title,
-                            'progress': flop_projects.progress
+                            'progress': flop_projects.progress,
+                            'status': flop_projects.status,
+                            'budget': flop_projects.budget
                         }
                     })
                 
