@@ -1,11 +1,16 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, Clock, User, FileText, MessageSquare } from 'lucide-react';
+import { Calendar, Clock, User, FileText, MessageSquare, Trash2 } from 'lucide-react';
 import { TaskComments } from './TaskComments';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Button } from '../ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useDeleteProjectTask } from '@/hooks/use-projects';
+import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/use-permissions';
 
 interface TaskDetailModalProps {
   task: any;
@@ -31,6 +36,24 @@ export function TaskDetailModal({ task, projectId, open, onOpenChange }: TaskDet
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+   const { 
+      hasPermission
+    } = usePermissions();
+
+  const deleteTaskMutation = useDeleteProjectTask();
+  
+
+  const handleDeleteTask = async (taskId: number, taskTitle: string) => {
+      try {
+        await deleteTaskMutation.mutateAsync({ projectId, taskId });
+        toast.success(`Activité "${taskTitle}" supprimée avec succès`);
+      } catch (error) {
+        toast.error('Erreur lors de la suppression de l\'activité');
+        console.error('Error deleting task:', error);
+      }
+    };
+  
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -146,6 +169,44 @@ export function TaskDetailModal({ task, projectId, open, onOpenChange }: TaskDet
             <TaskComments taskId={task.id} projectId={projectId} />
           </TabsContent>
         </Tabs>
+        {hasPermission('projects.delete_projecttask') && (
+          <DialogFooter>
+            {/* Bouton de suppression uniquement pour les activités qui ne viennent pas du contrat */}
+            {task.status !== 'Terminé' && !task.ligne_devis && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    title="Supprimer l'activité"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Cette action ne peut pas être annulée. L'activité "{task.title}" sera définitivement supprimée.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Annuler</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        handleDeleteTask(task.id, task.title);
+                        onOpenChange(false);
+                      }}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      Supprimer
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

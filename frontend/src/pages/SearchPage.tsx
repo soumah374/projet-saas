@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { projectsAPI, clientsAPI, teamsAPI } from '@/lib/api'
+import { projectsAPI, clientsAPI, teamsAPI, contratsAPI } from '@/lib/api'
 import { Search } from 'lucide-react'
 
 export const SearchPage: React.FC = () => {
@@ -16,27 +16,30 @@ export const SearchPage: React.FC = () => {
     projects: any[]
     clients: any[]
     teams: any[]
-  }>({ projects: [], clients: [], teams: [] })
+    contrats: any[]
+  }>({ projects: [], clients: [], teams: [], contrats: [] })
 
   const q = useMemo(() => (params.get('q') || '').trim(), [params])
 
   const performSearch = async (search: string) => {
     if (!search) {
-      setResults({ projects: [], clients: [], teams: [] })
+      setResults({ projects: [], clients: [], teams: [], contrats: [] })
       return
     }
     setLoading(true)
     setError(null)
     try {
-      const [projectsRes, clientsRes, teamsRes] = await Promise.all([
+      const [projectsRes, clientsRes, teamsRes, contratsRes] = await Promise.all([
         projectsAPI.getProjects({ search, page: 1 }),
         clientsAPI.getClients({ search, page: 1 }),
-        teamsAPI.getTeams({ search, page: 1 })
+        teamsAPI.getTeams({ search, page: 1 }),
+        contratsAPI.getContrats({search,page: 1})
       ])
       setResults({
         projects: projectsRes.data?.results || [],
         clients: clientsRes.data?.results || [],
-        teams: (teamsRes.data?.results as any[]) || []
+        teams: (teamsRes.data?.results as any[]) || [],
+        contrats: (contratsRes.data?.results as any[]) || []
       })
     } catch (e: any) {
       setError(e?.message || 'Erreur de recherche')
@@ -137,6 +140,24 @@ export const SearchPage: React.FC = () => {
                   <div className="text-xs text-gray-500">Membres: {t.members_count ?? '—'}</div>
                 </div>
                 <Link to={`/teams`} className="text-primary text-sm">Voir</Link>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Contrats ({results.contrats.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {loading && <div className="text-sm text-gray-500">Chargement...</div>}
+            {!loading && results.contrats.length === 0 && <div className="text-sm text-gray-500">Aucun contrat</div>}
+            {results.contrats.slice(0, 10).map((c: any) => (
+              <div key={c.id} className="p-3 border rounded flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-gray-900 truncate max-w-[360px]">{c.numero}</div>
+                  <div className="text-xs text-gray-500">{c.client.nom_complet || c.client.raison_sociale || 'Client'}</div>
+                </div>
+                <Link to={`/contrats/${c.id}`} className="text-primary text-sm">Ouvrir</Link>
               </div>
             ))}
           </CardContent>

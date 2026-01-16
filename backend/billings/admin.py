@@ -16,7 +16,14 @@ class FactureAdmin(admin.ModelAdmin):
         'statut', 'mode_paiement', 'date_emission', 'date_echeance',
         'contrat__client', 'contrat'
     ]
-    search_fields = ['numero', 'client__nom_complet', 'contrat__numero']
+    search_fields = [
+        'numero',
+        'client__nom',
+        'client__prenom',
+        'client__raison_sociale',
+        'client__email',
+        'contrat__numero',
+    ]
     readonly_fields = [
         'numero', 'date_emission', 'montant_restant', 'jours_restants', 'est_en_retard',
         'pourcentage_paye', 'created_at', 'updated_at'
@@ -87,8 +94,12 @@ class PaiementFactureAdmin(admin.ModelAdmin):
     ]
     list_filter = ['mode_paiement', 'date_paiement', 'facture__contrat']
     search_fields = [
-        'facture__numero', 'facture__client__nom_complet',
-        'reference_paiement'
+        'facture__numero',
+        'facture__client__nom',
+        'facture__client__prenom',
+        'facture__client__raison_sociale',
+        'facture__client__email',
+        'reference_paiement',
     ]
     readonly_fields = ['created_at']
     

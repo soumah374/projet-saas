@@ -1,47 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
-import { api } from '@/lib/api';
+import { Label } from '@/components/ui/label';
+import { Loader2, ChevronLeft, ChevronRight, Search as SearchIcon, Eye, ChevronsLeft, ChevronsRight, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/use-permissions';
-
-interface Category {
-  id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface PaginatedResponse {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: Category[];
-}
+import {
+  useCatalogCategories,
+  useCreateCatalogCategory,
+  useUpdateCatalogCategory,
+  useDeleteCatalogCategory,
+  type CatalogCategory
+} from '@/hooks/use-catalog-categories';
 
 export function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editCategory, setEditCategory] = useState<Category | null>(null);
-  const [form, setForm] = useState<Partial<Category>>({ name: '' });
-  const [saving, setSaving] = useState(false);
+  const [editCategory, setEditCategory] = useState<CatalogCategory | null>(null);
+  const [form, setForm] = useState<{ name: string }>({ name: '' });
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [hasNext, setHasNext] = useState(false);
-  const [hasPrev, setHasPrev] = useState(false);
-  const pageSize = 20;
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
-  const [totalItems, setTotalItems] = useState(0);
+  const [categoryToDelete, setCategoryToDelete] = useState<CatalogCategory | null>(null);
+  const pageSize = 20;
 
   const { hasPermission } = usePermissions();
+
+  // Utilisation des hooks
+  const { data, isLoading, refetch } = useCatalogCategories({
+    search: search || undefined,
+    page: currentPage,
+    page_size: pageSize,
+  });
+
+  const createCategoryMutation = useCreateCatalogCategory();
+  const updateCategoryMutation = useUpdateCatalogCategory();
+  const deleteCategoryMutation = useDeleteCatalogCategory();
+
+  const categories = data?.results || [];
+  const totalPages = data ? Math.ceil(data.count / pageSize) : 1;
+  const hasNext = !!data?.next;
+  const hasPrev = !!data?.previous;
+  const totalItems = data?.count || 0;
 
   // Fonctions de pagination améliorées
   const setPageSafely = (page: number) => {
@@ -78,31 +81,7 @@ export function CategoriesPage() {
     return pages;
   };
 
-  const fetchCategories = async (page = 1) => {
-    setLoading(true);
-    try {
-      const params: any = { page, page_size: pageSize };
-      if (search) params.search = search;
-      const res = await api.get('/catalog/categories/', { params });
-      const data: PaginatedResponse = res.data;
-      setCategories(data.results);
-      setTotalPages(Math.ceil(data.count / pageSize));
-      setHasNext(!!data.next);
-      setHasPrev(!!data.previous);
-      setTotalItems(data.count);
-    } catch (err) {
-      toast.error('Erreur lors du chargement des catégories');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories(currentPage);
-    // eslint-disable-next-line
-  }, [search, currentPage]);
-
-  const handleOpenDialog = (category?: Category) => {
+  const handleOpenDialog = (category?: CatalogCategory) => {
     if (category) {
       setEditCategory(category);
       setForm(category);
@@ -130,18 +109,19 @@ export function CategoriesPage() {
       return;
     }
 
-    setSaving(true);
     try {
       const payload = { name: form.name.trim() };
-      
+
       if (editCategory) {
-        await api.put(`/catalog/categories/${editCategory.id}/`, payload);
+        await updateCategoryMutation.mutateAsync({
+          id: editCategory.id,
+          data: payload,
+        });
         toast.success('Catégorie modifiée');
       } else {
-        await api.post('/catalog/categories/', payload);
+        await createCategoryMutation.mutateAsync(payload);
         toast.success('Catégorie ajoutée');
       }
-      fetchCategories(currentPage);
       handleCloseDialog();
     } catch (err: any) {
       if (err.response?.data?.name) {
@@ -149,18 +129,15 @@ export function CategoriesPage() {
       } else {
         toast.error('Erreur lors de la sauvegarde');
       }
-    } finally {
-      setSaving(false);
     }
   };
 
-  const handleDelete = async (category: Category) => {
+  const handleDelete = async (category: CatalogCategory) => {
     try {
-      await api.delete(`/catalog/categories/${category.id}/`);
+      await deleteCategoryMutation.mutateAsync(category.id);
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
       toast.success('Catégorie supprimée');
-      fetchCategories(currentPage);
     } catch (err: any) {
       if (err.response?.status === 400) {
         toast.error('Impossible de supprimer cette catégorie car elle est utilisée par des prestations');
@@ -187,6 +164,48 @@ export function CategoriesPage() {
 
   return (
     <div className="max-w-10xl mx-auto">
+      <div className='grid justify-items-end mb-2'>
+        {hasPermission('catalog.add_category') && (
+          <Button className='gap-2' onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter une catégorie
+          </Button>
+        )}
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editCategory ? 'Modifier' : 'Ajouter'} une catégorie</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nom de la catégorie</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="Ex: SERVICE D'EXÉCUTION"
+                  value={form.name || ''}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={handleCloseDialog}>
+                Annuler
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}
+              >
+                {(createCategoryMutation.isPending || updateCategoryMutation.isPending) ? (
+                  <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                ) : null}
+                Enregistrer
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
       <Card>
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <CardTitle>Catégories des Prestations</CardTitle>
@@ -200,36 +219,11 @@ export function CategoriesPage() {
               />
               <SearchIcon className="absolute left-2 top-2.5 text-gray-400" size={16} />
             </div>
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{editCategory ? 'Modifier' : 'Ajouter'} une catégorie</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Nom de la catégorie</label>
-                    <Input 
-                      name="name" 
-                      placeholder="Ex: SERVICE D'EXÉCUTION" 
-                      value={form.name || ''} 
-                      onChange={handleChange} 
-                      required 
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button onClick={handleSave} disabled={saving}>
-                    {saving ? <Loader2 className="animate-spin" size={16}/> : 'Enregistrer'}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+           
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {isLoading ? (
             <div className="flex justify-center py-10"><Loader2 className="animate-spin" size={32}/></div>
           ) : (
             <>
@@ -394,10 +388,14 @@ export function CategoriesPage() {
             >
               Annuler
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={() => handleDelete(categoryToDelete!)}
+              disabled={deleteCategoryMutation.isPending}
             >
+              {deleteCategoryMutation.isPending ? (
+                <Loader2 className="animate-spin h-4 w-4 mr-2" />
+              ) : null}
               Supprimer
             </Button>
           </DialogFooter>

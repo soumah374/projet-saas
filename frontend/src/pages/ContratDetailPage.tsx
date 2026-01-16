@@ -795,7 +795,7 @@ export function ContratDetailPage() {
                         <div>
                           <p className="font-medium">{contrat.devis.length} devis</p>
                           <div className="text-sm text-gray-600 flex flex-wrap gap-1">
-                            {contrat.devis.map((d, index) => (
+                            {contrat?.devis?.map((d, index) => (
                               <span key={d.id}>
                                 <button
                                   onClick={() => navigate(`/devis/${d.id}`)}
@@ -1122,7 +1122,7 @@ export function ContratDetailPage() {
                   </div>
                 ) : echeanciers && Array.isArray(echeanciers) && echeanciers.length > 0 ? (
                   <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
-                    {echeanciers.map((echeancier) => (
+                    {echeanciers?.map((echeancier) => (
                       <div key={echeancier.id} className="border-2 border-blue-200 rounded-lg overflow-hidden">
                         {/* En-tête de l'échéancier */}
                         <div className="bg-blue-50 border-b-2 border-blue-200 p-4">
@@ -1176,7 +1176,7 @@ export function ContratDetailPage() {
 
                         {/* Lignes d'échéances de cet échéancier */}
                         <div className="p-4 space-y-3">
-                          {echeancier.lignes.map((echeance) => (
+                          {echeancier?.lignes?.map((echeance) => (
                       <div key={echeance.id} className={`border rounded-lg p-4 transition-all duration-200 hover:shadow-md ${
                         echeance.est_en_retard ? 'border-red-200 bg-red-50' :
                         echeance.doit_alerter ? 'border-yellow-200 bg-yellow-50' :
@@ -1339,7 +1339,7 @@ export function ContratDetailPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {contrat.lignes.map((ligne: any) => (
+                    {contrat?.lignes?.map((ligne: any) => (
                       <TableRow
                         key={ligne.id}
                         className={ligne.statut === 'retiree' ? 'opacity-60 bg-gray-50' : ''}
@@ -1453,7 +1453,7 @@ export function ContratDetailPage() {
                   <h4 className="font-semibold mb-2">Échéances nécessitant une alerte</h4>
                   {echeances && Array.isArray(echeances) && echeances.filter(e => e.doit_alerter).length > 0 ? (
                     <div className="space-y-2">
-                      {echeances.filter(e => e.doit_alerter).map((echeance) => (
+                      {echeances.filter(e => e.doit_alerter)?.map((echeance) => (
                         <div key={echeance.id} className="border border-yellow-200 bg-yellow-50 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1479,7 +1479,7 @@ export function ContratDetailPage() {
                   <h4 className="font-semibold mb-2">Échéances en retard</h4>
                   {echeances && Array.isArray(echeances) && echeances.filter(e => e.est_en_retard).length > 0 ? (
                     <div className="space-y-2">
-                      {echeances.filter(e => e.est_en_retard).map((echeance) => (
+                      {echeances.filter(e => e.est_en_retard)?.map((echeance) => (
                         <div key={echeance.id} className="border border-red-200 bg-red-50 rounded-lg p-3">
                           <div className="flex items-center justify-between">
                             <div>
@@ -1523,7 +1523,7 @@ export function ContratDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {contratHistoriqueMontants.map((historique) =>(
+                  {contratHistoriqueMontants?.map((historique) =>(
                     <TableRow key={historique.id}>
                       <TableCell>
                         {format(new Date(historique.date_modification), 'dd/MM/yyyy HH:mm', { locale: fr })}
@@ -1677,7 +1677,7 @@ export function ContratDetailPage() {
                 <div>
                   <h4 className="font-semibold mb-3">Répartition des échéances :</h4>
                   <div className="space-y-3">
-                    {getEcheancierDetails(selectedEcheancierType)?.echeances.map((echeance) => (
+                    {getEcheancierDetails(selectedEcheancierType)?.echeances?.map((echeance) => (
                       <div key={`${selectedEcheancierType}-${echeance.numero}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-semibold text-sm">

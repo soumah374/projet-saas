@@ -236,11 +236,11 @@ const DashboardPage: React.FC = () => {
     if (!data?.projects?.project_performance) return [];
 
     return (data.projects.project_performance || []).slice(0, 20).map((perf: any) => ({
-      name: perf.projects?.name || 'Sans nom',
-      status: perf.projects?.status || 'Inconnu',
-      progress: perf.progress || 0,
+      name: perf.projects?.title || 'Sans nom',
+      status: perf.projects?.status || 'Prospection',
+      progress: perf.projects?.progress || 0,
       budget: perf.projects?.budget || 0,
-      team: 'Équipe ' + (perf.projects?.id % 5 + 1),
+      team: perf.projects?.team_members?.map((m: any) => m.name).join(', ') || 'Sans équipe',
     }));
   }, [data]);
 
@@ -338,7 +338,7 @@ const DashboardPage: React.FC = () => {
                       boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
                     }}
                     selected={customStart ? new Date(customStart) : undefined}
-                    onSelect={(d: Date | undefined) => setCustomStart(d ? d.toISOString().slice(0,10) : '')}
+                    onSelect={(d: Date | undefined) => setCustomStart(d ? d.toISOString().slice(0, 10) : '')}
                     initialFocus
                   />
                 </PopoverContent>
@@ -361,7 +361,7 @@ const DashboardPage: React.FC = () => {
                       boxShadow: '0 0 10px 0 rgba(0, 0, 0, 0.1)',
                     }}
                     selected={customEnd ? new Date(customEnd) : undefined}
-                    onSelect={(d: Date | undefined) => setCustomEnd(d ? d.toISOString().slice(0,10) : '')}
+                    onSelect={(d: Date | undefined) => setCustomEnd(d ? d.toISOString().slice(0, 10) : '')}
                     initialFocus
                   />
                 </PopoverContent>
@@ -369,7 +369,7 @@ const DashboardPage: React.FC = () => {
             </div>
           )}
 
-          {isSelected('advanced.filters') && (
+          {/* {isSelected('advanced.filters') && (
             <Button
               variant="outline"
               size="sm"
@@ -378,7 +378,7 @@ const DashboardPage: React.FC = () => {
               <FilterIcon className="h-4 w-4 mr-2" />
               Filtres
             </Button>
-          )}
+          )} */}
 
           <Button onClick={handleRefresh} variant="outline" size="sm">
             <RefreshCw className="h-4 w-4 mr-2" />

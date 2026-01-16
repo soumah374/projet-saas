@@ -36,9 +36,11 @@ export interface DashboardMetrics {
     };
     project_performance?: Array<{
       type: 'top' | 'flop';
-      projects:{
+      projects: {
         title: string;
         progress: number;
+        status: string;
+        budget: number;
       };
     }>;
     user_role?: string;

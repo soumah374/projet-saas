@@ -418,6 +418,8 @@ class DevisViewSet(viewsets.ModelViewSet):
                 devis_id__in=devis_ids,
                 type_ligne__in=['prestation', 'frais']
             ).exclude(
+                date_retrait__isnull = False
+            ).exclude(
                 id__in=project_tasks_ligne_devis_ids
             ).select_related('activity', 'frais_category', 'ligne_frais', 'unite', 'devis').prefetch_related('intervenants')
             
