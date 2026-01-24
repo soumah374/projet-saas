@@ -28,7 +28,7 @@ services:
   # Backend Django
   backend:
     build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     volumes:
       - ./backend:/app
       - ./backend/media:/app/media
@@ -52,21 +52,21 @@ services:
       - sakom_network
 
   # Frontend React
-  # frontend:
-  #   build: ./frontend
-  #   command: npm run dev
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - VITE_API_URL=http://localhost:8000/api/v1
-  #     - VITE_APP_NAME=SAKOM
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - sakom_network
+  frontend:
+    build: ./frontend
+    command: npm run dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "8080:8080"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - VITE_APP_NAME=SAKOM
+    depends_on:
+      - backend
+    networks:
+      - sakom_network
 
   # Nginx (optionnel pour la production)
   nginx:

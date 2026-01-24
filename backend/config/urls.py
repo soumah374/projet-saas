@@ -18,6 +18,9 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     path('print/<int:pk>/', print_contrat, name='print_contrat'),
     path('print-devis/', print_devis, name='print_devis'),
+    # GraphQL endpoint
+    path('graphql/', include('chat.urls')),
+    
     # API endpoints
     path('api/v1/', include([
         path('', api_root, name='api-root'),
