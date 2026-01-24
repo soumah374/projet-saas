@@ -48,6 +48,13 @@ INSTALLED_APPS = [
     'dashboard',
     'email_templates',
     'app_config',
+    'chat',
+    
+    # GraphQL
+    'graphene_django',
+    
+    # Channels for WebSockets
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -81,6 +88,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
 DATABASES = {
@@ -221,4 +229,20 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'INFO',
     },
+}
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('redis', 6379)],
+        },
+    },
+}
+
+# GraphQL configuration
+GRAPHENE = {
+    'SCHEMA': 'chat.schema.schema',
+    'MIDDLEWARE': [],
 } 

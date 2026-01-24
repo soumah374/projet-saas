@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { NotificationCenter } from './projects/NotificationCenter';
+import { ChatButton } from './chat';
 import { Logo } from './Logo';
 
 interface User {
@@ -95,6 +96,9 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
       </div>
 
       <div className="flex items-center gap-4 min-w-0">
+        {/* Chat - Messages en temps réel */}
+        <ChatButton />
+
         {/* Notifications - Phase 3 Collaboration */}
         <NotificationCenter />
 

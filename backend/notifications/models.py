@@ -12,6 +12,7 @@ class Notification(models.Model):
         ('event_update', 'Mise à jour d\'événement'),
         ('document_shared', 'Document partagé'),
         ('team_update', 'Mise à jour d\'équipe'),
+        ('message', 'Nouveau message'),
     ]
 
     # Destinataire de la notification
