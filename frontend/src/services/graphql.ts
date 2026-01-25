@@ -38,9 +38,12 @@ export async function graphqlRequest<T>(
 // Queries GraphQL pour le chat
 export const CHAT_QUERIES = {
   GET_CONVERSATIONS: `
-    query GetConversations {
-      conversations {
+    query GetConversations($conversationType: String) {
+      conversations(conversationType: $conversationType) {
         id
+        conversationType
+        name
+        description
         otherParticipant {
           id
           username
@@ -60,15 +63,27 @@ export const CHAT_QUERIES = {
           isRead
         }
         unreadCount
+        memberCount
+        isAdmin
+        participantsList {
+          id
+          username
+          firstName
+          lastName
+          fullName
+        }
         updatedAt
       }
     }
   `,
-  
+
   GET_CONVERSATION: `
     query GetConversation($id: ID, $userId: ID) {
       conversation(id: $id, userId: $userId) {
         id
+        conversationType
+        name
+        description
         otherParticipant {
           id
           username
@@ -88,11 +103,33 @@ export const CHAT_QUERIES = {
           isRead
         }
         unreadCount
+        memberCount
+        isAdmin
+        members {
+          id
+          role
+          isMuted
+          joinedAt
+          user {
+            id
+            username
+            firstName
+            lastName
+            fullName
+          }
+        }
+        participantsList {
+          id
+          username
+          firstName
+          lastName
+          fullName
+        }
         updatedAt
       }
     }
   `,
-  
+
   GET_MESSAGES: `
     query GetMessages($conversationId: ID!, $limit: Int, $offset: Int) {
       messages(conversationId: $conversationId, limit: $limit, offset: $offset) {
@@ -111,14 +148,75 @@ export const CHAT_QUERIES = {
         }
         isRead
         readAt
+        isEdited
+        editedAt
+        isDeleted
+        replyTo {
+          id
+          content
+          sender {
+            id
+            username
+            fullName
+          }
+        }
+        mentions {
+          id
+          mentionType
+          entityId
+          displayText
+          startPosition
+          endPosition
+        }
+        reactions {
+          emoji
+          count
+          hasReacted
+          users {
+            id
+            username
+            fullName
+          }
+        }
         createdAt
       }
     }
   `,
-  
+
   GET_UNREAD_COUNT: `
     query GetUnreadMessagesCount {
       unreadMessagesCount
+    }
+  `,
+
+  SEARCH_MENTIONABLES: `
+    query SearchMentionables($query: String!, $mentionType: String, $limit: Int) {
+      searchMentionables(query: $query, mentionType: $mentionType, limit: $limit) {
+        id
+        mentionType
+        displayText
+        secondaryText
+        reference
+      }
+    }
+  `,
+
+  SEARCH_MESSAGES: `
+    query SearchMessages($query: String!, $conversationId: ID, $limit: Int) {
+      searchMessages(query: $query, conversationId: $conversationId, limit: $limit) {
+        id
+        content
+        sender {
+          id
+          username
+          fullName
+        }
+        conversation {
+          id
+          name
+        }
+        createdAt
+      }
     }
   `,
 };
@@ -126,8 +224,8 @@ export const CHAT_QUERIES = {
 // Mutations GraphQL pour le chat
 export const CHAT_MUTATIONS = {
   SEND_MESSAGE: `
-    mutation SendMessage($conversationId: ID, $recipientId: ID, $content: String!) {
-      sendMessage(conversationId: $conversationId, recipientId: $recipientId, content: $content) {
+    mutation SendMessage($conversationId: ID, $recipientId: ID, $content: String!, $replyToId: ID, $mentions: [MentionInput]) {
+      sendMessage(conversationId: $conversationId, recipientId: $recipientId, content: $content, replyToId: $replyToId, mentions: $mentions) {
         message {
           id
           content
@@ -143,6 +241,22 @@ export const CHAT_MUTATIONS = {
             username
           }
           isRead
+          isEdited
+          replyTo {
+            id
+            content
+            sender {
+              id
+              username
+              fullName
+            }
+          }
+          mentions {
+            id
+            mentionType
+            entityId
+            displayText
+          }
           createdAt
         }
         conversation {
@@ -152,13 +266,150 @@ export const CHAT_MUTATIONS = {
       }
     }
   `,
-  
+
   MARK_MESSAGES_AS_READ: `
     mutation MarkMessagesAsRead($conversationId: ID!) {
       markMessagesAsRead(conversationId: $conversationId) {
         success
         conversation {
           id
+        }
+      }
+    }
+  `,
+
+  CREATE_GROUP_CONVERSATION: `
+    mutation CreateGroupConversation($name: String!, $description: String, $participantIds: [ID]!) {
+      createGroupConversation(name: $name, description: $description, participantIds: $participantIds) {
+        conversation {
+          id
+          name
+          description
+          conversationType
+          memberCount
+          members {
+            id
+            role
+            user {
+              id
+              username
+              fullName
+            }
+          }
+        }
+      }
+    }
+  `,
+
+  UPDATE_GROUP_SETTINGS: `
+    mutation UpdateGroupSettings($conversationId: ID!, $name: String, $description: String) {
+      updateGroupSettings(conversationId: $conversationId, name: $name, description: $description) {
+        conversation {
+          id
+          name
+          description
+        }
+      }
+    }
+  `,
+
+  ADD_GROUP_MEMBERS: `
+    mutation AddGroupMembers($conversationId: ID!, $userIds: [ID]!) {
+      addGroupMembers(conversationId: $conversationId, userIds: $userIds) {
+        conversation {
+          id
+          memberCount
+        }
+        addedMembers {
+          id
+          user {
+            id
+            username
+            fullName
+          }
+          role
+        }
+      }
+    }
+  `,
+
+  REMOVE_GROUP_MEMBER: `
+    mutation RemoveGroupMember($conversationId: ID!, $userId: ID!) {
+      removeGroupMember(conversationId: $conversationId, userId: $userId) {
+        success
+        conversation {
+          id
+          memberCount
+        }
+      }
+    }
+  `,
+
+  LEAVE_GROUP: `
+    mutation LeaveGroup($conversationId: ID!) {
+      leaveGroup(conversationId: $conversationId) {
+        success
+      }
+    }
+  `,
+
+  TOGGLE_MUTE_GROUP: `
+    mutation ToggleMuteGroup($conversationId: ID!) {
+      toggleMuteGroup(conversationId: $conversationId) {
+        conversation {
+          id
+        }
+        isMuted
+      }
+    }
+  `,
+
+  EDIT_MESSAGE: `
+    mutation EditMessage($messageId: ID!, $content: String!) {
+      editMessage(messageId: $messageId, content: $content) {
+        message {
+          id
+          content
+          isEdited
+          editedAt
+        }
+      }
+    }
+  `,
+
+  DELETE_MESSAGE: `
+    mutation DeleteMessage($messageId: ID!) {
+      deleteMessage(messageId: $messageId) {
+        success
+      }
+    }
+  `,
+
+  ADD_REACTION: `
+    mutation AddReaction($messageId: ID!, $emoji: String!) {
+      addReaction(messageId: $messageId, emoji: $emoji) {
+        message {
+          id
+          reactions {
+            emoji
+            count
+            hasReacted
+          }
+        }
+      }
+    }
+  `,
+
+  REMOVE_REACTION: `
+    mutation RemoveReaction($messageId: ID!, $emoji: String!) {
+      removeReaction(messageId: $messageId, emoji: $emoji) {
+        message {
+          id
+          reactions {
+            emoji
+            count
+            hasReacted
+          }
         }
       }
     }

@@ -2,6 +2,12 @@ import { config } from '../lib/config';
 
 const WS_URL = config.api.baseUrl.replace('/api/v1', '').replace('http', 'ws');
 
+export interface MessageMentionData {
+  mention_type: string;
+  entity_id: string;
+  display_text: string;
+}
+
 export interface MessageData {
   id: string;
   conversation_id: string;
@@ -14,6 +20,10 @@ export interface MessageData {
   sender_id?: string;
   content: string;
   created_at: string;
+  reply_to_id?: string;
+  mentions?: MessageMentionData[];
+  is_edited?: boolean;
+  edited_at?: string;
 }
 
 export interface WebSocketMessage {
@@ -182,6 +192,23 @@ export class ChatWebSocket {
 
   public isConnected(): boolean {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+
+  public send(data: Record<string, unknown>) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(data));
+    } else {
+      // Attendre que la connexion soit établie
+      const checkConnection = setInterval(() => {
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+          clearInterval(checkConnection);
+          this.ws.send(JSON.stringify(data));
+        }
+      }, 100);
+
+      // Timeout après 5 secondes
+      setTimeout(() => clearInterval(checkConnection), 5000);
+    }
   }
 }
 
