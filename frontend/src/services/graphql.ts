@@ -65,6 +65,19 @@ export const CHAT_QUERIES = {
         unreadCount
         memberCount
         isAdmin
+        members {
+          id
+          role
+          isMuted
+          joinedAt
+          user {
+            id
+            username
+            firstName
+            lastName
+            fullName
+          }
+        }
         participantsList {
           id
           username
@@ -360,6 +373,23 @@ export const CHAT_MUTATIONS = {
           id
         }
         isMuted
+      }
+    }
+  `,
+
+  PROMOTE_GROUP_MEMBER: `
+    mutation PromoteGroupMember($conversationId: ID!, $userId: ID!, $role: String!) {
+      promoteGroupMember(conversationId: $conversationId, userId: $userId, role: $role) {
+        success
+        member {
+          id
+          role
+          user {
+            id
+            username
+            fullName
+          }
+        }
       }
     }
   `,

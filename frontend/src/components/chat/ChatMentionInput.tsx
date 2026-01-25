@@ -3,8 +3,10 @@ import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Send, User, Folder, FileText, Receipt, X } from 'lucide-react';
+import { Textarea } from '../ui/textarea';
+import { Send, User, Folder, FileText, Receipt, X, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { useSearchMentionables, Mentionable, MentionInput } from '../../hooks/use-chat';
+import { EmojiPicker } from './EmojiPicker';
 import { cn } from '../../lib/utils';
 
 interface ChatMentionInputProps {
@@ -21,6 +23,8 @@ interface ChatMentionInputProps {
   onCancelReply?: () => void;
   onTypingStart?: () => void;
   onTypingStop?: () => void;
+  onFileSelect?: (files: FileList) => void;
+  showAttachments?: boolean;
 }
 
 const MENTION_TRIGGERS = ['@'];
@@ -61,6 +65,8 @@ export function ChatMentionInput({
   onCancelReply,
   onTypingStart,
   onTypingStop,
+  onFileSelect,
+  showAttachments = true,
 }: ChatMentionInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
@@ -70,8 +76,42 @@ export function ChatMentionInput({
   const [mentions, setMentions] = useState<MentionInput[]>([]);
 
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle emoji selection
+  const handleEmojiSelect = useCallback(
+    (emoji: string) => {
+      const cursorPosition = inputRef.current?.selectionStart || value.length;
+      const newValue = value.slice(0, cursorPosition) + emoji + value.slice(cursorPosition);
+      onChange(newValue, mentions);
+
+      setTimeout(() => {
+        if (inputRef.current) {
+          inputRef.current.focus();
+          const newPos = cursorPosition + emoji.length;
+          inputRef.current.setSelectionRange(newPos, newPos);
+        }
+      }, 0);
+    },
+    [value, mentions, onChange]
+  );
+
+  // Handle file selection
+  const handleFileClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files.length > 0 && onFileSelect) {
+        onFileSelect(e.target.files);
+        e.target.value = '';
+      }
+    },
+    [onFileSelect]
+  );
 
   const { mentionables, isLoading } = useSearchMentionables(mentionQuery, mentionType);
 
@@ -331,17 +371,56 @@ export function ChatMentionInput({
       )}
 
       {/* Input field */}
-      <div className="flex gap-2">
-        <Input
-          ref={inputRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          disabled={disabled}
-          className="flex-1"
-        />
-        <Button onClick={onSend} disabled={!value.trim() || disabled} size="icon">
+      <div className="flex items-end gap-2">
+        {/* Attachment button */}
+        {showAttachments && onFileSelect && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              multiple
+              onChange={handleFileChange}
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10 shrink-0"
+              onClick={handleFileClick}
+              disabled={disabled}
+              title="Joindre un fichier"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </>
+        )}
+
+        {/* Message input */}
+        <div className="flex-1 relative">
+          <Input
+            ref={inputRef}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            disabled={disabled}
+            className="pr-10"
+          />
+          {/* Emoji picker button inside input */}
+          <div className="absolute right-1 top-1/2 -translate-y-1/2">
+            <EmojiPicker onEmojiSelect={handleEmojiSelect} className="h-7 w-7" />
+          </div>
+        </div>
+
+        {/* Send button */}
+        <Button
+          onClick={onSend}
+          disabled={!value.trim() || disabled}
+          size="icon"
+          className="h-10 w-10 shrink-0"
+        >
           <Send className="h-4 w-4" />
         </Button>
       </div>

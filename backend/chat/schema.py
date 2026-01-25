@@ -308,10 +308,10 @@ class Query(graphene.ObjectType):
 
                 # Chercher une conversation directe existante
                 conversation = Conversation.objects.filter(
-                    participants=user,
+                    memberships__user=user,
                     conversation_type='direct'
                 ).filter(
-                    participants=other_user
+                    memberships__user=other_user
                 ).distinct().first()
 
                 # Si aucune conversation n'existe, en créer une nouvelle
@@ -622,25 +622,28 @@ class SendMessage(graphene.Mutation):
 
                 # Chercher ou créer une conversation directe
                 conversation = Conversation.objects.filter(
-                    participants=user,
+                    memberships__user=user,
                     conversation_type='direct'
                 ).filter(
-                    participants=recipient
+                    memberships__user=recipient
                 ).distinct().first()
 
                 if not conversation:
                     with transaction.atomic():
                         conversation = Conversation.objects.create(conversation_type='direct')
-                        ConversationMember.objects.create(
-                            conversation=conversation,
-                            user=user,
-                            role='member'
-                        )
-                        ConversationMember.objects.create(
-                            conversation=conversation,
-                            user=recipient,
-                            role='member'
-                        )
+                        # Éviter les doublons de membres
+                        if not conversation.memberships.filter(user=user).exists():
+                            ConversationMember.objects.create(
+                                conversation=conversation,
+                                user=user,
+                                role='member'
+                            )
+                        if not conversation.memberships.filter(user=recipient).exists():
+                            ConversationMember.objects.create(
+                                conversation=conversation,
+                                user=recipient,
+                                role='member'
+                            )
             except User.DoesNotExist:
                 raise GraphQLError("Destinataire non trouvé")
 
@@ -901,7 +904,7 @@ class CreateGroupConversation(graphene.Mutation):
             for pid in participant_ids:
                 try:
                     participant = User.objects.get(id=pid)
-                    if participant != user:
+                    if participant != user and not conversation.memberships.filter(user=participant).exists():
                         ConversationMember.objects.create(
                             conversation=conversation,
                             user=participant,
@@ -1134,6 +1137,80 @@ class ToggleMuteGroup(graphene.Mutation):
         )
 
 
+class PromoteGroupMember(graphene.Mutation):
+    """Mutation pour promouvoir ou rétrograder un membre du groupe"""
+
+    class Arguments:
+        conversation_id = graphene.ID(required=True)
+        user_id = graphene.ID(required=True)
+        role = graphene.String(required=True)  # 'admin' ou 'member'
+
+    success = graphene.Boolean()
+    member = graphene.Field(ConversationMemberType)
+
+    @staticmethod
+    def mutate(root, info, conversation_id, user_id, role):
+        user = get_user_from_context(info)
+        if not user or not user.is_authenticated:
+            raise GraphQLError("Vous devez être connecté")
+
+        if role not in ['admin', 'member']:
+            raise GraphQLError("Le rôle doit être 'admin' ou 'member'")
+
+        try:
+            conversation = Conversation.objects.get(
+                id=conversation_id,
+                participants=user,
+                conversation_type='group'
+            )
+        except Conversation.DoesNotExist:
+            raise GraphQLError("Groupe non trouvé")
+
+        if not conversation.is_admin(user):
+            raise GraphQLError("Vous devez être administrateur pour modifier les rôles")
+
+        try:
+            target_user = User.objects.get(id=user_id)
+            membership = conversation.memberships.get(user=target_user)
+        except (User.DoesNotExist, ConversationMember.DoesNotExist):
+            raise GraphQLError("Membre non trouvé")
+
+        # Ne pas permettre de se rétrograder soi-même si c'est le dernier admin
+        if target_user == user and role == 'member':
+            admin_count = conversation.memberships.filter(role='admin').count()
+            if admin_count <= 1:
+                raise GraphQLError("Vous ne pouvez pas vous rétrograder car vous êtes le seul administrateur")
+
+        # Ne pas permettre de rétrograder le dernier admin
+        if membership.role == 'admin' and role == 'member':
+            admin_count = conversation.memberships.filter(role='admin').count()
+            if admin_count <= 1:
+                raise GraphQLError("Impossible de rétrograder le dernier administrateur")
+
+        membership.role = role
+        membership.save()
+
+        # Notifier via WebSocket
+        channel_layer = get_channel_layer()
+        async_to_sync(channel_layer.group_send)(
+            f"conversation_{conversation.id}",
+            {
+                "type": "member_role_changed",
+                "data": {
+                    "conversation_id": str(conversation.id),
+                    "user_id": str(target_user.id),
+                    "new_role": role,
+                    "changed_by": {
+                        "id": str(user.id),
+                        "username": user.username
+                    }
+                }
+            }
+        )
+
+        return PromoteGroupMember(success=True, member=membership)
+
+
 class EditMessage(graphene.Mutation):
     """Mutation pour modifier un message"""
 
@@ -1331,6 +1408,7 @@ class Mutation(graphene.ObjectType):
     remove_group_member = RemoveGroupMember.Field()
     leave_group = LeaveGroup.Field()
     toggle_mute_group = ToggleMuteGroup.Field()
+    promote_group_member = PromoteGroupMember.Field()
 
     # Réactions
     add_reaction = AddReaction.Field()

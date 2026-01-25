@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   useConversations,
   useMessages,
@@ -10,6 +10,8 @@ import {
   useDeleteMessage,
   useAddReaction,
   useRemoveReaction,
+  useLeaveGroup,
+  useToggleMuteGroup,
   Conversation,
   Message,
   MentionInput,
@@ -17,10 +19,12 @@ import {
 import { graphqlRequest, CHAT_QUERIES } from '../../services/graphql';
 import { useUsers } from '../../hooks/use-users';
 import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Card, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +32,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../ui/alert-dialog';
 import {
   MessageSquare,
   X,
@@ -38,17 +52,24 @@ import {
   Trash2,
   Reply,
   Settings,
-  UserPlus,
+  Search,
+  ArrowDown,
+  LogOut,
+  BellOff,
+  Bell,
+  Check,
+  CheckCheck,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { UserSelector } from './UserSelector';
 import { ChatMentionInput } from './ChatMentionInput';
 import { renderMessageWithMentions, parseAndRenderMentions } from './MentionBadge';
-import { MessageReactions, MessageReactionsDisplay } from './MessageReactions';
+import { MessageReactionsDisplay } from './MessageReactions';
+import { QuickReactionPicker } from './EmojiPicker';
 import { CreateGroupDialog } from './CreateGroupDialog';
 import { GroupMembersPanel } from './GroupMembersPanel';
-import { useQueryClient } from '@tanstack/react-query';
+import { GroupSettingsDialog } from './GroupSettingsDialog';
 import { cn } from '../../lib/utils';
 
 interface ChatBoxProps {
@@ -72,11 +93,18 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
   const [showGroupMembers, setShowGroupMembers] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [conversationSearch, setConversationSearch] = useState('');
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+  const [showLeaveGroupDialog, setShowLeaveGroupDialog] = useState(false);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const queryClient = useQueryClient();
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  const CONVERSATIONGROUP: string = 'GROUP';
 
   const { conversations, isLoading: conversationsLoading, refetch: refetchConversations } = useConversations();
-
   // Utiliser useConversation pour créer/récupérer une conversation avec un utilisateur
   const { conversation: newConversation, isLoading: isLoadingNewConversation } = useConversation(
     selectedConversation || undefined,
@@ -100,8 +128,8 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
   const deleteMessageMutation = useDeleteMessage();
   const addReactionMutation = useAddReaction();
   const removeReactionMutation = useRemoveReaction();
-
-  const CONVERSATIONGROUP: string = 'GROUP';
+  const leaveGroupMutation = useLeaveGroup();
+  const toggleMuteMutation = useToggleMuteGroup();
 
   // Typing indicator
   const { typingUsers, sendTypingStarted, sendTypingStopped } = useTypingIndicator(selectedConversation);
@@ -235,6 +263,42 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
     }
   };
 
+  // Handle leaving group
+  const handleLeaveGroup = async () => {
+    if (!selectedConversation) return;
+    try {
+      await leaveGroupMutation.mutateAsync(selectedConversation);
+      setSelectedConversation(null);
+      setShowLeaveGroupDialog(false);
+      refetchConversations();
+    } catch (error) {
+      console.error('Error leaving group:', error);
+    }
+  };
+
+  // Handle mute toggle
+  const handleToggleMute = async () => {
+    if (!selectedConversation) return;
+    try {
+      await toggleMuteMutation.mutateAsync(selectedConversation);
+      refetchConversations();
+    } catch (error) {
+      console.error('Error toggling mute:', error);
+    }
+  };
+
+  // Scroll to bottom function
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Handle scroll for showing/hiding scroll-to-bottom button
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 100;
+    setShowScrollToBottom(!isAtBottom);
+  }, []);
+
   const selectedConversationData = conversations.find((c) => c.id === selectedConversation);
   const isGroupConversation = selectedConversationData?.conversationType === CONVERSATIONGROUP;
 
@@ -253,7 +317,6 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
   // Get conversation display info
   const getConversationDisplayInfo = (conv: Conversation) => {
-    
     if (conv.conversationType === CONVERSATIONGROUP) {
       return {
         name: conv.name || 'Groupe',
@@ -273,6 +336,17 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
     };
   };
 
+  // Filter conversations by search
+  const filteredConversations = conversations.filter((conv) => {
+    if (!conversationSearch.trim()) return true;
+    const searchLower = conversationSearch.toLowerCase();
+    const info = getConversationDisplayInfo(conv);
+    return (
+      info.name.toLowerCase().includes(searchLower) ||
+      conv.lastMessage?.content?.toLowerCase().includes(searchLower)
+    );
+  });
+
   return (
     <>
       <Card className="flex flex-col h-[600px] w-full max-w-4xl mx-auto">
@@ -287,37 +361,49 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
           {/* Liste des conversations */}
           {showConversationsList && !showUserSelector && (
             <div className="w-80 border-r flex flex-col">
-              <div className="p-4 border-b flex items-center justify-between">
-                <h3 className="font-semibold text-sm">Conversations</h3>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8">
-                      <Plus className="h-4 w-4 mr-1" />
-                      Nouveau
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setShowUserSelector(true)}>
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Message direct
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>
-                      <Users className="h-4 w-4 mr-2" />
-                      Nouveau groupe
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              <div className="p-3 border-b space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Conversations</h3>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Nouveau
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setShowUserSelector(true)}>
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        Message direct
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>
+                        <Users className="h-4 w-4 mr-2" />
+                        Nouveau groupe
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                {/* Search input */}
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher..."
+                    value={conversationSearch}
+                    onChange={(e) => setConversationSearch(e.target.value)}
+                    className="pl-8 h-8 text-sm"
+                  />
+                </div>
               </div>
               <ScrollArea className="flex-1">
                 {conversationsLoading ? (
                   <div className="p-4 text-sm text-muted-foreground">Chargement...</div>
-                ) : conversations.length === 0 ? (
+                ) : filteredConversations.length === 0 ? (
                   <div className="p-4 text-sm text-muted-foreground text-center">
-                    Aucune conversation
+                    {conversationSearch ? 'Aucun résultat' : 'Aucune conversation'}
                   </div>
                 ) : (
                   <div className="divide-y">
-                    {conversations.map((conversation) => {
+                    {filteredConversations.map((conversation) => {
                       const info = getConversationDisplayInfo(conversation);
                       return (
                         <button
@@ -368,7 +454,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                   })}
                                 </p>
                               )}
-                              <small className='text-xs text-muted-foreground mt-1'>{ info.subtitle }</small>
+                              {/* <small className='text-xs text-muted-foreground mt-1'>{ info.subtitle }</small> */}
                             </div>
                           </div>
                         </button>
@@ -489,19 +575,57 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                   <div className="flex items-center gap-1">
                     {isGroupConversation && (
                       <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setShowGroupMembers(!showGroupMembers)}
-                          title="Membres du groupe"
-                        >
-                          <Users className="h-4 w-4" />
-                        </Button>
-                        {selectedConversationData?.isAdmin && (
-                          <Button variant="ghost" size="icon" title="Paramètres du groupe">
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                        )}
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setShowGroupMembers(!showGroupMembers)}
+                              >
+                                <Users className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Membres</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={handleToggleMute}>
+                              {selectedConversationData?.isMuted ? (
+                                <>
+                                  <Bell className="h-4 w-4 mr-2" />
+                                  Activer les notifications
+                                </>
+                              ) : (
+                                <>
+                                  <BellOff className="h-4 w-4 mr-2" />
+                                  Désactiver les notifications
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            {selectedConversationData?.isAdmin && (
+                              <DropdownMenuItem onClick={() => setShowGroupSettings(true)}>
+                                <Settings className="h-4 w-4 mr-2" />
+                                Paramètres
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setShowLeaveGroupDialog(true)}
+                            >
+                              <LogOut className="h-4 w-4 mr-2" />
+                              Quitter le groupe
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </>
                     )}
                     <Button
@@ -520,9 +644,13 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                   </div>
                 </div>
 
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-1 overflow-hidden relative">
                   {/* Messages */}
-                  <ScrollArea className="flex-1 p-4">
+                  <ScrollArea
+                    className="flex-1 p-4"
+                    ref={scrollAreaRef}
+                    onScrollCapture={handleScroll}
+                  >
                     <div className="space-y-4">
                       {selectedConversation ? (
                         messages.map((message) => {
@@ -551,11 +679,13 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                             <div
                               key={message.id}
                               className={cn(
-                                'flex gap-3 group',
+                                'flex gap-3 group relative mt-2',
                                 isOwnMessage ? 'flex-row-reverse' : 'flex-row'
                               )}
+                              onMouseEnter={() => setHoveredMessageId(message.id)}
+                              onMouseLeave={() => setHoveredMessageId(null)}
                             >
-                              <Avatar className="h-8 w-8">
+                              <Avatar className="h-8 w-8 shrink-0">
                                 <AvatarFallback>
                                   {message.sender.fullName
                                     .split(' ')
@@ -571,6 +701,13 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                   isOwnMessage ? 'items-end' : 'items-start'
                                 )}
                               >
+                                {/* Sender name for group messages */}
+                                {isGroupConversation && !isOwnMessage && (
+                                  <span className="text-xs text-muted-foreground mb-0.5">
+                                    {message.sender.fullName}
+                                  </span>
+                                )}
+
                                 {/* Reply preview */}
                                 {message.replyTo && (
                                   <div className="text-xs text-muted-foreground mb-1 px-2 py-1 bg-muted/50 rounded border-l-2 border-primary">
@@ -591,12 +728,35 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                         : 'bg-muted'
                                     )}
                                   >
-                                    <p className="text-sm whitespace-pre-wrap">
+                                    <div className="text-sm whitespace-pre-wrap">
                                       {message.mentions && message.mentions.length > 0
                                         ? renderMessageWithMentions(message.content, message.mentions)
                                         : parseAndRenderMentions(message.content)}
-                                    </p>
+                                    </div>
                                   </div>
+
+                                  {/* Quick reactions on hover */}
+                                  {hoveredMessageId === message.id && (
+                                    <div
+                                      className={cn(
+                                        'absolute -top-4 z-10',
+                                        isOwnMessage ? 'right-10' : 'left-10'
+                                      )}
+                                    >
+                                      <QuickReactionPicker
+                                        onReactionSelect={(emoji) => {
+                                          const existingReaction = message.reactions?.find(
+                                            (r) => r.emoji === emoji
+                                          );
+                                          handleReaction(
+                                            message.id,
+                                            emoji,
+                                            existingReaction?.hasReacted || false
+                                          );
+                                        }}
+                                      />
+                                    </div>
+                                  )}
 
                                   {/* Message actions */}
                                   <DropdownMenu>
@@ -667,6 +827,16 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                   {message.isEdited && (
                                     <span className="text-xs text-muted-foreground">(modifié)</span>
                                   )}
+                                  {/* Read receipt for own messages */}
+                                  {isOwnMessage && (
+                                    <span className="text-xs text-muted-foreground">
+                                      {message.isRead ? (
+                                        <CheckCheck className="h-3 w-3 text-primary inline" />
+                                      ) : (
+                                        <Check className="h-3 w-3 inline" />
+                                      )}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -686,6 +856,18 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                       <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
+
+                  {/* Scroll to bottom button */}
+                  {showScrollToBottom && (
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute bottom-20 right-4 rounded-full shadow-lg z-10 h-10 w-10"
+                      onClick={scrollToBottom}
+                    >
+                      <ArrowDown className="h-4 w-4" />
+                    </Button>
+                  )}
 
                   {/* Group members panel */}
                   {showGroupMembers && isGroupConversation && selectedConversationData?.members && (
@@ -776,6 +958,44 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
           refetchConversations();
         }}
       />
+
+      {/* Leave group confirmation dialog */}
+      <AlertDialog open={showLeaveGroupDialog} onOpenChange={setShowLeaveGroupDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Quitter le groupe ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir quitter le groupe{' '}
+              <strong>{selectedConversationData?.name}</strong> ? Vous ne pourrez plus voir
+              les messages de ce groupe.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLeaveGroup}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {leaveGroupMutation.isPending ? 'Sortie...' : 'Quitter'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Group settings dialog */}
+      {selectedConversationData && isGroupConversation && (
+        <GroupSettingsDialog
+          open={showGroupSettings}
+          onOpenChange={setShowGroupSettings}
+          conversationId={selectedConversation!}
+          groupName={selectedConversationData.name}
+          groupDescription={selectedConversationData.description}
+          members={selectedConversationData.members || []}
+          isAdmin={selectedConversationData.isAdmin}
+          currentUserId={currentUserId}
+          onSettingsUpdated={refetchConversations}
+        />
+      )}
     </>
   );
 }

@@ -92,6 +92,7 @@ export interface Conversation {
   unreadCount: number;
   memberCount: number;
   isAdmin: boolean;
+  isMuted?: boolean;
   members?: ConversationMember[];
   participantsList?: User[];
   updatedAt: string;
@@ -325,8 +326,6 @@ export function useSendMessage() {
         console.error('GraphQL send message errors:', response.errors);
         throw new Error(response.errors[0]?.message || 'Erreur lors de l\'envoi du message');
       }
-
-      console.log('Message sent successfully:', response.data?.sendMessage);
       return response.data?.sendMessage;
     },
     onSuccess: (data, variables) => {
@@ -632,6 +631,39 @@ export function useToggleMuteGroup() {
       queryClient.invalidateQueries({ queryKey: ['conversations'] });
       queryClient.invalidateQueries({ queryKey: ['conversation', conversationId] });
       toast.success(data?.isMuted ? 'Notifications désactivées' : 'Notifications activées');
+    },
+  });
+}
+
+// Hook pour promouvoir ou rétrograder un membre du groupe
+export function usePromoteGroupMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      conversationId,
+      userId,
+      role,
+    }: {
+      conversationId: string;
+      userId: string;
+      role: 'admin' | 'member';
+    }) => {
+      const response = await graphqlRequest<{
+        promoteGroupMember: { success: boolean; member: ConversationMember };
+      }>(CHAT_MUTATIONS.PROMOTE_GROUP_MEMBER, { conversationId, userId, role });
+
+      if (response.errors) {
+        throw new Error(response.errors[0]?.message);
+      }
+
+      return response.data?.promoteGroupMember;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      queryClient.invalidateQueries({ queryKey: ['conversation', variables.conversationId] });
+      const isPromotion = variables.role === 'admin';
+      toast.success(isPromotion ? 'Membre promu administrateur' : 'Administrateur rétrogradé');
     },
   });
 }
