@@ -48,6 +48,7 @@ import SearchPage from './pages/SearchPage';
 import DashboardManagerPage from './pages/DashboardManagerPage';
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage';
 import { AppConfigPage } from './pages/AppConfigPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -220,6 +221,11 @@ function App() {
                 <Route path="/calendar" element={
                   <ProtectedRoute>
                     <CalendarPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/notifications" element={
+                  <ProtectedRoute>
+                    <NotificationsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/reports" element={

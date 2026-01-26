@@ -59,7 +59,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
+  const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('kanban');
   
   // États pour l'assignation des tâches
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
@@ -253,20 +253,20 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                 {/* Toggle vue Liste/Kanban */}
                 <div className="flex gap-2 ml-4">
                   <Button
-                    variant={taskViewMode === 'list' ? 'default' : 'outline'}
-                    size="icon"
-                    onClick={() => setTaskViewMode('list')}
-                    title="Vue liste"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
                     variant={taskViewMode === 'kanban' ? 'default' : 'outline'}
                     size="icon"
                     onClick={() => setTaskViewMode('kanban')}
                     title="Vue Kanban"
                   >
                     <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={taskViewMode === 'list' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setTaskViewMode('list')}
+                    title="Vue liste"
+                  >
+                    <List className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
