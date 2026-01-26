@@ -25,6 +25,7 @@ interface ChatMentionInputProps {
   onTypingStop?: () => void;
   onFileSelect?: (files: FileList) => void;
   showAttachments?: boolean;
+  hasAttachments?: boolean;
 }
 
 const MENTION_TRIGGERS = ['@'];
@@ -67,6 +68,7 @@ export function ChatMentionInput({
   onTypingStop,
   onFileSelect,
   showAttachments = true,
+  hasAttachments = false,
 }: ChatMentionInputProps) {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
@@ -417,7 +419,7 @@ export function ChatMentionInput({
         {/* Send button */}
         <Button
           onClick={onSend}
-          disabled={!value.trim() || disabled}
+          disabled={((!value.trim() && !hasAttachments) || disabled)}
           size="icon"
           className="h-10 w-10 shrink-0"
         >

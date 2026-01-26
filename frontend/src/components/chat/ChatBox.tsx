@@ -16,6 +16,8 @@ import {
   Message,
   MentionInput,
 } from '../../hooks/use-chat';
+import { useChatUpload } from '../../hooks/use-chat-upload';
+import { MessageContent } from './MessageContent';
 import { graphqlRequest, CHAT_QUERIES } from '../../services/graphql';
 import { useUsers } from '../../hooks/use-users';
 import { Button } from '../ui/button';
@@ -59,6 +61,9 @@ import {
   Bell,
   Check,
   CheckCheck,
+
+  File as FileIcon,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -97,7 +102,11 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showLeaveGroupDialog, setShowLeaveGroupDialog] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
+
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+
+  const { uploadFile, isLoading: isUploading } = useChatUpload();
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -158,10 +167,18 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
     setMentions(newMentions);
   };
 
-  const handleSendMessage = async () => {
-    if (!messageInput.trim()) return;
+  const handleFileSelect = (files: FileList) => {
+    setPendingFiles((prev) => [...prev, ...Array.from(files)]);
+  };
 
-    // Si on édite un message existant
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() && pendingFiles.length === 0) return;
+
+    // Si on édite un message existant (pas d'upload supporté pour l'instant en édition)
     if (editingMessage) {
       try {
         await editMessageMutation.mutateAsync({
@@ -202,10 +219,39 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
     if (!selectedConversation) return;
 
+    if (!selectedConversation) return;
+
     try {
+      let content = messageInput.trim();
+
+      // Upload pending files
+      if (pendingFiles.length > 0) {
+        const results = await Promise.all(pendingFiles.map(file => uploadFile(file)));
+
+        results.forEach((doc, index) => {
+          if (!doc) return;
+          const file = pendingFiles[index];
+          const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(file.name.split('.').pop()?.toLowerCase() || '');
+          // Configurer l'URL complète si nécessaire, mais supposons que l'API renvoie une URL ou un chemin relatif
+          // Si c'est un chemin relatif, on devra peut-être ajouter le préfixe à l'affichage, 
+          // mais stockons le tel quel pour l'instant.
+          const url = doc.file;
+
+          if (isImage) {
+            content += `\n![${file.name}](${url})`;
+          } else {
+            content += `\n[${file.name}](${url})`;
+          }
+        });
+
+        setPendingFiles([]);
+      }
+
+      if (!content.trim()) return;
+
       await sendMessageMutation.mutateAsync({
         conversationId: selectedConversation,
-        content: messageInput.trim(),
+        content: content,
         replyToId: replyTo?.id,
         mentions: mentions.length > 0 ? mentions : undefined,
       });
@@ -534,10 +580,10 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                               newConversation?.otherParticipant ||
                               (selectedUserData
                                 ? {
-                                    fullName:
-                                      `${selectedUserData.first_name || ''} ${selectedUserData.last_name || ''}`.trim() ||
-                                      selectedUserData.username,
-                                  }
+                                  fullName:
+                                    `${selectedUserData.first_name || ''} ${selectedUserData.last_name || ''}`.trim() ||
+                                    selectedUserData.username,
+                                }
                                 : null);
                             return (
                               user?.fullName
@@ -556,19 +602,19 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                         {isGroupConversation
                           ? selectedConversationData?.name || 'Groupe'
                           : selectedConversationData?.otherParticipant?.fullName ||
-                            newConversation?.otherParticipant?.fullName ||
-                            (selectedUserData
-                              ? `${selectedUserData.first_name || ''} ${selectedUserData.last_name || ''}`.trim() ||
-                                selectedUserData.username
-                              : 'Utilisateur')}
+                          newConversation?.otherParticipant?.fullName ||
+                          (selectedUserData
+                            ? `${selectedUserData.first_name || ''} ${selectedUserData.last_name || ''}`.trim() ||
+                            selectedUserData.username
+                            : 'Utilisateur')}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {isGroupConversation
                           ? `${selectedConversationData?.memberCount || 0} membres`
                           : selectedConversationData?.otherParticipant?.email ||
-                            newConversation?.otherParticipant?.email ||
-                            selectedUserData?.email ||
-                            ''}
+                          newConversation?.otherParticipant?.email ||
+                          selectedUserData?.email ||
+                          ''}
                       </p>
                     </div>
                   </div>
@@ -657,7 +703,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                           const isOwnMessage =
                             message.sender.id === currentUserId ||
                             message.sender.username ===
-                              JSON.parse(localStorage.getItem('user') || '{}').username;
+                            JSON.parse(localStorage.getItem('user') || '{}').username;
 
                           if (message.isDeleted) {
                             return (
@@ -729,9 +775,11 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                     )}
                                   >
                                     <div className="text-sm whitespace-pre-wrap">
-                                      {message.mentions && message.mentions.length > 0
-                                        ? renderMessageWithMentions(message.content, message.mentions)
-                                        : parseAndRenderMentions(message.content)}
+                                      <MessageContent
+                                        content={message.content}
+                                        isOwnMessage={isOwnMessage}
+                                        mentions={message.mentions}
+                                      />
                                     </div>
                                   </div>
 
@@ -893,6 +941,30 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                   </div>
                 )}
 
+                {/* Pending files */}
+                {pendingFiles.length > 0 && (
+                  <div className="px-4 py-2 bg-muted/30 border-t flex flex-wrap gap-2">
+                    {pendingFiles.map((file, index) => (
+                      <div key={index} className="relative group bg-background border rounded-md p-2 flex items-center gap-2 pr-8">
+                        <div className="bg-primary/10 p-1.5 rounded-full">
+                          {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(file.name.split('.').pop()?.toLowerCase() || '') ? (
+                            <ImageIcon className="h-4 w-4 text-primary" />
+                          ) : (
+                            <FileIcon className="h-4 w-4 text-primary" />
+                          )}
+                        </div>
+                        <span className="text-xs max-w-[150px] truncate" title={file.name}>{file.name}</span>
+                        <button
+                          onClick={() => removePendingFile(index)}
+                          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded-full text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 {/* Zone de saisie */}
                 <div className="p-4 border-t">
                   <ChatMentionInput
@@ -906,14 +978,16 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                           ? 'Tapez votre premier message...'
                           : 'Tapez votre message... (@ pour mentionner)'
                     }
-                    disabled={sendMessageMutation.isPending || isLoadingNewConversation}
+                    disabled={sendMessageMutation.isPending || isLoadingNewConversation || isUploading}
+                    onFileSelect={handleFileSelect}
+                    hasAttachments={pendingFiles.length > 0}
                     replyTo={
                       replyTo
                         ? {
-                            id: replyTo.id,
-                            content: replyTo.content,
-                            senderName: replyTo.sender.fullName,
-                          }
+                          id: replyTo.id,
+                          content: replyTo.content,
+                          senderName: replyTo.sender.fullName,
+                        }
                         : null
                     }
                     onCancelReply={() => {
