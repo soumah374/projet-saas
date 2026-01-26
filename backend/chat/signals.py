@@ -8,7 +8,7 @@ from notifications.models import Notification
 @receiver(post_save, sender=Message)
 def create_message_notification(sender, instance, created, **kwargs):
     """Créer une notification lorsqu'un nouveau message est créé"""
-    if created:
+    if created and instance.recipient:
         content_type = ContentType.objects.get_for_model(instance)
         Notification.objects.create(
             recipient=instance.recipient,

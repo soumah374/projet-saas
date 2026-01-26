@@ -7,7 +7,7 @@ class ConversationAdmin(admin.ModelAdmin):
     list_display = ['id', 'get_participants', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
     search_fields = ['participants__username', 'participants__email']
-    filter_horizontal = ['participants']
+    # filter_horizontal = ['participants']  # Retiré car le champ utilise un modèle through personnalisé
     
     def get_participants(self, obj):
         return ', '.join([p.username for p in obj.participants.all()])
