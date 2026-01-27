@@ -317,17 +317,25 @@ class Query(graphene.ObjectType):
                 # Si aucune conversation n'existe, en créer une nouvelle
                 if not conversation:
                     with transaction.atomic():
-                        conversation = Conversation.objects.create(conversation_type='direct')
-                        ConversationMember.objects.create(
-                            conversation=conversation,
-                            user=user,
-                            role='member'
-                        )
-                        ConversationMember.objects.create(
-                            conversation=conversation,
-                            user=other_user,
-                            role='member'
-                        )
+                         # Chercher une conversation directe existante
+                        conversation = Conversation.objects.filter(
+                            memberships__user=user,
+                            conversation_type='direct'
+                        ).filter(
+                            memberships__user=other_user
+                        ).distinct().first()
+                        if not conversation:
+                            conversation = Conversation.objects.create(conversation_type='direct')
+                            ConversationMember.objects.create(
+                                conversation=conversation,
+                                user=user,
+                                role='member'
+                            )
+                            ConversationMember.objects.create(
+                                conversation=conversation,
+                                user=other_user,
+                                role='member'
+                            )
 
                 return conversation
             except User.DoesNotExist:
