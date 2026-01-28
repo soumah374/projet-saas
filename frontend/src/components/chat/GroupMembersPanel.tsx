@@ -22,17 +22,7 @@ import {
 } from '../ui/alert-dialog';
 import { MoreVertical, Shield, ShieldOff, UserMinus, Crown, UserPlus, Search } from 'lucide-react';
 import { Input } from '../ui/input';
-import { ConversationMember, useRemoveGroupMember, useAddGroupMembers, usePromoteGroupMember } from '../../hooks/use-chat';
-import { useUsers } from '../../hooks/use-users';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../ui/dialog';
-import { Checkbox } from '../ui/checkbox';
+import { ConversationMember, useRemoveGroupMember, usePromoteGroupMember } from '../../hooks/use-chat';
 
 interface GroupMembersPanelProps {
   members: ConversationMember[];
@@ -41,6 +31,7 @@ interface GroupMembersPanelProps {
   currentUserId: string;
   groupName?: string;
   onMemberRemoved?: () => void;
+  onAddMemberClick?: () => void;
 }
 
 export function GroupMembersPanel({
@@ -50,17 +41,14 @@ export function GroupMembersPanel({
   currentUserId,
   groupName,
   onMemberRemoved,
+  onAddMemberClick,
 }: GroupMembersPanelProps) {
   const [memberToRemove, setMemberToRemove] = useState<ConversationMember | null>(null);
   const [memberToPromote, setMemberToPromote] = useState<ConversationMember | null>(null);
   const [memberToDemote, setMemberToDemote] = useState<ConversationMember | null>(null);
-  const [showAddMembers, setShowAddMembers] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [memberSearch, setMemberSearch] = useState('');
   const removeGroupMemberMutation = useRemoveGroupMember();
-  const addGroupMembersMutation = useAddGroupMembers();
   const promoteMemberMutation = usePromoteGroupMember();
-  const { data: usersResponse, isLoading: isLoadingUsers } = useUsers({});
 
   const handleRemoveMember = async () => {
     if (!memberToRemove) return;
@@ -114,36 +102,7 @@ export function GroupMembersPanel({
 
   const adminCount = members.filter((m) => m.role === 'admin').length;
 
-  const handleUserToggle = (userId: string) => {
-    setSelectedUsers((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  };
 
-  const handleAddMembers = async () => {
-    if (selectedUsers.length === 0) return;
-
-    try {
-      await addGroupMembersMutation.mutateAsync({
-        conversationId,
-        userIds: selectedUsers,
-      });
-      setSelectedUsers([]);
-      setShowAddMembers(false);
-      onMemberRemoved?.(); // Refresh conversation data
-    } catch (error) {
-      console.error('Error adding members:', error);
-    }
-  };
-
-  // Convert all member IDs to strings for consistent comparison
-  const currentMemberIds = members.map((m) => String(m.user.id));
-  const availableUsers = (usersResponse?.data?.results || []).filter(
-    (user: any) => {
-      const userId = String(user.id);
-      return !currentMemberIds.includes(userId) && userId !== String(currentUserId);
-    }
-  );
 
   const sortedMembers = [...members]
     .filter((member) => {
@@ -176,7 +135,7 @@ export function GroupMembersPanel({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowAddMembers(true)}
+                  onClick={onAddMemberClick}
                   className="h-6 px-2 text-xs"
                 >
                   <UserPlus className="h-3 w-3 mr-1" />
@@ -355,72 +314,7 @@ export function GroupMembersPanel({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog for adding members */}
-      <Dialog open={showAddMembers} onOpenChange={setShowAddMembers}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Ajouter des membres</DialogTitle>
-            <DialogDescription>
-              Sélectionnez les utilisateurs à ajouter au groupe {groupName || 'ce groupe'}.
-            </DialogDescription>
-          </DialogHeader>
 
-          <div className="max-h-60 overflow-y-auto space-y-2">
-            {isLoadingUsers ? (
-              <div className="text-sm text-muted-foreground">Chargement...</div>
-            ) : availableUsers.length === 0 ? (
-              <div className="text-sm text-muted-foreground">Tous les utilisateurs sont déjà membres</div>
-            ) : (
-              availableUsers.map((user: any) => {
-                const userId = String(user.id);
-                return (
-                <div key={userId} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`user-${userId}`}
-                    checked={selectedUsers.includes(userId)}
-                    onCheckedChange={() => handleUserToggle(userId)}
-                  />
-                  <label
-                    htmlFor={`user-${user.id}`}
-                    className="flex items-center space-x-2 cursor-pointer flex-1"
-                  >
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {user.first_name?.[0]}{user.last_name?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm">
-                      {user.first_name} {user.last_name}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {user.email}
-                    </span>
-                  </label>
-                </div>
-              );
-            })
-          )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setSelectedUsers([]);
-                setShowAddMembers(false);
-              }}
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={handleAddMembers}
-              disabled={selectedUsers.length === 0 || addGroupMembersMutation.isPending}
-            >
-              {addGroupMembersMutation.isPending ? 'Ajout...' : `Ajouter (${selectedUsers.length})`}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

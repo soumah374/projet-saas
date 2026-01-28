@@ -2,6 +2,29 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
+User = get_user_model()
+
+
+class ConversationManager(models.Manager):
+    def get_or_create_direct(self, user1, user2):
+        """Récupère ou crée une conversation directe entre deux utilisateurs."""
+        with transaction.atomic():
+            # Chercher une conversation existante
+            conversation = self.filter(
+                memberships__user=user1,
+                conversation_type='direct'
+            ).filter(
+                memberships__user=user2
+            ).distinct().first()
+            
+            if not conversation:
+                conversation = self.create(conversation_type='direct')
+                ConversationMember.objects.bulk_create([
+                    ConversationMember(conversation=conversation, user=user1, role='member'),
+                    ConversationMember(conversation=conversation, user=user2, role='member')
+                ])
+            
+            return conversation
 
 class Conversation(models.Model):
     """Modèle pour représenter une conversation entre utilisateurs"""

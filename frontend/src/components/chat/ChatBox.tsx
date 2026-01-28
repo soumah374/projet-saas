@@ -18,7 +18,6 @@ import {
 } from '../../hooks/use-chat';
 import { useChatUpload } from '../../hooks/use-chat-upload';
 import { MessageContent } from './MessageContent';
-import { graphqlRequest, CHAT_QUERIES } from '../../services/graphql';
 import { useUsers } from '../../hooks/use-users';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -55,6 +54,7 @@ import {
   Reply,
   Settings,
   Search,
+  ArrowLeft,
   ArrowDown,
   LogOut,
   BellOff,
@@ -69,12 +69,12 @@ import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { UserSelector } from './UserSelector';
 import { ChatMentionInput } from './ChatMentionInput';
-import { renderMessageWithMentions, parseAndRenderMentions } from './MentionBadge';
 import { MessageReactionsDisplay } from './MessageReactions';
 import { QuickReactionPicker } from './EmojiPicker';
-import { CreateGroupDialog } from './CreateGroupDialog';
+import { AddMemberView } from './AddMemberView';
+import { CreateGroupView } from './CreateGroupView';
 import { GroupMembersPanel } from './GroupMembersPanel';
-import { GroupSettingsDialog } from './GroupSettingsDialog';
+import { GroupSettingsView } from './GroupSettingsView';
 import { cn } from '../../lib/utils';
 
 interface ChatBoxProps {
@@ -94,14 +94,13 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
   const [mentions, setMentions] = useState<MentionInput[]>([]);
   const [showConversationsList, setShowConversationsList] = useState(true);
   const [showUserSelector, setShowUserSelector] = useState(false);
-  const [showCreateGroup, setShowCreateGroup] = useState(false);
+  const [activeOverlay, setActiveOverlay] = useState<'createGroup' | 'groupSettings' | 'addMembers' | null>(null);
   const [showGroupMembers, setShowGroupMembers] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [conversationSearch, setConversationSearch] = useState('');
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [showLeaveGroupDialog, setShowLeaveGroupDialog] = useState(false);
-  const [showGroupSettings, setShowGroupSettings] = useState(false);
 
   const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
 
@@ -112,6 +111,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const CONVERSATIONGROUP: string = 'GROUP';
+  const CONVERSATIONDIRECT: string = 'DIRECT';
 
   const { conversations, isLoading: conversationsLoading, refetch: refetchConversations } = useConversations();
   // Utiliser useConversation pour créer/récupérer une conversation avec un utilisateur
@@ -266,25 +266,12 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
     }
   };
 
-  const handleSelectUser = async (userId: string) => {
+  const handleSelectUser = (userId: string) => {
+    // Le hook useConversation gère automatiquement la création/récupération
+    // quand selectedUserId change
     setSelectedUserId(userId);
     setSelectedConversation(null);
     setShowUserSelector(false);
-    setShowConversationsList(false);
-
-    try {
-      const response = await graphqlRequest<{ conversation: Conversation }>(
-        CHAT_QUERIES.GET_CONVERSATION,
-        { userId }
-      );
-      if (response.data?.conversation) {
-        setSelectedConversation(response.data.conversation.id);
-        setSelectedUserId(null);
-        refetchConversations();
-      }
-    } catch (error) {
-      console.error('Error fetching conversation:', error);
-    }
   };
 
   const handleDeleteMessage = async (messageId: string) => {
@@ -395,182 +382,193 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
   return (
     <>
-      <Card className="flex flex-col h-[600px] w-full max-w-4xl mx-auto">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
+      <Card className="flex flex-col h-[600px] w-full max-w-5xl mx-auto overflow-hidden relative border rounded-lg shadow-xl">
+        {/* Header */}
+        <div className="flex flex-row items-center justify-between p-3 border-b bg-card">
           <div className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            <CardTitle>Messages</CardTitle>
+            <MessageSquare className="h-5 w-5 text-primary" />
+            <h3 className="font-semibold">Messages</h3>
           </div>
-        </CardHeader>
+          <div className="flex items-center gap-1">
+            {onClose && (
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
 
-        <div className="flex flex-1 overflow-hidden">
-          {/* Liste des conversations */}
-          {showConversationsList && !showUserSelector && (
-            <div className="w-80 border-r flex flex-col">
-              <div className="p-3 border-b space-y-2">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">Conversations</h3>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8">
-                        <Plus className="h-4 w-4 mr-1" />
-                        Nouveau
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setShowUserSelector(true)}>
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Message direct
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setShowCreateGroup(true)}>
-                        <Users className="h-4 w-4 mr-2" />
-                        Nouveau groupe
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-                {/* Search input */}
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Rechercher..."
-                    value={conversationSearch}
-                    onChange={(e) => setConversationSearch(e.target.value)}
-                    className="pl-8 h-8 text-sm"
-                  />
-                </div>
-              </div>
-              <ScrollArea className="flex-1">
-                {conversationsLoading ? (
-                  <div className="p-4 text-sm text-muted-foreground">Chargement...</div>
-                ) : filteredConversations.length === 0 ? (
-                  <div className="p-4 text-sm text-muted-foreground text-center">
-                    {conversationSearch ? 'Aucun résultat' : 'Aucune conversation'}
-                  </div>
-                ) : (
-                  <div className="divide-y">
-                    {filteredConversations.map((conversation) => {
-                      const info = getConversationDisplayInfo(conversation);
-                      return (
-                        <button
-                          key={conversation.id}
-                          onClick={() => {
-                            setSelectedConversation(conversation.id);
-                            setShowConversationsList(false);
-                            setShowGroupMembers(false);
-                          }}
-                          className={cn(
-                            'w-full p-4 text-left hover:bg-muted transition-colors',
-                            selectedConversation === conversation.id && 'bg-muted'
-                          )}
-                        >
-                          <div className="flex items-start gap-3">
-                            <Avatar className="h-10 w-10">
-                              <AvatarFallback
-                                className={cn(
-                                  conversation.conversationType === CONVERSATIONGROUP && 'bg-primary/10'
-                                )}
-                              >
-                                {conversation.conversationType === CONVERSATIONGROUP ? (
-                                  <Users className="h-5 w-5" />
-                                ) : (
-                                  info.initials
-                                )}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="font-medium text-sm truncate">{info.name}</p>
-                                {conversation.unreadCount > 0 && (
-                                  <Badge variant="destructive" className="h-5 min-w-5 text-xs">
-                                    {conversation.unreadCount}
-                                  </Badge>
-                                )}
-                              </div>
-                              {conversation.lastMessage && (
-                                <p className="text-xs text-muted-foreground truncate mt-1">
-                                  {conversation.lastMessage.content}
-                                </p>
-                              )}
-                              {conversation.lastMessage && (
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {formatDistanceToNow(new Date(conversation.lastMessage.createdAt), {
-                                    addSuffix: true,
-                                    locale: fr,
-                                  })}
-                                </p>
-                              )}
-                              {/* <small className='text-xs text-muted-foreground mt-1'>{ info.subtitle }</small> */}
-                            </div>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </ScrollArea>
-            </div>
-          )}
+        <div className="flex flex-1 overflow-hidden relative bg-muted/10">
 
-          {/* Sélecteur d'utilisateur */}
-          {showUserSelector && (
-            <div className="w-80 border-r flex flex-col">
-              <div className="p-4 border-b flex items-center justify-between">
-                <h3 className="font-semibold text-sm">Nouveau message</h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
+          {/* LEFT PANE: Conversation List */}
+          <div className={cn(
+            "flex flex-col border-r bg-background transition-all duration-300",
+            (selectedConversation || selectedUserId) ? "hidden md:flex md:w-80" : "w-full md:w-80"
+          )}>
+            {showUserSelector ? (
+              <div className="flex flex-col h-full">
+                <div className="p-3 border-b flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Nouveau message</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowUserSelector(false);
+                    }}
+                    className="h-8"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <UserSelector
+                  onSelectUser={handleSelectUser}
+                  onClose={() => {
                     setShowUserSelector(false);
-                    setShowConversationsList(true);
                   }}
-                  className="h-8"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                  disabled={isLoadingNewConversation}
+                  excludeUserIds={conversations
+                    .filter((c) => c.conversationType === CONVERSATIONDIRECT && c.otherParticipant)
+                    .map((c) => c.otherParticipant!.id)}
+                />
               </div>
-              <UserSelector
-                onSelectUser={handleSelectUser}
-                onClose={() => {
-                  setShowUserSelector(false);
-                  setShowConversationsList(true);
-                }}
-                excludeUserIds={conversations
-                  .filter((c) => c.conversationType === 'direct' && c.otherParticipant)
-                  .map((c) => c.otherParticipant!.id)}
-              />
-            </div>
-          )}
-
-          {/* Zone de messages */}
-          <div className="flex-1 flex flex-col">
-            {isLoadingNewConversation && selectedUserId && !selectedConversation ? (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50 animate-pulse" />
-                  <p>Ouverture de la conversation...</p>
+            ) : (
+              <div className="flex flex-col h-full">
+                <div className="p-3 border-b space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-sm">Conversations</h3>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8">
+                          <Plus className="h-4 w-4 mr-1" />
+                          Nouveau
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => setShowUserSelector(true)}>
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Message direct
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setActiveOverlay('createGroup')}>
+                          <Users className="h-4 w-4 mr-2" />
+                          Nouveau groupe
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  {/* Search input */}
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Rechercher..."
+                      value={conversationSearch}
+                      onChange={(e) => setConversationSearch(e.target.value)}
+                      className="pl-8 h-8 text-sm bg-muted/50"
+                    />
+                  </div>
                 </div>
+                <ScrollArea className="flex-1">
+                  {conversationsLoading ? (
+                    <div className="p-4 text-sm text-muted-foreground text-center">Chargement...</div>
+                  ) : filteredConversations.length === 0 ? (
+                    <div className="p-4 text-sm text-muted-foreground text-center">
+                      {conversationSearch ? 'Aucun résultat' : 'Aucune conversation'}
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {filteredConversations.map((conversation) => {
+                        const info = getConversationDisplayInfo(conversation);
+                        return (
+                          <button
+                            key={conversation.id}
+                            onClick={() => {
+                              setSelectedConversation(conversation.id);
+                              setShowConversationsList(false); // Only relevant for mobile view logic
+                              setShowGroupMembers(false);
+                            }}
+                            className={cn(
+                              'w-full p-4 text-left hover:bg-muted/80 transition-colors',
+                              selectedConversation === conversation.id && 'bg-primary/5 hover:bg-primary/10 border-l-4 border-primary pl-3'
+                            )}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Avatar className="h-10 w-10 border shadow-sm">
+                                <AvatarFallback
+                                  className={cn(
+                                    conversation.conversationType === CONVERSATIONGROUP && 'bg-primary/10 text-primary'
+                                  )}
+                                >
+                                  {conversation.conversationType === CONVERSATIONGROUP ? (
+                                    <Users className="h-5 w-5" />
+                                  ) : (
+                                    info.initials
+                                  )}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <p className="font-medium text-sm truncate text-foreground">{info.name}</p>
+                                  {conversation.unreadCount > 0 && (
+                                    <Badge variant="destructive" className="h-5 min-w-5 text-[10px] px-1">
+                                      {conversation.unreadCount}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex justify-between items-center mt-1">
+                                  <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                    {conversation.lastMessage ? conversation.lastMessage.content :
+                                      <span className="italic">Aucun message</span>}
+                                  </p>
+                                  {conversation.lastMessage && (
+                                    <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
+                                      {formatDistanceToNow(new Date(conversation.lastMessage.createdAt), {
+                                        addSuffix: false,
+                                        locale: fr,
+                                      })}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT PANE: Chat Area */}
+          <div className={cn(
+            "flex-1 flex flex-col bg-background min-w-0",
+            !(selectedConversation || selectedUserId) && "hidden md:flex"
+          )}>
+            {isLoadingNewConversation && selectedUserId && !selectedConversation ? (
+              <div className="flex-1 flex items-center justify-center text-muted-foreground flex-col gap-2">
+                <MessageSquare className="h-10 w-10 opacity-20 animate-pulse" />
+                <p className="text-sm">Chargement...</p>
               </div>
             ) : selectedConversation || (selectedUserId && (newConversation || selectedUserData)) ? (
               <>
                 {/* En-tête de la conversation */}
-                <div className="p-4 border-b flex items-center justify-between">
+                <div className="p-3 border-b flex items-center justify-between bg-card shadow-sm z-10">
                   <div className="flex items-center gap-3">
-                    {!showConversationsList && !showUserSelector && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setShowConversationsList(true);
-                          setShowUserSelector(false);
-                          setShowGroupMembers(false);
-                        }}
-                      >
-                        <Users className="h-4 w-4" />
-                      </Button>
-                    )}
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className={cn(isGroupConversation && 'bg-primary/10')}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="md:hidden h-8 w-8 -ml-1"
+                      onClick={() => {
+                        setSelectedConversation(null);
+                        setSelectedUserId(null);
+                        // Back to list on mobile
+                      }}
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+
+                    <Avatar className="h-9 w-9 border">
+                      <AvatarFallback className={cn(isGroupConversation && 'bg-primary/10 text-primary')}>
                         {isGroupConversation ? (
                           <Users className="h-4 w-4" />
                         ) : (
@@ -597,8 +595,8 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                         )}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium text-sm">
+                    <div className="flex flex-col">
+                      <p className="font-semibold text-sm leading-none">
                         {isGroupConversation
                           ? selectedConversationData?.name || 'Groupe'
                           : selectedConversationData?.otherParticipant?.fullName ||
@@ -608,7 +606,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                             selectedUserData.username
                             : 'Utilisateur')}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {isGroupConversation
                           ? `${selectedConversationData?.memberCount || 0} membres`
                           : selectedConversationData?.otherParticipant?.email ||
@@ -625,8 +623,9 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
-                                variant="ghost"
+                                variant={showGroupMembers ? "secondary" : "ghost"}
                                 size="icon"
+                                className="h-8 w-8"
                                 onClick={() => setShowGroupMembers(!showGroupMembers)}
                               >
                                 <Users className="h-4 w-4" />
@@ -638,7 +637,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreVertical className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -657,7 +656,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                               )}
                             </DropdownMenuItem>
                             {selectedConversationData?.isAdmin && (
-                              <DropdownMenuItem onClick={() => setShowGroupSettings(true)}>
+                              <DropdownMenuItem onClick={() => setActiveOverlay('groupSettings')}>
                                 <Settings className="h-4 w-4 mr-2" />
                                 Paramètres
                               </DropdownMenuItem>
@@ -674,30 +673,17 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                         </DropdownMenu>
                       </>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setSelectedConversation(null);
-                        setSelectedUserId(null);
-                        setShowConversationsList(true);
-                        setShowGroupMembers(false);
-                      }}
-                      title="Fermer la conversation"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
 
                 <div className="flex flex-1 overflow-hidden relative">
                   {/* Messages */}
                   <ScrollArea
-                    className="flex-1 p-4"
+                    className="flex-1 p-4 bg-muted/5"
                     ref={scrollAreaRef}
                     onScrollCapture={handleScroll}
                   >
-                    <div className="space-y-4">
+                    <div className="space-y-6 pb-2">
                       {selectedConversation ? (
                         messages.map((message) => {
                           const isOwnMessage =
@@ -714,7 +700,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                   isOwnMessage ? 'flex-row-reverse' : 'flex-row'
                                 )}
                               >
-                                <div className="text-xs text-muted-foreground italic">
+                                <div className="text-xs text-muted-foreground italic px-4 py-2 bg-muted/30 rounded-lg">
                                   Message supprimé
                                 </div>
                               </div>
@@ -725,14 +711,14 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                             <div
                               key={message.id}
                               className={cn(
-                                'flex gap-3 group relative mt-2',
+                                'flex gap-3 group relative',
                                 isOwnMessage ? 'flex-row-reverse' : 'flex-row'
                               )}
                               onMouseEnter={() => setHoveredMessageId(message.id)}
                               onMouseLeave={() => setHoveredMessageId(null)}
                             >
-                              <Avatar className="h-8 w-8 shrink-0">
-                                <AvatarFallback>
+                              <Avatar className="h-8 w-8 shrink-0 mt-1">
+                                <AvatarFallback className="text-[10px]">
                                   {message.sender.fullName
                                     .split(' ')
                                     .map((n) => n[0])
@@ -749,14 +735,14 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                               >
                                 {/* Sender name for group messages */}
                                 {isGroupConversation && !isOwnMessage && (
-                                  <span className="text-xs text-muted-foreground mb-0.5">
+                                  <span className="text-[10px] text-muted-foreground mb-1 ml-1">
                                     {message.sender.fullName}
                                   </span>
                                 )}
 
                                 {/* Reply preview */}
                                 {message.replyTo && (
-                                  <div className="text-xs text-muted-foreground mb-1 px-2 py-1 bg-muted/50 rounded border-l-2 border-primary">
+                                  <div className="text-xs text-muted-foreground mb-1 px-3 py-1.5 bg-muted/50 rounded-md border-l-2 border-primary w-full text-left">
                                     <span className="font-medium">
                                       {message.replyTo.sender.fullName}:
                                     </span>{' '}
@@ -765,16 +751,16 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                   </div>
                                 )}
 
-                                <div className="flex items-start gap-1">
+                                <div className="flex items-start gap-1 relative">
                                   <div
                                     className={cn(
-                                      'rounded-lg px-4 py-2',
+                                      'rounded-2xl px-4 py-2.5 shadow-sm text-sm',
                                       isOwnMessage
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted'
+                                        ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                        : 'bg-white border rounded-tl-none'
                                     )}
                                   >
-                                    <div className="text-sm whitespace-pre-wrap">
+                                    <div className="whitespace-pre-wrap leading-relaxed">
                                       <MessageContent
                                         content={message.content}
                                         isOwnMessage={isOwnMessage}
@@ -787,8 +773,8 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                   {hoveredMessageId === message.id && (
                                     <div
                                       className={cn(
-                                        'absolute -top-4 z-10',
-                                        isOwnMessage ? 'right-10' : 'left-10'
+                                        'absolute -top-8 z-10 transition-all opacity-0 group-hover:opacity-100',
+                                        isOwnMessage ? 'right-0' : 'left-0'
                                       )}
                                     >
                                       <QuickReactionPicker
@@ -812,7 +798,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                       <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute top-1/2 -translate-y-1/2 -mx-8 text-muted-foreground hover:text-foreground"
                                       >
                                         <MoreVertical className="h-3 w-3" />
                                       </Button>
@@ -849,35 +835,37 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
                                 {/* Reactions */}
                                 {message.reactions && message.reactions.length > 0 && (
-                                  <MessageReactionsDisplay
-                                    reactions={message.reactions}
-                                    onReactionClick={(emoji) => {
-                                      const reaction = message.reactions.find(
-                                        (r) => r.emoji === emoji
-                                      );
-                                      handleReaction(
-                                        message.id,
-                                        emoji,
-                                        reaction?.hasReacted || false
-                                      );
-                                    }}
-                                  />
+                                  <div className={cn("mt-1", isOwnMessage ? "mr-1" : "ml-1")}>
+                                    <MessageReactionsDisplay
+                                      reactions={message.reactions}
+                                      onReactionClick={(emoji) => {
+                                        const reaction = message.reactions.find(
+                                          (r) => r.emoji === emoji
+                                        );
+                                        handleReaction(
+                                          message.id,
+                                          emoji,
+                                          reaction?.hasReacted || false
+                                        );
+                                      }}
+                                    />
+                                  </div>
                                 )}
 
                                 {/* Message info */}
-                                <div className="flex items-center gap-2 mt-1">
-                                  <p className="text-xs text-muted-foreground">
+                                <div className={cn("flex items-center gap-1.5 mt-1 px-1", isOwnMessage ? "justify-end" : "justify-start")}>
+                                  <p className="text-[10px] text-muted-foreground/70">
                                     {formatDistanceToNow(new Date(message.createdAt), {
                                       addSuffix: true,
                                       locale: fr,
                                     })}
                                   </p>
                                   {message.isEdited && (
-                                    <span className="text-xs text-muted-foreground">(modifié)</span>
+                                    <span className="text-[10px] text-muted-foreground/70">(modifié)</span>
                                   )}
                                   {/* Read receipt for own messages */}
                                   {isOwnMessage && (
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-muted-foreground/70">
                                       {message.isRead ? (
                                         <CheckCheck className="h-3 w-3 text-primary inline" />
                                       ) : (
@@ -891,11 +879,13 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                           );
                         })
                       ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                        <div className="flex items-center justify-center h-full pt-20 text-muted-foreground">
                           <div className="text-center">
-                            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <div className="bg-muted/30 p-4 rounded-full inline-block mb-4">
+                              <MessageSquare className="h-8 w-8 opacity-50" />
+                            </div>
                             <p>Aucun message pour le moment</p>
-                            <p className="text-sm mt-2">
+                            <p className="text-sm mt-2 max-w-xs mx-auto">
                               Envoyez le premier message pour démarrer la conversation
                             </p>
                           </div>
@@ -910,7 +900,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                     <Button
                       variant="secondary"
                       size="icon"
-                      className="absolute bottom-20 right-4 rounded-full shadow-lg z-10 h-10 w-10"
+                      className="absolute bottom-20 right-4 rounded-full shadow-lg z-10 h-8 w-8 bg-background border"
                       onClick={scrollToBottom}
                     >
                       <ArrowDown className="h-4 w-4" />
@@ -919,7 +909,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
                   {/* Group members panel */}
                   {showGroupMembers && isGroupConversation && selectedConversationData?.members && (
-                    <div className="w-64 border-l">
+                    <div className="w-60 border-l bg-background hidden lg:block">
                       <GroupMembersPanel
                         members={selectedConversationData.members}
                         conversationId={selectedConversation!}
@@ -927,14 +917,16 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                         currentUserId={currentUserId}
                         groupName={selectedConversationData.name}
                         onMemberRemoved={refetchConversations}
+                        onAddMemberClick={() => setActiveOverlay('addMembers')}
                       />
                     </div>
                   )}
+                  {/* Internal Panel for Mobile/Tablet Group Members if needed, but for now relying on split view or just desktop */}
                 </div>
 
                 {/* Typing indicator */}
                 {typingUsers.length > 0 && (
-                  <div className="px-4 py-1 text-xs text-muted-foreground">
+                  <div className="px-4 py-1 text-[10px] font-medium text-primary animate-pulse bg-primary/5">
                     {typingUsers.length === 1
                       ? `${typingUsers[0].fullName} est en train d'écrire...`
                       : `${typingUsers.map((u) => u.fullName).join(', ')} sont en train d'écrire...`}
@@ -945,7 +937,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                 {pendingFiles.length > 0 && (
                   <div className="px-4 py-2 bg-muted/30 border-t flex flex-wrap gap-2">
                     {pendingFiles.map((file, index) => (
-                      <div key={index} className="relative group bg-background border rounded-md p-2 flex items-center gap-2 pr-8">
+                      <div key={index} className="relative group bg-background border rounded-md p-2 flex items-center gap-2 pr-8 shadow-sm">
                         <div className="bg-primary/10 p-1.5 rounded-full">
                           {['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(file.name.split('.').pop()?.toLowerCase() || '') ? (
                             <ImageIcon className="h-4 w-4 text-primary" />
@@ -966,7 +958,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                 )}
 
                 {/* Zone de saisie */}
-                <div className="p-4 border-t">
+                <div className="p-3 border-t bg-background">
                   <ChatMentionInput
                     value={messageInput}
                     onChange={handleMessageChange}
@@ -1001,16 +993,21 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                 </div>
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p className="mb-4">Sélectionnez une conversation pour commencer</p>
-                  <div className="flex flex-col gap-2">
-                    <Button onClick={() => setShowUserSelector(true)} variant="outline">
+              <div className="flex-1 flex items-center justify-center text-muted-foreground bg-muted/5">
+                <div className="text-center p-8">
+                  <div className="bg-muted/50 p-6 rounded-full inline-block mb-4 shadow-sm">
+                    <MessageSquare className="h-12 w-12 text-muted-foreground/50" />
+                  </div>
+                  <h3 className="font-medium text-foreground mb-2">Vos messages</h3>
+                  <p className="mb-6 text-sm max-w-[250px] mx-auto">
+                    Sélectionnez une discussion pour commencer à échanger
+                  </p>
+                  <div className="flex flex-col gap-3 w-full max-w-xs mx-auto">
+                    <Button onClick={() => setShowUserSelector(true)} variant="default" className="w-full">
                       <Plus className="h-4 w-4 mr-2" />
                       Nouveau message
                     </Button>
-                    <Button onClick={() => setShowCreateGroup(true)} variant="outline">
+                    <Button onClick={() => setActiveOverlay('createGroup')} variant="outline" className="w-full bg-background">
                       <Users className="h-4 w-4 mr-2" />
                       Créer un groupe
                     </Button>
@@ -1019,21 +1016,52 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
               </div>
             )}
           </div>
+
+          {/* INTERNAL VIEWS (Overlays) */}
+
+          {/* Create Group View */}
+          {activeOverlay === 'createGroup' && (
+            <CreateGroupView
+              onBack={() => setActiveOverlay(null)}
+              onGroupCreated={(conversationId) => {
+                setSelectedConversation(conversationId);
+                setActiveOverlay(null);
+                refetchConversations();
+              }}
+            />
+          )}
+
+          {/* Group Settings View */}
+          {activeOverlay === 'groupSettings' && selectedConversationData && (
+            <GroupSettingsView
+              onBack={() => setActiveOverlay(null)}
+              conversationId={selectedConversation!}
+              groupName={selectedConversationData.name}
+              groupDescription={selectedConversationData.description}
+              members={selectedConversationData.members || []}
+              isAdmin={selectedConversationData.isAdmin}
+              currentUserId={currentUserId}
+              onSettingsUpdated={refetchConversations}
+            />
+          )}
+
+          {/* Add Members View */}
+          {activeOverlay === 'addMembers' && selectedConversationData && (
+            <AddMemberView
+              conversationId={selectedConversation!}
+              currentMemberIds={selectedConversationData.members?.map(m => String(m.user.id)) || []}
+              onBack={() => setActiveOverlay(null)}
+              onMembersAdded={() => {
+                setActiveOverlay(null);
+                refetchConversations();
+              }}
+            />
+          )}
+
         </div>
       </Card>
 
-      {/* Create group dialog */}
-      <CreateGroupDialog
-        open={showCreateGroup}
-        onOpenChange={setShowCreateGroup}
-        onGroupCreated={(conversationId) => {
-          setSelectedConversation(conversationId);
-          setShowConversationsList(false);
-          refetchConversations();
-        }}
-      />
-
-      {/* Leave group confirmation dialog */}
+      {/* Leave group confirmation dialog - Keeping as Dialog/Alert since it's just a confirmation */}
       <AlertDialog open={showLeaveGroupDialog} onOpenChange={setShowLeaveGroupDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1056,20 +1084,6 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Group settings dialog */}
-      {selectedConversationData && isGroupConversation && (
-        <GroupSettingsDialog
-          open={showGroupSettings}
-          onOpenChange={setShowGroupSettings}
-          conversationId={selectedConversation!}
-          groupName={selectedConversationData.name}
-          groupDescription={selectedConversationData.description}
-          members={selectedConversationData.members || []}
-          isAdmin={selectedConversationData.isAdmin}
-          currentUserId={currentUserId}
-          onSettingsUpdated={refetchConversations}
-        />
-      )}
     </>
   );
 }

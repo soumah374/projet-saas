@@ -9,3 +9,4 @@ data-mailpit/
 backend/media/documents/projects/*
 backend/media/documents/general/*
 backend/media/comments/*
+backend/media/app_config/*

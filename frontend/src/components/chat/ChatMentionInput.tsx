@@ -326,8 +326,8 @@ export function ChatMentionInput({
                     key={`${item.mentionType}-${item.id}`}
                     data-index={index}
                     className={cn(
-                      'w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent transition-colors',
-                      index === selectedIndex && 'bg-accent'
+                      'w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-accent hover:text-white transition-colors',
+                      index === selectedIndex && 'bg-accent text-white'
                     )}
                     onClick={() => insertMention(item)}
                     type="button"

@@ -285,61 +285,71 @@ class Query(graphene.ObjectType):
             queryset = queryset.filter(conversation_type=conversation_type)
         return queryset
 
+    def _get_direct_conversation(self, user, other_user):
+        """Récupère une conversation directe entre deux utilisateurs"""
+        return Conversation.objects.filter(
+            memberships__user=user,
+            conversation_type='direct'
+        ).filter(
+            memberships__user=other_user
+        ).distinct().first()
+
+    def _get_or_create_direct_conversation(self, user, other_user):
+        """Récupère ou crée une conversation directe entre deux utilisateurs (thread-safe)"""
+        # Première vérification rapide sans lock
+        conversation = self._get_direct_conversation(user, other_user)
+        if conversation:
+            return conversation
+
+        # Création avec transaction et lock pour éviter les doublons
+        with transaction.atomic():
+            # Vérification avec lock pour éviter les race conditions
+            # On lock les memberships de l'utilisateur pour éviter la création concurrente
+            existing_memberships = ConversationMember.objects.select_for_update().filter(
+                user=user,
+                conversation__conversation_type='direct'
+            )
+            # Force l'évaluation du queryset pour acquérir le lock
+            list(existing_memberships)
+
+            # Re-vérifier après avoir acquis le lock
+            conversation = self._get_direct_conversation(user, other_user)
+            if conversation:
+                return conversation
+
+            # Créer la nouvelle conversation
+            conversation = Conversation.objects.create(conversation_type='direct')
+            ConversationMember.objects.bulk_create([
+                ConversationMember(conversation=conversation, user=user, role='member'),
+                ConversationMember(conversation=conversation, user=other_user, role='member'),
+            ])
+
+        return conversation
+
     def resolve_conversation(self, info, id=None, user_id=None):
         """Récupère une conversation spécifique ou en crée une nouvelle"""
         user = get_user_from_context(info)
         if not user or not user.is_authenticated:
             raise GraphQLError("Vous devez être connecté")
 
-        # Si un ID est fourni, récupérer la conversation existante
+        # Récupérer par ID
         if id:
             try:
-                conversation = Conversation.objects.get(id=id, participants=user)
-                return conversation
+                return Conversation.objects.get(id=id, participants=user)
             except Conversation.DoesNotExist:
                 raise GraphQLError("Conversation non trouvée")
 
-        # Si un user_id est fourni, créer ou récupérer une conversation directe avec cet utilisateur
+        # Récupérer ou créer une conversation directe
         if user_id:
             try:
                 other_user = User.objects.get(id=user_id)
-                if other_user == user:
-                    raise GraphQLError("Vous ne pouvez pas créer une conversation avec vous-même")
-
-                # Chercher une conversation directe existante
-                conversation = Conversation.objects.filter(
-                    memberships__user=user,
-                    conversation_type='direct'
-                ).filter(
-                    memberships__user=other_user
-                ).distinct().first()
-
-                # Si aucune conversation n'existe, en créer une nouvelle
-                if not conversation:
-                    with transaction.atomic():
-                         # Chercher une conversation directe existante
-                        conversation = Conversation.objects.filter(
-                            memberships__user=user,
-                            conversation_type='direct'
-                        ).filter(
-                            memberships__user=other_user
-                        ).distinct().first()
-                        if not conversation:
-                            conversation = Conversation.objects.create(conversation_type='direct')
-                            ConversationMember.objects.create(
-                                conversation=conversation,
-                                user=user,
-                                role='member'
-                            )
-                            ConversationMember.objects.create(
-                                conversation=conversation,
-                                user=other_user,
-                                role='member'
-                            )
-
-                return conversation
             except User.DoesNotExist:
                 raise GraphQLError("Utilisateur non trouvé")
+
+            if other_user == user:
+                raise GraphQLError("Vous ne pouvez pas créer une conversation avec vous-même")
+
+            return self._get_or_create_direct_conversation(user, other_user)
 
         raise GraphQLError("Vous devez fournir un ID de conversation ou un ID d'utilisateur")
 

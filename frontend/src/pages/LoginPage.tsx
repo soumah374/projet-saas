@@ -52,8 +52,8 @@ export function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4">
-            <Logo size="lg" showText={true} linkTo="" />
+          <div className="mx-auto mb-6">
+            <Logo size="2xl" showText={true} linkTo="" />
           </div>
           <CardTitle className="text-2xl font-bold">
             Connexion {config?.app_name || 'saKom'}

@@ -75,8 +75,8 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
             <PanelLeft className="h-5 w-5" />
           )}
         </Button>
-        <Link to="/" className="bg-blue-600 text-white px-3 py-1 rounded-lg font-bold text-lg whitespace-nowrap">
-          <Logo size="md" showText={true} className="text-white" linkTo="" />
+        <Link to="/" className="text-white px-3 py-1 rounded-lg font-bold text-lg whitespace-nowrap" style={{backgroundColor:'#213262'}}>
+          <Logo size="lg" showText={true} className="text-white" linkTo="" />
         </Link>
         <span className="hidden md:block text-sm text-gray-500 ml-0 whitespace-nowrap">
           Gestion de projets collaborative

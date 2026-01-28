@@ -10,9 +10,10 @@ interface UserSelectorProps {
   onSelectUser: (userId: string) => void;
   onClose?: () => void;
   excludeUserIds?: string[];
+  disabled?: boolean;
 }
 
-export function UserSelector({ onSelectUser, onClose, excludeUserIds = [] }: UserSelectorProps) {
+export function UserSelector({ onSelectUser, onClose, excludeUserIds = [], disabled = false }: UserSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const { data: usersResponse, isLoading } = useUsers({
     search: searchQuery || undefined,
@@ -31,8 +32,8 @@ export function UserSelector({ onSelectUser, onClose, excludeUserIds = [] }: Use
   });
 
   const handleSelectUser = (userId: string) => {
+    if (disabled) return;
     onSelectUser(userId);
-    onClose?.();
   };
 
   return (
@@ -69,7 +70,11 @@ export function UserSelector({ onSelectUser, onClose, excludeUserIds = [] }: Use
                 <button
                   key={user.id}
                   onClick={() => handleSelectUser(userId)}
-                  className="w-full p-4 text-left hover:bg-muted transition-colors"
+                  disabled={disabled}
+                  className={cn(
+                    "w-full p-4 text-left transition-colors",
+                    disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"
+                  )}
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
