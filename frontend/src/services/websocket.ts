@@ -31,6 +31,10 @@ export interface WebSocketMessage {
   message?: MessageData;
   conversation_id?: string;
   error?: string;
+  // Presence fields
+  user_id?: string;
+  status?: string;
+  user_ids?: string[];
 }
 
 export class ChatWebSocket {
@@ -52,7 +56,7 @@ export class ChatWebSocket {
 
     this.isConnecting = true;
     const token = localStorage.getItem('access_token');
-    
+
     if (!token) {
       console.warn('No authentication token found, cannot connect to WebSocket');
       this.isConnecting = false;
@@ -69,6 +73,9 @@ export class ChatWebSocket {
         console.log('WebSocket connected successfully');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
+
+        // Request online users list on connection
+        this.getOnlineUsers();
       };
 
       this.ws.onmessage = (event) => {
@@ -166,7 +173,7 @@ export class ChatWebSocket {
           }));
         }
       }, 100);
-      
+
       // Timeout après 5 secondes
       setTimeout(() => clearInterval(checkConnection), 5000);
     }
@@ -179,6 +186,12 @@ export class ChatWebSocket {
         conversation_id: conversationId,
       }));
     }
+  }
+
+  public getOnlineUsers() {
+    this.send({
+      type: 'get_online_users'
+    });
   }
 
   public disconnect() {

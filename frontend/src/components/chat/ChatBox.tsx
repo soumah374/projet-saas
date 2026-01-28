@@ -17,6 +17,7 @@ import {
   MentionInput,
 } from '../../hooks/use-chat';
 import { useChatUpload } from '../../hooks/use-chat-upload';
+import { usePresence } from '../../hooks/use-presence';
 import { MessageContent } from './MessageContent';
 import { useUsers } from '../../hooks/use-users';
 import { Button } from '../ui/button';
@@ -83,6 +84,10 @@ interface ChatBoxProps {
   initialUserId?: string;
 }
 
+const OnlineIndicator = ({ className }: { className?: string }) => (
+  <span className={cn("absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background", className)} />
+);
+
 export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatBoxProps) {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(
     initialConversationId || null
@@ -112,6 +117,8 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
   const CONVERSATIONGROUP: string = 'GROUP';
   const CONVERSATIONDIRECT: string = 'DIRECT';
+
+  const { isOnline } = usePresence();
 
   const { conversations, isLoading: conversationsLoading, refetch: refetchConversations } = useConversations();
   // Utiliser useConversation pour créer/récupérer une conversation avec un utilisateur
@@ -355,6 +362,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
         name: conv.name || 'Groupe',
         initials: (conv.name || 'G').slice(0, 2).toUpperCase(),
         subtitle: `${conv.participantsList.length || 0} membres`,
+        isOnline: false, // Groups don't have online status
       };
     }
     return {
@@ -366,6 +374,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
         .toUpperCase()
         .slice(0, 2) || 'U',
       subtitle: conv.otherParticipant?.email || '',
+      isOnline: conv.otherParticipant?.id ? isOnline(conv.otherParticipant.id) : false,
     };
   };
 
@@ -382,7 +391,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
   return (
     <>
-      <Card className="flex flex-col h-[600px] w-full max-w-5xl mx-auto overflow-hidden relative border rounded-lg shadow-xl">
+      <Card className="flex flex-col h-[85vh] md:h-[600px] w-full max-w-5xl mx-auto overflow-hidden relative border rounded-lg shadow-xl">
         {/* Header */}
         <div className="flex flex-row items-center justify-between p-3 border-b bg-card">
           <div className="flex items-center gap-2">
@@ -491,19 +500,22 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                             )}
                           >
                             <div className="flex items-start gap-3">
-                              <Avatar className="h-10 w-10 border shadow-sm">
-                                <AvatarFallback
-                                  className={cn(
-                                    conversation.conversationType === CONVERSATIONGROUP && 'bg-primary/10 text-primary'
-                                  )}
-                                >
-                                  {conversation.conversationType === CONVERSATIONGROUP ? (
-                                    <Users className="h-5 w-5" />
-                                  ) : (
-                                    info.initials
-                                  )}
-                                </AvatarFallback>
-                              </Avatar>
+                              <div className="relative">
+                                <Avatar className="h-10 w-10 border shadow-sm">
+                                  <AvatarFallback
+                                    className={cn(
+                                      conversation.conversationType === CONVERSATIONGROUP && 'bg-primary/10 text-primary'
+                                    )}
+                                  >
+                                    {conversation.conversationType === CONVERSATIONGROUP ? (
+                                      <Users className="h-5 w-5" />
+                                    ) : (
+                                      info.initials
+                                    )}
+                                  </AvatarFallback>
+                                </Avatar>
+                                {info.isOnline && <OnlineIndicator />}
+                              </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between gap-1">
                                   <p className="font-medium text-sm truncate text-foreground">{info.name}</p>
@@ -567,34 +579,46 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
 
-                    <Avatar className="h-9 w-9 border">
-                      <AvatarFallback className={cn(isGroupConversation && 'bg-primary/10 text-primary')}>
-                        {isGroupConversation ? (
-                          <Users className="h-4 w-4" />
-                        ) : (
-                          (() => {
-                            const user =
-                              selectedConversationData?.otherParticipant ||
-                              newConversation?.otherParticipant ||
-                              (selectedUserData
-                                ? {
-                                  fullName:
-                                    `${selectedUserData.first_name || ''} ${selectedUserData.last_name || ''}`.trim() ||
-                                    selectedUserData.username,
-                                }
-                                : null);
-                            return (
-                              user?.fullName
-                                .split(' ')
-                                .map((n: string) => n[0])
-                                .join('')
-                                .toUpperCase()
-                                .slice(0, 2) || 'U'
-                            );
-                          })()
+                    <div className="relative">
+                      <Avatar className="h-9 w-9 border">
+                        <AvatarFallback className={cn(isGroupConversation && 'bg-primary/10 text-primary')}>
+                          {isGroupConversation ? (
+                            <Users className="h-4 w-4" />
+                          ) : (
+                            (() => {
+                              const user =
+                                selectedConversationData?.otherParticipant ||
+                                newConversation?.otherParticipant ||
+                                (selectedUserData
+                                  ? {
+                                    fullName:
+                                      `${selectedUserData.first_name || ''} ${selectedUserData.last_name || ''}`.trim() ||
+                                      selectedUserData.username,
+                                  }
+                                  : null);
+                              return (
+                                user?.fullName
+                                  .split(' ')
+                                  .map((n: string) => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                                  .slice(0, 2) || 'U'
+                              );
+                            })()
+                          )}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      {/* Indicator for current chat */}
+                      {!isGroupConversation && (
+                        (selectedConversationData?.otherParticipant?.id && isOnline(selectedConversationData.otherParticipant.id)) ||
+                        (newConversation?.otherParticipant?.id && isOnline(newConversation.otherParticipant.id)) ||
+                        (selectedUserData?.id && isOnline(selectedUserData.id.toString()))
+                      ) && (
+                          <OnlineIndicator />
                         )}
-                      </AvatarFallback>
-                    </Avatar>
+                    </div>
+
                     <div className="flex flex-col">
                       <p className="font-semibold text-sm leading-none">
                         {isGroupConversation
@@ -606,14 +630,26 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                             selectedUserData.username
                             : 'Utilisateur')}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {isGroupConversation
-                          ? `${selectedConversationData?.memberCount || 0} membres`
-                          : selectedConversationData?.otherParticipant?.email ||
-                          newConversation?.otherParticipant?.email ||
-                          selectedUserData?.email ||
-                          ''}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {isGroupConversation
+                            ? `${selectedConversationData?.memberCount || 0} membres`
+                            : selectedConversationData?.otherParticipant?.email ||
+                            newConversation?.otherParticipant?.email ||
+                            selectedUserData?.email ||
+                            ''}
+                        </p>
+                        {/* Online Status Text */}
+                        {!isGroupConversation && (
+                          (selectedConversationData?.otherParticipant?.id && isOnline(selectedConversationData.otherParticipant.id)) ||
+                          (newConversation?.otherParticipant?.id && isOnline(newConversation.otherParticipant.id)) ||
+                          (selectedUserData?.id && isOnline(selectedUserData.id.toString()))
+                        ) && (
+                            <span className="text-[10px] text-green-600 font-medium flex items-center gap-1 mt-0.5">
+                              • En ligne
+                            </span>
+                          )}
+                      </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-1">
@@ -751,7 +787,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                                   </div>
                                 )}
 
-                                <div className="flex items-start gap-1 relative">
+                                <div className="flex items-start gap-1 relative mt-2">
                                   <div
                                     className={cn(
                                       'rounded-2xl px-4 py-2.5 shadow-sm text-sm',
@@ -835,7 +871,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
 
                                 {/* Reactions */}
                                 {message.reactions && message.reactions.length > 0 && (
-                                  <div className={cn("mt-1", isOwnMessage ? "mr-1" : "ml-1")}>
+                                  <div className={cn("mt-0", isOwnMessage ? "mr-1" : "ml-1")}>
                                     <MessageReactionsDisplay
                                       reactions={message.reactions}
                                       onReactionClick={(emoji) => {
@@ -1059,10 +1095,10 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
           )}
 
         </div>
-      </Card>
+      </Card >
 
       {/* Leave group confirmation dialog - Keeping as Dialog/Alert since it's just a confirmation */}
-      <AlertDialog open={showLeaveGroupDialog} onOpenChange={setShowLeaveGroupDialog}>
+      < AlertDialog open={showLeaveGroupDialog} onOpenChange={setShowLeaveGroupDialog} >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Quitter le groupe ?</AlertDialogTitle>
@@ -1082,7 +1118,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog >
 
     </>
   );

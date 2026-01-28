@@ -1,4 +1,5 @@
 import json
+import redis
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
@@ -6,6 +7,9 @@ from .models import Conversation, Message
 
 User = get_user_model()
 
+# Initialisation du client Redis pour la gestion de la présence
+# On utilise le même hôte que pour les Channels
+redis_client = redis.Redis(host='redis', port=6379, db=0, decode_responses=True)
 
 class ChatConsumer(AsyncWebsocketConsumer):
     """Consumer WebSocket pour le chat en temps réel"""
@@ -26,6 +30,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
+        # Rejoindre le groupe global de présence
+        await self.channel_layer.group_add(
+            "global_presence",
+            self.channel_name
+        )
+
+        # Marquer l'utilisateur comme en ligne dans Redis
+        await self.set_user_online()
+
+        # Diffuser le statut en ligne
+        await self.broadcast_user_status("online")
+
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -45,11 +61,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
 
+        # Marquer l'utilisateur comme hors ligne
+        if hasattr(self, 'user') and self.user.is_authenticated:
+            await self.set_user_offline()
+            await self.broadcast_user_status("offline")
+
         if hasattr(self, 'user_group'):
             await self.channel_layer.group_discard(
                 self.user_group,
                 self.channel_name
             )
+
+        # Quitter le groupe global
+        await self.channel_layer.group_discard(
+            "global_presence",
+            self.channel_name
+        )
 
         # Quitter tous les groupes de conversations
         if hasattr(self, 'conversation_groups'):
@@ -84,10 +111,57 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 conversation_id = data.get('conversation_id')
                 if conversation_id:
                     await self.handle_typing_stopped(conversation_id)
+            
+            elif message_type == 'get_online_users':
+                await self.send_online_users()
 
         except json.JSONDecodeError:
             await self.send(text_data=json.dumps({
                 'error': 'Invalid JSON'
+            }))
+
+    @database_sync_to_async
+    def set_user_online(self):
+        """Ajoute l'utilisateur au set des utilisateurs en ligne"""
+        redis_client.sadd("online_users", str(self.user.id))
+
+    @database_sync_to_async
+    def set_user_offline(self):
+        """Retire l'utilisateur du set des utilisateurs en ligne"""
+        redis_client.srem("online_users", str(self.user.id))
+
+    @database_sync_to_async
+    def get_online_users(self):
+        """Récupère la liste des IDs des utilisateurs en ligne"""
+        return list(redis_client.smembers("online_users"))
+
+    async def broadcast_user_status(self, status):
+        """Diffuse le changement de statut d'un utilisateur"""
+        await self.channel_layer.group_send(
+            "global_presence",
+            {
+                "type": "user_status_change",
+                "user_id": str(self.user.id),
+                "status": status
+            }
+        )
+
+    async def send_online_users(self):
+        """Envoie la liste des utilisateurs en ligne à l'utilisateur courant"""
+        online_users = await self.get_online_users()
+        await self.send(text_data=json.dumps({
+            "type": "online_users_list",
+            "user_ids": online_users
+        }))
+
+    async def user_status_change(self, event):
+        """Envoie la mise à jour de statut au client"""
+        # Ne pas envoyer à soi-même si c'est notre propre changement (optionnel, mais souvent utile pour confirmer)
+        if event["user_id"] != str(self.user.id):
+            await self.send(text_data=json.dumps({
+                "type": "user_status",
+                "user_id": event["user_id"],
+                "status": event["status"]
             }))
 
     async def subscribe_to_conversation(self, conversation_id):

@@ -20,9 +20,9 @@ export const Logo: React.FC<LogoProps> = ({
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-6 h-6',
-    lg: '',
+    lg: 'w-12 h-12',
     xl: 'w-16 h-16',
-    '2xl': 'w-24'
+    '2xl': 'w-24 h-24'
   };
 
   const textSizes = {
