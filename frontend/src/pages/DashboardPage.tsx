@@ -432,13 +432,13 @@ const DashboardPage: React.FC = () => {
           {showFinancialTab && (
             <TabsTrigger value="financial">
               <DollarSign className="h-4 w-4 mr-2" />
-              Financier
+              Finances
             </TabsTrigger>
           )}
           {showPerformanceTab && (
             <TabsTrigger value="performance">
               <Users className="h-4 w-4 mr-2" />
-              Performance
+              Performances
             </TabsTrigger>
           )}
           {showCalendarTab && (

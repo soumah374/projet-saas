@@ -486,7 +486,7 @@ export function ChatBox({ onClose, initialConversationId, initialUserId }: ChatB
                     <div className="divide-y">
                       {filteredConversations.map((conversation) => {
                         const info = getConversationDisplayInfo(conversation);
-                        console.log(info)
+                        
                         return (
                           <button
                             key={conversation.id}

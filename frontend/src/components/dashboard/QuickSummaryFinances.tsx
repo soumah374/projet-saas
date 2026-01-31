@@ -33,7 +33,7 @@ type SummaryItem = {
   change?: number;
 };
 
-export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data,period_days }) => {
+export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data, period_days }) => {
   if (!data) return null;
 
   const formatCurrency = (amount: number) => {
@@ -54,7 +54,7 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data,period_
 
   const financeItems: SummaryItem[] = [
     ...(isSelected('financial.montant_impaye') ? [{
-      title: 'Montant de la facture impayé',
+      title: 'Total des Factures impayées',
       value: (
         <>
           <button
@@ -70,42 +70,42 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data,period_
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      description: 'Montant de la facture impayé (cliquez pour voir la liste)'
+      description: 'Total des Factures impayées'
     }] : []),
     ...(isSelected('financial.total_factures_amount') ? [{
-      title: 'Montant total des factures',
+      title: 'Total des Factures',
       value: formatCurrency(data.total_factures_amount || 0),
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      description: 'Montant total'
+      description: 'Total des Factures'
     }] : []),
     ...(isSelected('financial.total_en_retard_amount') ? [{
-      title: 'Factures en retard',
+      title: 'Total des Factures en Retard',
       value: formatCurrency(data.total_en_retard_amount || 0),
       icon: AlertTriangle,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      description: 'Montant total'
+      description: 'Total des Factures en Retard'
     }] : []),
     ...(isSelected('financial.total_paid_amount') ? [{
-      title: 'Total payé',
+      title: 'Total des Factures Payées',
       value: formatCurrency(data.total_paid_amount || 0),
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      description: 'Montant total'
-    }] : []), 
+      description: 'Total des Factures Payées'
+    }] : []),
     ...(isSelected('financial.facture_non_emises') ? [{
-      title: 'Factures non emises',
+      title: 'Total des Factures Non Emises',
       value: formatCurrency(data.facture_non_emises || 0),
       icon: DollarSign,
       color: 'text-red-600',
       bgColor: 'bg-red-50',
-      description: 'Montant total'
+      description: 'Total des Factures non Emises'
     }] : []),
     ...(isSelected('financial.taux_recouvrement') ? [{
-      title: 'Taux de recouvrement',
+      title: 'Taux de Recouvrement',
       value: (
         <>
           <div className="flex items-center justify-between text-muted-foreground">
@@ -121,7 +121,7 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data,period_
       icon: DollarSign,
       color: 'text-green-600',
       bgColor: 'bg-green-50',
-      description: 'Sur la période'
+      description: 'Taux de Recouvrement'
     }] : [])
   ];
 
@@ -130,10 +130,10 @@ export const QuickSummaryFinances: React.FC<QuickSummaryProps> = ({ data,period_
   return (
     <div>
       {isSelectedFinances && (
-      <div className="flex items-center gap-2 mb-3">
-        <DollarSign className="h-4 w-4 text-green-600" />
-        <h3 className="text-sm font-semibold text-gray-700">Finances</h3>
-      </div>
+        <div className="flex items-center gap-2 mb-3">
+          <DollarSign className="h-4 w-4 text-green-600" />
+          <h3 className="text-sm font-semibold text-gray-700">Finances</h3>
+        </div>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {financeItems.map((item, index) => {

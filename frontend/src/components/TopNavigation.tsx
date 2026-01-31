@@ -43,11 +43,11 @@ interface TopNavigationProps {
   onLogout: () => void;
 }
 
-export const TopNavigation: React.FC<TopNavigationProps> = ({ 
-  isSidebarOpen, 
-  setIsSidebarOpen, 
-  user, 
-  onLogout 
+export const TopNavigation: React.FC<TopNavigationProps> = ({
+  isSidebarOpen,
+  setIsSidebarOpen,
+  user,
+  onLogout
 }) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,7 +76,7 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
           )}
         </Button>
         <Link to="/" className="text-white px-3 py-1 rounded-lg font-bold text-lg whitespace-nowrap">
-          <Logo size="lg" showText={true} className="text-white" linkTo="" />
+          <Logo size="xl" showText={true} className="text-white" linkTo="" />
         </Link>
         <span className="hidden md:block text-sm text-gray-500 ml-0 whitespace-nowrap">
           Gestion de projets collaborative
@@ -86,10 +86,10 @@ export const TopNavigation: React.FC<TopNavigationProps> = ({
       <div className="flex-1 flex justify-center mx-4">
         <form onSubmit={handleSearch} className="relative w-full max-w-lg">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input 
+          <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Rechercher un projet, client, équipe..." 
+            placeholder="Rechercher un projet, client, équipe..."
             className="pl-10 bg-gray-50 border-0 rounded-full"
           />
         </form>

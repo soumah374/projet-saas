@@ -18,14 +18,14 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
-  
+
   // Utiliser la configuration publique pour le titre et l'apparence
   const { data: config } = usePublicAppConfig();
   useDynamicTitle('Connexion');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!username || !password) {
       toast.error("Veuillez remplir tous les champs");
       return;
@@ -56,7 +56,7 @@ export function LoginPage() {
             <Logo size="2xl" showText={true} linkTo="" />
           </div>
           <CardTitle className="text-2xl font-bold">
-            Connexion {config?.app_name || 'saKom'}
+            Connexion
           </CardTitle>
           <CardDescription>
             {config?.app_description || 'Connectez-vous à votre compte pour accéder à la plateforme'}
@@ -79,7 +79,7 @@ export function LoginPage() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Mot de passe</Label>
               <div className="relative">

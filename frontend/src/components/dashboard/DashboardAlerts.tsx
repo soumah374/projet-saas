@@ -3,14 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  AlertTriangle, 
-  Clock, 
-  DollarSign, 
+import {
+  AlertTriangle,
+  Clock,
+  DollarSign,
   Users,
   CheckCircle,
   Info
 } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 
 interface DashboardAlertsProps {
   data?: {
@@ -104,14 +105,6 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'GNF',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
 
   return (
     <div className="space-y-6">
@@ -130,8 +123,8 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
           <CardContent>
             <div className="space-y-3">
               {data.urgent_deadlines.slice(0, 5).map((deadline) => (
-                <div 
-                  key={deadline.id} 
+                <div
+                  key={deadline.id}
                   className={`p-3 border rounded-lg ${getPriorityColor(deadline.priority)}`}
                 >
                   <div className="flex items-center justify-between">
@@ -146,9 +139,9 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
                     </div>
                     <div className="text-right">
                       <Badge variant="secondary" className={getPriorityColor(deadline.priority)}>
-                        {deadline.days_until_deadline === 0 
-                          ? "Aujourd'hui" 
-                          : deadline.days_until_deadline === 1 
+                        {deadline.days_until_deadline === 0
+                          ? "Aujourd'hui"
+                          : deadline.days_until_deadline === 1
                             ? "Demain"
                             : `Dans ${deadline.days_until_deadline} jours`
                         }
@@ -187,8 +180,8 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
           <CardContent>
             <div className="space-y-3">
               {data.overdue_projects.slice(0, 5).map((project) => (
-                <div 
-                  key={project.id} 
+                <div
+                  key={project.id}
                   className="p-3 bg-orange-50 border border-orange-200 rounded-lg"
                 >
                   <div className="flex items-center justify-between">
@@ -236,8 +229,8 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
           <CardContent>
             <div className="space-y-3">
               {data.billing_alerts.slice(0, 5).map((alert) => (
-                <div 
-                  key={alert.id} 
+                <div
+                  key={alert.id}
                   className={`p-3 border rounded-lg ${getBillingAlertColor(alert.type)}`}
                 >
                   <div className="flex items-center justify-between">
@@ -286,8 +279,8 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
           <CardContent>
             <div className="space-y-3">
               {data.team_alerts.slice(0, 5).map((alert) => (
-                <div 
-                  key={alert.id} 
+                <div
+                  key={alert.id}
                   className={`p-3 border rounded-lg ${getTeamAlertColor(alert.severity)}`}
                 >
                   <div className="flex items-center justify-between">
@@ -319,21 +312,21 @@ export const DashboardAlerts: React.FC<DashboardAlertsProps> = ({ data }) => {
 
       {/* Aucune alerte */}
       {(!data.urgent_deadlines || data.urgent_deadlines.length === 0) &&
-       (!data.overdue_projects || data.overdue_projects.length === 0) &&
-       (!data.billing_alerts || data.billing_alerts.length === 0) &&
-       (!data.team_alerts || data.team_alerts.length === 0) && (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-green-800 mb-2">Aucune alerte</h3>
-              <p className="text-green-600">
-                Tous vos projets et équipes sont en bon état !
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+        (!data.overdue_projects || data.overdue_projects.length === 0) &&
+        (!data.billing_alerts || data.billing_alerts.length === 0) &&
+        (!data.team_alerts || data.team_alerts.length === 0) && (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="pt-6">
+              <div className="text-center">
+                <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-3" />
+                <h3 className="text-lg font-medium text-green-800 mb-2">Aucune alerte</h3>
+                <p className="text-green-600">
+                  Tous vos projets et équipes sont en bon état !
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
     </div>
   );
 }; 

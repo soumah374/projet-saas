@@ -1,11 +1,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  FileText, 
-  AlertTriangle, 
+import {
+  TrendingUp,
+  TrendingDown,
+  DollarSign,
+  FileText,
+  AlertTriangle,
   CheckCircle,
   Calendar,
   Clock
@@ -167,10 +167,10 @@ export const StatistiquesFacturation: React.FC<StatistiquesFacturationProps> = (
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold text-blue-600">
-            {statistiques.factures_mois}
+            {formatMontant(statistiques.montant_mois)}
           </div>
           <p className="text-xs text-muted-foreground">
-            {formatMontant(statistiques.montant_mois)} facturé
+            facturé
           </p>
         </CardContent>
       </Card>
