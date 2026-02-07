@@ -282,9 +282,9 @@ class Contrat(models.Model):
             'DELAI_RESILIATION': '30',
         }
         
-        # Variables du prestataire (SAKOM)
+        # Variables du prestataire (project_saas)
         variables.update({
-            'RAISON_SOCIALE_PRESTATAIRE': 'SAKOM SARL',
+            'RAISON_SOCIALE_PRESTATAIRE': 'project_saas SARL',
             'FORME_JURIDIQUE': 'SARL',
             'MONTANT_CAPITAL': '100,000,000',
             'VILLE_RCS': 'Conakry',
@@ -1145,9 +1145,9 @@ class Avenant(models.Model):
             'VILLE_SIGNATURE': 'Conakry',
         }
         
-        # Variables du prestataire (SAKOM)
+        # Variables du prestataire (project_saas)
         variables.update({
-            'RAISON_SOCIALE_PRESTATAIRE': 'SAKOM SARL',
+            'RAISON_SOCIALE_PRESTATAIRE': 'project_saas SARL',
             'FORME_JURIDIQUE': 'SARL',
             'MONTANT_CAPITAL': '100,000,000',
             'VILLE_RCS': 'Conakry',

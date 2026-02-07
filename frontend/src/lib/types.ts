@@ -1,4 +1,4 @@
-// Types basés sur le schéma OpenAPI SAKOM
+// Types basés sur le schéma OpenAPI project_saas
 
 // Enums
 export type ProjectStatus = 

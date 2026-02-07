@@ -1,11 +1,11 @@
-# SAKOM Project Makefile
+# project_saas Project Makefile
 # Usage: make <command>
 
 .PHONY: help install build run stop clean logs test lint format migrate superuser shell frontend backend
 
 # Default target
 help:
-	@echo "SAKOM Project - Available Commands:"
+	@echo "project_saas Project - Available Commands:"
 	@echo ""
 	@echo "Docker Commands:"
 	@echo "  make build          - Build all Docker containers"
@@ -51,15 +51,15 @@ build:
 	docker compose build --no-cache
 
 run:
-	@echo "Starting SAKOM services..."
+	@echo "Starting project_saas services..."
 	docker compose up -d
 
 stop:
-	@echo "Stopping SAKOM services..."
+	@echo "Stopping project_saas services..."
 	docker compose down
 
 restart:
-	@echo "Restarting SAKOM services..."
+	@echo "Restarting project_saas services..."
 	docker compose restart
 
 logs:
@@ -223,7 +223,7 @@ install:
 	cd frontend && npm install
 
 setup:
-	@echo "Setting up SAKOM project..."
+	@echo "Setting up project_saas project..."
 	make install
 	make run
 	@echo "Waiting for services to start..."
@@ -232,7 +232,7 @@ setup:
 	@echo "Setup complete! You can now create a superuser with: make superuser"
 
 reset:
-	@echo "Resetting SAKOM project..."
+	@echo "Resetting project_saas project..."
 	make clean
 	make setup
 

@@ -2,7 +2,7 @@
 
 ## ✨ Vue d'ensemble
 
-Le tableau de bord SAKOM dispose maintenant d'un **système de personnalisation dynamique** complet permettant aux administrateurs de configurer précisément quels widgets sont visibles pour chaque utilisateur ou rôle.
+Le tableau de bord project_saas dispose maintenant d'un **système de personnalisation dynamique** complet permettant aux administrateurs de configurer précisément quels widgets sont visibles pour chaque utilisateur ou rôle.
 
 ## 🏗️ Architecture du Système
 
@@ -518,7 +518,7 @@ Le système track automatiquement:
 
 ## 🎉 Conclusion
 
-Le système de configuration du tableau de bord SAKOM offre:
+Le système de configuration du tableau de bord project_saas offre:
 
 ✅ **Flexibilité Totale** - Configuration par rôle ou utilisateur
 ✅ **40+ Widgets** - Anciens et nouveaux composants

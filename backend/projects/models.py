@@ -9,7 +9,7 @@ from contrats.models import Contrat
 from decimal import Decimal
 
 class Project(models.Model):
-    """Modèle pour les projets SAKOM"""
+    """Modèle pour les projets project_saas"""
     
     PROJECT_TYPES = [
         ('Externe', 'Externe'),

@@ -1,4 +1,4 @@
-# Module de Gestion des Équipes - SAKOM
+# Module de Gestion des Équipes - project_saas
 
 ## Vue d'ensemble
 

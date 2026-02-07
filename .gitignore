@@ -11,3 +11,9 @@ backend/media/documents/general/*
 backend/media/comments/*
 backend/media/app_config/*
 backend/media/factures/*
+backend/media/contrats/*
+backend/*/__pycache__/*
+backend/*/__pycache__/
+backend/*/*/__pycache__/*
+backend/*/*/__pycache__/
+backend/*/*/*/__pycache__/*

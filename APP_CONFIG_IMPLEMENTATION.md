@@ -242,9 +242,9 @@ Lors de la première installation, une configuration par défaut est créée:
 
 ```json
 {
-  "app_name": "SAKOM",
+  "app_name": "project_saas",
   "app_description": "Système de gestion de projets",
-  "company_name": "SAKOM",
+  "company_name": "project_saas",
   "primary_color": "#3B82F6",
   "secondary_color": "#6B7280"
 }

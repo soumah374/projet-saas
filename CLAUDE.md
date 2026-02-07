@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SAKOM is a comprehensive business management platform for service companies, handling the complete workflow from quotes (devis) to contracts to invoicing. Built with Django (backend) and React + TypeScript (frontend).
+project_saas is a comprehensive business management platform for service companies, handling the complete workflow from quotes (devis) to contracts to invoicing. Built with Django (backend) and React + TypeScript (frontend).
 
 **Key Business Flow:** Devis → Contrat → Échéancier → Factures
 

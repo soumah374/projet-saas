@@ -17,7 +17,7 @@ class ApplicationConfigModelTest(TestCase):
         config = ApplicationConfig.get_config()
         
         self.assertEqual(ApplicationConfig.objects.count(), 1)
-        self.assertEqual(config.app_name, 'SAKOM')
+        self.assertEqual(config.app_name, 'project_saas')
         self.assertEqual(config.primary_color, '#3B82F6')
     
     def test_singleton_behavior(self):
@@ -70,7 +70,7 @@ class ApplicationConfigAPITest(APITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('app_name', response.data)
-        self.assertEqual(response.data['app_name'], 'SAKOM')
+        self.assertEqual(response.data['app_name'], 'project_saas')
     
     def test_authenticated_config_access(self):
         """Test l'accès authentifié à la configuration complète"""
@@ -87,14 +87,14 @@ class ApplicationConfigAPITest(APITestCase):
         url = reverse('app_config:config-detail')
         
         data = {
-            'app_name': 'SAKOM Updated',
+            'app_name': 'project_saas Updated',
             'primary_color': '#FF5733'
         }
         response = self.client.patch(url, data)
         
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.config.refresh_from_db()
-        self.assertEqual(self.config.app_name, 'SAKOM Updated')
+        self.assertEqual(self.config.app_name, 'project_saas Updated')
         self.assertEqual(self.config.primary_color, '#FF5733')
     
     def test_normal_user_cannot_update(self):

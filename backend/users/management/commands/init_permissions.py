@@ -4,7 +4,7 @@ from users.management_permission import initialize_permissions, get_user_permiss
 
 
 class Command(BaseCommand):
-    help = 'Initialiser le système de permissions Django pour SAKOM'
+    help = 'Initialiser le système de permissions Django pour project_saas'
 
     def add_arguments(self, parser):
         parser.add_argument(

@@ -85,7 +85,7 @@ def api_root(request):
     Endpoint racine de l'API
     """
     return Response({
-        'message': 'SAKOM API v1.0.0',
+        'message': 'project_saas API v1.0.0',
         'endpoints': {
             'health': '/api/v1/health/',
             'auth': '/api/v1/login/',

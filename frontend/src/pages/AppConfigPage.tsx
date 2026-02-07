@@ -189,7 +189,7 @@ export function AppConfigPage() {
                 id="app_name"
                 value={formData.app_name || ''}
                 onChange={(e) => handleInputChange('app_name', e.target.value)}
-                placeholder="SAKOM"
+                placeholder="project_saas"
               />
             </div>
             <div>

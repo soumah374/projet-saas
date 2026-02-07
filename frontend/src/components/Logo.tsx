@@ -33,7 +33,7 @@ export const Logo: React.FC<LogoProps> = ({
     '2xl': 'text-3xl'
   };
 
-  const appName = config?.app_name || 'saKom';
+  const appName = config?.app_name || 'project_saas';
   const logoUrl = config?.logo_url;
 
   const logoElement = (
@@ -45,16 +45,10 @@ export const Logo: React.FC<LogoProps> = ({
           className={`${sizeClasses[size]} object-contain`} 
         />
       ) : (
-        <img 
-          src="/logo/inkom-logo.jpeg" 
-          alt="Default Logo"
-          className={`${sizeClasses[size]} object-contain`}
-          width={100}
-        />
         // Fallback: afficher un icône par défaut si pas de logo
-        // <div className={`${sizeClasses[size]} bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs`}>
-        //   {appName.charAt(0).toUpperCase()}
-        // </div>
+        <div className={`${sizeClasses[size]} bg-blue-600 rounded flex items-center justify-center text-white font-bold text-xs`}>
+          {appName.charAt(0).toUpperCase()}
+        </div>
       )}
       {/* {showText && (
         <span 

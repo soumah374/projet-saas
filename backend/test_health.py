@@ -109,7 +109,7 @@ def test_api_root():
         return False
 
 if __name__ == "__main__":
-    print("🚀 Test des endpoints de santé de l'API SAKOM")
+    print("🚀 Test des endpoints de santé de l'API project_saas")
     print("=" * 60)
     
     health_ok = test_health_check()

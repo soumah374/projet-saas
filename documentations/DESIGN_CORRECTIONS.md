@@ -1,4 +1,4 @@
-# Corrections du Design System - SAKOM Frontend
+# Corrections du Design System - project_saas Frontend
 
 ## Objectif
 

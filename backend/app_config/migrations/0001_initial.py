@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             name='ApplicationConfig',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('app_name', models.CharField(default='SAKOM', help_text="Le nom qui apparaîtra dans l'interface utilisateur", max_length=100, verbose_name="Nom de l'application")),
+                ('app_name', models.CharField(default='project_saas', help_text="Le nom qui apparaîtra dans l'interface utilisateur", max_length=100, verbose_name="Nom de l'application")),
                 ('app_description', models.TextField(blank=True, help_text="Description courte de l'application", verbose_name="Description de l'application")),
                 ('logo', models.ImageField(blank=True, help_text='Logo qui apparaîtra dans l\'interface (formats supportés: PNG, JPG, JPEG, SVG, WebP)', null=True, upload_to=app_config.models.logo_upload_path, validators=[django.core.validators.FileExtensionValidator(allowed_extensions=['png', 'jpg', 'jpeg', 'svg', 'webp'])], verbose_name="Logo de l'application")),
                 ('favicon', models.ImageField(blank=True, help_text="Icône qui apparaîtra dans l'onglet du navigateur (formats supportés: PNG, JPG, JPEG, ICO)", null=True, upload_to=app_config.models.logo_upload_path, validators=[django.core.validators.FileExtensionValidator(allowed_extensions=['png', 'jpg', 'jpeg', 'ico'])], verbose_name='Favicon')),

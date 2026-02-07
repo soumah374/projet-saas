@@ -1,4 +1,4 @@
-# Fonctionnalités Collaboratives Avancées - Basées sur l'Architecture SAKOM
+# Fonctionnalités Collaboratives Avancées - Basées sur l'Architecture project_saas
 
 ## 🏗️ Architecture Actuelle Identifiée
 
@@ -568,14 +568,14 @@ export const KanbanBoard = ({ projectId, groupBy = 'status' }: KanbanBoardProps)
 channels==4.0.0
 channels-redis==4.1.0
 
-# backend/sakom/asgi.py
+# backend/project_saas/asgi.py
 import os
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 import projects.routing
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sakom.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'project_saas.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
@@ -1212,7 +1212,7 @@ export const ProjectsDashboard = () => {
 
 ## 📊 Comparaison avec MS Project / Autres Outils
 
-| Fonctionnalité | MS Project | Asana | SAKOM (Proposé) |
+| Fonctionnalité | MS Project | Asana | project_saas (Proposé) |
 |----------------|-----------|-------|-----------------|
 | Dépendances de tâches | ✅ | ✅ | ✅ |
 | Chemin critique | ✅ | ❌ | ✅ |
@@ -1227,4 +1227,4 @@ export const ProjectsDashboard = () => {
 ---
 
 *Document créé le : 2025-11-29*
-*Basé sur l'architecture SAKOM existante*
+*Basé sur l'architecture project_saas existante*

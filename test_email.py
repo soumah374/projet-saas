@@ -31,7 +31,7 @@ def test_email():
         print("Envoi d'un email de test...")
         
         send_mail(
-            subject='Test Email SAKOM - Mailpit',
+            subject='Test Email project_saas - Mailpit',
             message="""
 Bonjour,
 
@@ -40,7 +40,7 @@ Ceci est un email de test pour vérifier la configuration Mailpit.
 Si vous voyez cet email dans l'interface Mailpit, la configuration fonctionne !
 
 Cordialement,
-L'équipe SAKOM
+L'équipe project_saas
             """,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=['test@example.com'],

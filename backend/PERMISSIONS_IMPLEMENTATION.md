@@ -1,8 +1,8 @@
-# Implémentation du Système de Permissions SAKOM
+# Implémentation du Système de Permissions project_saas
 
 ## Résumé
 
-Le système de permissions de SAKOM a été implémenté en utilisant le système d'authentification et d'autorisation natif de Django (`django.contrib.auth`) avec des groupes et permissions personnalisés.
+Le système de permissions de project_saas a été implémenté en utilisant le système d'authentification et d'autorisation natif de Django (`django.contrib.auth`) avec des groupes et permissions personnalisés.
 
 ## Fichiers créés/modifiés
 

@@ -115,4 +115,4 @@
 ### **Section 6 : Alertes & Actions**
 - Projets en retard, Factures en retard, Tâches urgentes
 
-Ces indicateurs couvrent tous les aspects opérationnels et stratégiques de SAKOM, permettant une vision complète de la performance de l'entreprise et de ses projets.
+Ces indicateurs couvrent tous les aspects opérationnels et stratégiques de project_saas, permettant une vision complète de la performance de l'entreprise et de ses projets.

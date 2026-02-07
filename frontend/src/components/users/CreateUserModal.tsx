@@ -252,7 +252,7 @@ export const CreateUserModal = ({ children, open, onOpenChange, onSuccess }: Cre
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="jean.dupont@sakom.com"
+                    placeholder="jean.dupont@project_saas.com"
                     className="pl-10"
                     required
                   />

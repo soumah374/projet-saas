@@ -20,6 +20,7 @@ const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState<'dashboard' | 'project-details' | 'documents' | 'calendar'>('dashboard');
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Données d'exemple
   const [projects, setProjects] = useState([
@@ -69,6 +70,7 @@ const Index = () => {
 
   const handleProjectCreate = (newProject: any) => {
     setProjects(prev => [...prev, newProject]);
+    setIsCreateModalOpen(false);
   };
 
   const handleProjectUpdate = (updatedProject: any) => {
@@ -106,7 +108,7 @@ const Index = () => {
       case 'documents':
         return <DocumentManager projectId={selectedProject?.id || 'general'} />;
       case 'calendar':
-        return <ProjectCalendar projects={projects} />;
+        return selectedProject ? <ProjectCalendar project={selectedProject as any} /> : <div className="text-center py-8 text-gray-500">Sélectionnez un projet pour voir son calendrier</div>;
       default:
         return (
           <div className="max-w-7xl mx-auto space-y-8">
@@ -114,7 +116,7 @@ const Index = () => {
             <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl p-8 text-white">
               <div className="flex justify-between items-start">
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">Bienvenue sur saKom</h1>
+                  <h1 className="text-3xl font-bold mb-2">Bienvenue sur project_saas</h1>
                   <p className="text-blue-100 text-lg">Plateforme de gestion collaborative des projets</p>
                   <div className="mt-4 flex gap-4">
                     <Badge variant="secondary" className="bg-blue-600/20 text-blue-100 hover:bg-blue-600/30">
@@ -159,12 +161,17 @@ const Index = () => {
 
                   {/* Actions rapides */}
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <CreateProjectModal onProjectCreate={handleProjectCreate}>
-                      <Button className="h-16 bg-blue-600 hover:bg-blue-600 flex items-center gap-3">
-                        <FileText className="h-5 w-5" />
-                        Nouveau Projet
-                      </Button>
-                    </CreateProjectModal>
+                    <Button 
+                      className="h-16 bg-blue-600 hover:bg-blue-600 flex items-center gap-3"
+                      onClick={() => setIsCreateModalOpen(true)}
+                    >
+                      <FileText className="h-5 w-5" />
+                      Nouveau Projet
+                    </Button>
+                    <CreateProjectModal 
+                      isOpen={isCreateModalOpen}
+                      onClose={() => setIsCreateModalOpen(false)}
+                    />
                     <Button 
                       variant="outline" 
                       className="h-16 flex items-center gap-3"
@@ -228,7 +235,7 @@ const Index = () => {
                   <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                     {projects.map(project => (
                       <div key={project.id} onClick={() => handleProjectView(project)} className="cursor-pointer">
-                        <ProjectCard project={project} userRole={selectedRole} />
+                        <ProjectCard project={project as any} userRole={selectedRole} />
                       </div>
                     ))}
                   </div>
@@ -236,7 +243,7 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="planning">
-                <ProjectCalendar projects={projects} />
+                {selectedProject ? <ProjectCalendar project={selectedProject as any} /> : <div className="text-center py-8 text-gray-500">Sélectionnez un projet pour voir son calendrier</div>}
               </TabsContent>
 
               <TabsContent value="documents">
@@ -265,7 +272,6 @@ const Index = () => {
           currentView={currentView}
           onViewChange={handleViewChange}
           projects={projects}
-          user={user}
         />
         
         <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>

@@ -354,7 +354,7 @@ class DevisViewSet(viewsets.ModelViewSet):
             {message_personnalise}
 
             Cordialement,
-            L'équipe SAKOM
+            L'équipe project_saas
         """
         
         return message_base.strip()

@@ -5,7 +5,7 @@ export const config = {
         timeout: 10000,
     },
     app: {
-        name: "Sakom",
+        name: "project_saas",
         version: "1.0.0",
     },
     features: {

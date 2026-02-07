@@ -1,8 +1,8 @@
-# Système de Permissions SAKOM - Basé sur Django Auth
+# Système de Permissions project_saas - Basé sur Django Auth
 
 ## Vue d'ensemble
 
-Le système de permissions de SAKOM utilise le système d'authentification et d'autorisation natif de Django (`django.contrib.auth`) avec des groupes et permissions personnalisés pour gérer les accès aux différentes fonctionnalités de l'application.
+Le système de permissions de project_saas utilise le système d'authentification et d'autorisation natif de Django (`django.contrib.auth`) avec des groupes et permissions personnalisés pour gérer les accès aux différentes fonctionnalités de l'application.
 
 ## Architecture
 
