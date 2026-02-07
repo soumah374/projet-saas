@@ -41,7 +41,7 @@ import {
   LayoutGrid,
   List
 } from "lucide-react";
-import { projectTeamAPI } from '@/lib/api';
+import { projectApi } from '@/lib/api';
 import type { Project, ProjectMemberRole, ProjectMemberUpdate, ProjectMember } from '@/lib/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -82,7 +82,7 @@ export function ProjectTeamPage() {
   // Mutations
   const addMemberMutation = useMutation({
     mutationFn: ({ project, userId, role, allocation_percentage }: { project: string; userId: number; role: ProjectMemberRole, allocation_percentage}) =>
-      projectTeamAPI.addTeamMember(projectId, {project: project, user: userId.toString(), role, allocation_percentage: allocation_percentage, }),
+      projectApi.addTeamMember(projectId, {project: project, user: userId.toString(), role, allocation_percentage: allocation_percentage, }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -100,7 +100,7 @@ export function ProjectTeamPage() {
 
   const removeMemberMutation = useMutation({
     mutationFn: ({ projectId, memberId }: { projectId: string; memberId: number }) =>
-      projectTeamAPI.deleteProjectMember(projectId, memberId),
+      projectApi.deleteProjectMember(projectId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -114,7 +114,7 @@ export function ProjectTeamPage() {
 
   const updateMemberMutation = useMutation({
     mutationFn: ({ projectId, memberId, data }: { projectId: string; memberId: number; data: ProjectMemberUpdate }) =>
-      projectTeamAPI.updateTeamMember(projectId, memberId, data),
+      projectApi.updateTeamMember(projectId, memberId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       loadProjectTeam();
@@ -137,7 +137,7 @@ export function ProjectTeamPage() {
   const loadProjectTeam = async () => {
     try {
       setIsLoading(true);
-      const projectData = await projectTeamAPI.getProjectTeam(projectId!);
+      const projectData = await projectApi.getProjectTeam(projectId!);
       setTeamMembers(projectData.data || []);
     } catch (err) {
       setError('Erreur lors du chargement de l\'équipe du projet');

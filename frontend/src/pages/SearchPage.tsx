@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { projectsAPI, clientsAPI, teamsAPI, contratsAPI } from '@/lib/api'
+import { projectApi, clientsAPI, teamsAPI, contratsAPI } from '@/lib/api'
 import { Search } from 'lucide-react'
 
 export const SearchPage: React.FC = () => {
@@ -30,7 +30,7 @@ export const SearchPage: React.FC = () => {
     setError(null)
     try {
       const [projectsRes, clientsRes, teamsRes, contratsRes] = await Promise.all([
-        projectsAPI.getProjects({ search, page: 1 }),
+        projectApi.getProjects({ search, page: 1 }),
         clientsAPI.getClients({ search, page: 1 }),
         teamsAPI.getTeams({ search, page: 1 }),
         contratsAPI.getContrats({search,page: 1})

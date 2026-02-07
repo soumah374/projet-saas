@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { projectTeamAPI, projectTasksAPI, servicesAPI, projectApi } from '@/lib/api';
+import { projectApi, servicesAPI } from '@/lib/api';
 import { Service } from '@/lib/types';
 
 interface UseProjectLifecycle {
@@ -43,7 +43,7 @@ export function useProjectLifecycle(projectId: string, searchTerm?: string): Use
     queryFn: async () => {
       // console.log('Fetching team members for projectId:', projectId, 'searchTerm:', searchTerm);
       const params = searchTerm ? { search: searchTerm } : undefined;
-      const response = await projectTeamAPI.getProjectTeam(projectId, params);
+      const response = await projectApi.getProjectTeam(projectId, params);
       return response.data;
     },
     enabled: !!projectId
@@ -54,7 +54,7 @@ export function useProjectLifecycle(projectId: string, searchTerm?: string): Use
   // Team member mutations
   const addTeamMemberMutation = useMutation({
     mutationFn: (data: any) => 
-      projectTeamAPI.addTeamMember(projectId, data),
+      projectApi.addTeamMember(projectId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-team', projectId] });
     }
@@ -62,7 +62,7 @@ export function useProjectLifecycle(projectId: string, searchTerm?: string): Use
   // Team member mutations
   const removeTeamMemberMutation = useMutation({
     mutationFn: (memberId: number) => 
-      projectTeamAPI.deleteProjectMember(projectId, memberId),
+      projectApi.deleteProjectMember(projectId, memberId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-team', projectId] });
     }
@@ -70,7 +70,7 @@ export function useProjectLifecycle(projectId: string, searchTerm?: string): Use
 
   const updateTeamMemberMutation = useMutation({
     mutationFn: ({ memberId, data }: { memberId: number; data: any }) => 
-      projectTeamAPI.updateTeamMember(projectId, memberId, data),
+      projectApi.updateTeamMember(projectId, memberId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-team', projectId] });
     }
@@ -87,7 +87,7 @@ export function useProjectLifecycle(projectId: string, searchTerm?: string): Use
   // Task template mutation
   const applyTemplateMutation = useMutation({
     mutationFn: (category: string) => 
-      projectTasksAPI.applyTaskTemplate(projectId, category),
+      projectApi.applyTaskTemplate(projectId, category),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
     }
@@ -98,7 +98,7 @@ export function useProjectLifecycle(projectId: string, searchTerm?: string): Use
   // Check user's current allocation for this project
   const checkUserAllocation = async (userId: string) => {
     try {
-      const response = await projectTeamAPI.getUserAllocation(userId);
+      const response = await projectApi.getUserAllocation(userId);
       return response.data.total_allocation;
     } catch (error) {
       console.error('Error checking user allocation:', error);

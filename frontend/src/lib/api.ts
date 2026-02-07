@@ -167,66 +167,6 @@ export interface TimeSheet {
 // API Client
 export const projectApi = {
     // Projets
-    getProjects: () => api.get<PaginatedResponse<Project>>('/projects/'),
-    getProject: (id: string) => api.get<Project>(`/projects/${id}/`),
-    createProject: (data: Partial<Project>) => api.post<Project>('/projects/', data),
-    updateProject: (id: string, data: Partial<Project>) => api.patch<Project>(`/projects/${id}/`, data),
-    deleteProject: (id: string) => api.delete(`/projects/${id}/`),
-    
-
-    
-    // Activités
-    getProjectTasks: (projectId: string) => api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
-    getProjectTask: (projectId: string, taskId: number) => 
-        api.get<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`),
-    createProjectTask: (projectId: string, data: Partial<ProjectTask>) => 
-        api.post<ProjectTask>(`/projects/${projectId}/tasks/`, data),
-    updateProjectTask: (projectId: string, taskId: number, data: Partial<ProjectTask>) => 
-        api.patch<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, data),
-    deleteProjectTask: (projectId: string, taskId: number) => 
-        api.delete(`/projects/${projectId}/tasks/${taskId}/`),
-
-    updateTaskStatus: (projectId: string, taskId: number, status: ProjectTask['status']) =>
-        api.patch(`/projects/${projectId}/tasks/${taskId}/`, { status }),
-
-    assignTask: (projectId: string, taskId: number, userId: number) =>
-        api.post(`/projects/${projectId}/tasks/${taskId}/assign/`, { user_id: userId }),
-    getTaskTemplates: (projectId: string) => 
-        api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/templates/`),
-    createTaskFromTemplate: (projectId: string, templateId: number, data: {
-        start_date?: string;
-        due_date?: string;
-    }) => api.post<ProjectTask>(
-        `/projects/${projectId}/tasks/${templateId}/create_from_template/`,
-        data
-    ),
-    
-    // Feuilles de temps
-    getProjectTimeSheets: (projectId: string) => 
-        api.get<PaginatedResponse<TimeSheet>>(`/projects/${projectId}/timesheets/`),
-    getProjectTimeSheet: (projectId: string, timeSheetId: number) => 
-        api.get<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`),
-    createProjectTimeSheet: (projectId: string, data: Partial<TimeSheet>) => 
-        api.post<TimeSheet>(`/projects/${projectId}/timesheets/`, data),
-    updateProjectTimeSheet: (projectId: string, timeSheetId: number, data: Partial<TimeSheet>) => 
-        api.patch<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`, data),
-    deleteProjectTimeSheet: (projectId: string, timeSheetId: number) => 
-        api.delete(`/projects/${projectId}/timesheets/${timeSheetId}/`),
-    validateTimeSheet: (projectId: string, timeSheetId: number, comment?: string) =>
-        api.post<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/validate/`, { comment: comment || '' }),
-    getTimeSheetSummary: (projectId: string) =>
-        api.get(`/projects/${projectId}/timesheets/summary/`),
-    
-
-    // Suivi et alertes
-    getProjectTimeline: (projectId: string) => api.get(`/projects/${projectId}/timeline/`),
-    getProjectWorkload: (projectId: string) => api.get(`/projects/${projectId}/workload/`),
-    getProjectAlerts: (projectId: string) => api.get(`/projects/${projectId}/alerts/`),
-    updateProjectStatus: (projectId: string, status: Project['status']) =>
-        api.post(`/projects/${projectId}/update_phase/`, { status }),
-};
-
-export const projectsAPI = {
     getProjects: (params?: {
         search?: string;
         ordering?: string;
@@ -244,35 +184,83 @@ export const projectsAPI = {
     getTeamProjects: () => api.get('/projects/team-projects/'),
     getUpcomingDeadlines: () => api.get('/projects/upcoming-deadlines/'),
     updateProgress: (id: string, progress: number) => api.post(`/projects/${id}/update-progress/`, { progress }),
+
+    // Activités
+    getProjectTasks: (projectId: string) => api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
+    getProjectTask: (projectId: string, taskId: number) =>
+        api.get<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`),
+    createProjectTask: (projectId: string, data: Partial<ProjectTask>) =>
+        api.post<ProjectTask>(`/projects/${projectId}/tasks/`, data),
+    updateProjectTask: (projectId: string, taskId: number, data: Partial<ProjectTask>) =>
+        api.patch<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, data),
+    deleteProjectTask: (projectId: string, taskId: number) =>
+        api.delete(`/projects/${projectId}/tasks/${taskId}/`),
+    updateTaskStatus: (projectId: string, taskId: number, status: ProjectTask['status']) =>
+        api.patch(`/projects/${projectId}/tasks/${taskId}/`, { status }),
+    assignTask: (projectId: string, taskId: number, userId: number) =>
+        api.post(`/projects/${projectId}/tasks/${taskId}/assign/`, { user_id: userId }),
+    getTaskTemplates: (projectId: string) =>
+        api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/templates/`),
+    createTaskFromTemplate: (projectId: string, templateId: number, data: {
+        start_date?: string;
+        due_date?: string;
+    }) => api.post<ProjectTask>(
+        `/projects/${projectId}/tasks/${templateId}/create_from_template/`,
+        data
+    ),
+    applyTaskTemplate: (projectId: string, category: string) =>
+        api.post<void>(`/projects/${projectId}/tasks/create_from_template/`, { category }),
+
+    // Feuilles de temps
+    getProjectTimeSheets: (projectId: string) =>
+        api.get<PaginatedResponse<TimeSheet>>(`/projects/${projectId}/timesheets/`),
+    getProjectTimeSheet: (projectId: string, timeSheetId: number) =>
+        api.get<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`),
+    createProjectTimeSheet: (projectId: string, data: Partial<TimeSheet>) =>
+        api.post<TimeSheet>(`/projects/${projectId}/timesheets/`, data),
+    updateProjectTimeSheet: (projectId: string, timeSheetId: number, data: Partial<TimeSheet>) =>
+        api.patch<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/`, data),
+    deleteProjectTimeSheet: (projectId: string, timeSheetId: number) =>
+        api.delete(`/projects/${projectId}/timesheets/${timeSheetId}/`),
+    validateTimeSheet: (projectId: string, timeSheetId: number, comment?: string) =>
+        api.post<TimeSheet>(`/projects/${projectId}/timesheets/${timeSheetId}/validate/`, { comment: comment || '' }),
+    getTimeSheetSummary: (projectId: string) =>
+        api.get(`/projects/${projectId}/timesheets/summary/`),
+
+    // Événements
     getProjectEvents: (projectId: string) => api.get(`/projects/${projectId}/events/`),
     createProjectEvent: (projectId: string, data: any) => api.post(`/projects/${projectId}/events/`, data),
-    updateProjectEvent: (projectId: string, eventId: number, data: any) => 
+    updateProjectEvent: (projectId: string, eventId: number, data: any) =>
         api.patch(`/projects/${projectId}/events/${eventId}/`, data),
-    deleteProjectEvent: (projectId: string, eventId: number) => 
+    deleteProjectEvent: (projectId: string, eventId: number) =>
         api.delete(`/projects/${projectId}/events/${eventId}/`),
+
+    // Équipe
+    getProjectTeam: (projectId: string, params?: { search?: string }) =>
+        api.get<ProjectMember[]>(`/projects/${projectId}/team/`, { params }),
+    addTeamMember: (projectId: string, data: { project: string; user: string; role: string; allocation_percentage: number }) =>
+        api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
+    updateTeamMember: (projectId: string, memberId: number, data: { role?: string; allocation_percentage?: number }) =>
+        api.patch<TeamMember>(`/projects/${projectId}/team/${memberId}/`, data),
+    removeTeamMember: (projectId: string, memberId: number) =>
+        api.delete(`/projects/${projectId}/team/${memberId}/`),
+    getUserAllocation: (userId: string) =>
+        api.get<{ total_allocation: number }>(`/projects/team/user/${userId}/allocation/`),
+    deleteProjectMember: (projectId: string, id: number) =>
+        api.delete(`/projects/${projectId}/team/${id}/delete/`),
+
+    // Suivi et alertes
+    getProjectTimeline: (projectId: string) => api.get(`/projects/${projectId}/timeline/`),
+    getProjectWorkload: (projectId: string) => api.get(`/projects/${projectId}/workload/`),
+    getProjectAlerts: (projectId: string) => api.get(`/projects/${projectId}/alerts/`),
+    updateProjectStatus: (projectId: string, status: Project['status']) =>
+        api.post(`/projects/${projectId}/update_phase/`, { status }),
 };
 
-export const projectMembersAPI = {
-    getProjectMembers: (projectId: string) => 
-        api.get(`/projects/${projectId}/members/`),
-    addProjectMember: (projectId: string, data: any) => 
-        api.post(`/projects/${projectId}/members/`, data),
-    updateProjectMember: (projectId: string, memberId: number, data: any) => 
-        api.patch(`/projects/${projectId}/members/${memberId}/`, data)
-};
-
-export const projectTasksAPI = {
-    getProjectTasks: (projectId: string) => 
-        api.get<PaginatedResponse<ProjectTask>>(`/projects/${projectId}/tasks/`),
-    createTask: (projectId: string, data: any) => 
-        api.post<ProjectTask>(`/projects/${projectId}/tasks/`, data),
-    updateTask: (projectId: string, taskId: number, data: any) => 
-        api.patch<ProjectTask>(`/projects/${projectId}/tasks/${taskId}/`, data),
-    deleteTask: (projectId: string, taskId: number) => 
-        api.delete(`/projects/${projectId}/tasks/${taskId}/`),
-    applyTaskTemplate: (projectId: string, category: string) =>
-        api.post<void>(`/projects/${projectId}/tasks/create_from_template/`, { category })
-};
+// Aliases pour rétrocompatibilité
+export const projectsAPI = projectApi;
+export const projectTasksAPI = projectApi;
+export const projectTeamAPI = projectApi;
 
 export const notificationsAPI = {
     getNotifications: (params?: {
@@ -519,21 +507,6 @@ export const fetchUpcomingEvents = () => api.get('/events/upcoming/');
 export default api; 
 
 
-
-export const projectTeamAPI = {
-    getProjectTeam: (projectId: string, params: { search: string; }) => 
-        api.get<ProjectMember[]>(`/projects/${projectId}/team/`, {params}),
-    addTeamMember: (projectId: string, data: { project: string; user: string; role: string; allocation_percentage: number }) => 
-        api.post<TeamMember>(`/projects/${projectId}/add_member/`, data),
-    updateTeamMember: (projectId: string, memberId: number, data: { role?: string; allocation_percentage?: number }) => 
-        api.patch<TeamMember>(`/projects/${projectId}/team/${memberId}/`, data),
-    removeTeamMember: (projectId: string, memberId: number) => 
-        api.delete(`/projects/${projectId}/team/${memberId}/`),
-    getUserAllocation: (userId: string) => 
-        api.get<{ total_allocation: number }>(`/projects/team/user/${userId}/allocation/`),
-    deleteProjectMember: (projectId: string, id: number) => 
-        api.delete(`/projects/${projectId}/team/${id}/delete/`),
-}; 
 
 // Services
 export const servicesAPI = {
