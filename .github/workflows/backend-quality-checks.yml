@@ -10,8 +10,6 @@ on:
       - 'backend/**'
   push:
     branches:
-      - main
-      - master
       - develop
     paths:
       - 'backend/**'
