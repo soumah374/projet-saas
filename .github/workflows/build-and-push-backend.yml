@@ -3,8 +3,6 @@ name: Build and Push Backend to Registry
 on:
   push:
     branches:
-      - main
-      - master
       - develop
     paths:
       - 'backend/**'
