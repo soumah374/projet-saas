@@ -125,7 +125,7 @@ export const EmailTemplatePreviewModal: React.FC<EmailTemplatePreviewModalProps>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">De:</span>
                         <span className="text-gray-600 dark:text-gray-400">
-                          SAKOM &lt;noreply@sakom.com&gt;
+                          project_saas &lt;noreply@project_saas.com&gt;
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

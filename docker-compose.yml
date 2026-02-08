@@ -7,13 +7,13 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=sakom_db
-      - POSTGRES_USER=sakom_user
-      - POSTGRES_PASSWORD=sakom_password
+      - POSTGRES_DB=project_saas_db
+      - POSTGRES_USER=project_saas_user
+      - POSTGRES_PASSWORD=project_saas_password
     ports:
       - "5432:5432"
     networks:
-      - sakom_network
+      - project_saas_network
 
   # Cache Redis
   redis:
@@ -23,12 +23,12 @@ services:
     volumes:
       - redis_data:/data
     networks:
-      - sakom_network
+      - project_saas_network
 
   # Backend Django
   backend:
     build: ./backend
-    command: python manage.py runserver 0.0.0.0:8000
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     volumes:
       - ./backend:/app
       - ./backend/media:/app/media
@@ -38,9 +38,9 @@ services:
     environment:
       - DEBUG=True
       - SECRET_KEY=django-insecure-change-me-in-production
-      - DB_NAME=sakom_db
-      - DB_USER=sakom_user
-      - DB_PASSWORD=sakom_password
+      - DB_NAME=project_saas_db
+      - DB_USER=project_saas_user
+      - DB_PASSWORD=project_saas_password
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
@@ -49,7 +49,7 @@ services:
       - db
       - redis
     networks:
-      - sakom_network
+      - project_saas_network
 
   # Frontend React
   # frontend:
@@ -62,11 +62,11 @@ services:
   #     - "8080:8080"
   #   environment:
   #     - VITE_API_URL=http://localhost:8000/api/v1
-  #     - VITE_APP_NAME=SAKOM
+  #     - VITE_APP_NAME=project_saas
   #   depends_on:
   #     - backend
   #   networks:
-  #     - sakom_network
+  #     - project_saas_network
 
   # Nginx (optionnel pour la production)
   nginx:
@@ -79,7 +79,7 @@ services:
       - backend
       - frontend
     networks:
-      - sakom_network
+      - project_saas_network
     profiles:
       - production
   mailpit:
@@ -96,7 +96,7 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
     networks:
-      - sakom_network
+      - project_saas_network
 volumes:
   postgres_data:
   redis_data:
@@ -104,5 +104,5 @@ volumes:
   static_volume:
 
 networks:
-  sakom_network:
+  project_saas_network:
     driver: bridge

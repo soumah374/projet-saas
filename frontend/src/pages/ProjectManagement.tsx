@@ -391,7 +391,7 @@ export function ProjectManagement() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Gestion des Projets</h1>
-          <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets saKom</p>
+          <p className="text-gray-600 mt-1">Gérez et suivez tous vos projets project_saas</p>
         </div>
         { hasPermission('projects.create_project') && (
           <Button onClick={() => setShowCreateModal(true)}>

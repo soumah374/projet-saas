@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, Check, CheckCheck, X } from 'lucide-react';
+import { Bell, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -9,52 +9,35 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '@/hooks/use-notifications';
+import { useNotifications } from '@/hooks/use-notifications';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { useNavigate } from 'react-router-dom';
-
-interface Notification {
-  id: number;
-  notification_type: string;
-  title: string;
-  message: string;
-  is_read: boolean;
-  created_at: string;
-  related_project?: string;
-  related_task?: number;
-  related_task_title?: string;
-  related_project_title?: string;
-}
+import { useNavigate, Link } from 'react-router-dom';
+import type { AppNotification } from '@/lib/types';
 
 export function NotificationCenter() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
-  const { notifications = [], loading: isLoading, unreadCount } = useNotifications();
-  const markAsReadMutation = useMarkAsRead();
-  const markAllAsReadMutation = useMarkAllAsRead();
+  const { notifications = [], loading: isLoading, unreadCount, markAsRead, markAllAsRead } = useNotifications();
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'task_assigned':
+      case 'project_member':
+        return '👥';
+      case 'task_assignment':
         return '📋';
-      case 'task_completed':
+      case 'task_update':
         return '✅';
-      case 'task_status_changed':
-        return '🔄';
-      case 'deadline_approaching':
-        return '⏰';
-      case 'comment_added':
+      case 'event_created':
+      case 'event_update':
+        return '📅';
+      case 'document_shared':
+        return '📄';
+      case 'team_update':
+        return '👥';
+      case 'message':
         return '💬';
-      case 'mention':
-        return '@';
-      case 'budget_exceeded':
-        return '💰';
-      case 'timesheet_validated':
-        return '✔️';
-      case 'timesheet_rejected':
-        return '❌';
       default:
         return '🔔';
     }
@@ -62,39 +45,57 @@ export function NotificationCenter() {
 
   const getNotificationColor = (type: string) => {
     switch (type) {
-      case 'task_assigned':
-      case 'task_completed':
-        return 'text-green-600';
-      case 'deadline_approaching':
-      case 'budget_exceeded':
-      case 'timesheet_rejected':
-        return 'text-red-600';
-      case 'mention':
-      case 'comment_added':
+      case 'project_member':
+      case 'team_update':
         return 'text-blue-600';
+      case 'task_assignment':
+      case 'task_update':
+        return 'text-green-600';
+      case 'event_created':
+      case 'event_update':
+        return 'text-purple-600';
+      case 'document_shared':
+        return 'text-orange-600';
+      case 'message':
+        return 'text-cyan-600';
       default:
         return 'text-gray-600';
     }
   };
 
-  const handleNotificationClick = async (notification: Notification) => {
-    // Marquer comme lue
+  const getNotificationUrl = (notification: AppNotification): string | null => {
+    const projectId = notification.metadata?.project_id || notification.object_id;
+
+    switch (notification.type) {
+      case 'project_member':
+        return `/projects/${notification.object_id}`;
+      case 'task_assignment':
+      case 'task_update':
+        return `/projects/${projectId}`;
+      case 'event_created':
+      case 'event_update':
+        return '/calendar';
+      case 'document_shared':
+        return '/documents';
+      default:
+        return '/notifications';
+    }
+  };
+
+  const handleNotificationClick = (notification: AppNotification) => {
     if (!notification.is_read) {
-      await markAsReadMutation.mutateAsync(notification.id);
+      markAsRead(notification.id);
     }
 
-    // Naviguer vers la ressource liée
-    if (notification.related_project && notification.related_task) {
-      navigate(`/projects/${notification.related_project}`);
-    } else if (notification.related_project) {
-      navigate(`/projects/${notification.related_project}`);
+    const url = getNotificationUrl(notification);
+    if (url) {
+      setTimeout(() => navigate(url), 0);
     }
-
     setOpen(false);
   };
 
-  const handleMarkAllAsRead = async () => {
-    await markAllAsReadMutation.mutateAsync();
+  const handleMarkAllAsRead = () => {
+    markAllAsRead();
   };
 
   return (
@@ -137,31 +138,28 @@ export function NotificationCenter() {
           </div>
         ) : (
           <div className="divide-y">
-            {notifications.map((notification: Notification) => (
+            {notifications.slice(0, 5).map((notification: AppNotification) => (
               <DropdownMenuItem
                 key={notification.id}
                 className={`p-3 cursor-pointer ${
-                  !notification.is_read ? 'bg-blue-50' : ''
+                  !notification.is_read ? 'bg-blue-50 dark:bg-blue-950/20' : ''
                 }`}
-                onClick={() => handleNotificationClick(notification)}
+                onSelect={() => handleNotificationClick(notification)}
               >
                 <div className="flex gap-3 w-full">
-                  <div className={`text-2xl ${getNotificationColor(notification.notification_type)}`}>
-                    {getNotificationIcon(notification.notification_type)}
+                  <div className={`text-2xl ${getNotificationColor(notification.type)}`}>
+                    {getNotificationIcon(notification.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium text-sm">{notification.title}</p>
+                      <p className="font-medium text-sm line-clamp-2">{notification.message}</p>
                       {!notification.is_read && (
                         <div className="h-2 w-2 rounded-full bg-blue-600 flex-shrink-0 mt-1" />
                       )}
                     </div>
-                    <p className="text-xs text-gray-600 line-clamp-2">
-                      {notification.message}
-                    </p>
-                    {notification.related_task_title && (
+                    {notification.metadata?.project_title && (
                       <Badge variant="secondary" className="text-xs mt-1">
-                        {notification.related_task_title}
+                        {notification.metadata.project_title}
                       </Badge>
                     )}
                     <p className="text-xs text-gray-400 mt-1">
@@ -177,23 +175,12 @@ export function NotificationCenter() {
           </div>
         )}
 
-        {notifications.length > 0 && (
-          <>
-            <DropdownMenuSeparator />
-            <div className="p-2">
-              <Button
-                variant="ghost"
-                className="w-full text-xs"
-                onClick={() => {
-                  setOpen(false);
-                  // TODO: Navigate to notifications page
-                }}
-              >
-                Voir toutes les notifications
-              </Button>
-            </div>
-          </>
-        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild className="justify-center">
+          <Link to="/notifications" className="w-full flex items-center justify-center text-primary text-sm">
+            Voir toutes les notifications
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

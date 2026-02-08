@@ -1,5 +1,5 @@
 /**
- * Fonctions de formatage pour l'application SAKOM
+ * Fonctions de formatage pour l'application project_saas
  */
 
 /**

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationsAPI, api } from '../lib/api';
-import type { Notification, PaginatedResponse } from '../lib/types';
+import type { AppNotification, PaginatedResponse } from '../lib/types';
 
 // Query keys
 const notificationKeys = {
@@ -20,20 +20,26 @@ export const useNotifications = (params?: {
 
   // Requête pour obtenir les notifications
   const {
-    data,
+    data: notificationsResponse,
     isLoading: loading,
     error,
     refetch,
-  } = useQuery<PaginatedResponse<Notification>>({
+  } = useQuery<PaginatedResponse<AppNotification>>({
     queryKey: notificationKeys.list(params),
-    queryFn: () => notificationsAPI.getNotifications(params),
+    queryFn: async () => {
+      const response = await notificationsAPI.getNotifications(params);
+      return response.data;
+    },
     refetchInterval: 60000, // Rafraîchir toutes les minutes
   });
 
   // Requête pour obtenir le nombre de notifications non lues
   const { data: unreadCountData } = useQuery({
     queryKey: notificationKeys.unreadCount(),
-    queryFn: () => notificationsAPI.getUnreadCount(),
+    queryFn: async () => {
+      const response = await notificationsAPI.getUnreadCount();
+      return response.data;
+    },
     refetchInterval: 60000,
   });
 
@@ -56,8 +62,8 @@ export const useNotifications = (params?: {
   });
 
   return {
-    notifications: data?.results || [],
-    totalCount: data?.count || 0,
+    notifications: (notificationsResponse?.results || []) as AppNotification[],
+    totalCount: notificationsResponse?.count || 0,
     unreadCount: unreadCountData?.unread_count || 0,
     loading,
     error,

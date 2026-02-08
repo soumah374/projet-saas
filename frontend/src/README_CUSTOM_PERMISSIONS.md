@@ -1,8 +1,8 @@
-# Implémentation des Permissions Personnalisées SAKOM
+# Implémentation des Permissions Personnalisées project_saas
 
 ## Résumé
 
-Ce document résume l'implémentation des permissions personnalisées dans le système SAKOM, basées sur la liste de permissions fournie par le backend.
+Ce document résume l'implémentation des permissions personnalisées dans le système project_saas, basées sur la liste de permissions fournie par le backend.
 
 ## Permissions implémentées
 
@@ -351,6 +351,6 @@ const App = () => {
 
 ## Conclusion
 
-L'implémentation des permissions personnalisées SAKOM offre un système robuste et flexible pour contrôler l'accès aux fonctionnalités de l'application. En utilisant les composants appropriés et en suivant les bonnes pratiques, vous pouvez créer une interface utilisateur sécurisée et intuitive.
+L'implémentation des permissions personnalisées project_saas offre un système robuste et flexible pour contrôler l'accès aux fonctionnalités de l'application. En utilisant les composants appropriés et en suivant les bonnes pratiques, vous pouvez créer une interface utilisateur sécurisée et intuitive.
 
 Pour plus de détails, consultez le guide complet dans `CUSTOM_PERMISSIONS_GUIDE.md` et les exemples d'utilisation dans `CustomPermissionsUsage.tsx`.

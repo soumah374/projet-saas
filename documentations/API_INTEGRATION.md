@@ -1,10 +1,10 @@
-# Intégration API SAKOM
+# Intégration API project_saas
 
-Ce document décrit l'intégration complète du schéma OpenAPI SAKOM dans le frontend React.
+Ce document décrit l'intégration complète du schéma OpenAPI project_saas dans le frontend React.
 
 ## 📋 Schéma OpenAPI
 
-Le schéma API est basé sur le fichier `SAKOM API.yaml` qui définit toutes les endpoints et types de données de l'API SAKOM.
+Le schéma API est basé sur le fichier `project_saas API.yaml` qui définit toutes les endpoints et types de données de l'API project_saas.
 
 ### Endpoints disponibles
 
@@ -319,7 +319,7 @@ test("useProjects returns projects data", async () => {
 
 ## 📚 Ressources
 
-- [Documentation OpenAPI SAKOM](./SAKOM%20API.yaml)
+- [Documentation OpenAPI project_saas](./project_saas%20API.yaml)
 - [React Query Documentation](https://tanstack.com/query/latest)
 - [TypeScript Documentation](https://www.typescriptlang.org/docs/)
 - [Vite Documentation](https://vitejs.dev/guide/)

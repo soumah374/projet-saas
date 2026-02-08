@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { DocumentDetailsModal } from "@/components/DocumentDetailsModal";
 import { useDocuments, useCreateDocument, useDeleteDocument } from "@/hooks/use-documents";
-import type { Document as SakomDocument, DocumentType as SakomDocumentType, DocumentCategory } from "@/lib/types";
+import type { Document as SakomDocument, DocumentType as ProjectDocumentType, DocumentCategory } from "@/lib/types";
 
 export function DocumentsPage() {
   const { toast } = useToast();
@@ -33,7 +33,7 @@ export function DocumentsPage() {
   const documents: SakomDocument[] = documentsData?.data?.results || [];
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | SakomDocumentType>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | ProjectDocumentType>('all');
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
 
   const [selectedDocument, setSelectedDocument] = useState<SakomDocument | null>(null);
@@ -45,7 +45,7 @@ export function DocumentsPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [documentType, setDocumentType] = useState<SakomDocumentType>('other');
+  const [documentType, setDocumentType] = useState<ProjectDocumentType>('other');
   const [category, setCategory] = useState<DocumentCategory>('other');
   const [tags, setTags] = useState('');
   const [isPublic, setIsPublic] = useState(false);
@@ -53,7 +53,7 @@ export function DocumentsPage() {
   const createDocumentMutation = useCreateDocument();
   const deleteDocumentMutation = useDeleteDocument();
 
-  const allowedTypes: SakomDocumentType[] = [
+  const allowedTypes: ProjectDocumentType[] = [
     'pdf','doc','docx','xls','xlsx','ppt','pptx','txt','jpg','jpeg','png','gif','mp4','avi','mp3','zip','other'
   ];
 
@@ -119,7 +119,7 @@ export function DocumentsPage() {
 
     const extension = file.name.split('.').pop()?.toLowerCase() || '';
     const mime = (file.type || '').toLowerCase();
-    let type: SakomDocumentType = 'other';
+    let type: ProjectDocumentType = 'other';
 
     // Extension-based detection
     if (['pdf'].includes(extension)) type = 'pdf';
@@ -143,7 +143,7 @@ export function DocumentsPage() {
       if (mime === 'application/pdf') type = 'pdf';
       else if (mime.startsWith('image/')) {
         if (['jpg','jpeg','png','gif'].includes(extension)) {
-          type = extension as SakomDocumentType;
+          type = extension as ProjectDocumentType;
         } else {
           type = 'jpg';
         }
@@ -311,7 +311,7 @@ export function DocumentsPage() {
             className="pl-10"
           />
         </div>
-        <Select value={typeFilter} onValueChange={(v: 'all' | SakomDocumentType) => setTypeFilter(v)}>
+        <Select value={typeFilter} onValueChange={(v: 'all' | ProjectDocumentType) => setTypeFilter(v)}>
           <SelectTrigger className="w-full sm:w-[220px]">
             <Filter className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Filtrer par type" />

@@ -48,6 +48,13 @@ INSTALLED_APPS = [
     'dashboard',
     'email_templates',
     'app_config',
+    'chat',
+    
+    # GraphQL
+    'graphene_django',
+    
+    # Channels for WebSockets
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -81,14 +88,15 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 # Database
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DB_NAME', default='sakom_db'),
-        'USER': config('DB_USER', default='sakom_user'),
-        'PASSWORD': config('DB_PASSWORD', default='sakom_password'),
+        'NAME': config('DB_NAME', default='project_saas_db'),
+        'USER': config('DB_USER', default='project_saas_user'),
+        'PASSWORD': config('DB_PASSWORD', default='project_saas_password'),
         'HOST': config('DB_HOST', default='db'),
         'PORT': config('DB_PORT', default='5432'),
     }
@@ -180,12 +188,12 @@ EMAIL_USE_TLS = False
 EMAIL_USE_SSL = False
 EMAIL_HOST_USER = ''
 EMAIL_HOST_PASSWORD = ''
-DEFAULT_FROM_EMAIL = 'noreply@sakom.com'
+DEFAULT_FROM_EMAIL = 'noreply@project_saas.com'
 
 # API Documentation
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'SAKOM API',
-    'DESCRIPTION': 'API pour la gestion de projets SAKOM',
+    'TITLE': 'project_saas API',
+    'DESCRIPTION': 'API pour la gestion de projets project_saas',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'COMPONENT_SPLIT_REQUEST': True,
@@ -221,4 +229,20 @@ LOGGING = {
         'handlers': ['console'],
         'level': 'INFO',
     },
+}
+
+# Channels configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('redis', 6379)],
+        },
+    },
+}
+
+# GraphQL configuration
+GRAPHENE = {
+    'SCHEMA': 'chat.schema.schema',
+    'MIDDLEWARE': [],
 } 

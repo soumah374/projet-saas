@@ -227,4 +227,4 @@ Pour toute question ou problème :
 
 **Version** : 1.0.0  
 **Dernière mise à jour** : 2024  
-**Auteur** : Équipe de développement saKom
+**Auteur** : Équipe de développement project_saas

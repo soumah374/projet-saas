@@ -2,7 +2,7 @@
 
 ## Vue d'ensemble
 
-Ce document décrit les modifications apportées pour lier les projets aux clients dans le système SAKOM.
+Ce document décrit les modifications apportées pour lier les projets aux clients dans le système project_saas.
 
 ## Changements Backend
 

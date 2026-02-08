@@ -216,7 +216,7 @@ class Command(BaseCommand):
 
         # Variables par défaut
         variables_defaut = {
-            'raison_sociale_prestataire': 'SAKOM SARL',
+            'raison_sociale_prestataire': 'project_saas SARL',
             'forme_juridique': 'SARL',
             'montant_capital': '10,000,000',
             'ville': 'Conakry',

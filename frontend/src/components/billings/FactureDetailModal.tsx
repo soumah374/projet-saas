@@ -9,12 +9,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Calendar, 
-  DollarSign, 
-  FileText, 
-  AlertTriangle, 
-  CheckCircle, 
+import {
+  Calendar,
+  DollarSign,
+  FileText,
+  AlertTriangle,
+  CheckCircle,
   Clock,
   Download,
   CreditCard,
@@ -274,28 +274,28 @@ export const FactureDetailModal: React.FC<FactureDetailModalProps> = ({
                         <div className="font-medium">{ligne.description}</div>
                         <div className="text-sm text-muted-foreground">
                           <ProtectedField
-                            modelName="ligne"
+                            modelName="lignefacture"
                             appLabel="billings"
                             fieldName="prix_unitaire_ht"
                             mode="hide"
                             fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                           >
-                          {ligne.quantite} x {formatMontant(ligne.prix_unitaire_ht)}
+                            {ligne.quantite} x {formatMontant(ligne.prix_unitaire_ht)}
                           </ProtectedField>
                         </div>
                       </div>
                       <div className="text-right">
                         <div className="font-semibold">
                           <ProtectedField
-                            modelName="ligne"
+                            modelName="lignefacture"
                             appLabel="billings"
                             fieldName="montant_ht"
                             mode="hide"
                             fallback={<div className="text-gray-400 italic">Non autorisé</div>}
                           >
-                          {formatMontant(ligne.montant_ht)}
+                            {formatMontant(ligne.montant_ht)}
                           </ProtectedField>
-                          </div>
+                        </div>
                         <div className="text-xs text-muted-foreground capitalize">
                           {ligne.type_ligne}
                         </div>

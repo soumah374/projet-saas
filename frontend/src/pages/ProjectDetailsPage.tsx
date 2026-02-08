@@ -18,6 +18,12 @@ import { ProjectActionModals } from '@/components/projects/ProjectActionModals';
 import { usePermissions } from '@/hooks/use-permissions';
 import { ProjectDetailsSkeleton } from '@/components/projects/ProjectSkeleton';
 
+interface ProjectDetailsPageProps {
+  project?: any;
+  onBack?: () => void;
+  onUpdateProject?: (updatedProject: any) => void;
+}
+
 const getStatusBadgeClass = (status: string) => {
   switch (status) {
     case 'Prospection':
@@ -33,24 +39,40 @@ const getStatusBadgeClass = (status: string) => {
   }
 };
 
-export function ProjectDetailsPage() {
+export function ProjectDetailsPage(props: ProjectDetailsPageProps = {}) {
+  const { project: propProject, onBack, onUpdateProject } = props;
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('planning');
+  
+  const currentProjectId = projectId || (propProject?.id);
+  const { data: routeProject, isLoading, error } = useProject(currentProjectId || '');
+  const project = propProject || routeProject;
 
   const { 
     hasPermission
   } = usePermissions();
   
-  const { data: project, isLoading, error } = useProject(projectId || '');
   const startProjectMutation = useStartProject();
   const updateProjectMutation = useUpdateProject();
+
+  const handleBackClick = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate('/projects');
+    }
+  };
 
   const isProjectStarted = project && project.status === 'Production' && project.start_date;
 
   const handleProjectUpdate = async (id: string, data: Partial<CreateProjectForm>) => {
     try {
-      await updateProjectMutation.mutateAsync({ projectId: id, data });
+      if (onUpdateProject && propProject) {
+        onUpdateProject({ ...propProject, ...data });
+      } else {
+        await updateProjectMutation.mutateAsync({ projectId: id, data });
+      }
     } catch (e) {
       console.error('Erreur lors de la mise à jour du projet:', e);
     }
@@ -85,7 +107,7 @@ export function ProjectDetailsPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading && !propProject) {
     return (
       <div className="container mx-auto py-6">
         <ProjectDetailsSkeleton />
@@ -93,10 +115,10 @@ export function ProjectDetailsPage() {
     );
   }
 
-  if (error || !projectId || !project) {
+  if ((error || !project) && !propProject) {
     return (
       <div className="container mx-auto py-6 space-y-6">
-        <Button variant="outline" onClick={() => navigate('/projects')}>
+        <Button variant="outline" onClick={handleBackClick}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour aux projets
         </Button>
@@ -116,7 +138,7 @@ export function ProjectDetailsPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex items-center gap-4 justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/projects')}>
+          <Button variant="outline" onClick={handleBackClick}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Retour aux projets
           </Button>

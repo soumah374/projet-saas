@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CreateProjectModal } from '@/components/projects/CreateProjectModal';
 import { useProjects } from '@/hooks/use-projects';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import type { ProjectStatus, ProjectType, ProjectPriority } from '@/lib/types';
-import { Plus, Search, Calendar, Users, Clock } from 'lucide-react';
+import { Plus, Search, Calendar, Users, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { CreateButton } from '@/components/PermissionButton';
@@ -37,18 +38,24 @@ export function ProjectsPage() {
   const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 12;
   const [filters, setFilters] = useState({
     status: undefined as ProjectStatus | undefined,
     type: undefined as ProjectType | undefined,
     priority: undefined as ProjectPriority | undefined
   });
 
-  const { data: projects, isLoading } = useProjects(filters);
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
 
-  const filteredProjects = projects?.results?.filter(project =>
-    project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.client_details?.nom_complet.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const { data: projects, isLoading } = useProjects({
+    ...filters,
+    search: debouncedSearch || undefined,
+    page,
+    page_size: pageSize
+  });
+
+  const filteredProjects = projects?.results;
 
   const getStatusColor = (status: ProjectStatus) => {
     switch (status) {
@@ -128,9 +135,10 @@ export function ProjectsPage() {
 
             <Select
               value={filters.status}
-              onValueChange={(value: ProjectStatus) =>
-                setFilters(prev => ({ ...prev, status: value }))
-              }
+              onValueChange={(value: ProjectStatus) => {
+                setFilters(prev => ({ ...prev, status: value }));
+                setPage(1);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Statut" />
@@ -147,9 +155,10 @@ export function ProjectsPage() {
 
             <Select
               value={filters.type}
-              onValueChange={(value: ProjectType) =>
-                setFilters(prev => ({ ...prev, type: value }))
-              }
+              onValueChange={(value: ProjectType) => {
+                setFilters(prev => ({ ...prev, type: value }));
+                setPage(1);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Type" />
@@ -166,9 +175,10 @@ export function ProjectsPage() {
 
             <Select
               value={filters.priority}
-              onValueChange={(value: ProjectPriority) =>
-                setFilters(prev => ({ ...prev, priority: value }))
-              }
+              onValueChange={(value: ProjectPriority) => {
+                setFilters(prev => ({ ...prev, priority: value }));
+                setPage(1);
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Priorité" />
@@ -241,6 +251,38 @@ export function ProjectsPage() {
           </Card>
         ))}
       </div>
+
+      {/* Pagination */}
+      {projects && (projects.count ?? 0) > pageSize && (
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {projects.count} projet{(projects.count ?? 0) > 1 ? 's' : ''} au total
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!projects.previous}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Précédent
+            </Button>
+            <span className="text-sm text-muted-foreground px-2">
+              Page {page} sur {Math.ceil((projects.count ?? 0) / pageSize)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!projects.next}
+              onClick={() => setPage(p => p + 1)}
+            >
+              Suivant
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
 
       <CreateProjectModal
         isOpen={isCreateModalOpen}

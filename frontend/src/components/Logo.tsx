@@ -3,33 +3,37 @@ import { Link } from 'react-router-dom';
 import { usePublicAppConfig } from '@/hooks/use-app-config';
 
 interface LogoProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showText?: boolean;
   className?: string;
   linkTo?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({ 
-  size = 'md', 
-  showText = true, 
+export const Logo: React.FC<LogoProps> = ({
+  size = 'md',
+  showText = true,
   className = '',
   linkTo = '/'
 }) => {
   const { data: config } = usePublicAppConfig();
-  
+
   const sizeClasses = {
     sm: 'w-4 h-4',
     md: 'w-6 h-6',
-    lg: 'w-8 h-8'
+    lg: 'w-12 h-12',
+    xl: 'w-16 h-16',
+    '2xl': 'w-24 h-24'
   };
 
   const textSizes = {
     sm: 'text-sm',
     md: 'text-lg',
-    lg: 'text-xl'
+    lg: 'text-xl',
+    xl: 'text-2xl',
+    '2xl': 'text-3xl'
   };
 
-  const appName = config?.app_name || 'saKom';
+  const appName = config?.app_name || 'project_saas';
   const logoUrl = config?.logo_url;
 
   const logoElement = (
@@ -46,14 +50,14 @@ export const Logo: React.FC<LogoProps> = ({
           {appName.charAt(0).toUpperCase()}
         </div>
       )}
-      {showText && (
+      {/* {showText && (
         <span 
           className={`font-bold ${textSizes[size]}`}
           style={{ color: config?.primary_color || undefined }}
         >
           {appName}
         </span>
-      )}
+      )} */}
     </div>
   );
 

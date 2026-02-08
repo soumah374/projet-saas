@@ -4,142 +4,60 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Users, Calendar as CalendarIcon, Plus, X, Search, Edit, Play, View, Clock, Package, UserPlus, LayoutGrid, List, Loader2, Trash2, CalendarPlus } from 'lucide-react';
+import { Users, Search, LayoutGrid, List, Loader2, UserPlus } from 'lucide-react';
 import { useProjectLifecycle } from '@/hooks/use-project-lifecycle';
-import { useUsers } from '@/hooks/use-users';
-import { useProjectTasks, useUpdateProjectTask, useDeleteProjectTask } from '@/hooks/use-projects';
+import { useProjectTasks, useUpdateProjectTask } from '@/hooks/use-projects';
 import { useProject } from '@/hooks/use-projects';
 import { toast } from 'sonner';
 import { ProjectKanbanView } from './ProjectKanbanView';
 import { QuickTaskCreate } from './QuickTaskCreate';
 import { TaskDetailModal } from './TaskDetailModal';
-
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Label } from '@/components/ui/label';
-import { TaskModal } from '../TaskModal';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { DeleteMemberProject } from '../DeleteMemberProject';
-import { StartTaskProjectModal } from '../StartTaskProjectModal';
 import { StandardTasksManager } from './StandardTasksManager';
-import { UserAutocomplete } from '@/components/ui/UserAutocomplete';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { usePermissions } from '@/hooks/use-permissions';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
+import { PlanningTeamPanel } from './PlanningTeamPanel';
+import { PlanningTaskList } from './PlanningTaskList';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import type { ProjectTask } from '@/lib/types';
 
 interface ProjectPlanningProps {
   projectId: string;
 }
 
-const teamMemberSchema = z.object({
-  project: z.string().min(1, 'Sélectionnez un projet'),
-  user: z.string().min(1, 'Sélectionnez un utilisateur'),
-  role: z.string().min(1, 'Sélectionnez un rôle'),
-  allocation_percentage: z.number().min(0, { message: "L'allocation doit être supérieure ou égale à 0%" })
-});
-
-const roleOptions = [
-  'Chef de projet',
-  'Designer',
-  'Développeur',
-  'Rédacteur',
-  'Consultant',
-  'Assistant'
-];
-
 export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
   const [activeTab, setActiveTab] = useState('templates');
-  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('list');
-  
+  const [taskViewMode, setTaskViewMode] = useState<'list' | 'kanban'>('kanban');
+
   // États pour l'assignation des tâches
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [selectedTaskForAssignment, setSelectedTaskForAssignment] = useState<any>(null);
   const [selectedMemberForAssignment, setSelectedMemberForAssignment] = useState<string | undefined>(undefined);
   const [selectedTaskForDetails, setSelectedTaskForDetails] = useState<any>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
-  const [userSearchTerm, setUserSearchTerm] = useState('');
-  const [teamMemberSearchTerm, setTeamMemberSearchTerm] = useState('');
 
-  // États pour la gestion des dates d'échéance
-  const [datePopoverOpen, setDatePopoverOpen] = useState<number | null>(null);
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
 
   const {
     teamMembers,
-    addTeamMember,
     loading
-  } = useProjectLifecycle(projectId, teamMemberSearchTerm);
+  } = useProjectLifecycle(projectId);
 
-  const { data: users, isLoading: usersLoading } = useUsers({
-    search: userSearchTerm || undefined
-  });
   const { data: tasks } = useProjectTasks(projectId);
   const { data: projectDetails } = useProject(projectId);
   const updateTaskMutation = useUpdateProjectTask();
-  const deleteTaskMutation = useDeleteProjectTask();
-
-  const {
-    hasPermission
-  } = usePermissions();
-  
-  const form = useForm<z.infer<typeof teamMemberSchema>>({
-    resolver: zodResolver(teamMemberSchema),
-    defaultValues: {
-      project: projectId,
-      user: '',
-      role: '',
-      allocation_percentage: 100
-    }
-  });
-  
-  const handleAddTeamMember = async (data: z.infer<typeof teamMemberSchema>) => {
-    try {
-      await addTeamMember(data);
-      setIsTeamDialogOpen(false);
-      form.reset();
-    } catch (error: any) {
-      if (error.response?.data?.error) {
-        console.log(error.response.data.error)
-        form.setError('role', {
-          type: 'manual',
-          message: error.response.data.error
-        });
-      } else {
-        console.error('Error adding team member:', error);
-        form.setError('role', {
-          type: 'manual',
-          message: "Une erreur s'est produite lors de l'ajout du membre"
-        });
-      }
-    }
-  };
-  
 
   const filteredTasks = tasks?.results?.filter(task => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = task.title.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+      task.description.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
-
-  const handleUserChange = async (userId: string) => {
-    form.setValue('user', userId);
-    setSelectedUser(userId);
-  };
-
   // Fonctions pour l'assignation des tâches
-  const handleOpenAssignmentDialog = (task: any) => {
+  const handleOpenAssignmentDialog = (task: ProjectTask) => {
     setSelectedTaskForAssignment(task);
     setSelectedMemberForAssignment(task.assigned_to?.toString() || undefined);
     setShowAssignmentDialog(true);
@@ -155,9 +73,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       await updateTaskMutation.mutateAsync({
         projectId,
         taskId: selectedTaskForAssignment.id,
-        data: {
-          assigned_to: parseInt(selectedMemberForAssignment)
-        }
+        data: { assigned_to: parseInt(selectedMemberForAssignment) }
       });
 
       const member = teamMembers?.find(m => m.user === parseInt(selectedMemberForAssignment));
@@ -167,42 +83,11 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       setShowAssignmentDialog(false);
       setSelectedTaskForAssignment(null);
       setSelectedMemberForAssignment(undefined);
-    } catch (error) {
-      toast.error('Erreur lors de l\'assignation de l\'activité');
-      console.error('Error assigning task:', error);
+    } catch {
+      // Error handled by hook
     }
   };
 
-  const handleDeleteTask = async (taskId: number, taskTitle: string) => {
-    try {
-      await deleteTaskMutation.mutateAsync({ projectId, taskId });
-      toast.success(`Activité "${taskTitle}" supprimée avec succès`);
-    } catch (error) {
-      toast.error('Erreur lors de la suppression de l\'activité');
-      console.error('Error deleting task:', error);
-    }
-  };
-
-  const handleUpdateDueDate = async (taskId: number, taskTitle: string, date: Date | undefined) => {
-    if (!date) return;
-
-    try {
-      await updateTaskMutation.mutateAsync({
-        projectId,
-        taskId,
-        data: {
-          due_date: date.toISOString().split('T')[0]
-        }
-      });
-      toast.success(`Date d'échéance mise à jour pour "${taskTitle}"`);
-      setDatePopoverOpen(null);
-    } catch (error) {
-      toast.error('Erreur lors de la mise à jour de la date');
-      console.error('Error updating due date:', error);
-    }
-  };
-
-  
   return (
     <>
       <Card className="w-full">
@@ -219,7 +104,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
 
             <TabsContent value="tasks" className="space-y-4">
               <div className="text-sm text-muted-foreground mb-4">
-                <span className="font-medium">ℹ️</span> Toutes les activités sont créées à partir des services du catalogue dans l'onglet "Activités standards"
+                <span className="font-medium">i</span> Toutes les activités sont créées à partir des services du catalogue dans l'onglet "Activités standards"
               </div>
 
               {/* Création rapide de tâche */}
@@ -253,20 +138,20 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                 {/* Toggle vue Liste/Kanban */}
                 <div className="flex gap-2 ml-4">
                   <Button
-                    variant={taskViewMode === 'list' ? 'default' : 'outline'}
-                    size="icon"
-                    onClick={() => setTaskViewMode('list')}
-                    title="Vue liste"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
                     variant={taskViewMode === 'kanban' ? 'default' : 'outline'}
                     size="icon"
                     onClick={() => setTaskViewMode('kanban')}
                     title="Vue Kanban"
                   >
                     <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={taskViewMode === 'list' ? 'default' : 'outline'}
+                    size="icon"
+                    onClick={() => setTaskViewMode('list')}
+                    title="Vue liste"
+                  >
+                    <List className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -279,302 +164,16 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                   onOpenAssignmentDialog={handleOpenAssignmentDialog}
                 />
               ) : (
-                <ScrollArea className="h-[400px]">
-                  <div className="space-y-4">
-                    {filteredTasks?.map((task) => {
-                    const extendedTask = {
-                      ...task,
-                      assigned_to: task.assigned_to_name ? {
-                        id: task.assigned_to as number,
-                        first_name: task.assigned_to_name.split(' ')[0],
-                        last_name: task.assigned_to_name.split(' ')[1] || '',
-                        email: '',
-                        username: '',
-                        profile: {
-                          is_active: true,
-                          created_at: '',
-                          updated_at: ''
-                        },
-                        full_name: task.assigned_to_name,
-                        project_count: '0',
-                        is_active: true,
-                        groups: []
-                      } : null
-                    };
-                    
-                    return (
-                      <Card key={task.id}>
-                        <CardContent className="p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="space-y-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-medium">{task.title}</h3>
-                                <Badge variant={task.status === 'Terminé' ? 'default' : 'secondary'}>
-                                  {task.status}
-                                </Badge>
-                              </div>
-                              {task.description && (
-                                <p className="text-sm text-gray-500">{task.description}</p>
-                              )}
-                              <div className="flex items-center gap-4 text-sm text-gray-500">
-                                {task.assigned_to_name && (
-                                  <div className="flex items-center gap-1">
-                                    <Users className="h-4 w-4" />
-                                    <span>{task.assigned_to_name}</span>
-                                  </div>
-                                )}
-
-                                {task.due_date && (
-                                  <div className="flex items-center gap-1">
-                                    <CalendarIcon className="h-4 w-4" />
-                                    <span>{format(new Date(task.due_date), 'dd MMM yyyy', { locale: fr })}</span>
-                                  </div>
-                                )}
-                                {task.estimated_hours && (
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-4 w-4" />
-                                    <span>{task.estimated_hours / 8}J</span>
-                                  </div>
-                                )}
-
-                              </div>
-
-                            </div>
-                            <div className="flex gap-1">
-
-                            {task.status !== 'Terminé' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenAssignmentDialog(task)}
-                                title="Assigner la tâche"
-                              >
-                                <UserPlus className="h-4 w-4" />
-                              </Button>
-                            )}
-
-                              {task.status !== 'Terminé' && (
-                                <StartTaskProjectModal task={task} projectId={projectId}>
-                                  <Button variant="ghost" size="icon">
-                                    <Play className="h-4 w-4" />
-                                  </Button>
-                                </StartTaskProjectModal>
-                              )}
-
-                              {task.status !== 'Terminé' && (
-                                <TaskModal projectId={projectId} task={extendedTask} mode="edit">
-                                  <Button variant="ghost" size="icon">
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                </TaskModal>
-                              )}
-
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedTaskForDetails(extendedTask);
-                                  setIsTaskDetailOpen(true);
-                                }}
-                              >
-                                <View className="h-4 w-4" />
-                              </Button>
-
-                              {/* Bouton pour ajouter/modifier la date d'échéance - uniquement pour les activités qui ne viennent pas du contrat */}
-                              {task.status !== 'Terminé' && !task.ligne_devis && hasPermission('projects.change_projecttask') && (
-                                <Popover
-                                  open={datePopoverOpen === task.id}
-                                  onOpenChange={(open) => setDatePopoverOpen(open ? task.id : null)}
-                                >
-                                  <PopoverTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      title={task.due_date ? "Modifier la date d'échéance" : "Ajouter une date d'échéance"}
-                                    >
-                                      <CalendarPlus className={`h-4 w-4 ${task.due_date ? 'text-blue-500' : 'text-gray-400'}`} />
-                                    </Button>
-                                  </PopoverTrigger>
-                                  <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                      mode="single"
-                                      selected={task.due_date ? new Date(task.due_date) : undefined}
-                                      onSelect={(date) => handleUpdateDueDate(task.id, task.title, date)}
-                                      initialFocus
-                                    />
-                                  </PopoverContent>
-                                </Popover>
-                              )}
-
-                              {/* Bouton de suppression uniquement pour les activités qui ne viennent pas du contrat */}
-                              {task.status !== 'Terminé' && !task.ligne_devis && (
-                                <>
-                                  {hasPermission('projects.delete_projecttask') && (
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          title="Supprimer l'activité"
-                                        >
-                                          <Trash2 className="h-4 w-4 text-red-500" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Êtes-vous sûr ?</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Cette action ne peut pas être annulée. L'activité "{task.title}" sera définitivement supprimée.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => handleDeleteTask(task.id, task.title)}
-                                            className="bg-red-600 hover:bg-red-700"
-                                          >
-                                            Supprimer
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  )}
-                                </>
-                              )}
-
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
+                <PlanningTaskList
+                  tasks={filteredTasks || []}
+                  projectId={projectId}
+                  onOpenAssignmentDialog={handleOpenAssignmentDialog}
+                />
               )}
             </TabsContent>
-            
-            <TabsContent value="team" className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Membres de l'équipe</h3>
-                <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Ajouter un membre
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Ajouter un membre à l'équipe</DialogTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Ajoutez un nouveau membre à l'équipe du projet avec son rôle et son allocation de temps.
-                      </p>
-                    </DialogHeader>
-                    <Form {...form}>
-                      <form onSubmit={form.handleSubmit(handleAddTeamMember)} className="space-y-4">
-                        <FormField
-                          control={form.control}
-                          name="user"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Membre</FormLabel>
-                              <FormControl>
-                                <UserAutocomplete
-                                  value={field.value}
-                                  onValueChange={handleUserChange}
-                                  placeholder="Sélectionner un membre"
-                                  users={users?.data?.results || []}
-                                  isLoading={usersLoading}
-                                  showClearButton={true}
-                                  onSearchChange={setUserSearchTerm}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        
-                        <FormField
-                          control={form.control}
-                          name="role"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Rôle</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionner un rôle" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {roleOptions.map((role) => (
-                                    <SelectItem key={role} value={role}>
-                                      {role}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="allocation_percentage"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Allocation</FormLabel>
-                              <Input type="number" {...field} />
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button type="submit" className="w-full">
-                          Ajouter
-                        </Button>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </div>
-              
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-4">
-                  {teamMembers?.map((member: any) => (
-                    <Card key={member.id}>
-                      <CardContent className="flex items-center justify-between p-4">
-                        <div className="flex items-center space-x-4">
-                          <div>
-                            <p className="font-medium">
-                              {member.user_details.first_name} {member.user_details.last_name}
 
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              {member.role}
-                              <span className="text-xs text-gray-500 block">
-                                Allocation: {member.allocation_percentage}%
-                              </span>
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <DeleteMemberProject 
-                            projectId={projectId} 
-                            userId={member.id} 
-                            firstName={member.user_details.first_name} 
-                            lastName={member.user_details.last_name} 
-                            role={member.role}
-                          >
-                            <Button variant="ghost" size="icon">
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </DeleteMemberProject>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </ScrollArea>
+            <TabsContent value="team" className="space-y-4">
+              <PlanningTeamPanel projectId={projectId} />
             </TabsContent>
 
             <TabsContent value="templates" className="space-y-4">
@@ -583,19 +182,16 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                   {projectDetails?.contract ? 'Création d\'activités basées sur le contrat' : 'Création d\'activités standards'}
                 </h3>
                 <p className="text-sm text-blue-700">
-                  {projectDetails?.contract 
+                  {projectDetails?.contract
                     ? 'Les activités sont créées automatiquement à partir des services définis dans le contrat du projet.'
                     : 'Sélectionnez une catégorie du catalogue pour créer automatiquement toutes les activités standards associées au projet. Ces activités seront basées sur les services disponibles dans le catalogue.'
                   }
                 </p>
               </div>
-              <StandardTasksManager 
+              <StandardTasksManager
                 projectId={projectId}
                 contractId={projectDetails?.contract || null}
-                onTasksCreated={() => {
-                  // Rafraîchir les données des activités
-                  // window.location.reload();
-                }}
+                onTasksCreated={() => {}}
               />
             </TabsContent>
           </Tabs>
@@ -623,7 +219,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                 </div>
               </div>
             )}
-            
+
             <div>
               <Label>Membre du projet</Label>
               <Select
@@ -642,17 +238,17 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
                       </div>
                     </SelectItem>
                   ) : teamMembers && teamMembers.length > 0 ? (
-                                      teamMembers.map((member: any) => (
-                    <SelectItem key={member.id} value={member.user.toString()}>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        <span>{member.user_name}</span>
-                        <Badge variant="outline" className="text-xs">
-                          {member.role} {member.user_details.full_name}
-                        </Badge>
-                      </div>
-                    </SelectItem>
-                  ))
+                    teamMembers.map((member: any) => (
+                      <SelectItem key={member.id} value={member.user.toString()}>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          <span>{member.user_name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {member.role} {member.user_details.full_name}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    ))
                   ) : (
                     <SelectItem value="no-members" disabled>
                       Aucun membre disponible
@@ -681,7 +277,7 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Task Detail Modal with Comments - Phase 3 */}
+      {/* Task Detail Modal with Comments */}
       <TaskDetailModal
         task={selectedTaskForDetails}
         projectId={projectId}
@@ -690,4 +286,4 @@ export function ProjectPlanning({ projectId }: ProjectPlanningProps) {
       />
     </>
   );
-} 
+}

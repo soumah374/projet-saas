@@ -93,19 +93,41 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
     return tasks?.filter(task => task.status === status) || [];
   };
 
-  const handleDragStart = (task: ProjectTask) => {
+  const handleDragStart = (e: React.DragEvent, task: ProjectTask) => {
     setDraggedTask(task);
+    // Appliquer un style à l'élément source après un petit délai (pour que le ghost soit normal)
+    requestAnimationFrame(() => {
+      (e.target as HTMLElement).classList.add('opacity-40', 'scale-95');
+    });
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e: React.DragEvent) => {
     setDraggedTask(null);
+    (e.target as HTMLElement).classList.remove('opacity-40', 'scale-95');
+    // Nettoyer toutes les zones de drop
+    document.querySelectorAll('[data-drop-zone]').forEach(el => {
+      el.classList.remove('bg-primary/10', 'border-primary', 'ring-2', 'ring-primary/20');
+    });
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const zone = (e.currentTarget as HTMLElement);
+    zone.classList.add('bg-primary/10', 'border-primary', 'ring-2', 'ring-primary/20');
   };
 
-  const handleDrop = async (status: string) => {
+  const handleDragLeave = (e: React.DragEvent) => {
+    const zone = (e.currentTarget as HTMLElement);
+    // Seulement retirer si on quitte vraiment la zone (pas un enfant)
+    if (!zone.contains(e.relatedTarget as Node)) {
+      zone.classList.remove('bg-primary/10', 'border-primary', 'ring-2', 'ring-primary/20');
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, status: string) => {
+    const zone = (e.currentTarget as HTMLElement);
+    zone.classList.remove('bg-primary/10', 'border-primary', 'ring-2', 'ring-primary/20');
     if (!draggedTask) return;
 
     // Ne rien faire si la tâche est déjà dans ce statut
@@ -182,9 +204,9 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
       <Card
         key={task.id}
         draggable
-        onDragStart={() => handleDragStart(task)}
+        onDragStart={(e) => handleDragStart(e, task)}
         onDragEnd={handleDragEnd}
-        className="mb-3 cursor-move hover:shadow-md transition-shadow"
+        className="mb-3 cursor-grab active:cursor-grabbing hover:shadow-md transition-all duration-200"
       >
         <CardContent className="p-4">
           <div className="space-y-3">
@@ -344,9 +366,11 @@ export function ProjectKanbanView({ tasks, projectId, onOpenAssignmentDialog }: 
           return (
             <div
               key={column.id}
-              className="flex flex-col"
+              className="flex flex-col border-2 border-transparent rounded-lg transition-all duration-150"
+              data-drop-zone
               onDragOver={handleDragOver}
-              onDrop={() => handleDrop(column.status)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, column.status)}
             >
               {/* En-tête de colonne */}
               <Card className={`${column.bgColor} border-2`}>

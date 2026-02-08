@@ -1,7 +1,7 @@
 # Proposition de Fonctionnalités Avancées - Gestion de Projet Collaborative
 
 ## 🎯 Vision
-Transformer SAKOM en une plateforme de gestion de projet collaborative de niveau entreprise, combinant les meilleures fonctionnalités de MS Project, Asana, Jira et Monday.com.
+Transformer project_saas en une plateforme de gestion de projet collaborative de niveau entreprise, combinant les meilleures fonctionnalités de MS Project, Asana, Jira et Monday.com.
 
 ---
 
@@ -602,7 +602,7 @@ class ProjectRole(models.Model):
 
 ## 🎯 Conclusion
 
-Cette roadmap transformera SAKOM en une solution de gestion de projet de classe entreprise, capable de rivaliser avec les leaders du marché tout en restant adaptée aux besoins spécifiques de votre organisation.
+Cette roadmap transformera project_saas en une solution de gestion de projet de classe entreprise, capable de rivaliser avec les leaders du marché tout en restant adaptée aux besoins spécifiques de votre organisation.
 
 **Prochaines étapes recommandées :**
 1. Prioriser les fonctionnalités selon vos besoins métier

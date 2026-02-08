@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { toast } from 'sonner';
+import { AxiosError } from 'axios';
 import type {
   Project,
   CreateProjectPayload,
@@ -15,17 +17,23 @@ import { useMemo } from 'react';
 
 const BASE_URL = '/projects';
 
-async function apiRequest<T>(endpoint: string, options: any = {}): Promise<T> {
-  try {
-    const response = await api({
-      url: `${BASE_URL}${endpoint}`,
-      ...options,
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error('API Error:', error);
-    throw new Error(error.response?.data?.message || error.message || 'API Error');
+function getErrorMessage(error: unknown, context: string): string {
+  if (error instanceof AxiosError) {
+    const data = error.response?.data;
+    return data?.detail || data?.message || data?.error || `Erreur lors de ${context}`;
   }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return `Erreur inattendue lors de ${context}`;
+}
+
+async function apiRequest<T>(endpoint: string, options: any = {}): Promise<T> {
+  const response = await api({
+    url: `${BASE_URL}${endpoint}`,
+    ...options,
+  });
+  return response.data;
 }
 
 interface ProjectsFilters extends ProjectFilters {
@@ -79,6 +87,9 @@ export function useCreateProject() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'la création du projet'));
+    },
   });
 }
 
@@ -95,6 +106,9 @@ export function useUpdateProject() {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'la mise à jour du projet'));
+    },
   });
 }
 
@@ -108,6 +122,9 @@ export function useDeleteProject() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'la suppression du projet'));
     },
   });
 }
@@ -143,6 +160,9 @@ export function useCreateTask() {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "la création de l'activité"));
+    },
   });
 }
 
@@ -175,6 +195,9 @@ export function useDeleteProjectTask() {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-tasks', taskId] });
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "la suppression de l'activité"));
+    },
   });
 }
 
@@ -206,6 +229,9 @@ export function useUpdateProjectTask() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "la mise à jour de l'activité"));
     },
   });
 }
@@ -254,6 +280,9 @@ export function useCreateProjectEvent() {
       queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "la création de l'événement"));
+    },
   });
 }
 
@@ -268,6 +297,9 @@ export function useDeleteProjectEvent() {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['project-events', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "la suppression de l'événement"));
     },
   });
 }
@@ -364,14 +396,17 @@ export function useStartProject() {
     mutationFn: ({ projectId, startDate }: { projectId: string; startDate: string }) =>
       apiRequest<Project>(`/${projectId}/`, {
         method: 'PATCH',
-        data: { 
+        data: {
           status: 'Production',
-          start_date: startDate 
+          start_date: startDate
         },
       }),
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, 'le démarrage du projet'));
     },
   });
 }

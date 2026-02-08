@@ -18,7 +18,7 @@ interface AppearanceContextType {
 
 const AppearanceContext = createContext<AppearanceContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'sakom-appearance-settings';
+const STORAGE_KEY = 'project_saas-appearance-settings';
 
 const DEFAULT_SETTINGS: AppearanceSettings = {
   theme: 'light',

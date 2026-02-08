@@ -299,7 +299,7 @@ const DashboardPage: React.FC = () => {
       {/* En-tête du tableau de bord */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord SAKOM</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Tableau de Bord project_saas</h1>
           <p className="text-gray-600 mt-2">
             Vue d'ensemble de vos projets, finances et performance
           </p>
@@ -432,13 +432,13 @@ const DashboardPage: React.FC = () => {
           {showFinancialTab && (
             <TabsTrigger value="financial">
               <DollarSign className="h-4 w-4 mr-2" />
-              Financier
+              Finances
             </TabsTrigger>
           )}
           {showPerformanceTab && (
             <TabsTrigger value="performance">
               <Users className="h-4 w-4 mr-2" />
-              Performance
+              Performances
             </TabsTrigger>
           )}
           {showCalendarTab && (
@@ -562,7 +562,7 @@ const DashboardPage: React.FC = () => {
                 revenue: revenueChartRef,
                 performance: performanceChartRef,
               }}
-              fileName="dashboard-sakom"
+              fileName="dashboard-project_saas"
             />
           )}
         </TabsContent>

@@ -11,9 +11,9 @@ def create_default_config(apps, schema_editor):
     if not ApplicationConfig.objects.exists():
         ApplicationConfig.objects.create(
             id=1,
-            app_name='SAKOM',
+            app_name='project_saas',
             app_description='Système de gestion de projets',
-            company_name='SAKOM',
+            company_name='project_saas',
             primary_color='#3B82F6',
             secondary_color='#6B7280',
         )

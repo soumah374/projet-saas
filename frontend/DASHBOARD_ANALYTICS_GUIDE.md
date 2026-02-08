@@ -2,7 +2,7 @@
 
 ## 📊 Vue d'ensemble
 
-Ce guide présente l'ensemble des composants analytiques avancés créés pour améliorer le tableau de bord de SAKOM. Ces composants offrent des fonctionnalités d'analyse de données, de visualisation interactive et d'export de rapports.
+Ce guide présente l'ensemble des composants analytiques avancés créés pour améliorer le tableau de bord de project_saas. Ces composants offrent des fonctionnalités d'analyse de données, de visualisation interactive et d'export de rapports.
 
 ## 🎯 Composants Créés
 

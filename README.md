@@ -1,6 +1,6 @@
-# SAKOM - Plateforme de Gestion de Projets
+# project_saas - Plateforme de Gestion de Projets
 
-SAKOM est une plateforme complète de gestion collaborative des projets, construite avec Django (backend) et React (frontend).
+project_saas est une plateforme complète de gestion collaborative des projets, construite avec Django (backend) et React (frontend).
 
 ## 🚀 Technologies Utilisées
 
@@ -24,7 +24,7 @@ SAKOM est une plateforme complète de gestion collaborative des projets, constru
 ## 📁 Structure du Projet
 
 ```
-SAKOM/
+project_saas/
 ├── backend/                 # Backend Django
 │   ├── config/             # Configuration Django
 │   ├── projects/           # Application projets
@@ -56,7 +56,7 @@ SAKOM/
 1. **Cloner le repository**
    ```bash
    git clone <repository-url>
-   cd SAKOM
+   cd project_saas
    ```
 
 2. **Lancer les services**
@@ -151,9 +151,9 @@ L'API REST est documentée avec Swagger/OpenAPI :
 ```env
 DEBUG=True
 SECRET_KEY=your-secret-key
-DB_NAME=sakom_db
-DB_USER=sakom_user
-DB_PASSWORD=sakom_password
+DB_NAME=project_saas_db
+DB_USER=project_saas_user
+DB_PASSWORD=project_saas_password
 DB_HOST=db
 DB_PORT=5432
 REDIS_URL=redis://redis:6379/0
@@ -163,7 +163,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1
 #### Frontend
 ```env
 VITE_API_URL=http://localhost:8000/api/v1
-VITE_APP_NAME=SAKOM
+VITE_APP_NAME=project_saas
 ```
 
 ## 🗄️ Base de Données

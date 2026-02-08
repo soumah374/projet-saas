@@ -30,11 +30,11 @@ curl http://localhost:8000/api/v1/app-config/public/
 
 # Devrait retourner quelque chose comme:
 # {
-#   "app_name": "SAKOM",
+#   "app_name": "project_saas",
 #   "app_description": "Système de gestion de projets",
 #   "logo_url": null,
 #   "favicon_url": null,
-#   "company_name": "SAKOM",
+#   "company_name": "project_saas",
 #   "primary_color": "#3B82F6",
 #   "secondary_color": "#6B7280"
 # }
@@ -53,7 +53,7 @@ npm run dev
 1. **Page de connexion** (`http://localhost:5173/login`)
 
    - Vérifier que le logo et nom de l'app s'affichent
-   - Le titre de la page devrait être "Connexion - SAKOM"
+   - Le titre de la page devrait être "Connexion - project_saas"
 
 2. **Se connecter avec le superutilisateur**
 
@@ -84,7 +84,7 @@ npm run dev
 
 - [ ] La configuration par défaut est créée automatiquement
 - [ ] L'API publique retourne les bonnes valeurs
-- [ ] La page de connexion affiche "SAKOM"
+- [ ] La page de connexion affiche "project_saas"
 
 ### Test 2: Modification du nom
 

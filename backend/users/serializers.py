@@ -224,18 +224,18 @@ class LoginRequestSerializer(serializers.Serializer):
         otp = OTPCode.generate_otp(user, email)
         
         # Envoyer l'email
-        subject = "Code de vérification SAKOM"
+        subject = "Code de vérification project_saas"
         message = f"""
         Bonjour {user.get_full_name() or user.username},
         
-        Votre code de vérification pour SAKOM est : {otp.code}
+        Votre code de vérification pour project_saas est : {otp.code}
         
         Ce code expire dans 10 minutes.
         
         Si vous n'avez pas demandé ce code, ignorez cet email.
         
         Cordialement,
-        L'équipe SAKOM
+        L'équipe project_saas
         """
         
         try:

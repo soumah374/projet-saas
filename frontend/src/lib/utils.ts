@@ -66,7 +66,7 @@ export function statusFacture(statut: string) {
   }
 }
 
-export function statusContratHistorique(status: string){
+export function statusContratHistorique(status: string) {
   switch (status) {
     case 'ajout_devis':
       return " Ajout devis";
@@ -81,4 +81,13 @@ export function statusContratHistorique(status: string){
     default:
       break;
   }
+}
+
+export function formatCurrency(amount: number) {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'GNF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
 }

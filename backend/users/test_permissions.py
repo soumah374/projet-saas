@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Script de test pour le système de permissions SAKOM
+Script de test pour le système de permissions project_saas
 """
 
 import os
@@ -26,7 +26,7 @@ from users.permissions import RoleBasedPermission, IsProjectManager, IsFinanceAd
 def test_permission_system():
     """Tester le système de permissions"""
     
-    print("=== Test du système de permissions SAKOM ===\n")
+    print("=== Test du système de permissions project_saas ===\n")
     
     # 1. Initialiser les permissions
     print("1. Initialisation des permissions...")

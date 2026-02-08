@@ -17,7 +17,7 @@ class ApplicationConfig(models.Model):
     # Informations de base de l'application
     app_name = models.CharField(
         max_length=100, 
-        default='SAKOM',
+        default='project_saas',
         verbose_name='Nom de l\'application',
         help_text='Le nom qui apparaîtra dans l\'interface utilisateur'
     )
@@ -119,9 +119,9 @@ class ApplicationConfig(models.Model):
         config, created = cls.objects.get_or_create(
             pk=1,
             defaults={
-                'app_name': 'SAKOM',
+                'app_name': 'project_saas',
                 'app_description': 'Système de gestion de projets',
-                'company_name': 'SAKOM',
+                'company_name': 'project_saas',
                 'primary_color': '#3B82F6',
                 'secondary_color': '#6B7280',
             }

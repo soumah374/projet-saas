@@ -662,10 +662,10 @@ export const PDFExport: React.FC<PDFExportProps> = ({ devis, onClose }) => {
                 fontSize: '10px',
                 margin: '3px 0'
               }}>
-                saKom - Votre partenaire de confiance
+                project_saas - Votre partenaire de confiance
               </p>
               <p style={{ margin: '3px 0' }}>
-                Email: contact@sakom.com | Téléphone: +224 XXX XXX XXX
+                Email: contact@project_saas.com | Téléphone: +224 XXX XXX XXX
               </p>
             </div>
           </div>

@@ -11,7 +11,7 @@ export function useDynamicTitle(pageTitle?: string) {
   useEffect(() => {
     if (config) {
       // Mettre à jour le titre de la page
-      const appName = config.app_name || 'SAKOM';
+      const appName = config.app_name || 'project_saas';
       const fullTitle = pageTitle ? `${pageTitle} - ${appName}` : appName;
       document.title = fullTitle;
 

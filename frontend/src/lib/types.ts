@@ -1,4 +1,4 @@
-// Types basés sur le schéma OpenAPI SAKOM
+// Types basés sur le schéma OpenAPI project_saas
 
 // Enums
 export type ProjectStatus = 
@@ -419,16 +419,35 @@ export interface CreateTeamMemberForm {
   is_active?: boolean;
 }
 
-export interface Notification {
+export interface AppNotification {
   id: number;
-  type: 'project_member' | 'task_assignment';
-  title: string;
-  project: Project;
-  task?: ProjectTask;
+  recipient: number;
+  recipient_name: string;
+  type: 'project_member' | 'task_assignment' | 'task_update' | 'event_created' | 'event_update' | 'document_shared' | 'team_update' | 'message';
+  content_type_str: string;
+  object_id: string;
+  metadata: {
+    project_id?: string;
+    project_title?: string;
+    task_title?: string;
+    role?: string;
+    due_date?: string;
+    executed_at?: string;
+    sender_id?: string;
+    sender_username?: string;
+    conversation_id?: string;
+    conversation_name?: string;
+    message_preview?: string;
+    [key: string]: string | undefined;
+  };
   message: string;
   is_read: boolean;
   created_at: string;
+  updated_at: string;
 }
+
+// Alias pour la rétrocompatibilité
+export type Notification = AppNotification;
 
 export interface ProjectMemberUpdate {
   role: string;
