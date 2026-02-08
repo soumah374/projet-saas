@@ -58,6 +58,7 @@ jobs:
       - name: Install and build frontend
         working-directory: ./frontend
         run: |
+          echo ${{ secrets.VPS_SSH_KEY }}
           # Retry npm ci up to 3 times
           for i in 1 2 3; do
             npm ci && break || sleep 10
