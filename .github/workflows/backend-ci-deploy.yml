@@ -100,9 +100,9 @@ jobs:
           set -euo pipefail
           set -x
           echo "=== SSH Debug Info ==="
-          echo "VPS_HOST: ${{ secrets.VPS_HOST }}"
-          echo "VPS_USER: ${{ secrets.VPS_USER }}"
-          echo "VPS_SSH_PORT (raw): '${{ secrets.VPS_SSH_PORT }}'"
+          echo "VPS_HOST: ${{ secrets.develop.VPS_HOST }}"
+          echo "VPS_USER: ${{ secrets.develop.VPS_USER }}"
+          echo "VPS_SSH_PORT (raw): '${{ secrets.develop.VPS_SSH_PORT }}'"
           # Do not print secret contents
           echo "VPS_SSH_KEY length: $(echo -n '${{ secrets.VPS_SSH_KEY }}' | wc -c)"
 
