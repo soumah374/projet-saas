@@ -58,7 +58,6 @@ jobs:
       - name: Install and build frontend
         working-directory: ./frontend
         run: |
-          echo ${{ secrets.VPS_SSH_KEY }}
           # Retry npm ci up to 3 times
           for i in 1 2 3; do
             npm ci && break || sleep 10
@@ -98,34 +97,42 @@ jobs:
 
       - name: Debug SSH Connection
         run: |
+          set -euo pipefail
           set -x
           echo "=== SSH Debug Info ==="
           echo "VPS_HOST: ${{ secrets.VPS_HOST }}"
           echo "VPS_USER: ${{ secrets.VPS_USER }}"
-          echo "VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}"
+          echo "VPS_SSH_PORT (raw): '${{ secrets.VPS_SSH_PORT }}'"
+          # Do not print secret contents
           echo "VPS_SSH_KEY length: $(echo -n '${{ secrets.VPS_SSH_KEY }}' | wc -c)"
-          
+
           # Setup SSH directory
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          
-          # Write private key
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+
+          # Write private key using printf to preserve newlines exactly
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          
-          # Verify key format
+
+          # Verify key format (first and last lines)
           echo "=== Key verification ==="
-          head -1 ~/.ssh/deploy_key
-          tail -1 ~/.ssh/deploy_key
-          
-          # Configure SSH
-          ssh-keyscan -p ${{ secrets.VPS_SSH_PORT || '22' }} ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>&1 || true
-          
+          head -n 1 ~/.ssh/deploy_key || true
+          tail -n 1 ~/.ssh/deploy_key || true
+
+          # Determine port in shell (fallback to 22)
+          PORT='22'
+          if [ -n "${{ secrets.VPS_SSH_PORT }}" ]; then
+            PORT='${{ secrets.VPS_SSH_PORT }}'
+          fi
+
+          # Add host to known_hosts to avoid interactive prompt
+          ssh-keyscan -p "$PORT" "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
           # Test connection with retries
           echo "=== Testing SSH Connection ==="
           for attempt in 1 2 3; do
             echo "Attempt $attempt/3..."
-            if ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} -p ${{ secrets.VPS_SSH_PORT || '22' }} "echo 'SSH connection successful!'; whoami; pwd"; then
+            if ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=10 "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" -p "$PORT" "echo 'SSH connection successful!'; whoami; pwd"; then
               echo "✓ Connection successful"
               break
             else
@@ -133,7 +140,7 @@ jobs:
               if [ $attempt -lt 3 ]; then
                 sleep 5
               else
-                echo "✗ All attempts failed - check VPS_SSH_KEY, VPS_HOST, VPS_USER, VPS_SSH_PORT"
+                echo "✗ All attempts failed - check VPS_SSH_KEY (private key), VPS_HOST, VPS_USER, VPS_SSH_PORT"
                 exit 1
               fi
             fi
