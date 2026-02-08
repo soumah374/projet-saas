@@ -1,0 +1,242 @@
+from django.db import migrations, models
+import django.db.models.deletion
+import django.utils.timezone
+import uuid
+from django.conf import settings
+
+
+class Migration(migrations.Migration):
+
+    initial = True
+
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+        ('projects', '0010_alter_taskcomment_attachments'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='Fleet',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=150, unique=True, verbose_name='Nom')),
+                ('description', models.TextField(blank=True, verbose_name='Description')),
+                ('is_active', models.BooleanField(default=True, verbose_name='Actif')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('manager', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='managed_fleets', to=settings.AUTH_USER_MODEL, verbose_name='Responsable')),
+            ],
+            options={
+                'verbose_name': 'Flotte',
+                'verbose_name_plural': 'Flottes',
+                'ordering': ['name'],
+            },
+        ),
+        migrations.CreateModel(
+            name='Driver',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('first_name', models.CharField(max_length=100, verbose_name='Prénom')),
+                ('last_name', models.CharField(max_length=100, verbose_name='Nom')),
+                ('phone', models.CharField(blank=True, max_length=30, verbose_name='Téléphone')),
+                ('email', models.EmailField(blank=True, max_length=254, verbose_name='Email')),
+                ('license_number', models.CharField(blank=True, max_length=50, verbose_name='Permis')),
+                ('license_expiry', models.DateField(blank=True, null=True, verbose_name='Expiration permis')),
+                ('status', models.CharField(choices=[('actif', 'Actif'), ('suspendu', 'Suspendu'), ('inactif', 'Inactif')], default='actif', max_length=20, verbose_name='Statut')),
+                ('hire_date', models.DateField(blank=True, null=True, verbose_name="Date d'embauche")),
+                ('notes', models.TextField(blank=True, verbose_name='Notes')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('user', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='driver_profile', to=settings.AUTH_USER_MODEL, verbose_name='Utilisateur')),
+            ],
+            options={
+                'verbose_name': 'Chauffeur',
+                'verbose_name_plural': 'Chauffeurs',
+                'ordering': ['last_name', 'first_name'],
+            },
+        ),
+        migrations.CreateModel(
+            name='Trip',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('reference', models.CharField(default=uuid.uuid4, editable=False, max_length=36, unique=True)),
+                ('title', models.CharField(max_length=200, verbose_name='Titre')),
+                ('description', models.TextField(blank=True, verbose_name='Description')),
+                ('status', models.CharField(choices=[('planifie', 'Planifié'), ('en_cours', 'En cours'), ('termine', 'Terminé'), ('annule', 'Annulé')], default='planifie', max_length=20, verbose_name='Statut')),
+                ('origin_address', models.CharField(blank=True, max_length=255, verbose_name='Origine')),
+                ('destination_address', models.CharField(blank=True, max_length=255, verbose_name='Destination')),
+                ('planned_start', models.DateTimeField(blank=True, null=True, verbose_name='Début planifié')),
+                ('planned_end', models.DateTimeField(blank=True, null=True, verbose_name='Fin planifiée')),
+                ('actual_start', models.DateTimeField(blank=True, null=True, verbose_name='Début réel')),
+                ('actual_end', models.DateTimeField(blank=True, null=True, verbose_name='Fin réelle')),
+                ('distance_km', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True, verbose_name='Distance (km)')),
+                ('cargo_description', models.TextField(blank=True, verbose_name='Chargement')),
+                ('cargo_weight_kg', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True, verbose_name='Poids (kg)')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_trips', to=settings.AUTH_USER_MODEL, verbose_name='Créé par')),
+                ('driver', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='trips', to='logistics.driver', verbose_name='Chauffeur')),
+                ('fleet', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='trips', to='logistics.fleet', verbose_name='Flotte')),
+                ('project', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='logistics_trips', to='projects.project', verbose_name='Projet')),
+            ],
+            options={
+                'verbose_name': 'Trajet',
+                'verbose_name_plural': 'Trajets',
+                'ordering': ['-created_at'],
+            },
+        ),
+        migrations.CreateModel(
+            name='Vehicle',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('plate_number', models.CharField(max_length=30, unique=True, verbose_name='Immatriculation')),
+                ('vin', models.CharField(blank=True, max_length=64, null=True, unique=True, verbose_name='VIN')),
+                ('brand', models.CharField(blank=True, max_length=100, verbose_name='Marque')),
+                ('model', models.CharField(blank=True, max_length=100, verbose_name='Modèle')),
+                ('year', models.PositiveIntegerField(blank=True, null=True, verbose_name='Année')),
+                ('color', models.CharField(blank=True, max_length=50, verbose_name='Couleur')),
+                ('fuel_type', models.CharField(choices=[('essence', 'Essence'), ('diesel', 'Diesel'), ('hybride', 'Hybride'), ('electrique', 'Électrique'), ('gaz', 'Gaz'), ('autre', 'Autre')], default='diesel', max_length=20, verbose_name='Carburant')),
+                ('capacity_kg', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True, verbose_name='Capacité (kg)')),
+                ('capacity_volume', models.DecimalField(blank=True, decimal_places=2, max_digits=10, null=True, verbose_name='Capacité (m3)')),
+                ('status', models.CharField(choices=[('actif', 'Actif'), ('maintenance', 'En maintenance'), ('inactif', 'Inactif'), ('retire', 'Retiré')], default='actif', max_length=20, verbose_name='Statut')),
+                ('odometer_km', models.PositiveIntegerField(default=0, verbose_name='Kilométrage (km)')),
+                ('last_service_date', models.DateField(blank=True, null=True, verbose_name='Dernière maintenance')),
+                ('next_service_date', models.DateField(blank=True, null=True, verbose_name='Prochaine maintenance')),
+                ('insurance_expiry', models.DateField(blank=True, null=True, verbose_name='Expiration assurance')),
+                ('registration_expiry', models.DateField(blank=True, null=True, verbose_name='Expiration carte grise')),
+                ('notes', models.TextField(blank=True, verbose_name='Notes')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('fleet', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='vehicles', to='logistics.fleet', verbose_name='Flotte')),
+            ],
+            options={
+                'verbose_name': 'Véhicule',
+                'verbose_name_plural': 'Véhicules',
+                'ordering': ['plate_number'],
+            },
+        ),
+        migrations.CreateModel(
+            name='TripStop',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('sequence', models.PositiveIntegerField(verbose_name='Ordre')),
+                ('address', models.CharField(max_length=255, verbose_name='Adresse')),
+                ('planned_arrival', models.DateTimeField(blank=True, null=True, verbose_name='Arrivée planifiée')),
+                ('actual_arrival', models.DateTimeField(blank=True, null=True, verbose_name='Arrivée réelle')),
+                ('notes', models.TextField(blank=True, verbose_name='Notes')),
+                ('trip', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='stops', to='logistics.trip', verbose_name='Trajet')),
+            ],
+            options={
+                'verbose_name': 'Arrêt de trajet',
+                'verbose_name_plural': 'Arrêts de trajet',
+                'ordering': ['sequence'],
+                'unique_together': {('trip', 'sequence')},
+            },
+        ),
+        migrations.CreateModel(
+            name='TrackingPoint',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('recorded_at', models.DateTimeField(default=django.utils.timezone.now, verbose_name='Date')),
+                ('latitude', models.DecimalField(decimal_places=6, max_digits=9, verbose_name='Latitude')),
+                ('longitude', models.DecimalField(decimal_places=6, max_digits=9, verbose_name='Longitude')),
+                ('speed_kmh', models.DecimalField(blank=True, decimal_places=2, max_digits=8, null=True, verbose_name='Vitesse (km/h)')),
+                ('odometer_km', models.PositiveIntegerField(blank=True, null=True, verbose_name='Kilométrage (km)')),
+                ('fuel_level', models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True, verbose_name='Niveau carburant (%)')),
+                ('status', models.CharField(choices=[('en_route', 'En route'), ('arret', 'Arrêt'), ('incident', 'Incident'), ('inconnu', 'Inconnu')], default='inconnu', max_length=20, verbose_name='Statut')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('trip', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='tracking_points', to='logistics.trip', verbose_name='Trajet')),
+                ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tracking_points', to='logistics.vehicle', verbose_name='Véhicule')),
+            ],
+            options={
+                'verbose_name': 'Point de suivi',
+                'verbose_name_plural': 'Points de suivi',
+                'ordering': ['-recorded_at'],
+            },
+        ),
+        migrations.CreateModel(
+            name='MaintenanceRecord',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('maintenance_type', models.CharField(choices=[('preventif', 'Préventif'), ('correctif', 'Correctif')], default='preventif', max_length=20, verbose_name='Type')),
+                ('description', models.TextField(blank=True, verbose_name='Description')),
+                ('provider', models.CharField(blank=True, max_length=150, verbose_name='Prestataire')),
+                ('cost', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True, verbose_name='Coût')),
+                ('performed_at', models.DateField(default=django.utils.timezone.now, verbose_name='Date')),
+                ('next_due_date', models.DateField(blank=True, null=True, verbose_name='Prochaine échéance')),
+                ('odometer_km', models.PositiveIntegerField(blank=True, null=True, verbose_name='Kilométrage (km)')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='maintenances', to='logistics.vehicle', verbose_name='Véhicule')),
+            ],
+            options={
+                'verbose_name': 'Maintenance',
+                'verbose_name_plural': 'Maintenances',
+                'ordering': ['-performed_at'],
+            },
+        ),
+        migrations.CreateModel(
+            name='FuelLog',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('filled_at', models.DateTimeField(default=django.utils.timezone.now, verbose_name='Date')),
+                ('liters', models.DecimalField(decimal_places=2, max_digits=10, verbose_name='Litres')),
+                ('cost', models.DecimalField(blank=True, decimal_places=2, max_digits=12, null=True, verbose_name='Coût')),
+                ('odometer_km', models.PositiveIntegerField(blank=True, null=True, verbose_name='Kilométrage (km)')),
+                ('station', models.CharField(blank=True, max_length=150, verbose_name='Station')),
+                ('notes', models.TextField(blank=True, verbose_name='Notes')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('driver', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='fuel_logs', to='logistics.driver', verbose_name='Chauffeur')),
+                ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='fuel_logs', to='logistics.vehicle', verbose_name='Véhicule')),
+            ],
+            options={
+                'verbose_name': 'Carburant',
+                'verbose_name_plural': 'Carburants',
+                'ordering': ['-filled_at'],
+            },
+        ),
+        migrations.CreateModel(
+            name='Incident',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('reported_at', models.DateTimeField(default=django.utils.timezone.now, verbose_name='Date')),
+                ('severity', models.CharField(choices=[('faible', 'Faible'), ('moyen', 'Moyen'), ('eleve', 'Élevé'), ('critique', 'Critique')], default='faible', max_length=20, verbose_name='Gravité')),
+                ('description', models.TextField(verbose_name='Description')),
+                ('resolved', models.BooleanField(default=False, verbose_name='Résolu')),
+                ('resolved_at', models.DateTimeField(blank=True, null=True, verbose_name='Résolu le')),
+                ('resolution_notes', models.TextField(blank=True, verbose_name='Notes de résolution')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('driver', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='incidents', to='logistics.driver', verbose_name='Chauffeur')),
+                ('trip', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='incidents', to='logistics.trip', verbose_name='Trajet')),
+                ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='incidents', to='logistics.vehicle', verbose_name='Véhicule')),
+            ],
+            options={
+                'verbose_name': 'Incident',
+                'verbose_name_plural': 'Incidents',
+                'ordering': ['-reported_at'],
+            },
+        ),
+        migrations.CreateModel(
+            name='DriverAssignment',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('start_date', models.DateField(default=django.utils.timezone.now, verbose_name='Date de début')),
+                ('end_date', models.DateField(blank=True, null=True, verbose_name='Date de fin')),
+                ('is_primary', models.BooleanField(default=True, verbose_name='Principal')),
+                ('notes', models.TextField(blank=True, verbose_name='Notes')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('driver', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='assignments', to='logistics.driver', verbose_name='Chauffeur')),
+                ('vehicle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='assignments', to='logistics.vehicle', verbose_name='Véhicule')),
+            ],
+            options={
+                'verbose_name': 'Affectation chauffeur',
+                'verbose_name_plural': 'Affectations chauffeurs',
+                'ordering': ['-start_date'],
+                'unique_together': {('driver', 'vehicle', 'start_date')},
+            },
+        ),
+        migrations.AddField(
+            model_name='trip',
+            name='vehicle',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='trips', to='logistics.vehicle', verbose_name='Véhicule'),
+        ),
+    ]

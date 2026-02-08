@@ -26,6 +26,7 @@ def create_role_groups():
             'catalog': ['view', 'add', 'change', 'delete'],
             'documents': ['view', 'add', 'change', 'delete'],
             'notifications': ['view', 'add', 'change', 'delete'],
+            'logistics': ['view', 'add', 'change', 'delete'],
         },
         'Finance/Admin': {
             'users': ['view'],
@@ -39,6 +40,7 @@ def create_role_groups():
             'catalog': ['view'],
             'documents': ['view'],
             'notifications': ['view'],
+            'logistics': ['view'],
         },
         'Chef de projet': {
             'users': ['view'],
@@ -52,6 +54,7 @@ def create_role_groups():
             'catalog': ['view'],
             'documents': ['view', 'add', 'change'],
             'notifications': ['view', 'add', 'change'],
+            'logistics': ['view', 'add', 'change'],
         },
         'Designer': {
             'users': ['view'],
@@ -65,6 +68,7 @@ def create_role_groups():
             'catalog': ['view'],
             'documents': ['view', 'add', 'change'],
             'notifications': ['view'],
+            'logistics': ['view'],
         },
         'Développeur': {
             'users': ['view'],
@@ -78,6 +82,7 @@ def create_role_groups():
             'catalog': ['view'],
             'documents': ['view', 'add', 'change'],
             'notifications': ['view'],
+            'logistics': ['view'],
         },
         'Rédacteur': {
             'users': ['view'],
@@ -91,6 +96,7 @@ def create_role_groups():
             'catalog': ['view'],
             'documents': ['view', 'add', 'change'],
             'notifications': ['view'],
+            'logistics': ['view'],
         },
         'Consultant': {
             'users': ['view'],
@@ -104,6 +110,7 @@ def create_role_groups():
             'catalog': ['view'],
             'documents': ['view', 'add', 'change'],
             'notifications': ['view'],
+            'logistics': ['view'],
         },
         'Assistant': {
             'users': ['view'],
@@ -117,6 +124,7 @@ def create_role_groups():
             'catalog': ['view'],
             'documents': ['view'],
             'notifications': ['view'],
+            'logistics': ['view'],
         },
     }
     
@@ -129,11 +137,12 @@ def create_role_groups():
             for perm_type in perm_types:
                 try:
                     # Construire le nom de la permission
-                    perm_name = f"{app_name}.{perm_type}_{app_name.rstrip('s')}"
+                    model_name = 'fleet' if app_name == 'logistics' else app_name.rstrip('s')
+                    perm_name = f"{app_name}.{perm_type}_{model_name}"
                     
                     # Chercher la permission
                     permission = Permission.objects.filter(
-                        codename=f"{perm_type}_{app_name.rstrip('s')}",
+                        codename=f"{perm_type}_{model_name}",
                         content_type__app_label=app_name
                     ).first()
                     
@@ -391,6 +400,7 @@ def get_user_permissions_summary(user):
         'billings': user.has_perm('billings.view_billing'),
         'catalog': user.has_perm('catalog.view_service'),
         'documents': user.has_perm('documents.view_document'),
+        'logistics': user.has_perm('logistics.view_fleet'),
     }
     
     summary['module_permissions'] = module_permissions

@@ -792,6 +792,7 @@ class PermissionManagerViewSet(viewsets.ViewSet):
                 'catalog': ('catalog', 'service'),
                 'documents': ('documents', 'document'),
                 'notifications': ('notifications', 'notification'),
+                'logistics': ('logistics', 'fleet'),
             }
             mapped_app, mapped_model = app_model_mappings.get(app_label, ('users', 'userprofile'))
             content_type = ContentType.objects.get(app_label=mapped_app, model=mapped_model)

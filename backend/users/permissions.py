@@ -226,6 +226,12 @@ class HasModulePermission(permissions.BasePermission):
             'edit': 'documents.change_document',
             'delete': 'documents.delete_document',
         },
+        'logistics': {
+            'view': 'logistics.view_fleet',
+            'create': 'logistics.add_fleet',
+            'edit': 'logistics.change_fleet',
+            'delete': 'logistics.delete_fleet',
+        },
         'reports': {
             'view': 'projects.view_project',  # Utilise les projets pour les rapports
             'create': None,

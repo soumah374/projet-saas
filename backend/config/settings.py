@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'dashboard',
     'email_templates',
     'app_config',
+    'logistics',
 ]
 
 MIDDLEWARE = [

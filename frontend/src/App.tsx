@@ -48,6 +48,7 @@ import SearchPage from './pages/SearchPage';
 import DashboardManagerPage from './pages/DashboardManagerPage';
 import { EmailTemplatesPage } from './pages/EmailTemplatesPage';
 import { AppConfigPage } from './pages/AppConfigPage';
+import LogisticsPage from './pages/LogisticsPage';
 
 function App() {
   const { user, isLoading, logout } = useAuth();
@@ -230,6 +231,11 @@ function App() {
                 <Route path="/documents" element={
                   <ProtectedRoute module="documents">
                     <DocumentsPage />
+                  </ProtectedRoute>
+                } />
+                <Route path="/logistics" element={
+                  <ProtectedRoute module="logistics">
+                    <LogisticsPage />
                   </ProtectedRoute>
                 } />
                 <Route path="/settings" element={

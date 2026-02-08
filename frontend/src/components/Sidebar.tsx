@@ -27,7 +27,8 @@ import {
   FileCheck,
   CreditCard,
   Shield,
-  Mail
+  Mail,
+  Truck
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -282,6 +283,17 @@ export const Sidebar = ({ isOpen, user, onLogout, setIsSidebarOpen }: SidebarPro
                   <span>Facturation</span>
               </Link>
              )}
+
+            {/* Logistique */}
+            {hasModuleAccess('logistics') && (
+              <Link to="/logistics" className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded hover:bg-primary/10 transition-colors",
+                location.pathname.startsWith('/logistics') ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:text-gray-900"
+              )}>
+                <Truck className="h-5 w-5" />
+                <span>Logistique</span>
+              </Link>
+            )}
           
             {/* Départements */}
             {hasModuleAccess('departments') && (
