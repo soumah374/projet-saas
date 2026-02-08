@@ -2,7 +2,7 @@ name: CI - Build & Deploy Backend
 
 on:
   push:
-    branches: [ main ]
+    branches: [ develop ]
   workflow_dispatch:
 
 permissions:
@@ -85,7 +85,7 @@ jobs:
     name: Deploy to VPS
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/develop'
     steps:
       - name: Wait a moment
         run: echo "Starting remote deploy..."
