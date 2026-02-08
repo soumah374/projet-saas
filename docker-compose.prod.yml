@@ -47,7 +47,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - ./frontend/dist/*:/var/www/html/frontend-dist:ro
+      - ./frontend/dist/:/var/www/html/frontend-dist:ro
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media:ro
     depends_on:
