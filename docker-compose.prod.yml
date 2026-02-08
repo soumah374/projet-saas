@@ -1,109 +1,73 @@
 version: "3.8"
 
 services:
-  # Base de données PostgreSQL
   db:
     image: postgres:15
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=project_saas_db
-      - POSTGRES_USER=project_saas_user
-      - POSTGRES_PASSWORD=project_saas_password
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: project_saas_db
+      POSTGRES_USER: project_saas_user
+      POSTGRES_PASSWORD: project_saas_password
     networks:
       - project_saas_network
 
-  # Cache Redis
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
       - project_saas_network
 
-  # Backend Django
   backend:
     build: ./backend
     command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
     volumes:
       - ./backend:/app
-      - ./backend/media:/app/media
-      - ./backend/staticfiles:/app/staticfiles
-    ports:
-      - "8000:8000"
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
     environment:
-      - DEBUG=True
-      - SECRET_KEY=django-insecure-change-me-in-production
-      - DB_NAME=project_saas_db
-      - DB_USER=project_saas_user
-      - DB_PASSWORD=project_saas_password
-      - DB_HOST=db
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
-      - ALLOWED_HOSTS=localhost,127.0.0.1,backend
+      DEBUG: "True"
+      DB_NAME: project_saas_db
+      DB_USER: project_saas_user
+      DB_PASSWORD: project_saas_password
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      ALLOWED_HOSTS: "*"
     depends_on:
       - db
       - redis
     networks:
       - project_saas_network
 
-  # Frontend React
-  # frontend:
-  #   build: ./frontend
-  #   command: npm run dev
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - VITE_API_URL=http://localhost:8000/api/v1
-  #     - VITE_APP_NAME=project_saas
-  #   depends_on:
-  #     - backend
-  #   networks:
-  #     - project_saas_network
-
-  # Nginx (optionnel pour la production)
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
+      - static_volume:/static
+      - media_volume:/media
     depends_on:
       - backend
-      - frontend
     networks:
       - project_saas_network
-    profiles:
-      - production
+
   mailpit:
     image: axllent/mailpit
-    restart: unless-stopped
-    volumes:
-      - ./data-mailpit:/data
     ports:
       - 8025:8025
       - 1025:1025
-    environment:
-      MP_MAX_MESSAGES: 5000
-      MP_DATABASE: /data/mailpit.db
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
     networks:
       - project_saas_network
+
 volumes:
   postgres_data:
   redis_data:
-  media_volume:
   static_volume:
+  media_volume:
 
 networks:
   project_saas_network:
     driver: bridge
-
