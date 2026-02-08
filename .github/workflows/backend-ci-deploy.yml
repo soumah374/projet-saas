@@ -2,7 +2,7 @@ name: CI - Build & Deploy Backend
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -52,11 +52,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
 
       - name: Install and build frontend
         working-directory: ./frontend
         run: |
-          npm ci
+          # Retry npm ci up to 3 times
+          for i in 1 2 3; do
+            npm ci && break || sleep 10
+          done
           npm run build
 
       - name: Upload frontend dist artifact
