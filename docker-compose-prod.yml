@@ -1,0 +1,121 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: project_saas_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=project_saas_db
+      - POSTGRES_USER=project_saas_user
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-project_saas_password}
+    restart: unless-stopped
+    networks:
+      - project_saas_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U project_saas_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: project_saas_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - project_saas_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Django)
+  backend:
+    image: ghcr.io/${GITHUB_REPO_OWNER}/project-backend:latest
+    container_name: project_saas_backend
+    command: daphne -b 0.0.0.0 -p 8000 config.asgi:application
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DB_NAME=project_saas_db
+      - DB_USER=project_saas_user
+      - DB_PASSWORD=${DB_PASSWORD:-project_saas_password}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,your-domain.com}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost,http://127.0.0.1}
+    restart: unless-stopped
+    networks:
+      - project_saas_network
+    expose:
+      - 8000
+    volumes:
+      - ./backend/media:/app/media
+      - ./backend/staticfiles:/app/staticfiles
+
+  # Nginx (HTTP only - no SSL)
+  nginx:
+    image: nginx:alpine
+    container_name: project_saas_nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - /var/www/html/frontend-dist:/usr/share/nginx/html:ro
+    networks:
+      - project_saas_network
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost/health",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Mail catch service (optional - for development)
+  mailpit:
+    image: axllent/mailpit
+    container_name: project_saas_mailpit
+    restart: unless-stopped
+    volumes:
+      - mailpit_data:/data
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    environment:
+      MP_MAX_MESSAGES: 5000
+      MP_DATABASE: /data/mailpit.db
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    networks:
+      - project_saas_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  mailpit_data:
+
+networks:
+  project_saas_network:
+    driver: bridge

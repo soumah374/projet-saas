@@ -165,24 +165,43 @@ jobs:
           port: ${{ secrets.VPS_SSH_PORT }}
           script: |
             set -e
-            IMAGE=ghcr.io/${{ github.repository_owner }}/project-backend:${{ github.sha }}
-            echo "Pulling $IMAGE"
-            docker pull $IMAGE || true
-            docker tag $IMAGE ghcr.io/${{ github.repository_owner }}/project-backend:latest || true
-            # path where your docker-compose.yml lives on the VPS
-            DEPLOY_PATH=${{ secrets.VPS_DEPLOY_PATH }}
-            if [ -n "$DEPLOY_PATH" ]; then
-              cd "$DEPLOY_PATH"
-              docker-compose pull backend || true
-              docker-compose up -d backend
-            else
-              echo "VPS_DEPLOY_PATH not set; attempting direct docker run"
-              docker stop project_saas_backend || true
-              docker rm project_saas_backend || true
-              docker run -d --restart unless-stopped --name project_saas_backend -p 8000:8000 ghcr.io/${{ github.repository_owner }}/project-backend:latest
-            fi
-            # set permissions and reload nginx if available
-            if command -v systemctl >/dev/null 2>&1; then
-              chown -R www-data:www-data /var/www/html || true
-              systemctl try-restart nginx || true
-            fi
+            DEPLOY_PATH="${{ secrets.VPS_DEPLOY_PATH:-/home/${{ secrets.VPS_USER }}/project-saas }}"
+            echo "📦 Deploying from: $DEPLOY_PATH"
+            cd "$DEPLOY_PATH"
+            
+            # Pull latest images
+            echo "🐳 Pulling Docker images..."
+            docker-compose -f docker-compose-prod.yml pull || true
+            
+            # Set environment variables if needed
+            export GITHUB_REPO_OWNER="${{ github.repository_owner }}"
+            export SECRET_KEY="${{ secrets.SECRET_KEY }}"
+            export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+            export ALLOWED_HOSTS="${{ secrets.ALLOWED_HOSTS }}"
+            
+            # Start all services (db, redis, backend, nginx)
+            echo "🚀 Starting services..."
+            docker-compose -f docker-compose-prod.yml up -d --no-deps backend nginx
+            
+            # Wait for backend to be ready
+            echo "⏳ Waiting for backend to be ready..."
+            for i in {1..30}; do
+              if docker exec project_saas_backend curl -f http://localhost:8000/health >/dev/null 2>&1; then
+                echo "✓ Backend is ready"
+                break
+              fi
+              echo "  Attempt $i/30..."
+              sleep 2
+            done
+            
+            # Copy nginx config to container volume
+            echo "🔧 Copying nginx config..."
+            cp nginx.prod.conf /tmp/nginx.prod.conf || true
+            
+            # Set permissions on frontend files
+            echo "📄 Setting frontend permissions..."
+            sudo chown -R www-data:www-data /var/www/html 2>/dev/null || true
+            
+            # Display service status
+            echo "✅ Deployment complete!"
+            docker-compose -f docker-compose-prod.yml ps

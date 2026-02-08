@@ -1,0 +1,67 @@
+# SSH Keys - NEVER commit
+deploy_key
+deploy_key.pub
+*.backup
+*.pem
+*.key
+*.crt
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+npm-debug.log*
+.npm
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Temp
+/tmp/
+/temp/
+*.tmp
+
+# Media uploaded
+media/
+uploads/
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Coverage
+.coverage
+htmlcov/
