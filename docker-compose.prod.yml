@@ -41,31 +41,17 @@ services:
     networks:
       - project_saas_network
 
-  frontend:
-    build: ./frontend
-    command: sh -c "mkdir -p /frontend_dist && npm run build && cp -r dist/* /frontend_dist/ && tail -f /dev/null"
-    environment:
-      VITE_API_URL: /api/v1
-      VITE_APP_NAME: project_saas
-    volumes:
-      - frontend_dist:/frontend_dist
-    depends_on:
-      - backend
-    networks:
-      - project_saas_network
-
   nginx:
     image: nginx:alpine
     ports:
       - "80:80"
     volumes:
       - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - frontend_dist:/usr/share/nginx/html:ro
+      - ./frontend/dist/*:/var/www/html/frontend-dist:ro
       - static_volume:/app/staticfiles:ro
       - media_volume:/app/media:ro
     depends_on:
       - backend
-      - frontend
     networks:
       - project_saas_network
 
@@ -82,7 +68,6 @@ volumes:
   redis_data:
   static_volume:
   media_volume:
-  frontend_dist:
 
 networks:
   project_saas_network:
