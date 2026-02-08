@@ -76,7 +76,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
-      - /var/www/html/frontend-dist:/usr/share/nginx/html:ro
+      - /var/www/html/projet-saas/frontend/dist:/usr/share/nginx/html:ro
     networks:
       - project_saas_network
     healthcheck:
