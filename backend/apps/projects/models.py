@@ -3,9 +3,9 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 from django.db.models import Sum
-from departments.models import Department
-from users.models import ClientProfile
-from contrats.models import Contrat
+from apps.departments.models import Department
+from apps.users.models import ClientProfile
+from apps.contrats.models import Contrat
 from decimal import Decimal
 
 class Project(models.Model):

@@ -1,8 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.contrib.contenttypes.models import ContentType
-from projects.models import ProjectMember, ProjectTask, ProjectEvent
-from .models import Notification
+from apps.projects.models import ProjectMember, ProjectTask, ProjectEvent
+from apps.notifications.models import Notification
 
 @receiver(post_save, sender=ProjectMember)
 def create_project_member_notification(sender, instance, created, **kwargs):

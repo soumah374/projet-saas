@@ -3,10 +3,10 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-from users.models import ClientProfile
-from devis.models import (Devis,LigneDevis)
-from catalog.models import Service, Activity, IntervenantProfile, UniteStandard
-from .constant import DEFAULT_TEMPLATE_HTML, DEFAULT_TEMPLATE_AVENANT_HTML
+from apps.users.models import ClientProfile
+from apps.devis.models import (Devis,LigneDevis)
+from apps.catalog.models import Service, Activity, IntervenantProfile, UniteStandard
+from apps.contrats.constant import DEFAULT_TEMPLATE_HTML, DEFAULT_TEMPLATE_AVENANT_HTML
 
 
 class Contrat(models.Model):

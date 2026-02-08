@@ -1,6 +1,7 @@
 from django.apps import AppConfig
 
 
-class ContratsConfig(AppConfig):
+class DevisConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'contrats'
+    name = 'apps.devis'
+    verbose_name = 'Devis'

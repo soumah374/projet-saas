@@ -3,8 +3,8 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-from contrats.models import Contrat, LigneEcheancierContrat
-from users.models import ClientProfile
+from apps.contrats.models import Contrat, LigneEcheancierContrat
+from apps.users.models import ClientProfile
 
 
 class Facture(models.Model):

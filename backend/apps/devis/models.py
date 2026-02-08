@@ -3,8 +3,8 @@ from django.db import models
 from django.utils import timezone
 from django.core.validators import MinValueValidator
 from decimal import Decimal
-from users.models import ClientProfile
-from catalog.models import Service, Activity, IntervenantProfile, UniteStandard
+from apps.users.models import ClientProfile
+from apps.catalog.models import Service, Activity, IntervenantProfile, UniteStandard
 
 
 class Devis(models.Model):

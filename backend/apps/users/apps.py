@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 
 
-class CatalogConfig(AppConfig):
+class UsersConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'catalog'
-    verbose_name = 'Catalogue'
+    name = 'apps.users'
+    verbose_name = 'Users'
